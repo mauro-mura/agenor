@@ -18,6 +18,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-010](ADR-010-llm-memory-management.md)                | LLM Memory Management                | Accepted | 2025-12-23 |
 | [ADR-011](ADR-011-knowledge-store-core.md)                 | KnowledgeStore as Core Interface     | Accepted | 2026-03-05 |
 | [ADR-012](ADR-012-reflection-behavior.md)                  | ReflectionStrategy as Core Interface     | Accepted | 2026-03-12 |
+| [ADR-013](ADR-013-mcp-adapter.md)                  | MCP Adapter     | Accepted | 2026-03-16 |
 
 ---
 
