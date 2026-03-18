@@ -29,7 +29,7 @@ class McpToolMapperTest {
     }
 
     @Test
-    void from_sdkTool_nullInputSchema_producesNullJsonNode() {
+    void from_sdkTool_nullInputSchema_producesEmptyObjectNode() {
         McpSchema.Tool sdkTool = mock(McpSchema.Tool.class);
         when(sdkTool.name()).thenReturn("ping");
         when(sdkTool.description()).thenReturn("Ping");
@@ -37,7 +37,9 @@ class McpToolMapperTest {
 
         McpTool result = McpToolMapper.from(sdkTool);
 
-        assertThat(result.inputSchema()).isNull();
+        assertThat(result.inputSchema()).isNotNull();
+        assertThat(result.inputSchema().isObject()).isTrue();
+        assertThat(result.inputSchema().isEmpty()).isTrue();
     }
 
     @Test

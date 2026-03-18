@@ -1,103 +1,111 @@
 package dev.jentic.adapters.mcp;
 
+import dev.jentic.core.mcp.McpClient;
 import dev.jentic.core.mcp.McpTool;
+import dev.jentic.core.mcp.McpToolResult;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Thread-safe cache for MCP tool listings.
+ * Thread-safe cache layer over {@link McpClient}.
  *
- * <p>Lazy initialization: {@link #getTools()} triggers the first {@code listTools()} call
- * on first access. Subsequent calls return the cached result until the TTL expires.
+ * <p>Tool list is fetched lazily on first access and cached for {@code ttl} (default 60s).
+ * The cache is invalidated immediately when {@link #invalidate()} is called — intended to be
+ * wired to the SDK's {@code ToolListChanged} notification.
  *
- * <p>Cache invalidation:
- * <ul>
- *   <li>Automatic: after {@code cacheTtl} elapses since the last fetch</li>
- *   <li>Immediate: call {@link #invalidate()} on {@code ToolListChanged} SDK notification</li>
- * </ul>
- *
- * <p>Default TTL is 60 seconds, configurable via constructor.
+ * <p>Usage:
+ * <pre>
+ *   McpToolRegistry registry = new McpToolRegistry(mcpClient);
+ *   registry.getTools().thenAccept(tools -> ...);
+ *   registry.callTool("read_file", Map.of("path", "/tmp/foo.txt")).thenAccept(result -> ...);
+ * </pre>
  */
 public class McpToolRegistry {
 
     static final Duration DEFAULT_TTL = Duration.ofSeconds(60);
 
     private final McpClient client;
-    private final Duration cacheTtl;
-    private final Clock clock;
+    private final Duration ttl;
 
-    private final AtomicReference<CacheEntry> cacheRef = new AtomicReference<>();
+    /** Cached snapshot; {@code null} means cache is empty (never fetched or invalidated). */
+    private final AtomicReference<CachedSnapshot> cache = new AtomicReference<>(null);
 
     public McpToolRegistry(McpClient client) {
-        this(client, DEFAULT_TTL, Clock.systemUTC());
+        this(client, DEFAULT_TTL);
     }
 
-    public McpToolRegistry(McpClient client, Duration cacheTtl) {
-        this(client, cacheTtl, Clock.systemUTC());
-    }
-
-    /** Package-private constructor for testing with a controllable clock. */
-    McpToolRegistry(McpClient client, Duration cacheTtl, Clock clock) {
+    public McpToolRegistry(McpClient client, Duration ttl) {
         if (client == null) throw new IllegalArgumentException("client must not be null");
-        if (cacheTtl == null || cacheTtl.isNegative() || cacheTtl.isZero()) {
-            throw new IllegalArgumentException("cacheTtl must be positive");
-        }
+        if (ttl == null || ttl.isNegative() || ttl.isZero())
+            throw new IllegalArgumentException("ttl must be positive");
         this.client = client;
-        this.cacheTtl = cacheTtl;
-        this.clock = clock;
+        this.ttl    = ttl;
     }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
 
     /**
-     * Returns the cached tool list, fetching from the MCP server if the cache is
-     * absent or expired.
-     *
-     * @return a future that completes with the (possibly cached) tool list
+     * Returns the cached tool list, fetching from the server if the cache is
+     * empty or expired.
      */
     public CompletableFuture<List<McpTool>> getTools() {
-        CacheEntry current = cacheRef.get();
-        if (current != null && !current.isExpired(clock.instant(), cacheTtl)) {
-            return CompletableFuture.completedFuture(current.tools);
+        CachedSnapshot snapshot = cache.get();
+        if (snapshot != null && !snapshot.isExpired(ttl)) {
+            return CompletableFuture.completedFuture(snapshot.tools());
         }
         return refresh();
     }
 
     /**
-     * Calls a tool by name, delegating to the underlying {@link McpClient}.
+     * Invokes a tool on the underlying {@link McpClient} directly (no caching).
      *
-     * <p>This method does not use the cache — tool calls are always forwarded.
+     * @param name tool name as returned by {@link #getTools()}
+     * @param args arguments conforming to the tool's input schema
      */
-    public CompletableFuture<dev.jentic.core.mcp.McpToolResult> callTool(
-            String name, java.util.Map<String, Object> args) {
+    public CompletableFuture<McpToolResult> callTool(String name, Map<String, Object> args) {
         return client.callTool(name, args);
     }
 
     /**
-     * Immediately invalidates the cache.
+     * Invalidates the cached tool list immediately.
+     * The next call to {@link #getTools()} will trigger a fresh fetch.
      *
-     * <p>Call this when an MCP {@code ToolListChanged} notification is received
-     * from the SDK so the next {@link #getTools()} triggers a fresh fetch.
+     * <p>Wire this to the SDK's {@code ToolListChanged} notification:
+     * <pre>
+     *   sdkClient.addRootNotificationHandler(n -> {
+     *       if (n instanceof McpSchema.ToolListChangedNotification) registry.invalidate();
+     *   });
+     * </pre>
      */
     public void invalidate() {
-        cacheRef.set(null);
+        cache.set(null);
     }
 
-    // --- internals ---
+    // -------------------------------------------------------------------------
+    // Internal
+    // -------------------------------------------------------------------------
 
     private CompletableFuture<List<McpTool>> refresh() {
         return client.listTools().thenApply(tools -> {
-            cacheRef.set(new CacheEntry(tools, clock.instant()));
+            cache.set(new CachedSnapshot(tools, Instant.now()));
             return tools;
         });
     }
 
-    private record CacheEntry(List<McpTool> tools, Instant fetchedAt) {
-        boolean isExpired(Instant now, Duration ttl) {
-            return now.isAfter(fetchedAt.plus(ttl));
+    // -------------------------------------------------------------------------
+    // Snapshot record
+    // -------------------------------------------------------------------------
+
+    private record CachedSnapshot(List<McpTool> tools, Instant fetchedAt) {
+        boolean isExpired(Duration ttl) {
+            return Instant.now().isAfter(fetchedAt.plus(ttl));
         }
     }
 }

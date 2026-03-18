@@ -3,20 +3,14 @@ package dev.jentic.core.mcp;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Represents an MCP tool as exposed by an MCP server.
+ * Immutable representation of a tool advertised by an MCP server.
  *
- * <p>SDK types are mapped to this record in {@code jentic-adapters} via {@code McpToolMapper}.
- *
- * @param name        unique tool name within the MCP server
- * @param description human-readable description of what the tool does
- * @param inputSchema JSON Schema describing the tool's input parameters;
- *                    may be {@code null} if the server does not advertise a schema
+ * @param name        unique tool name within the server
+ * @param description human-readable description shown to the LLM
+ * @param inputSchema JSON Schema describing the tool's input parameters
  */
-public record McpTool(
-        String name,
-        String description,
-        JsonNode inputSchema
-) {
+public record McpTool(String name, String description, JsonNode inputSchema) {
+
     public McpTool {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("McpTool name must not be blank");

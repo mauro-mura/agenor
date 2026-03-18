@@ -40,6 +40,12 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 | [PipelineBehavior](behaviors/PipelineBehavior.md) | Multi-stage transformation |
 | [ReflectionBehavior](behaviors/ReflectionBehavior.md) | LLM output reflection loop |
 
+## Adapters
+
+| Document | Description                                                  |
+|----------|--------------------------------------------------------------|
+| [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Jentic agentss |
+
 ## Examples
 
 Runnable examples with a structured learning path are in `jentic-examples/README.md`.

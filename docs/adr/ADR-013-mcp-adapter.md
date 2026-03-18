@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-03-16  
-**Deciders**: Project team  
+**Deciders**: Project team
 
 ---
 
@@ -74,16 +74,16 @@ McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Jentic)
 jentic-core
   └── dev.jentic.core.mcp
         ├── McpTool.java          (record — no SDK dependency)
-        └── McpToolResult.java    (record — no SDK dependency)
+        ├── McpToolResult.java    (record — no SDK dependency)
+        └── McpClient.java        (interface — CompletableFuture + core types only)
 
 jentic-adapters
   └── dev.jentic.adapters.mcp
-        ├── McpClient.java              (interface — CompletableFuture-based)
-        ├── JenticMcpClientAdapter.java (wraps McpSyncClient)
+        ├── JenticMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
         ├── McpToolMapper.java          (SDK types → Jentic records)
         ├── McpClientFactory.java       (factory: serverUrl → adapter)
         ├── McpToolRegistry.java        (cache TTL 60s + ToolListChanged)
-        └── McpToolBehavior.java        (McpTool → LLMFunction bridge)
+        └── McpFunctionAdapter.java     (McpTool → LLMFunction adapter)
 ```
 
 ### Bridge Pattern
@@ -112,4 +112,6 @@ The transitive Reactor dependency is therefore confined to the adapters module.
 - `JenticMcpClientAdapter` requires a dedicated thread pool for `supplyAsync()` calls (default: `ForkJoinPool.commonPool()`; configurable)
 - `McpClientFactory` performs the MCP handshake (`initialize()`) synchronously at construction time — callers should construct outside hot paths
 - `McpToolRegistry` must handle `ToolListChanged` notifications from the SDK to invalidate its cache immediately
-- Future transport additions (e.g., STDIO for local processes) require no architecture change — only a different `McpTransport` passed to `McpClientFactory`
+- **Supported transports (F2 scope): SSE + STDIO** — SSE via `HttpClientSseClientTransport` (remote servers), STDIO via `StdioClientTransport` (local processes, required by the `npx @modelcontextprotocol/server-filesystem` example in T6)
+- `McpClientFactory` exposes two factory methods: `fromSse(String serverUrl)` and `fromStdio(String command, String... args)`
+- **Streamable-HTTP**: not implemented in F2 — tracked as backlog item for when remote hosted servers adopt the new transport

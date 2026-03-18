@@ -7,55 +7,53 @@ import dev.jentic.core.mcp.McpToolResult;
 import io.modelcontextprotocol.spec.McpSchema;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Maps MCP SDK types to Jentic domain records.
- *
- * <p>All methods are stateless and thread-safe.
+ * Stateless mapper between MCP SDK types and Jentic core records.
  */
 final class McpToolMapper {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private McpToolMapper() {}
 
-    /**
-     * Maps an SDK {@link McpSchema.Tool} to a Jentic {@link McpTool}.
-     */
     static McpTool from(McpSchema.Tool sdkTool) {
-        JsonNode schema = null;
-        if (sdkTool.inputSchema() != null) {
-            schema = MAPPER.valueToTree(sdkTool.inputSchema());
-        }
-        return new McpTool(
-                sdkTool.name(),
-                sdkTool.description(),
-                schema
-        );
+        // inputSchema() returns McpSchema.JsonSchema in SDK 1.0.0; normalize to JsonNode
+        JsonNode schema = toJsonNode(sdkTool.inputSchema());
+        return new McpTool(sdkTool.name(), sdkTool.description(), schema);
     }
 
-    /**
-     * Maps an SDK {@link McpSchema.CallToolResult} to a Jentic {@link McpToolResult}.
-     *
-     * <p>Content blocks are concatenated in order, separated by newlines.
-     */
     static McpToolResult from(McpSchema.CallToolResult sdkResult) {
-        String content = extractContent(sdkResult.content());
+        String content = extractText(sdkResult.content());
         boolean isError = Boolean.TRUE.equals(sdkResult.isError());
         return new McpToolResult(content, isError);
     }
 
-    private static String extractContent(List<McpSchema.Content> blocks) {
-        if (blocks == null || blocks.isEmpty()) {
+    // -------------------------------------------------------------------------
+
+    private static JsonNode toJsonNode(Object inputSchema) {
+        if (inputSchema == null) {
+            return OBJECT_MAPPER.createObjectNode();
+        }
+        try {
+            if (inputSchema instanceof JsonNode node) {
+                return node;
+            }
+            // SDK may return a Map or a raw string — normalize via Jackson
+            return OBJECT_MAPPER.valueToTree(inputSchema);
+        } catch (Exception e) {
+            return OBJECT_MAPPER.createObjectNode();
+        }
+    }
+
+    private static String extractText(List<McpSchema.Content> contents) {
+        if (contents == null || contents.isEmpty()) {
             return "";
         }
-        StringBuilder sb = new StringBuilder();
-        for (McpSchema.Content block : blocks) {
-            if (block instanceof McpSchema.TextContent text) {
-                if (!sb.isEmpty()) sb.append('\n');
-                sb.append(text.text());
-            }
-        }
-        return sb.toString();
+        return contents.stream()
+                .filter(c -> c instanceof McpSchema.TextContent)
+                .map(c -> ((McpSchema.TextContent) c).text())
+                .collect(Collectors.joining("\n"));
     }
 }
