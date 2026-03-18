@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Model Context Protocol (MCP) Integration (ADR-013)**: Support for official MCP SDK to connect external tools to LLM workflows.
+  - `JenticMcpClientAdapter` and `McpClientFactory` for synchronous to asynchronous SDK bridging.
+  - `McpToolRegistry` with TTL support for efficient tool caching and discovery.
+  - `McpFunctionAdapter` to map MCP tools to Jentic function-calling framework.
+  - Core abstractions: `McpClient`, `McpTool`, and `McpToolResult` in `jentic-core`.
+- **MCP Documentation**: Detailed guide for MCP adapter and architecture overview in `docs/adapters/mcp.md`.
+- **MCP Example**: `McpExample` demonstrating Docker-based STDIO transport for MCP servers in `jentic-examples`.
+
+### Changed
+- **Project Structure**: Updated ADR documentation with ADR-013 and expanded `mkdocs.yml` navigation for MCP support.
+
+### Fixed
+- **Documentation**: Fixed version annotation in `ReflectionBehavior.md`.
+
 ## [0.12.0] - 2026-03-14
 
 ### Added
