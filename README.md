@@ -1,4 +1,5 @@
-# Jentic
+
+![jentic](docs/assets/jentic-wordmark.svg)
 
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9%2B-blue.svg)](https://maven.apache.org/)

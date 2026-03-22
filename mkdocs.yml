@@ -7,6 +7,8 @@ repo_name: mauro-mura/jentic
 
 theme:
   name: material
+  logo: assets/jentic-icon.svg
+  favicon: assets/jentic-icon.svg
   palette:
     - scheme: default
       primary: indigo

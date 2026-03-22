@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" role="img" aria-label="jentic">
+  <style>
+    .wordmark   { fill: #0C447C; font-family: system-ui, -apple-system, sans-serif; font-size: 38px; font-weight: 500; letter-spacing: -1.5px; }
+    .i-core     { fill: #185FA5; }
+    .i-halo     { fill: #185FA5; opacity: .18; }
+    .i-sat-a    { fill: #185FA5; opacity: .58; }
+    .i-sat-b    { fill: #185FA5; opacity: .42; }
+    .i-edge     { stroke: #185FA5; fill: none; stroke-width: 0.9; }
+    @media (prefers-color-scheme: dark) {
+      .wordmark   { fill: #B5D4F4; }
+      .i-core     { fill: #378ADD; }
+      .i-halo     { fill: #378ADD; opacity: .22; }
+      .i-sat-a    { fill: #378ADD; opacity: .65; }
+      .i-sat-b    { fill: #378ADD; opacity: .48; }
+      .i-edge     { stroke: #378ADD; }
+    }
+  </style>
+  <!-- Wordmark: "jentic" lowercase -->
+  <text class="wordmark" x="4" y="40">jentic</text>
+  <!-- i-dot cluster (positioned over the dot of "i", approx x=108, y=8) -->
+  <circle class="i-halo" cx="108" cy="8"  r="7"/>
+  <circle class="i-core" cx="108" cy="8"  r="4"/>
+  <!-- Satellite agents -->
+  <circle class="i-sat-a" cx="119" cy="3"  r="2.5"/>
+  <circle class="i-sat-b" cx="97"  cy="2"  r="2"/>
+  <circle class="i-sat-b" cx="121" cy="15" r="2"/>
+  <!-- Connector edges -->
+  <line class="i-edge" x1="112" y1="5"  x2="117" y2="4"/>
+  <line class="i-edge" x1="104" y1="5"  x2="99"  y2="3"/>
+  <line class="i-edge" x1="112" y1="11" x2="119" y2="14"/>
+</svg>
