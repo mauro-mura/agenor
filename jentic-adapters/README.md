@@ -267,20 +267,6 @@ For a detailed guide to the A2A protocol and dialogue patterns see **[`docs/dial
 
 ---
 
-## Future (not yet implemented)
-
-The following adapters may be planned for future releases:
-
-| Adapter | Interface | Notes |
-|---------|-----------|-------|
-| `KafkaMessageService` | `MessageService` | Apache Kafka transport |
-| `ConsulAgentDirectory` | `AgentDirectory` | HashiCorp Consul service registry |
-| `RedisMessageService` | `MessageService` | Redis Pub/Sub transport |
-| `QuartzBehaviorScheduler` | `BehaviorScheduler` | Quartz-based scheduling |
-| `DatabaseMemoryStore` | `MemoryStore` | SQL/NoSQL-backed long-term memory |
-
----
-
 ## See Also
 
 - [`docs/llm-integration.md`](../docs/llm-integration.md) — complete LLM integration guide

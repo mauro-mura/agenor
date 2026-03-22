@@ -165,12 +165,17 @@ Implements the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A):
 
 For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 
-### Planned (not yet implemented)
+### Extension Points
 
-- Kafka `MessageService` adapter
-- Consul `AgentDirectory` adapter
-- Redis `MessageService` adapter
-- Quartz `BehaviorScheduler` adapter
+All core contracts are interfaces. Custom implementations can be plugged in
+without changing agent code:
+
+- `MessageService` → JMS, Kafka, Redis, or any custom transport
+- `AgentDirectory` → database, Consul, etcd, or any registry
+- `BehaviorScheduler` → Quartz, cron, or any scheduler
+- `MemoryStore` → any SQL or NoSQL backend
+
+Community adapters are welcome. See `CONTRIBUTING.md`.
 
 ## 6. Concurrency Model
 
@@ -186,7 +191,7 @@ For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 3) Agents subscribe implicitly via `@JenticMessageHandler(topic)` annotated methods.
 4) Filters registered at subscription time further restrict delivery.
 5) In-memory implementation delivers messages synchronously/asynchronously within the JVM.
-6) Adapters (future) can switch transport (JMS/Kafka) without changing user code.
+6) Custom adapters can switch transport without changing user code
 
 ## 8. Discovery & Lifecycle
 
@@ -231,7 +236,7 @@ Guidelines:
 ## 12. Evolution Path
 
 - MVP: in‑memory runtime for simple single‑JVM systems.
-- Future: JMS + DB adapters, management/CLI, Kafka + Consul, clustering, cloud deployment.
+- See `CONTRIBUTING.md` for how to build and share custom adapters.
 
 See [ADRs](adr/README.md) for rationale and decisions.
 

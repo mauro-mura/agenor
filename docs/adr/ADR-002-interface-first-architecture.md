@@ -38,10 +38,8 @@ public class InMemoryMessageService implements MessageService {
     // In-memory implementation using ConcurrentHashMap
 }
 
-// Advanced implementation in jentic-adapters
-public class KafkaMessageService implements MessageService {
-    // Kafka-based implementation
-}
+// Custom implementations follow the same interface
+public class CustomMessageService implements MessageService { ... }
 ```
 
 ### Implementation Strategy

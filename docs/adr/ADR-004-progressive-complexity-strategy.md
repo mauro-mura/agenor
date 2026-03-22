@@ -12,21 +12,8 @@ Different users have different needs - from simple prototypes to enterprise prod
 
 We will implement a **Progressive Complexity Strategy** where users can start simple and evolve to more sophisticated implementations as needed.
 
-### Evolution Path
-
-```
-Level 1: In-Memory     → Level 2: Persistent    → Level 3: Distributed
-├─ InMemoryMessage     → ├─ JmsMessageService   → ├─ KafkaMessageService
-├─ LocalDirectory      → ├─ DatabaseDirectory   → ├─ ConsulDirectory  
-└─ SimpleScheduler     → └─ QuartzScheduler     → └─ KubernetesScheduler
-```
-
 ### Implementation Strategy
-
-1. **Start Simple**: MVP uses in-memory implementations
-2. **Add Persistence**: V1.1 adds database and JMS options
-3. **Scale Distributed**: V1.2 adds Kafka, Consul, etc.
-4. **Cloud Native**: V2.0 adds Kubernetes, service mesh support
+The framework ships with in-memory implementations that are production-ready for single-JVM deployments. All components are interfaces — users and contributors can provide alternative implementations at any complexity level.
 
 ### Configuration Evolution
 

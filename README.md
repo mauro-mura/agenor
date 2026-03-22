@@ -138,8 +138,8 @@ For details, read the Architecture Guide at docs/architecture.md.
 │ MessageService   │ LLMAgent        │ AnthropicProvider    │
 │ AgentDirectory   │ InMemoryMessage │ OllamaProvider       │
 │ BehaviorScheduler│ LocalDirectory  │ A2A Adapter          │
-│ LLMProvider      │ SimpleScheduler │ (Kafka, Consul…      │
-│ MemoryStore      │ InMemoryStore   │  future)             │
+│ LLMProvider      │ SimpleScheduler │ extensible           │
+│ MemoryStore      │ InMemoryStore   │                      │
 └──────────────────┴─────────────────┴──────────────────────┘
 ```
 
@@ -153,7 +153,7 @@ For details, read the Architecture Guide at docs/architecture.md.
 ### Evolution Path
 
 ```
-MVP (In-Memory) → V1.1 (JMS/DB) → V1.2 (Kafka/Consul) → V2.0 (Cloud)
+All components are interfaces — swap any implementation without changing agent code.
 ```
 
 ## 🔧 Configuration
@@ -170,10 +170,10 @@ jentic:
     basePackage: "com.example.agents"
 
   messaging:
-    provider: in-memory  # Evolution: jms, kafka
+    provider: in-memory 
 
   directory:
-    provider: local      # Evolution: database, consul
+    provider: local      
 ```
 
 ## 📦 Modules
@@ -244,15 +244,6 @@ Web Console and CLI tools.
 - [x] Dialogue protocol (Request, Query, Contract-Net)
 - [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
 
-### Future
-- [ ] JMS message integration
-- [ ] Database-backed agent directory
-- [ ] Docker containerization
-- [ ] Kafka message streaming
-- [ ] Consul service discovery
-- [ ] Agent migration
-- [ ] Clustering support
-- [ ] Kubernetes operators
 
 ## 📚 Examples
 
@@ -350,7 +341,7 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 - Proven multi-agent patterns
 - Gradual complexity adoption
 - Clear migration paths
-- Enterprise-ready evolution
+- Extensible by design — plug in any infrastructure
 
 ## 📄 License
 
