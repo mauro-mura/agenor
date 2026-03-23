@@ -233,14 +233,66 @@ Guidelines:
 - Logging via SLF4J with pluggable backend (logback in tests/examples).
 - Planned: metrics for behavior execution, message throughput, and directory health.
 
-## 12. Evolution Path
+## 12. Guardrails Pipeline
+
+Added in 0.13.0 (ADR-014). The Guardrails Layer intercepts content at two hook points
+inside every `LLMAgent` subclass:
+
+```
+User input
+  → InputGuardrailChain   applyInputGuardrails(input, ctx)
+  → LLMProvider.chat()
+  → OutputGuardrailChain  applyOutputGuardrails(output, ctx)
+  → Consumer
+```
+
+### Core types (`jentic-core` / `dev.jentic.core.guardrail`)
+
+| Type | Role |
+|------|------|
+| `GuardrailResult` | Sealed interface: `Passed \| Modified(newContent) \| Blocked(reason)` |
+| `InputGuardrail` | `@FunctionalInterface` — validates/transforms user input |
+| `OutputGuardrail` | `@FunctionalInterface` — validates/transforms LLM output |
+| `GuardrailContext` | Immutable record: `agentId`, `topic`, `metadata` |
+| `GuardrailViolationException` | Unchecked, extends `JenticException` |
+| `@WithGuardrails` | Annotation for declarative chain wiring |
+
+### Implementations (`jentic-runtime` / `dev.jentic.runtime.guardrail`)
+
+| Class | Type |
+|-------|------|
+| `GuardrailChain` | Fluent builder + sequential execution with short-circuit |
+| `PiiRedactionGuardrail` | Input + Output |
+| `ContentPolicyGuardrail` | Input + Output (YAML blocklist) |
+| `JsonSchemaOutputGuardrail` | Output (Jackson, re-prompt support) |
+| `MaxTokensInputGuardrail` | Input (3 truncation strategies) |
+| `GuardrailAnnotationProcessor` | Reads `@WithGuardrails`, injects chain at registration |
+
+### Wiring
+
+`JenticRuntime.registerAgent()` calls `GuardrailAnnotationProcessor.process(agent)` for every
+`LLMAgent` instance. The processor reads `@WithGuardrails`, instantiates the listed guardrail
+classes via their no-arg constructors, and injects the resulting `GuardrailChain`. Programmatic
+chains set before registration are merged (annotation chain prepended).
+
+### Design decisions (ADR-014)
+
+- `GuardrailResult` as a **sealed interface** (Java 21) enforces exhaustive `switch` at
+  compile time, making silent mishandling of `Blocked` impossible.
+- `LLMAgent` exposes `applyInputGuardrails` / `applyOutputGuardrails` as `protected` hooks;
+  subclasses call them around their own `llmProvider.chat()` invocation.
+- `GuardrailViolationException` is unchecked, consistent with the `JenticException` hierarchy.
+
+See `docs/guardrails.md` for the full developer guide.
+
+## 13. Evolution Path
 
 - MVP: in‑memory runtime for simple single‑JVM systems.
 - See `CONTRIBUTING.md` for how to build and share custom adapters.
 
 See [ADRs](adr/README.md) for rationale and decisions.
 
-## 13. Example Bootstrapping
+## 14. Example Bootstrapping
 
 ```java
 public class Main {
@@ -256,7 +308,7 @@ public class Main {
 
 Agents are discovered, registered, and their behaviors scheduled automatically.
 
-## 14. Glossary
+## 15. Glossary
 
 - Agent: Autonomous unit of computation and coordination.
 - Behavior: Scheduled unit of work owned by an Agent.

@@ -33,11 +33,13 @@ import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.agent.LLMAgent;
 import dev.jentic.runtime.config.DefaultConfigurationLoader;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
 import dev.jentic.runtime.discovery.AnnotationProcessor;
+import dev.jentic.runtime.guardrail.GuardrailAnnotationProcessor;
 import dev.jentic.runtime.lifecycle.LifecycleListener;
 import dev.jentic.runtime.lifecycle.LifecycleManager;
 import dev.jentic.runtime.memory.llm.DefaultLLMMemoryManager;
@@ -251,6 +253,11 @@ public class JenticRuntime {
             	}
             	
             }
+        }
+        
+        // Inject guardrail chain from @WithGuardrails annotation (LLMAgent only)
+        if (agent instanceof LLMAgent llmAgent) {
+            GuardrailAnnotationProcessor.process(llmAgent);
         }
 
         // Create a descriptor and register in a directory
