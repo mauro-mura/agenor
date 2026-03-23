@@ -182,7 +182,7 @@ public final class GuardrailChain {
     }
 
     private static String guardrailName(Object guardrail) {
-        return guardrail.getClass().getSimpleName();
+        return guardrail.getClass().getName();
     }
 
     private static String truncate(String s) {

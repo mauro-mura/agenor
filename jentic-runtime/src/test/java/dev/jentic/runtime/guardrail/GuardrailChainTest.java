@@ -131,17 +131,29 @@ class GuardrailChainTest {
         }
 
         @Test
-        @DisplayName("Blocked exception carries correct blockedBy class name")
+        @DisplayName("Blocked exception carries correct blockedBy class name (FQN)")
         void blocked_carriesGuardrailClassName() {
-            GuardrailChain chain = GuardrailChain.builder()
-                    .addInput(inputBlocked("pii detected"))
+            // PiiRedactionGuardrail returns Passed if no PII found, 
+            // but here we need it to BLOCK to test the blockedBy field.
+            // Since PiiRedactionGuardrail doesn't block by itself, 
+            // let's use a custom class that blocks.
+            
+            class BlockingGuardrail implements InputGuardrail {
+                @Override
+                public CompletableFuture<GuardrailResult> apply(String input, GuardrailContext ctx) {
+                    return CompletableFuture.completedFuture(new GuardrailResult.Blocked("stop"));
+                }
+            }
+
+            GuardrailChain blockingChain = GuardrailChain.builder()
+                    .addInput(new BlockingGuardrail())
                     .build();
 
-            assertThatThrownBy(() -> chain.applyInput("email@example.com", CTX))
+            assertThatThrownBy(() -> blockingChain.applyInput("test", CTX))
                     .isInstanceOf(GuardrailViolationException.class)
                     .satisfies(ex -> {
                         var gve = (GuardrailViolationException) ex;
-                        assertThat(gve.blockedBy()).isNotBlank();
+                        assertThat(gve.blockedBy()).isEqualTo(BlockingGuardrail.class.getName());
                     });
         }
 

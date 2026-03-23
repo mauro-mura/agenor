@@ -95,29 +95,35 @@ jentic-core
         ├── GuardrailViolationException.java
         └── WithGuardrails.java           (@interface annotation)
 
-jentic-runtime
+jentic-adapters (or jentic-runtime)
   └── dev.jentic.runtime.guardrail
         ├── GuardrailChain.java           (builder + sequential execution)
         ├── PiiRedactionGuardrail.java    (Input + Output)
-        ├── ContentPolicyGuardrail.java   (Input, YAML blocklist)
-        ├── JsonSchemaOutputGuardrail.java (Output, Jackson schema)
-        └── MaxTokensInputGuardrail.java  (Input, 3 truncation strategies)
+        ├── ContentPolicyGuardrail.java   (Input + Output)
+        ├── JsonSchemaOutputGuardrail.java (Output)
+        └── MaxTokensInputGuardrail.java  (Input)
 ```
 
 ### Hook Position in `LLMAgent`
 
+`LLMAgent` provides two protected hook methods that subclasses call around their LLM interactions.
+This "utility hook" pattern ensures that guardrails are enforced consistently without forcing 
+a specific LLM provider implementation in the base class.
+
 ```java
-// Pre-input hook
-String processedInput = guardrailChain != null
-    ? applyInputChain(guardrailChain, rawInput, ctx)   // throws GuardrailViolationException on Blocked
-    : rawInput;
-
-LLMResponse llmResponse = callLLM(processedInput);
-
-// Post-output hook
-String processedOutput = guardrailChain != null
-    ? applyOutputChain(guardrailChain, llmResponse.content(), ctx)
-    : llmResponse.content();
+// Subclass implementation example:
+public String chat(String rawInput) {
+    GuardrailContext ctx = GuardrailContext.of(getAgentId());
+    
+    // 1. Pre-input hook
+    String safeInput = applyInputGuardrails(rawInput, ctx); // throws GuardrailViolationException
+    
+    // 2. LLM Call
+    String rawOutput = provider.chat(safeInput);
+    
+    // 3. Post-output hook
+    return applyOutputGuardrails(rawOutput, ctx);
+}
 ```
 
 ### Chain Execution Semantics
@@ -133,7 +139,7 @@ String processedOutput = guardrailChain != null
 ```java
 @WithGuardrails(
     input  = { PiiRedactionGuardrail.class, MaxTokensInputGuardrail.class },
-    output = { ContentPolicyGuardrail.class }
+    output = { PiiRedactionGuardrail.class, ContentPolicyGuardrail.class }
 )
 public class FinanceAgent extends LLMAgent { ... }
 ```
@@ -141,7 +147,7 @@ public class FinanceAgent extends LLMAgent { ... }
 `JenticRuntime` reads the annotation at agent registration time, instantiates guardrails via
 reflection (no-arg constructor), builds and injects a `GuardrailChain`.  
 Programmatic chain configuration and `@WithGuardrails` can be combined: the annotation-derived
-chain is extended with the programmatic guardrails.
+chain is **prepended** to the programmatic guardrails (annotation guardrails run first).
 
 ---
 

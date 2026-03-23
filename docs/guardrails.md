@@ -57,7 +57,7 @@ public no-arg constructor and injects the chain at registration time:
 @JenticAgent("finance-agent")
 @WithGuardrails(
     input  = { PiiRedactionGuardrail.class, MaxTokensInputGuardrail.class },
-    output = { ContentPolicyGuardrail.class }
+    output = { PiiRedactionGuardrail.class, ContentPolicyGuardrail.class }
 )
 public class FinanceAgent extends LLMAgent { ... }
 ```
