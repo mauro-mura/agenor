@@ -7,7 +7,7 @@ This document describes the architecture of Jentic, a modern, interface‑first 
 
 ## 1. Architectural Overview
 
-Jentic embraces an interface‑first, modular architecture. Core contracts live in jentic-core, while minimal, ready‑to‑use implementations live in jentic-runtime. Adapters (LLM providers, A2A) and future enterprise adapters live in jentic-adapters.
+Jentic embraces an interface‑first, modular architecture. Core contracts live in jentic-core, while minimal, ready‑to‑use implementations live in jentic-runtime. Adapters (LLM providers, A2A) live in jentic-adapters.
 
 | jentic-core (interfaces) | jentic-runtime (in-memory impls) | jentic-adapters (integrations) |
 |--------------------------|----------------------------------|--------------------------------|
@@ -18,9 +18,9 @@ Jentic embraces an interface‑first, modular architecture. Core contracts live 
 | Behavior                 | SimpleBehaviorScheduler          | A2A Adapter                    |
 | BehaviorScheduler        | Behaviors (Cyclic…)              | JenticA2AClient                |
 | LLMProvider              | InMemoryStore                    | JenticAgentExecutor            |
-| MemoryStore              | DefaultLLMMemoryManager          | Kafka (future)                 |
-| Condition                | Filters, RateLimiters            | Consul (future)                |
-|                          | Conditions, Dialogue             | Redis (future)                 |
+| MemoryStore              | DefaultLLMMemoryManager          |                                |
+| Condition                | Filters, RateLimiters            |                                |
+|                          | Conditions, Dialogue             |                                |
 
 
 Design goals:

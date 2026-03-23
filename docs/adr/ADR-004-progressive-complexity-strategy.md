@@ -15,30 +15,6 @@ We will implement a **Progressive Complexity Strategy** where users can start si
 ### Implementation Strategy
 The framework ships with in-memory implementations that are production-ready for single-JVM deployments. All components are interfaces — users and contributors can provide alternative implementations at any complexity level.
 
-### Configuration Evolution
-
-```yaml
-# Level 1: Minimal configuration
-jentic:
-  messaging:
-    provider: in-memory
-
-# Level 2: Adding persistence  
-jentic:
-  messaging:
-    provider: database
-    properties:
-      url: jdbc:postgresql://localhost/jentic
-
-# Level 3: Distributed systems
-jentic:
-  messaging:
-    provider: kafka
-    properties:
-      bootstrap-servers: kafka:9092
-      consumer-group: jentic-agents
-```
-
 ### Benefits
 
 - **Low Barrier to Entry**: New users can start immediately
