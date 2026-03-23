@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Guardrails Layer (ADR-014)**: Introduced a declarative interceptor chain for `LLMAgent` to validate and transform inputs and outputs.
+  - Core abstractions in `jentic-core`: `GuardrailResult` (sealed interface), `InputGuardrail`, `OutputGuardrail`, and `GuardrailContext`.
+  - `GuardrailChain` in `jentic-runtime` for sequential execution and short-circuiting on violations.
+  - `@WithGuardrails` annotation for declarative wiring of guardrails to agents.
+  - Built-in implementations: `PiiRedactionGuardrail`, `ContentPolicyGuardrail`, `MaxTokensInputGuardrail`, and `JsonSchemaOutputGuardrail`.
+  - New dedicated guide for Guardrails and `GuardrailsExample` in `jentic-examples`.
 - **Model Context Protocol (MCP) Integration (ADR-013)**: Support for official MCP SDK to connect external tools to LLM workflows.
   - `JenticMcpClientAdapter` and `McpClientFactory` for synchronous to asynchronous SDK bridging.
   - `McpToolRegistry` with TTL support for efficient tool caching and discovery.
@@ -15,9 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Core abstractions: `McpClient`, `McpTool`, and `McpToolResult` in `jentic-core`.
 - **MCP Documentation**: Detailed guide for MCP adapter and architecture overview in `docs/adapters/mcp.md`.
 - **MCP Example**: `McpExample` demonstrating Docker-based STDIO transport for MCP servers in `jentic-examples`.
+- **Branding Assets**: Added official Jentic logo and wordmark to `docs/assets`.
 
 ### Changed
-- **Project Structure**: Updated ADR documentation with ADR-013 and expanded `mkdocs.yml` navigation for MCP support.
+- **Documentation**: Significant refactoring of the documentation structure, including updated ADRs (ADR-002, ADR-004) and a simplified `README.md` with removed outdated roadmap.
+- **Project Structure**: Updated ADR documentation with ADR-013 and expanded `mkdocs.yml` navigation for MCP and Guardrails support.
 
 ### Fixed
 - **Documentation**: Fixed version annotation in `ReflectionBehavior.md`.
