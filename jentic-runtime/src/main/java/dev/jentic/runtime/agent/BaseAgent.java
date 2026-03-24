@@ -283,7 +283,22 @@ public abstract class BaseAgent implements Agent {
             }
         }
     }
-    
+
+    /**
+     * Returns a snapshot of all behaviors currently registered on this agent.
+     *
+     * <p>The returned list is a point-in-time copy; modifications to it do not
+     * affect the agent's behavior collection. Used by
+     * {@code HitlAnnotationProcessor} during agent registration.
+     *
+     * @return immutable snapshot of registered behaviors
+     * @since 0.13.0
+     */
+    public List<Behavior> getBehaviors() {
+        return List.copyOf(behaviors.values());
+    }
+
+
     @Override
     public MessageService getMessageService() {
         return messageService;

@@ -16,6 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import dev.jentic.core.context.AgentContext;
+import dev.jentic.runtime.hitl.ApprovalService;
+import dev.jentic.runtime.hitl.HitlAnnotationProcessor;
+import dev.jentic.runtime.hitl.HumanCheckpointBehavior;
+import dev.jentic.runtime.hitl.InMemoryApprovalGate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +64,10 @@ public class JenticRuntime {
     private final BehaviorScheduler behaviorScheduler;
     private final MemoryStore memoryStore;
     private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
+
+    // HITL: singleton gate and service — lazily initialized, shared across all agents
+    private final InMemoryApprovalGate approvalGate = new InMemoryApprovalGate();
+    private final ApprovalService approvalService = new ApprovalService(approvalGate);
 
     // Discovery components
     private final AgentScanner agentScanner;
@@ -260,6 +268,11 @@ public class JenticRuntime {
             GuardrailAnnotationProcessor.process(llmAgent);
         }
 
+        // Wrap behaviors annotated with @RequiresApproval (BaseAgent and subclasses)
+        if (agent instanceof BaseAgent baseAgent) {
+            HitlAnnotationProcessor.process(baseAgent, approvalGate);
+        }
+
         // Create a descriptor and register in a directory
         AgentDescriptor descriptor = agentFactory.createDescriptor(
                 agent.getClass(),
@@ -374,6 +387,20 @@ public class JenticRuntime {
                 configuration.agents().getAllScanPackages().size(),
                 serviceInstances.size()
         );
+    }
+
+    /**
+     * Returns the singleton {@link ApprovalService} for this runtime.
+     *
+     * <p>External systems (HTTP handlers, tests, webhooks) call this service to
+     * submit human approval decisions for pending {@link HumanCheckpointBehavior}
+     * executions.
+     *
+     * @return the approval service; never {@code null}
+     * @since 0.13.0
+     */
+    public ApprovalService getApprovalService() {
+        return approvalService;
     }
 
     /**
