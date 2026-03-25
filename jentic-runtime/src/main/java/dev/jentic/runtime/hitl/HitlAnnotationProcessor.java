@@ -33,7 +33,7 @@ import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
  * }
  * }</pre>
  *
- * <h3>Wiring logic</h3>
+ * <p><b>Wiring logic</b></p>
  * <ol>
  *   <li>Iterate over all behaviors currently registered on the agent.</li>
  *   <li>For each behavior whose class carries {@link RequiresApproval}:</li>

@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * Returns {@link GuardrailResult.Blocked} on the first match; {@link GuardrailResult.Passed}
  * when no rule matches.
  *
- * <h3>YAML format</h3>
+ * <p><b>YAML format</b></p>
  * <pre>{@code
  * content-policy:
  *   blocked-patterns:

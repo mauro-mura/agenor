@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * }
  * }</pre>
  *
- * <h3>Wiring logic</h3>
+ * <p><b>Wiring logic</b></p>
  * <ol>
  *   <li>If the agent class has no {@code @WithGuardrails} annotation → no-op.</li>
  *   <li>Instantiate each listed {@link InputGuardrail} and {@link OutputGuardrail}
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  *       {@link LLMAgent#setGuardrailChain}.</li>
  * </ol>
  *
- * <h3>Error handling</h3>
+ * <p><b>Error handling</b></p>
  * If a guardrail class listed in the annotation cannot be instantiated
  * (missing no-arg constructor, abstract class, etc.) a
  * {@link GuardrailWiringException} is thrown, which aborts agent registration

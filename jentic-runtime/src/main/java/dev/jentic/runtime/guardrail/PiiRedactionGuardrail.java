@@ -58,7 +58,7 @@ public class PiiRedactionGuardrail implements InputGuardrail, OutputGuardrail {
         /**
          * Italian mobile phone numbers.
          * Covers formats: +393xxxxxxxx, +39 3xx xxxxxxx, 3xx.xxxxxxx, 3xxxxxxxxx, etc.
-         * Uses negative lookbehind (?<!\d) instead of \b so that the optional +39 prefix
+         * Uses negative lookbehind {@code (?<!\d)} instead of {@code \b} so that the optional +39 prefix
          * (which starts with a non-word char) is also captured correctly.
          */
         PHONE_IT(Pattern.compile(

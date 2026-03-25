@@ -7,7 +7,7 @@ import dev.jentic.core.memory.llm.LLMMemoryManager;
  *
  * <p>The runtime detects this interface during agent registration and injects
  * a per-agent {@link LLMMemoryManager} instance automatically, regardless of
- * whether the agent extends {@link dev.jentic.runtime.agent.BaseAgent} or
+ * whether the agent extends {@code BaseAgent} or
  * implements {@link dev.jentic.core.Agent} directly.
  *
  * <p>Agents that extend {@code LLMAgent} already implement this interface
@@ -31,7 +31,6 @@ import dev.jentic.core.memory.llm.LLMMemoryManager;
  *
  * @since 0.10.0
  * @see LLMMemoryManager
- * @see dev.jentic.runtime.agent.LLMAgent
  */
 public interface LLMMemoryAware {
 

@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  *
- * <h3>Timeout format</h3>
+ * <p><b>Timeout format</b></p>
  * The {@link #timeout()} string is parsed as a simple duration:
  * <ul>
  *   <li>{@code "30s"} — 30 seconds</li>

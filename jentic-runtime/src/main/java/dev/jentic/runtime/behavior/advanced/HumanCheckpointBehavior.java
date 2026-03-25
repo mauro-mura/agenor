@@ -7,6 +7,7 @@ import dev.jentic.core.hitl.ApprovalNotifier;
 import dev.jentic.core.hitl.ApprovalRequest;
 import dev.jentic.core.hitl.ApprovalTimeoutException;
 import dev.jentic.runtime.behavior.BaseBehavior;
+import dev.jentic.runtime.hitl.ApprovalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

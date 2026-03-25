@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>{@code properties} — nested per-property schema validation (recursive)</li>
  * </ul>
  *
- * <h3>Execution semantics</h3>
+ * <p><b>Execution semantics</b></p>
  * <ol>
  *   <li>If output is not parseable as JSON → {@link GuardrailResult.Blocked} immediately.</li>
  *   <li>If output is valid JSON and conforms to the schema → {@link GuardrailResult.Passed}.</li>
