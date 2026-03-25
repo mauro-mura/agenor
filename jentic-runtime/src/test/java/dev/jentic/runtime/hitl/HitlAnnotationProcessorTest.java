@@ -1,18 +1,7 @@
 package dev.jentic.runtime.hitl;
 
-import dev.jentic.core.Behavior;
-import dev.jentic.core.BehaviorType;
-import dev.jentic.core.hitl.ApprovalNotifier;
-import dev.jentic.core.hitl.ApprovalRequest;
-import dev.jentic.core.hitl.DefaultApprovalNotifier;
-import dev.jentic.core.hitl.RequiresApproval;
-import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.runtime.behavior.BaseBehavior;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
@@ -20,7 +9,20 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.assertj.core.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import dev.jentic.core.BehaviorType;
+import dev.jentic.core.hitl.ApprovalNotifier;
+import dev.jentic.core.hitl.ApprovalRequest;
+import dev.jentic.core.hitl.DefaultApprovalNotifier;
+import dev.jentic.core.hitl.RequiresApproval;
+import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.behavior.BaseBehavior;
+import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
 
 @DisplayName("HitlAnnotationProcessor")
 class HitlAnnotationProcessorTest {

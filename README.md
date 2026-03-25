@@ -326,6 +326,7 @@ mvn exec:java -pl jentic-examples \
 - [PipelineBehavior](docs/behaviors/PipelineBehavior.md) - Multi-stage data transformation
 - [RetryBehavior](docs/behaviors/RetryBehavior.md) - Automatic retry with back-off
 - [ReflectionBehavior](docs/behaviors/ReflectionBehavior.md) - LLM Generate → Critique → Revise loop
+- [Human-In-The-Loop](docs/behaviors/hitl.md) - Human-In-The-Loop Checkpoint
 
 See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 

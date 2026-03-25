@@ -1,20 +1,23 @@
 package dev.jentic.runtime.hitl;
 
-import dev.jentic.core.Behavior;
-import dev.jentic.runtime.behavior.BaseBehavior;
-import dev.jentic.core.exceptions.JenticException;
-import dev.jentic.core.hitl.ApprovalDecision;
-import dev.jentic.core.hitl.ApprovalNotifier;
-import dev.jentic.core.hitl.DefaultApprovalNotifier;
-import dev.jentic.core.hitl.RequiresApproval;
-import dev.jentic.runtime.agent.BaseAgent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Behavior;
+import dev.jentic.core.exceptions.JenticException;
+import dev.jentic.core.hitl.ApprovalDecision;
+import dev.jentic.core.hitl.ApprovalGate;
+import dev.jentic.core.hitl.ApprovalNotifier;
+import dev.jentic.core.hitl.DefaultApprovalNotifier;
+import dev.jentic.core.hitl.RequiresApproval;
+import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.behavior.BaseBehavior;
+import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
 
 /**
  * Reads the {@link RequiresApproval} annotation from behavior classes registered
@@ -42,7 +45,7 @@ import java.util.Objects;
  *   <li>Add a {@link HumanCheckpointBehavior} wrapping it in its place.</li>
  * </ol>
  *
- * @since 0.14.0
+ * @since 0.13.0
  */
 public final class HitlAnnotationProcessor {
 
@@ -65,7 +68,7 @@ public final class HitlAnnotationProcessor {
      * @throws HitlWiringException if a notifier class cannot be instantiated, or
      *                             if the timeout string cannot be parsed
      */
-    public static void process(BaseAgent agent, InMemoryApprovalGate gate) {
+    public static void process(BaseAgent agent, ApprovalGate gate) {
         Objects.requireNonNull(agent, "agent must not be null");
         Objects.requireNonNull(gate, "gate must not be null");
 
@@ -84,7 +87,6 @@ public final class HitlAnnotationProcessor {
 
             // Build the checkpoint wrapper using the original behavior's action via a delegate
             String checkpointId = behavior.getBehaviorId() + "-checkpoint";
-            @SuppressWarnings("unchecked")
             HumanCheckpointBehavior<Object> checkpoint = new HumanCheckpointBehavior<>(
                     checkpointId,
                     gate,
@@ -187,7 +189,9 @@ public final class HitlAnnotationProcessor {
      * wired at agent bootstrap time.
      */
     public static class HitlWiringException extends JenticException {
-        public HitlWiringException(String message, Throwable cause) {
+        private static final long serialVersionUID = -5557669097342903733L;
+
+		public HitlWiringException(String message, Throwable cause) {
             super(message, cause);
         }
     }

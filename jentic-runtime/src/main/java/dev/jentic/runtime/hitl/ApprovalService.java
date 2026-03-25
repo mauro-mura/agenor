@@ -1,6 +1,7 @@
 package dev.jentic.runtime.hitl;
 
 import dev.jentic.core.hitl.ApprovalDecision;
+import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.core.hitl.ApprovalRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,14 +27,14 @@ public class ApprovalService {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalService.class);
 
-    private final InMemoryApprovalGate gate;
+    private final ApprovalGate gate;
 
     /**
      * Creates an {@code ApprovalService} backed by the given gate.
      *
      * @param gate the approval gate; never {@code null}
      */
-    public ApprovalService(InMemoryApprovalGate gate) {
+    public ApprovalService(ApprovalGate gate) {
         this.gate = Objects.requireNonNull(gate, "gate must not be null");
     }
 

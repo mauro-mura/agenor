@@ -285,14 +285,36 @@ chains set before registration are merged (annotation chain prepended).
 
 See `docs/guardrails.md` for the full developer guide.
 
-## 13. Evolution Path
+## 13. Human-in-the-Loop Checkpoint
+
+Suspends agent behavior execution pending human approval.
+
+```
+Agent → HumanCheckpointBehavior → ApprovalGate (virtual thread parks)
+→ ApprovalNotifier (fire-and-forget)
+← ApprovalService.submit()  (from external system)
+→ resumes with ApprovalDecision (Approved | Rejected | Modified)
+```
+
+Core types (jentic-core / dev.jentic.core.hitl):
+ApprovalRequest, ApprovalDecision (sealed), ApprovalGate, ApprovalNotifier,
+ApprovalTimeoutException, @RequiresApproval
+
+Implementations (jentic-runtime / dev.jentic.runtime.hitl):
+InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
+LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
+
+Access via: runtime.getApprovalService()
+See docs/hitl.md for the full developer guide.
+
+## 14. Evolution Path
 
 - MVP: in‑memory runtime for simple single‑JVM systems.
 - See `CONTRIBUTING.md` for how to build and share custom adapters.
 
 See [ADRs](adr/README.md) for rationale and decisions.
 
-## 14. Example Bootstrapping
+## 15. Example Bootstrapping
 
 ```java
 public class Main {
@@ -308,7 +330,7 @@ public class Main {
 
 Agents are discovered, registered, and their behaviors scheduled automatically.
 
-## 15. Glossary
+## 16. Glossary
 
 - Agent: Autonomous unit of computation and coordination.
 - Behavior: Scheduled unit of work owned by an Agent.

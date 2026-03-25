@@ -166,6 +166,7 @@ graph TD
 - **ADR-002** (Interfaces) enables **ADR-004** (Progressive Complexity)
 - **ADR-003** (Maven Modules) supports **ADR-002** (Interface Architecture)
 - **ADR-006** (Annotations) builds on **ADR-005** (Message Format)
+- **ADR-015** (HITL) builds on ADR-001 (Virtual Threads), ADR-005 (Records), ADR-006 (Annotations), ADR-014 (sealed interface pattern)
 
 ---
 

@@ -103,10 +103,6 @@ public class InMemoryApprovalGate implements ApprovalGate {
         return future;
     }
 
-    // -------------------------------------------------------------------------
-    // Package-private API called by ApprovalService
-    // -------------------------------------------------------------------------
-
     /**
      * Submits a decision for a pending approval request.
      *
@@ -117,7 +113,8 @@ public class InMemoryApprovalGate implements ApprovalGate {
      * @param decision  the human decision
      * @throws IllegalArgumentException if no pending request exists for {@code requestId}
      */
-    void submit(String requestId, ApprovalDecision decision) {
+    @Override
+    public void submit(String requestId, ApprovalDecision decision) {
         CompletableFuture<ApprovalDecision> future = pendingFutures.get(requestId);
         if (future == null) {
             throw new IllegalArgumentException(
@@ -138,7 +135,8 @@ public class InMemoryApprovalGate implements ApprovalGate {
      *
      * @return immutable list of pending {@link ApprovalRequest}s
      */
-    List<ApprovalRequest> getPendingRequests() {
+    @Override
+    public List<ApprovalRequest> getPendingRequests() {
         return List.copyOf(pendingRequests.values());
     }
 

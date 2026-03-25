@@ -26,6 +26,7 @@ Behaviors are the primary mechanism for implementing agent logic. Every behavior
 | `PipelineBehavior` | Multi-stage sequential data transformation |
 | `RetryBehavior` | Automatic retry with configurable back-off |
 | `ReflectionBehavior` | Generate → Critique → Revise loop for LLM output self-improvement |
+| `Human-In-The-Loop` | Human-In-The-Loop Checkpoint |
 
 ## Quick Reference
 
@@ -78,3 +79,4 @@ addBehavior() → [active=true] → execute() loops → stop() → [active=false
 - [PipelineBehavior](PipelineBehavior.md)
 - [RetryBehavior](RetryBehavior.md)
 - [ReflectionBehavior](ReflectionBehavior.md)
+- [Human-In-The-Loop](hitl.md)

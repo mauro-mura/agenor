@@ -40,6 +40,7 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 | [CircuitBreakerBehavior](behaviors/CircuitBreakerBehavior.md) | Fault-tolerance pattern |
 | [PipelineBehavior](behaviors/PipelineBehavior.md) | Multi-stage transformation |
 | [ReflectionBehavior](behaviors/ReflectionBehavior.md) | LLM output reflection loop |
+| [Human-In-The-Loop](behaviors/hitl.md) | Human-in-the-Loop Checkpoint |
 
 ## Adapters
 

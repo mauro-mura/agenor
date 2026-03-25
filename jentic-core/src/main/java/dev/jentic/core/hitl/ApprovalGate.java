@@ -1,5 +1,6 @@
 package dev.jentic.core.hitl;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -35,4 +36,25 @@ public interface ApprovalGate {
      * @return a future that resolves to an {@link ApprovalDecision}; never {@code null}
      */
     CompletableFuture<ApprovalDecision> requestApproval(ApprovalRequest request);
+    
+    /**
+     * Submits a human decision for a pending approval request.
+     *
+     * <p>If the future for {@code requestId} has already completed (e.g. timed out),
+     * this call is a silent no-op.
+     *
+     * @param requestId the UUID of the pending request; never {@code null}
+     * @param decision  the human decision; never {@code null}
+     * @throws IllegalArgumentException if no pending request exists for {@code requestId}
+     */
+    void submit(String requestId, ApprovalDecision decision);
+ 
+    /**
+     * Returns a snapshot of approval requests that are still pending.
+     *
+     * <p>Expired or already-decided requests are not included.
+     *
+     * @return immutable list of pending {@link ApprovalRequest}s
+     */
+    List<ApprovalRequest> getPendingRequests();
 }
