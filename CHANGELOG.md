@@ -5,9 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.13.0] - 2026-03-25
 
 ### Added
+- **Human-in-the-Loop Checkpoint (ADR-015)**: Introduced a mechanism to pause agent execution and wait for human approval before proceeding.
+  - Core abstractions in `jentic-core`: `ApprovalRequest`, `ApprovalDecision`, `ApprovalGate`, `ApprovalNotifier`, and `ApprovalTimeoutException`.
+  - `@RequiresApproval` annotation for declarative wiring of human checkpoints to agents.
+  - Implementation in `jentic-runtime`: `ApprovalService` to manage the lifecycle of approval requests.
+  - Built-in `ApprovalGate` implementations: `InMemoryApprovalGate` for local testing.
+  - Built-in `ApprovalNotifier` implementations: `WebhookApprovalNotifier` for remote notifications and `LoggingApprovalNotifier`.
+  - New dedicated guide for Human-in-the-Loop and `HumanCheckpointBehaviorTest` in `jentic-runtime`.
 - **Guardrails Layer (ADR-014)**: Introduced a declarative interceptor chain for `LLMAgent` to validate and transform inputs and outputs.
   - Core abstractions in `jentic-core`: `GuardrailResult` (sealed interface), `InputGuardrail`, `OutputGuardrail`, and `GuardrailContext`.
   - `GuardrailChain` in `jentic-runtime` for sequential execution and short-circuiting on violations.
@@ -24,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Branding Assets**: Added official Jentic logo and wordmark to `docs/assets`.
 
 ### Changed
-- **Documentation**: Significant refactoring of the documentation structure, including updated ADRs (ADR-002, ADR-004) and a simplified `README.md` with removed outdated roadmap.
-- **Project Structure**: Updated ADR documentation with ADR-013 and expanded `mkdocs.yml` navigation for MCP and Guardrails support.
+- **Documentation**: Significant refactoring of the documentation structure, including updated ADRs (ADR-002, ADR-004, ADR-015) and a simplified `README.md` with removed outdated roadmap.
+- **Project Structure**: Updated ADR documentation with ADR-013, ADR-014, ADR-015 and expanded `mkdocs.yml` navigation for MCP, Guardrails and HITL support.
 
 ### Fixed
 - **Documentation**: Fixed version annotation in `ReflectionBehavior.md`.
