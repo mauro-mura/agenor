@@ -48,6 +48,12 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 |----------|--------------------------------------------------------------|
 | [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Jentic agentss |
 
+## Integrations
+
+| Document                                      | Description                                                  |
+|-----------------------------------------------|--------------------------------------------------------------|
+| [Spring Boot Starter](spring-boot-starter.md) | zero-configuration auto-wiring of `JenticRuntime` into any Spring Boot 3.5.x application |
+
 ## Examples
 
 Runnable examples with a structured learning path are in `jentic-examples/README.md`.
