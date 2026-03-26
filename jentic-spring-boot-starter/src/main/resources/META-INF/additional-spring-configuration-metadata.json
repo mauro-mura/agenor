@@ -1,0 +1,91 @@
+{
+  "properties": [
+    {
+      "name": "jentic.runtime.name",
+      "type": "java.lang.String",
+      "description": "Name of the Jentic runtime instance.",
+      "defaultValue": "jentic-runtime"
+    },
+    {
+      "name": "jentic.runtime.environment",
+      "type": "java.lang.String",
+      "description": "Deployment environment label (e.g. development, staging, production).",
+      "defaultValue": "development"
+    },
+    {
+      "name": "jentic.agents.auto-discovery",
+      "type": "java.lang.Boolean",
+      "description": "Whether to automatically discover and register @JenticAgent classes at startup.",
+      "defaultValue": true
+    },
+    {
+      "name": "jentic.agents.base-package",
+      "type": "java.lang.String",
+      "description": "Root package to scan for @JenticAgent classes. Merged with scan-packages."
+    },
+    {
+      "name": "jentic.agents.scan-packages",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Additional packages to scan for @JenticAgent classes. Merged with base-package."
+    },
+    {
+      "name": "jentic.scheduler.thread-pool-size",
+      "type": "java.lang.Integer",
+      "description": "Number of threads in the behavior scheduler thread pool.",
+      "defaultValue": 10
+    },
+    {
+      "name": "jentic.llm.provider",
+      "type": "java.lang.String",
+      "description": "LLM provider to auto-configure. Requires jentic-adapters on the classpath for any value other than 'none'.",
+      "defaultValue": "none"
+    },
+    {
+      "name": "jentic.llm.api-key",
+      "type": "java.lang.String",
+      "description": "API key for the configured LLM provider. Required for openai and anthropic. Use ${OPENAI_API_KEY} or ${ANTHROPIC_API_KEY} to read from environment variables."
+    },
+    {
+      "name": "jentic.llm.model",
+      "type": "java.lang.String",
+      "description": "Model name to use. Defaults: openai=gpt-4o-mini, anthropic=claude-3-haiku-20240307, ollama=llama3.2."
+    },
+    {
+      "name": "jentic.llm.base-url",
+      "type": "java.lang.String",
+      "description": "Base URL for the LLM server. Used only by the ollama provider.",
+      "defaultValue": "http://localhost:11434"
+    }
+  ],
+  "hints": [
+    {
+      "name": "jentic.llm.provider",
+      "values": [
+        {
+          "value": "none",
+          "description": "No LLM provider. Runtime starts without LLM support (default)."
+        },
+        {
+          "value": "openai",
+          "description": "OpenAI provider. Requires jentic.llm.api-key and jentic-adapters on the classpath."
+        },
+        {
+          "value": "anthropic",
+          "description": "Anthropic provider. Requires jentic.llm.api-key and jentic-adapters on the classpath."
+        },
+        {
+          "value": "ollama",
+          "description": "Ollama local provider. No API key required. Requires jentic-adapters on the classpath."
+        }
+      ]
+    },
+    {
+      "name": "jentic.runtime.environment",
+      "values": [
+        { "value": "development" },
+        { "value": "staging" },
+        { "value": "production" }
+      ]
+    }
+  ]
+}

@@ -37,7 +37,7 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
 
 ```groovy
 dependencies {
-    implementation platform('dev.jentic:jentic-bom:0.13.0-SNAPSHOT')
+    implementation platform('dev.jentic:jentic-bom:0.14.0-SNAPSHOT')
     implementation 'dev.jentic:jentic-core'
     implementation 'dev.jentic:jentic-runtime'
 }
@@ -48,6 +48,7 @@ dependencies {
 - `jentic-core` - Core interfaces and abstractions
 - `jentic-runtime` - Runtime implementations
 - `jentic-adapters` - External system adapters
+- `jentic-spring-boot-starter` - Spring Boot 3.5.x auto-configuration
 - `jentic-tools` - CLI tools and utilities
 
 ## Benefits

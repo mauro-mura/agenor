@@ -1,0 +1,159 @@
+package dev.jentic.autoconfigure;
+
+import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.runtime.JenticRuntime;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Tests for the LLM conditional beans in {@link JenticAutoConfiguration}.
+ *
+ * <p>These tests use a filtered context runner that simulates the presence / absence
+ * of {@code jentic-adapters} by checking whether the real factory class is available.
+ * In the test classpath, {@code jentic-adapters} IS present (test scope dependency),
+ * so {@link JenticAutoConfiguration.LlmConfiguration} will be active.
+ * Tests that require adapters to be absent use mocks / property-only assertions.
+ */
+class JenticLlmAutoConfigurationTest {
+
+    private final ApplicationContextRunner runner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(JenticAutoConfiguration.class));
+
+    // --- provider=none (default) ---
+
+    @Test
+    void noLlmBeanCreatedWhenProviderIsNone() {
+        runner.run(ctx -> {
+            assertThat(ctx).doesNotHaveBean(LLMProvider.class);
+            assertThat(ctx).hasSingleBean(JenticRuntime.class);
+        });
+    }
+
+    @Test
+    void noLlmBeanCreatedWhenProviderPropertyAbsent() {
+        runner.run(ctx -> assertThat(ctx).doesNotHaveBean(LLMProvider.class));
+    }
+
+    // --- provider=openai ---
+
+    @Test
+    void openAiProviderCreatedWhenConfigured() {
+        runner
+            .withPropertyValues(
+                "jentic.llm.provider=openai",
+                "jentic.llm.api-key=sk-test-key",
+                "jentic.llm.model=gpt-4o-mini"
+            )
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(LLMProvider.class);
+                LLMProvider provider = ctx.getBean(LLMProvider.class);
+                assertThat(provider.getProviderName()).containsIgnoringCase("openai");
+            });
+    }
+
+    @Test
+    void openAiProviderFailsFastWhenApiKeyMissing() {
+        runner
+            .withPropertyValues("jentic.llm.provider=openai")
+            .run(ctx ->
+                assertThat(ctx).hasFailed()
+                    .getFailure()
+                    .hasMessageContaining("jentic.llm.api-key"));
+    }
+
+    @Test
+    void openAiProviderUsesDefaultModelWhenNotSpecified() {
+        runner
+            .withPropertyValues(
+                "jentic.llm.provider=openai",
+                "jentic.llm.api-key=sk-test-key"
+                // no model specified — should default to gpt-4o-mini
+            )
+            .run(ctx -> assertThat(ctx).hasSingleBean(LLMProvider.class));
+    }
+
+    // --- provider=anthropic ---
+
+    @Test
+    void anthropicProviderCreatedWhenConfigured() {
+        runner
+            .withPropertyValues(
+                "jentic.llm.provider=anthropic",
+                "jentic.llm.api-key=sk-ant-test",
+                "jentic.llm.model=claude-3-haiku-20240307"
+            )
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(LLMProvider.class);
+                LLMProvider provider = ctx.getBean(LLMProvider.class);
+                assertThat(provider.getProviderName()).containsIgnoringCase("anthropic");
+            });
+    }
+
+    @Test
+    void anthropicProviderFailsFastWhenApiKeyMissing() {
+        runner
+            .withPropertyValues("jentic.llm.provider=anthropic")
+            .run(ctx ->
+                assertThat(ctx).hasFailed()
+                    .getFailure()
+                    .hasMessageContaining("jentic.llm.api-key"));
+    }
+
+    // --- provider=ollama ---
+
+    @Test
+    void ollamaProviderCreatedWhenConfigured() {
+        runner
+            .withPropertyValues(
+                "jentic.llm.provider=ollama",
+                "jentic.llm.base-url=http://localhost:11434",
+                "jentic.llm.model=llama3.2"
+            )
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(LLMProvider.class);
+                LLMProvider provider = ctx.getBean(LLMProvider.class);
+                assertThat(provider.getProviderName()).containsIgnoringCase("ollama");
+            });
+    }
+
+    @Test
+    void ollamaProviderUsesDefaultBaseUrlWhenNotSpecified() {
+        runner
+            .withPropertyValues("jentic.llm.provider=ollama")
+            // no base-url, no api-key needed for ollama
+            .run(ctx -> assertThat(ctx).hasSingleBean(LLMProvider.class));
+    }
+
+    // --- user override ---
+
+    @Test
+    void userLlmProviderBeanTakesPrecedenceOverAutoConfigured() {
+        runner
+            .withPropertyValues(
+                "jentic.llm.provider=openai",
+                "jentic.llm.api-key=sk-test-key"
+            )
+            .withUserConfiguration(UserLlmConfig.class)
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(LLMProvider.class);
+                // The user mock wins — auto-configured bean must not have been created
+                LLMProvider provider = ctx.getBean(LLMProvider.class);
+                assertThat(provider.getProviderName()).isEqualTo("user-mock");
+            });
+    }
+
+    // --- support config ---
+
+    @org.springframework.context.annotation.Configuration
+    static class UserLlmConfig {
+        @org.springframework.context.annotation.Bean
+        LLMProvider llmProvider() {
+            LLMProvider mock = org.mockito.Mockito.mock(LLMProvider.class);
+            org.mockito.Mockito.when(mock.getProviderName()).thenReturn("user-mock");
+            return mock;
+        }
+    }
+}

@@ -35,6 +35,7 @@
         <module>jentic-core</module>
         <module>jentic-runtime</module>
         <module>jentic-adapters</module>
+        <module>jentic-spring-boot-starter</module>
         <module>jentic-examples</module>
         <module>jentic-tools</module>
     </modules>

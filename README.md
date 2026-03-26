@@ -223,6 +223,31 @@ Web Console and CLI tools.
 </dependency>
 ```
 
+### jentic-spring-boot-starter
+ 
+Zero-configuration Spring Boot 3.5.x integration. Auto-wires `JenticRuntime` and
+optionally an `LLMProvider` from `application.yml`. Includes Actuator health indicator.
+ 
+```xml
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-spring-boot-starter</artifactId>
+    <version>0.14.0-SNAPSHOT</version>
+</dependency>
+```
+ 
+`application.yml`:
+```yaml
+jentic:
+  agents:
+    base-package: com.example.agents
+  llm:
+    provider: openai          # none | openai | anthropic | ollama
+    api-key: ${OPENAI_API_KEY}
+```
+ 
+That's it — `JenticRuntime` is started and stopped automatically by the Spring lifecycle.
+
 ## 🚀 Features
 
 ### Current (MVP)
@@ -244,6 +269,7 @@ Web Console and CLI tools.
 - [x] LLM integration with memory management (context window strategies)
 - [x] Dialogue protocol (Request, Query, Contract-Net)
 - [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
+- [x] Spring Boot 3.5.x auto-configuration (jentic-spring-boot-starter)
 
 
 ## 📚 Examples

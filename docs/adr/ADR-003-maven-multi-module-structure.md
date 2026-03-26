@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
+**Last Modified**: 2026-03-26 
 **Authors**: Project Team  
 
 ### Context
@@ -19,6 +20,7 @@ jentic/
 ├── jentic-core/          # Core interfaces only
 ├── jentic-runtime/       # Basic implementations  
 ├── jentic-adapters/      # Enterprise implementations
+├── jentic-spring-boot-starter/    # Spring Boot 3.5.x auto-configuration
 ├── jentic-examples/      # Usage examples
 └── jentic-tools/         # CLI and utilities
 ```
@@ -30,6 +32,10 @@ jentic/
 3. **jentic-adapters**: Depends on jentic-core + external systems
 4. **jentic-examples**: Can depend on any module
 5. **jentic-tools**: Depends on jentic-runtime
+6. **jentic-spring-boot-starter**: Depends on jentic-runtime (mandatory) and
+   jentic-adapters (optional). All Spring Boot dependencies declared optional=true —
+   no Spring Boot on the transitive classpath of non-Spring consumers.
+   See ADR-016.
 
 ### Benefits
 
@@ -53,6 +59,7 @@ jentic/
     <module>jentic-core</module>
     <module>jentic-runtime</module>
     <module>jentic-adapters</module>
+    <module>jentic-spring-boot-starter</module>
     <module>jentic-examples</module>
     <module>jentic-tools</module>
 </modules>

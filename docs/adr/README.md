@@ -4,26 +4,26 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 
 ## ADR Index
 
-| #                                                          | Title                                | Status | Date       |
-|------------------------------------------------------------|--------------------------------------|---------|------------|
-| [ADR-001](ADR-001-use-java-21-with-virtual-threads.md)     | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
-| [ADR-002](ADR-002-interface-first-architecture.md)         | Interface-First Architecture         | Accepted | 2025-09-16 |
-| [ADR-003](ADR-003-maven-multi-module-structure.md)         | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
-| [ADR-004](ADR-004-progressive-complexity-strategy.md)      | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
-| [ADR-005](ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records     | Accepted | 2025-09-16 |
-| [ADR-006](ADR-006-annotation-based-agent-configuration.md) | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
-| [ADR-007](ADR-007-llm-core.md)                             | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
-| [ADR-008](ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
-| [ADR-009](ADR-009-agent-dialogue-protocol.md)              | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
-| [ADR-010](ADR-010-llm-memory-management.md)                | LLM Memory Management                | Accepted | 2025-12-23 |
-| [ADR-011](ADR-011-knowledge-store-core.md)                 | KnowledgeStore as Core Interface     | Accepted | 2026-03-05 |
-| [ADR-012](ADR-012-reflection-behavior.md)                  | ReflectionStrategy as Core Interface     | Accepted | 2026-03-12 |
-| [ADR-013](ADR-013-mcp-adapter.md)                          | MCP Adapter     | Accepted | 2026-03-16 |
-| [ADR-014](ADR-014-guardrails-layer.md)                     | Guardrails Layer     | Accepted | 2026-03-23 |
-| [ADR-015](ADR-015-hitl-checkpoint.md)                      | Human-in-the-Loop Checkpoint     | Accepted | 2026-03-24 |
+| #                                                                   | Title                                    | Status   | Date       |
+|---------------------------------------------------------------------|------------------------------------------|----------|------------|
+| [ADR-001](ADR-001-use-java-21-with-virtual-threads.md)              | Use Java 21 with Virtual Threads         | Accepted | 2025-09-16 |
+| [ADR-002](ADR-002-interface-first-architecture.md)                  | Interface-First Architecture             | Accepted | 2025-09-16 |
+| [ADR-003](ADR-003-maven-multi-module-structure.md)                  | Maven Multi-Module Structure             | Accepted | 2025-09-16 |
+| [ADR-004](ADR-004-progressive-complexity-strategy.md)               | Progressive Complexity Strategy          | Accepted | 2025-09-16 |
+| [ADR-005](ADR-005-json-message-format-with-records.md)              | JSON Message Format with Records         | Accepted | 2025-09-16 |
+| [ADR-006](ADR-006-annotation-based-agent-configuration.md)          | Annotation-Based Agent Configuration     | Accepted | 2025-09-16 |
+| [ADR-007](ADR-007-llm-core.md)                                      | LLMProvider as Core Interface            | Accepted | 2025-11-04 |
+| [ADR-008](ADR-008-WebConsole-Interface-First.md)                    | WebConsole Interface-First Design        | Accepted | 2025-11-26 |
+| [ADR-009](ADR-009-agent-dialogue-protocol.md)                       | Agent Dialogue Protocol                  | Accepted | 2025-12-13 |
+| [ADR-010](ADR-010-llm-memory-management.md)                         | LLM Memory Management                    | Accepted | 2025-12-23 |
+| [ADR-011](ADR-011-knowledge-store-core.md)                          | KnowledgeStore as Core Interface         | Accepted | 2026-03-05 |
+| [ADR-012](ADR-012-reflection-behavior.md)                           | ReflectionStrategy as Core Interface     | Accepted | 2026-03-12 |
+| [ADR-013](ADR-013-mcp-adapter.md)                                   | MCP Adapter                              | Accepted | 2026-03-16 |
+| [ADR-014](ADR-014-guardrails-layer.md)                              | Guardrails Layer                         | Accepted | 2026-03-23 |
+| [ADR-015](ADR-015-hitl-checkpoint.md)                               | Human-in-the-Loop Checkpoint             | Accepted | 2026-03-24 |
+| [ADR-016](ADR-016-spring-boot-starter.md)                           | Spring Boot Starter Module               | Proposed | 2026-03-26 |
 
 ---
-
 
 ## How to Use This ADR Collection
 
@@ -56,13 +56,14 @@ When creating new ADRs, use this template:
 
 **Status**: [Proposed/Accepted/Deprecated/Rejected]  
 **Date**: YYYY-MM-DD  
+**Last Modified**: YYYY-MM-DD
 **Authors**: [List of authors]  
 **Replaces**: [ADR number if replacing an existing decision]  
 **Replaced By**: [ADR number if this decision was superseded]  
 
 ## Context
 
-[Describe the forces at play, including technological, political, social, and project local. These forces are probably in tension, and should be called out as such.]
+[Describe the forces at play, including technological, political, social, and project local.]
 
 ## Decision
 
@@ -93,7 +94,7 @@ When creating new ADRs, use this template:
 - [List negative consequences]
 
 ### Neutral
-- [List neutral consequences that are neither clearly positive nor negative]
+- [List neutral consequences]
 
 ## Compliance
 
@@ -106,20 +107,10 @@ When creating new ADRs, use this template:
 
 ---
 
-
 ## Future ADRs
 
-New ADRs will be created when architectural decisions are needed. ADRs are created on-demand, not planned in advance, to maintain flexibility and avoid premature commitments.
-
-Common architectural topics that may require future ADRs include:
-- Error handling strategies
-- Configuration management approaches  
-- Logging and observability patterns
-- Testing strategies for distributed systems
-- Plugin/extension architectures
-- Security models and authentication
-- Performance monitoring and profiling
-- Deployment patterns and strategies
+New ADRs will be created when architectural decisions are needed. ADRs are created on-demand,
+not planned in advance, to maintain flexibility and avoid premature commitments.
 
 When a new architectural decision is required:
 1. Assess if it warrants an ADR (significant impact, affects multiple components, long-term implications)
@@ -128,6 +119,7 @@ When a new architectural decision is required:
 4. Update this index when the ADR is accepted
 
 ---
+
 ## Decision History
 
 ### Major Architectural Phases
@@ -142,10 +134,10 @@ When a new architectural decision is required:
 - Establish quality practices
 - Set operational guidelines
 
-**Phase 3 - Enterprise - Future**
+**Phase 3 - Enterprise**
 - Advanced features and extensibility
 - Production-ready capabilities
-- Enterprise integration patterns
+- Enterprise integration patterns (Spring Boot starter, HITL, Guardrails)
 
 ### Technology Evolution
 
@@ -156,8 +148,10 @@ graph TD
     C --> D[Progressive Complexity]
     D --> E[JSON + Records]
     E --> F[Annotation Config]
-    F --> G[Future: Plugin Architecture]
-    G --> H[Future: Security Model]
+    F --> G[LLMProvider Core]
+    G --> H[MCP Adapter]
+    H --> I[Guardrails + HITL]
+    I --> J[Spring Boot Starter]
 ```
 
 ### Decision Dependencies
@@ -166,7 +160,8 @@ graph TD
 - **ADR-002** (Interfaces) enables **ADR-004** (Progressive Complexity)
 - **ADR-003** (Maven Modules) supports **ADR-002** (Interface Architecture)
 - **ADR-006** (Annotations) builds on **ADR-005** (Message Format)
-- **ADR-015** (HITL) builds on ADR-001 (Virtual Threads), ADR-005 (Records), ADR-006 (Annotations), ADR-014 (sealed interface pattern)
+- **ADR-015** (HITL) builds on ADR-001, ADR-005, ADR-006, ADR-014
+- **ADR-016** (Spring Boot Starter) builds on ADR-003, ADR-004, ADR-007
 
 ---
 
@@ -178,6 +173,7 @@ graph TD
 - [Java 21 Documentation](https://docs.oracle.com/en/java/javase/21/)
 - [Project Loom Documentation](https://openjdk.org/projects/loom/)
 - [Maven Multi-Module Best Practices](https://maven.apache.org/guides/mini/guide-multiple-modules.html)
+- [Spring Boot Auto-configuration](https://docs.spring.io/spring-boot/reference/using/auto-configuration.html)
 
 ### Related Projects
 
@@ -194,5 +190,5 @@ graph TD
 
 ---
 
-
-> **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated. Always check the status and date of each ADR to ensure you're working with current architectural decisions.
+> **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated.
+> Always check the status and date of each ADR to ensure you're working with current architectural decisions.
