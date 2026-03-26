@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Spring Boot Starter (ADR-016)**: Introduced `jentic-spring-boot-starter` for seamless integration with Spring Boot applications.
+  - Auto-configuration for `JenticRuntime` based on classpath scanning and configuration properties.
+  - Support for `JenticProperties` to configure agent packages, LLM providers, and memory settings.
+  - Dedicated documentation guide for Spring Boot Starter in `docs/spring-boot-starter.md`.
+
+### Changed
+- **Documentation**: Standardized documentation headers and formatting across core and runtime packages for better consistency.
+- **Project Structure**: Updated parent `pom.xml` and module-specific configurations to include the new Spring Boot Starter module.
+
 ## [0.13.0] - 2026-03-25
 
 ### Added
