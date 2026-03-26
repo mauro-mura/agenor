@@ -269,7 +269,11 @@ That's it — `JenticRuntime` is started and stopped automatically by the Spring
 - [x] LLM integration with memory management (context window strategies)
 - [x] Dialogue protocol (Request, Query, Contract-Net)
 - [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
-- [x] Spring Boot 3.5.x auto-configuration (jentic-spring-boot-starter)
+- [x] Reflection Pattern
+- [x] Human-in-the-Loop Checkpoint
+- [x] Guardrail layer
+- [x] MCP adapter
+- [x] Spring Boot 3.5.x autoconfiguration (jentic-spring-boot-starter)
 
 
 ## 📚 Examples

@@ -9,8 +9,13 @@
     {
       "name": "jentic.runtime.environment",
       "type": "java.lang.String",
-      "description": "Deployment environment label (e.g. development, staging, production).",
+      "description": "Deployment environment label. Accepted values: development, staging, production, test.",
       "defaultValue": "development"
+    },
+    {
+      "name": "jentic.runtime.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "Arbitrary key/value pairs forwarded to JenticConfiguration.RuntimeConfig.properties."
     },
     {
       "name": "jentic.agents.auto-discovery",
@@ -29,10 +34,43 @@
       "description": "Additional packages to scan for @JenticAgent classes. Merged with base-package."
     },
     {
+      "name": "jentic.agents.scan-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Legacy alias for scan-packages, kept for compatibility with jentic.yml format. Merged with scan-packages and base-package."
+    },
+    {
+      "name": "jentic.scheduler.provider",
+      "type": "java.lang.String",
+      "description": "Behavior scheduler implementation to use.",
+      "defaultValue": "simple"
+    },
+    {
       "name": "jentic.scheduler.thread-pool-size",
       "type": "java.lang.Integer",
       "description": "Number of threads in the behavior scheduler thread pool.",
       "defaultValue": 10
+    },
+    {
+      "name": "jentic.messaging.provider",
+      "type": "java.lang.String",
+      "description": "Message service implementation to use.",
+      "defaultValue": "inmemory"
+    },
+    {
+      "name": "jentic.messaging.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "Provider-specific messaging properties."
+    },
+    {
+      "name": "jentic.directory.provider",
+      "type": "java.lang.String",
+      "description": "Agent directory implementation to use.",
+      "defaultValue": "local"
+    },
+    {
+      "name": "jentic.directory.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "Provider-specific directory properties."
     },
     {
       "name": "jentic.llm.provider",
@@ -84,7 +122,26 @@
       "values": [
         { "value": "development" },
         { "value": "staging" },
-        { "value": "production" }
+        { "value": "production" },
+        { "value": "test" }
+      ]
+    },
+    {
+      "name": "jentic.messaging.provider",
+      "values": [
+        { "value": "inmemory", "description": "In-memory message bus (default, suitable for single-node)." }
+      ]
+    },
+    {
+      "name": "jentic.directory.provider",
+      "values": [
+        { "value": "local", "description": "Local in-memory agent directory (default)." }
+      ]
+    },
+    {
+      "name": "jentic.scheduler.provider",
+      "values": [
+        { "value": "simple", "description": "Simple thread-pool scheduler (default)." }
       ]
     }
   ]
