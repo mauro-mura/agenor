@@ -1,10 +1,9 @@
 # ADR-016: Spring Boot Starter Module
 
-**Status**: Proposed  
+**Status**: Accepted  
 **Date**: 2026-03-26  
 **Authors**: Jentic Team  
-**Replaces**: —  
-**Replaced By**: —  
+  
 
 ## Context
 
