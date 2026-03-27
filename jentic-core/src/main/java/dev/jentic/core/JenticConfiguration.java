@@ -8,6 +8,15 @@ import java.util.*;
 /**
  * Configuration object for the Jentic framework.
  * Can be loaded from YAML, JSON, or properties files.
+ * 
+ * @param runtime   runtime identity settings (name, environment, properties);
+ *                  defaults to {@link RuntimeConfig#defaults()} if null
+ * @param agents    agent discovery and scanning configuration;
+ *                  defaults to {@link AgentsConfig#defaults()} if null
+ * @param messaging messaging provider configuration; defaults applied if null
+ * @param directory agent directory provider configuration; defaults applied if null
+ * @param scheduler behavior scheduler configuration; defaults applied if null
+ * @since 0.1.0
  */
 public record JenticConfiguration(
     @JsonProperty("runtime") RuntimeConfig runtime,
@@ -32,6 +41,14 @@ public record JenticConfiguration(
         this.scheduler = scheduler != null ? scheduler : SchedulerConfig.defaults();   // Optional in Phase 2
     }
 
+    /**
+     * Runtime identity settings.
+     *
+     * @param name        runtime instance name; default {@code jentic-runtime}
+     * @param environment environment label ({@code development}, {@code staging},
+     *                    {@code production}, {@code test}); default {@code development}
+     * @param properties  arbitrary key/value pairs available to agents at runtime
+     */
     public record RuntimeConfig(
             @JsonProperty("name") String name,
             @JsonProperty("environment") String environment,
@@ -67,6 +84,17 @@ public record JenticConfiguration(
         );
     }
 
+    /**
+     * Agent discovery and scanning configuration.
+     *
+     * @param autoDiscovery whether to scan for {@code @JenticAgent} classes at startup
+     * @param basePackage   primary root package to scan; merged into {@code scanPackages}
+     * @param scanPaths     legacy alias for additional packages (kept for YAML compatibility);
+     *                      merged into {@code scanPackages} at construction time
+     * @param scanPackages  merged, deduplicated list of all packages to scan
+     *                      (computed from {@code basePackage}, {@code scanPaths}, and explicit entries)
+     * @param properties    arbitrary key/value pairs forwarded to agent factories
+     */
     public record AgentsConfig(
             @JsonProperty("autoDiscovery") boolean autoDiscovery,
             @JsonProperty("basePackage") String basePackage,
@@ -125,6 +153,13 @@ public record JenticConfiguration(
         }
     }
 
+    /**
+     * Messaging provider configuration.
+     *
+     * @param provider   messaging implementation identifier (e.g. {@code inmemory});
+     *                   default {@code inmemory}
+     * @param properties provider-specific configuration key/value pairs
+     */
     public record MessagingConfig(
             @JsonProperty("provider") String provider,
             @JsonProperty("properties") Map<String, String> properties
@@ -144,6 +179,13 @@ public record JenticConfiguration(
         }
     }
 
+    /**
+     * Agent directory provider configuration.
+     *
+     * @param provider   directory implementation identifier (e.g. {@code local});
+     *                   default {@code local}
+     * @param properties provider-specific configuration key/value pairs
+     */
     public record DirectoryConfig(
             @JsonProperty("provider") String provider,
             @JsonProperty("properties") Map<String, String> properties
@@ -163,6 +205,14 @@ public record JenticConfiguration(
         }
     }
 
+    /**
+     * Behavior scheduler configuration.
+     *
+     * @param provider       scheduler implementation identifier (e.g. {@code simple});
+     *                       default {@code simple}
+     * @param threadPoolSize thread pool size for behavior execution; default {@code 10}
+     * @param properties     provider-specific configuration key/value pairs
+     */
     public record SchedulerConfig(
             @JsonProperty("provider") String provider,
             @JsonProperty("threadPoolSize") int threadPoolSize,

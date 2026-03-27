@@ -6,14 +6,6 @@ import java.time.Instant;
 /**
  * Statistics and metrics about memory usage.
  * 
- * <p>Provides information about:
- * <ul>
- *   <li>Number of entries per scope</li>
- *   <li>Estimated token usage (for LLM context)</li>
- *   <li>Last update timestamp</li>
- *   <li>Storage size estimates</li>
- * </ul>
- * 
  * <p>Example usage:
  * <pre>{@code
  * MemoryStats stats = memoryManager.getStats();
@@ -24,6 +16,11 @@ import java.time.Instant;
  * System.out.println("Last updated: " + stats.lastUpdated());
  * }</pre>
  * 
+ * @param shortTermCount    number of entries in {@link MemoryScope#SHORT_TERM}
+ * @param longTermCount     number of entries in {@link MemoryScope#LONG_TERM}
+ * @param estimatedTokens   approximate total LLM token count across all entries
+ * @param lastUpdated       instant at which these statistics were last computed
+ * @param estimatedSizeBytes approximate total serialised size in bytes
  * @since 0.6.0
  */
 public record MemoryStats(

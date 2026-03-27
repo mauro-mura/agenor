@@ -286,12 +286,7 @@ public interface Agent {
      * </ul>
      *
      * <p><strong>Not Found:</strong> If no behavior exists with the given ID,
-     * this method should either:
-     * <ul>
-     *   <li>Silently succeed (no-op)</li>
-     *   <li>Log a warning</li>
-     *   <li>Throw {@link IllegalArgumentException} (implementation-dependent)</li>
-     * </ul>
+     * this method is a no-op.
      *
      * <p><strong>Thread Safety:</strong> This method must be thread-safe and can
      * be called concurrently with behavior execution and other lifecycle operations.

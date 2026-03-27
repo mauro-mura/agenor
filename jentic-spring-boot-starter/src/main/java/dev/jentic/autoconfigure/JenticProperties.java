@@ -42,6 +42,13 @@ import java.util.Map;
  *     api-key: ${OPENAI_API_KEY}
  *     model: gpt-4o-mini
  * }</pre>
+ * 
+ * @param runtime   runtime identity configuration (name, environment)
+ * @param agents    agent discovery and package scanning settings
+ * @param scheduler behavior scheduler settings (provider, thread pool)
+ * @param messaging messaging provider settings
+ * @param directory agent directory provider settings
+ * @param llm       LLM provider configuration (provider, api-key, model)
  */
 @ConfigurationProperties(prefix = "jentic")
 public record JenticProperties(
@@ -53,20 +60,33 @@ public record JenticProperties(
         @DefaultValue Llm llm
 ) {
 
-    // ── Runtime ───────────────────────────────────────────────────────────────
-
+	/**
+	 * Runtime
+	 * 
+     * @param name        runtime instance name; default {@code jentic-runtime}
+     * @param environment environment label ({@code development}, {@code staging},
+     *                    {@code production}, {@code test}); default {@code development}
+     * @param properties  arbitrary key/value pairs forwarded to {@code RuntimeConfig}
+     */
     public record Runtime(
             @DefaultValue("jentic-runtime") String name,
             @DefaultValue("development") String environment,
             @DefaultValue Map<String, String> properties
     ) {}
 
-    // ── Agents ────────────────────────────────────────────────────────────────
-
     /**
+     * Agents
+     * 
      * {@code base-package} and {@code scan-packages} are both merged into
      * {@link JenticConfiguration.AgentsConfig} by the core constructor.
      * {@code scan-paths} is kept as a legacy alias consistent with the native YAML format.
+     * 
+     * @param autoDiscovery  whether to scan for {@code @JenticAgent} classes at startup;
+     *                       default {@code true}
+     * @param basePackage    root package to scan for agents
+     * @param scanPackages   additional packages to scan (merged with {@code basePackage})
+     * @param scanPaths      legacy alias for {@code scan-packages}; kept for compatibility
+     *                       with native {@code jentic.yml} format
      */
     public record Agents(
             @DefaultValue("true") boolean autoDiscovery,
@@ -75,29 +95,50 @@ public record JenticProperties(
             @DefaultValue List<String> scanPaths
     ) {}
 
-    // ── Scheduler ─────────────────────────────────────────────────────────────
-
+    /**
+     * Scheduler
+     * 
+     * @param provider       scheduler implementation; default {@code simple}
+     * @param threadPoolSize thread pool size for behavior execution; default {@code 10}
+     */
     public record Scheduler(
             @DefaultValue("simple") String provider,
             @DefaultValue("10") int threadPoolSize
     ) {}
 
-    // ── Messaging ─────────────────────────────────────────────────────────────
-
+    /**
+     * Messaging
+     * 
+     * @param provider   messaging provider implementation; default {@code inmemory}
+     * @param properties provider-specific configuration key/value pairs
+     */
     public record Messaging(
             @DefaultValue("inmemory") String provider,
             @DefaultValue Map<String, String> properties
     ) {}
 
-    // ── Directory ─────────────────────────────────────────────────────────────
-
+    /**
+     * Directory
+     * 
+     * @param provider   agent directory implementation; default {@code local}
+     * @param properties provider-specific configuration key/value pairs
+     */
     public record Directory(
             @DefaultValue("local") String provider,
             @DefaultValue Map<String, String> properties
     ) {}
 
-    // ── LLM ───────────────────────────────────────────────────────────────────
-
+    /**
+     * LLM
+     * 
+     * @param provider LLM provider to activate ({@code none}, {@code openai},
+     *                 {@code anthropic}, {@code ollama}); default {@code none}
+     * @param apiKey   API key for cloud providers (required for {@code openai} and
+     *                 {@code anthropic}); use {@code ${ENV_VAR}} for injection
+     * @param model    model name override; falls back to provider default if null
+     * @param baseUrl  base URL for self-hosted providers (Ollama);
+     *                 default {@code http://localhost:11434}
+     */
     public record Llm(
             @DefaultValue("none") String provider,
             String apiKey,

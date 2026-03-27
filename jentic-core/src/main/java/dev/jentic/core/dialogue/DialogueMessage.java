@@ -13,6 +13,16 @@ import java.util.UUID;
  * A dialogue-aware wrapper around {@link Message}.
  * Adds conversation tracking and performative semantics.
  * 
+ * @param id             unique message identifier (UUID)
+ * @param conversationId identifier grouping messages in the same dialogue session
+ * @param senderId       agent ID of the message sender; must not be null
+ * @param receiverId     agent ID of the intended recipient; may be null for broadcast
+ * @param performative   FIPA-inspired speech act declaring the communicative intent; must not be null
+ * @param content        message payload; type depends on the ontology in use
+ * @param protocol       optional dialogue protocol name (e.g. {@code "fipa-request"})
+ * @param inReplyTo      ID of the message this is a reply to; null if not a reply
+ * @param timestamp      instant at which this message was created; must not be null
+ * @param metadata       immutable map of additional header-style data; empty if null
  * @since 0.5.0
  */
 public record DialogueMessage(

@@ -4,6 +4,12 @@ import java.time.Duration;
 
 /**
  * Configuration for rate limiting
+ * 
+ * @param maxRequests   maximum number of requests allowed within {@code period}
+ * @param period        time window over which {@code maxRequests} applies
+ * @param burstCapacity maximum burst size above the steady-state limit;
+ *                      defaults to {@code maxRequests} when using factory methods
+ * @since 0.2.0
  */
 public record RateLimit(
     int maxRequests,

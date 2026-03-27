@@ -7,16 +7,7 @@ import java.util.Objects;
 /**
  * Query parameters for searching memory entries.
  * 
- * <p>Supports filtering by:
- * <ul>
- *   <li>Text content (full-text or substring search)</li>
- *   <li>Memory scope (SHORT_TERM or LONG_TERM)</li>
- *   <li>Owner agent ID</li>
- *   <li>Custom metadata filters</li>
- *   <li>Result limit</li>
- * </ul>
- * 
- * <p>Example usage:
+ * <p>Example:
  * <pre>{@code
  * MemoryQuery query = MemoryQuery.builder()
  *     .text("customer order")
@@ -25,10 +16,15 @@ import java.util.Objects;
  *     .filter("status", "completed")
  *     .limit(10)
  *     .build();
- * 
  * List<MemoryEntry> results = memoryStore.search(query).join();
  * }</pre>
  * 
+ * @param text    optional full-text or substring filter; null means no text constraint
+ * @param scope   memory scope to search ({@link MemoryScope#SHORT_TERM} or
+ *                {@link MemoryScope#LONG_TERM}); must not be null
+ * @param ownerId optional filter by owning agent ID; null means any owner
+ * @param filters immutable map of metadata key/value filters; empty if null
+ * @param limit   maximum number of results to return; must be between 1 and 1000
  * @since 0.6.0
  */
 public record MemoryQuery(

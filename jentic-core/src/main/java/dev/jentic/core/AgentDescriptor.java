@@ -8,6 +8,16 @@ import java.util.Set;
 
 /**
  * Immutable descriptor containing agent metadata for discovery.
+ * 
+ * @param agentId       unique identifier of the agent
+ * @param agentName     human-readable display name
+ * @param agentType     fully-qualified class name of the agent implementation
+ * @param status        current lifecycle status; defaults to {@link AgentStatus#UNKNOWN} if null
+ * @param capabilities  immutable set of capability tags declared by this agent; empty if null
+ * @param metadata      immutable map of arbitrary key/value metadata; empty if null
+ * @param registeredAt  timestamp of first registration; defaults to {@code Instant.now()} if null
+ * @param lastSeen      timestamp of last heartbeat or status update; defaults to {@code Instant.now()} if null
+ * @since 0.1.0
  */
 public record AgentDescriptor(
         @JsonProperty("agentId") String agentId,
