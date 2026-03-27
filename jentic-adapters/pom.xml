@@ -94,9 +94,6 @@
             <version>${mcp.sdk.version}</version>
         </dependency>
 
-        <!-- Future: Kafka, JMS, etc. -->
-        <!-- For now, keep empty or add optional dependencies -->
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
