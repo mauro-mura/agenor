@@ -12,10 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto-configuration for `JenticRuntime` based on classpath scanning and configuration properties.
   - Support for `JenticProperties` to configure agent packages, LLM providers, and memory settings.
   - Dedicated documentation guide for Spring Boot Starter in `docs/spring-boot-starter.md`.
+- **`SchedulingHint` enum** (`jentic-core`, `dev.jentic.core.composite`): declares how a `CompositeBehavior` wants to be driven by the scheduler (`ONCE`, `CYCLIC`, `ON_DEMAND`). Eliminates the need to wrap workflow composites in a `CyclicBehavior` driver.
+- **`CompositeBehavior.getSchedulingHint()`**: new method (default `ON_DEMAND`) that workflow composites override to express their scheduling intent.
+- **`SimpleBehaviorScheduler.scheduleComposite()`**: new private method that reads `SchedulingHint` and dispatches `SEQUENTIAL`/`PARALLEL` to `scheduleOneShot()` or `scheduleCyclic()` automatically. `FSM`, `RETRY`, `CIRCUIT_BREAKER`, and `PIPELINE` remain `ON_DEMAND`.
+- **`SequentialBehavior.withStepTimeout(Duration)`**: fluent method to set a per-step timeout on both one-shot and repeating instances without requiring a dedicated constructor.
 
 ### Changed
+- **`SequentialBehavior` — auto-scheduling (BREAKING CHANGE)**: `addBehavior()` is now sufficient to start a `SequentialBehavior`; no manual `execute()` call required.
+  - One-shot mode (`SchedulingHint.ONCE`): all steps run once, then `active=false`. `getCurrentStep()` returns the total step count on completion.
+  - Repeating mode (`SchedulingHint.CYCLIC`): each scheduler tick advances one step and wraps around immediately after the last step.
+  - **Constructor API simplified**: removed `boolean repeatSequence` parameter and the 3-arg `(String, boolean, Duration)` / 4-arg constructors. Mode is now implicit: `new SequentialBehavior(id)` → one-shot; `new SequentialBehavior(id, interval)` → repeating.
+  - `isRepeatSequence()` removed; replaced by `isRepeating()` (derived from `interval != null`).
+- **`ParallelBehavior` — auto-scheduling**: `addBehavior()` is now sufficient; the behavior fires all children immediately upon registration (`SchedulingHint.ONCE`).
+  - Fixed double-increment bug in `executeNOfM()`: `completedCount` was incremented twice per successful child (once in `executeChild()`, once in `executeNOfM()`), causing the N-of-M future to complete prematurely.
+  - `addChild()` references in documentation corrected to `addChildBehavior()`.
+- **`@JenticBehavior` annotation**: removed `repeatSequence()` attribute. Repeating sequential behaviors are now expressed via the existing `interval()` attribute, consistent with `CYCLIC` behavior.
+- **`AnnotationProcessor.createSequentialBehavior()`**: updated to use new `SequentialBehavior` constructor API and `withStepTimeout()`.
+- **`CompositeBehavior`**: added `protected Duration interval` field and improved Javadoc (class-level sections for scheduling, child management, thread safety, and implementation guide).
 - **Documentation**: Standardized documentation headers and formatting across core and runtime packages for better consistency.
 - **Project Structure**: Updated parent `pom.xml` and module-specific configurations to include the new Spring Boot Starter module.
+
+### Fixed
+- **`SequentialBehavior` one-shot**: `getCurrentStep()` now correctly returns `size()` (total steps) after completion instead of resetting to `0`.
+- **`SequentialBehavior` repeating**: `currentIndex` now wraps to `0` immediately after the last step, not deferred to the next `execute()` call.
+- **`SimpleBehaviorScheduler`**: `SEQUENTIAL`/`PARALLEL` behaviors registered via `addBehavior()` were silently ignored (treated as on-demand). Now dispatched correctly via `scheduleComposite()`.
+- **`ParallelBehavior.executeNOfM()`**: fixed premature completion caused by double-counting `completedCount`.
 
 ## [0.13.0] - 2026-03-25
 
