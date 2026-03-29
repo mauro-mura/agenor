@@ -115,4 +115,3 @@ the behavior becomes inactive.
 
 - [`SequentialBehavior`](SequentialBehavior.md) — ordered step-by-step execution, also auto-scheduled
 - [`CompletionStrategy`](../core/CompletionStrategy.md) — strategy enum reference
-- [`SchedulingHint`](../core/SchedulingHint.md) — how composites declare scheduling intent
