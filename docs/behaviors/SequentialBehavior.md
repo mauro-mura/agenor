@@ -1,6 +1,6 @@
 # SequentialBehavior — Step-by-Step Execution
 
-**Since**: v0.3.0 | **Updated**: v0.4.0  
+**Since**: v0.3.0 | **Updated**: v0.14.0  
 **Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.jentic.runtime.behavior.composite`
 
 ## Overview
@@ -115,4 +115,3 @@ return `SchedulingHint.ON_DEMAND` and remain unscheduled.
 
 - [`ParallelBehavior`](ParallelBehavior.md) — concurrent fan-out, also auto-scheduled as ONCE
 - [`CyclicBehavior`](CyclicBehavior.md) — simpler periodic execution without child composition
-- [`SchedulingHint`](../core/SchedulingHint.md) — enum reference
