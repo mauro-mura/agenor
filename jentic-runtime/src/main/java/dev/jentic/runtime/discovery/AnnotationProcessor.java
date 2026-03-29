@@ -146,20 +146,24 @@ public class AnnotationProcessor {
 
     private Behavior createSequentialBehavior(Agent agent, Method method, JenticBehavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
-        boolean repeat = annotation.repeatSequence();
-        Duration timeout = annotation.stepTimeout().isEmpty() ? null : parseDuration(annotation.stepTimeout());
+        Duration stepTimeout = annotation.stepTimeout().isEmpty()
+                ? null : parseDuration(annotation.stepTimeout());
+        // interval present → repeating (CYCLIC hint); absent → one-shot (ONCE hint)
+        Duration interval = annotation.interval().isEmpty()
+                ? null : parseDuration(annotation.interval());
 
-        SequentialBehavior sequential = new SequentialBehavior(behaviorId, repeat, timeout);
+        SequentialBehavior sequential = interval != null
+                ? new SequentialBehavior(behaviorId, interval)
+                : new SequentialBehavior(behaviorId);
 
-        log.info("Created SEQUENTIAL behavior '{}' (repeat: {}, stepTimeout: {})",
-                behaviorId, repeat, timeout);
-        log.warn("SEQUENTIAL behavior '{}' has no child behaviors. Add them programmatically using addChildBehavior()", behaviorId);
+        if (stepTimeout != null) {
+            sequential.withStepTimeout(stepTimeout);
+        }
 
-        // Note: Child behaviors should be added programmatically
-        // Example in agent code:
-        //   sequential.addChildBehavior(new OneShotBehavior(...));
-        //   sequential.addChildBehavior(new OneShotBehavior(...));
-
+        log.info("Created SEQUENTIAL behavior '{}' (repeating: {}, stepTimeout: {})",
+                behaviorId, interval != null, stepTimeout);
+        log.warn("SEQUENTIAL behavior '{}' has no child behaviors. " +
+                "Add them programmatically using addChildBehavior()", behaviorId);
         return sequential;
     }
 

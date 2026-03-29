@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import dev.jentic.core.Agent;
+import dev.jentic.core.composite.SchedulingHint;
 import dev.jentic.core.console.ConsoleEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,31 +54,74 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                 log.warn("Scheduler not running, cannot schedule behavior: {}", behavior.getBehaviorId());
                 return;
             }
-            
+
             switch (behavior.getType()) {
-                case ONE_SHOT -> scheduleOneShot(behavior);
-                case CYCLIC -> scheduleCyclic(behavior);
-                case WAKER -> scheduleWaker(behavior);
+                case ONE_SHOT  -> scheduleOneShot(behavior);
+                case CYCLIC    -> scheduleCyclic(behavior);
+                case WAKER     -> scheduleWaker(behavior);
                 case EVENT_DRIVEN -> {
-                    // Event-driven behaviors are not scheduled, they respond to events
+                    // Event-driven behaviors respond to events; no scheduling needed.
                     log.debug("Event-driven behavior registered: {}", behavior.getBehaviorId());
                 }
                 // BATCH needs continuous polling to drain its internal queue.
                 case BATCH -> scheduleCustom(behavior);
-                // CONDITIONAL and THROTTLED override execute() and carry their own interval.
+                // CONDITIONAL and THROTTLED carry their own interval inside execute().
                 case CONDITIONAL, THROTTLED, CUSTOM -> scheduleCustom(behavior);
-                // On-demand behaviors: triggered explicitly via execute(); registering is enough
-                // so the framework calls setAgent(). They must NOT be auto-scheduled in a loop.
-                case RETRY, CIRCUIT_BREAKER, PIPELINE, SEQUENTIAL, PARALLEL, FSM -> {
-                    log.debug("On-demand behavior registered (not auto-scheduled): {}", behavior.getBehaviorId());
+                // Workflow composites (SEQUENTIAL, PARALLEL) declare their scheduling intent
+                // via SchedulingHint; delegate to scheduleComposite() so that addBehavior()
+                // is sufficient — no manual execute() call required.
+                case SEQUENTIAL, PARALLEL -> scheduleComposite(behavior);
+                // Control-flow composites are on-demand: they wrap operations triggered
+                // externally and must NOT be auto-scheduled.
+                case RETRY, CIRCUIT_BREAKER, PIPELINE, FSM -> {
+                    log.debug("On-demand composite registered (not auto-scheduled): {}",
+                            behavior.getBehaviorId());
                 }
-                // SCHEDULED manages its own internal ScheduledExecutorService but needs execute()
-                // called once to start the cron loop.
+                // SCHEDULED manages its own internal ScheduledExecutorService but needs
+                // execute() called once to start the cron loop.
                 case SCHEDULED -> scheduleOneShot(behavior);
-                default -> log.warn("Unhandled BehaviorType '{}' for behavior '{}', skipping scheduling",
-                        behavior.getType(), behavior.getBehaviorId());
             }
         });
+    }
+
+    /**
+     * Drives a composite behavior according to the {@link SchedulingHint} it declares.
+     *
+     * <ul>
+     *   <li>{@link SchedulingHint#ONCE}    — fires {@code execute()} immediately, once.</li>
+     *   <li>{@link SchedulingHint#CYCLIC}  — fires {@code execute()} at the behavior's interval.</li>
+     *   <li>{@link SchedulingHint#ON_DEMAND} — only registers; caller must call {@code execute()} manually.</li>
+     * </ul>
+     *
+     * @throws IllegalStateException if hint is CYCLIC but {@code getInterval()} returns null.
+     */
+    private void scheduleComposite(Behavior behavior) {
+        if (!(behavior instanceof dev.jentic.core.composite.CompositeBehavior composite)) {
+            // Fallback: if somehow a non-composite returns SEQUENTIAL/PARALLEL type, treat as one-shot.
+            scheduleOneShot(behavior);
+            return;
+        }
+
+        switch (composite.getSchedulingHint()) {
+            case ONCE -> {
+                log.debug("Scheduling composite behavior as one-shot: {}", behavior.getBehaviorId());
+                scheduleOneShot(behavior);
+            }
+            case CYCLIC -> {
+                if (behavior.getInterval() == null) {
+                    throw new IllegalStateException(
+                            "Composite behavior '%s' has SchedulingHint.CYCLIC but getInterval() returned null. "
+                                    .formatted(behavior.getBehaviorId())
+                                    + "Provide an interval via the constructor: "
+                                    + "new SequentialBehavior(id, true, stepTimeout, Duration.ofSeconds(1))");
+                }
+                log.debug("Scheduling composite behavior as cyclic (interval={}): {}",
+                        behavior.getInterval(), behavior.getBehaviorId());
+                scheduleCyclic(behavior);
+            }
+            case ON_DEMAND -> log.debug("On-demand composite registered (not auto-scheduled): {}",
+                    behavior.getBehaviorId());
+        }
     }
     
     @Override

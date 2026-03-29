@@ -40,7 +40,7 @@ class CompositeWorkflowIntegrationTest {
         validations.addChildBehavior(createLogBehavior("validate-payment", 50));
 
         // 2. Create fulfillment sequence
-        SequentialBehavior fulfillment = new SequentialBehavior("fulfillment", false);
+        SequentialBehavior fulfillment = new SequentialBehavior("fulfillment");
         fulfillment.addChildBehavior(createLogBehavior("reserve-inventory", 30));
         fulfillment.addChildBehavior(createLogBehavior("charge-payment", 30));
         fulfillment.addChildBehavior(createLogBehavior("ship-order", 30));
@@ -107,7 +107,7 @@ class CompositeWorkflowIntegrationTest {
     @DisplayName("Should handle nested composite behaviors")
     void shouldHandleNestedCompositeBehaviors() throws Exception {
         // Given - Sequential containing parallel behaviors
-        SequentialBehavior workflow = new SequentialBehavior("main-workflow", false);
+        SequentialBehavior workflow = new SequentialBehavior("main-workflow");
 
         // Step 1: Parallel initialization
         ParallelBehavior initPhase = new ParallelBehavior("init", CompletionStrategy.ALL);
@@ -116,7 +116,7 @@ class CompositeWorkflowIntegrationTest {
         workflow.addChildBehavior(initPhase);
 
         // Step 2: Sequential processing
-        SequentialBehavior processPhase = new SequentialBehavior("process", false);
+        SequentialBehavior processPhase = new SequentialBehavior("process");
         processPhase.addChildBehavior(createLogBehavior("load-data", 20));
         processPhase.addChildBehavior(createLogBehavior("transform-data", 20));
         workflow.addChildBehavior(processPhase);
@@ -155,7 +155,7 @@ class CompositeWorkflowIntegrationTest {
         parallel.addChildBehavior(createFailingBehavior("failing-task"));
         parallel.addChildBehavior(createLogBehavior("task2", 30));
 
-        SequentialBehavior sequential = new SequentialBehavior("sequential", false);
+        SequentialBehavior sequential = new SequentialBehavior("sequential");
         sequential.addChildBehavior(parallel);
         sequential.addChildBehavior(createLogBehavior("after-parallel", 20));
 
@@ -172,10 +172,8 @@ class CompositeWorkflowIntegrationTest {
     void shouldRespectTimeoutInNestedBehaviors() throws Exception {
         // Given
         SequentialBehavior sequential = new SequentialBehavior(
-                "sequential-with-timeout",
-                false,
-                Duration.ofMillis(100)
-        );
+                "sequential-with-timeout"
+                ).withStepTimeout(Duration.ofMillis(100));
 
         sequential.addChildBehavior(createLogBehavior("fast", 20));
         sequential.addChildBehavior(createLogBehavior("slow", 500)); // Will timeout
@@ -198,7 +196,7 @@ class CompositeWorkflowIntegrationTest {
     @DisplayName("Should handle parallel with timeout in nested workflow")
     void shouldHandleParallelWithTimeoutInNestedWorkflow() throws Exception {
         // Given - Sequential containing Parallel with timeouts
-        SequentialBehavior workflow = new SequentialBehavior("workflow", false);
+        SequentialBehavior workflow = new SequentialBehavior("workflow");
 
         ParallelBehavior parallelPhase = new ParallelBehavior(
                 "parallel-phase",
@@ -228,7 +226,7 @@ class CompositeWorkflowIntegrationTest {
         startupTasks.addChildBehavior(createLogBehavior("load-config", 30));
         startupTasks.addChildBehavior(createLogBehavior("connect-db", 30));
 
-        SequentialBehavior shutdownTasks = new SequentialBehavior("shutdown", false);
+        SequentialBehavior shutdownTasks = new SequentialBehavior("shutdown");
         shutdownTasks.addChildBehavior(createLogBehavior("flush-data", 30));
         shutdownTasks.addChildBehavior(createLogBehavior("close-connections", 30));
 

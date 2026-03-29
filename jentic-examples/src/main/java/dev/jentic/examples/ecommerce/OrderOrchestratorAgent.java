@@ -233,10 +233,8 @@ public class OrderOrchestratorAgent extends BaseAgent {
 
     private Behavior createFulfillmentBehavior() {
         SequentialBehavior sequential = new SequentialBehavior(
-                "fulfillment-sequence",
-                false,
-                FULFILLMENT_STEP_TIMEOUT  // ✅ Timeout di 10s per ogni step
-        );
+                "fulfillment-sequence")
+                .withStepTimeout(FULFILLMENT_STEP_TIMEOUT); // ✅ Timeout di 10s per ogni step
 
         sequential.addChildBehavior(new OneShotBehavior("reserve-inventory") {
             @Override

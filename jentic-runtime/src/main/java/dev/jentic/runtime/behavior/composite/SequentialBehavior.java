@@ -3,42 +3,146 @@ package dev.jentic.runtime.behavior.composite;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.composite.CompositeBehavior;
+import dev.jentic.core.composite.SchedulingHint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Executes child behaviors sequentially, one after another.
- * Each behavior waits for the previous one to complete.
+ * Each child waits for the previous one to complete.
+ *
+ * <h2>Scheduling modes</h2>
+ * <p>The mode is determined by whether an {@code interval} is provided:
+ * <ul>
+ *   <li><strong>One-shot</strong> (no interval) — runs all steps once, then becomes inactive.
+ *       {@link SchedulingHint#ONCE}: {@code addBehavior()} is sufficient.</li>
+ *   <li><strong>Repeating</strong> (interval provided) — each scheduler tick advances one step
+ *       and wraps around. {@link SchedulingHint#CYCLIC}: {@code addBehavior()} is sufficient.</li>
+ * </ul>
+ *
+ * <h2>Usage — one-shot</h2>
+ * <pre>{@code
+ * SequentialBehavior startup = new SequentialBehavior("startup");
+ * startup.addChildBehavior(new ConnectDatabaseBehavior());
+ * startup.addChildBehavior(new LoadConfigBehavior());
+ * startup.addChildBehavior(new RegisterWithDirectoryBehavior());
+ *
+ * agent.addBehavior(startup); // registers and triggers automatically
+ * }</pre>
+ *
+ * <h2>Usage — repeating (round-robin)</h2>
+ * <pre>{@code
+ * // One step every second, cycling through all children
+ * SequentialBehavior roundRobin = new SequentialBehavior("round-robin", Duration.ofSeconds(1));
+ * roundRobin.addChildBehavior(OneShotBehavior.from("poll-north",   this::pollNorth));
+ * roundRobin.addChildBehavior(OneShotBehavior.from("poll-central", this::pollCentral));
+ * roundRobin.addChildBehavior(OneShotBehavior.from("poll-south",   this::pollSouth));
+ *
+ * agent.addBehavior(roundRobin); // registers and schedules cyclically
+ * }</pre>
+ *
+ * <h2>Usage — one-shot with step timeout</h2>
+ * <pre>{@code
+ * SequentialBehavior pipeline = new SequentialBehavior("pipeline")
+ *         .withStepTimeout(Duration.ofSeconds(10));
+ * pipeline.addChildBehavior(new StepOneBehavior());
+ * pipeline.addChildBehavior(new StepTwoBehavior());
+ *
+ * agent.addBehavior(pipeline);
+ * }</pre>
+ *
+ * <h2>Usage — repeating with step timeout</h2>
+ * <pre>{@code
+ * SequentialBehavior roundRobin = new SequentialBehavior("poller", Duration.ofMillis(200))
+ *         .withStepTimeout(Duration.ofSeconds(5));
+ * roundRobin.addChildBehavior(OneShotBehavior.from("poll-north", this::pollNorth));
+ * roundRobin.addChildBehavior(OneShotBehavior.from("poll-south", this::pollSouth));
+ *
+ * agent.addBehavior(roundRobin);
+ * }</pre>
  */
 public class SequentialBehavior extends CompositeBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(SequentialBehavior.class);
 
     private int currentIndex = 0;
-    private boolean repeatSequence;
     private Duration stepTimeout;
 
+    // -------------------------------------------------------------------------
+    // Constructors
+    // -------------------------------------------------------------------------
+
+    /**
+     * One-shot sequential: runs all steps once, then becomes inactive.
+     *
+     * @param behaviorId unique behavior identifier
+     */
     public SequentialBehavior(String behaviorId) {
-        this(behaviorId, false);
-    }
-
-    public SequentialBehavior(String behaviorId, boolean repeatSequence) {
-        this(behaviorId, repeatSequence, null);
-    }
-
-    public SequentialBehavior(String behaviorId, boolean repeatSequence, Duration stepTimeout) {
         super(behaviorId);
-        this.repeatSequence = repeatSequence;
-        this.stepTimeout = stepTimeout;
     }
+
+    /**
+     * Repeating sequential (round-robin): each scheduler tick advances one step and wraps around.
+     *
+     * @param behaviorId unique behavior identifier
+     * @param interval   how often the scheduler calls {@code execute()} to advance one step;
+     *                   must not be null
+     * @throws IllegalArgumentException if interval is null
+     */
+    public SequentialBehavior(String behaviorId, Duration interval) {
+        super(behaviorId);
+        if (interval == null) {
+            throw new IllegalArgumentException(
+                "SequentialBehavior '" + behaviorId + "': interval must not be null for repeating mode.");
+        }
+        this.interval = interval;
+    }
+
+    /**
+     * Sets a per-step timeout and returns {@code this} for fluent chaining.
+     *
+     * <p>Works for both one-shot and repeating modes:
+     * <pre>{@code
+     * new SequentialBehavior("pipeline").withStepTimeout(Duration.ofSeconds(10))
+     * new SequentialBehavior("poller", Duration.ofMillis(200)).withStepTimeout(Duration.ofSeconds(5))
+     * }</pre>
+     *
+     * @param stepTimeout maximum duration allowed per step; {@code null} disables the timeout
+     * @return this instance
+     */
+    public SequentialBehavior withStepTimeout(Duration stepTimeout) {
+        this.stepTimeout = stepTimeout;
+        return this;
+    }
+
+    // -------------------------------------------------------------------------
+    // Scheduling contract
+    // -------------------------------------------------------------------------
 
     @Override
     public BehaviorType getType() {
         return BehaviorType.SEQUENTIAL;
     }
+
+    /**
+     * Returns {@link SchedulingHint#ONCE} for one-shot sequences and
+     * {@link SchedulingHint#CYCLIC} for repeating sequences.
+     *
+     * <p>The {@link dev.jentic.runtime.scheduler.SimpleBehaviorScheduler} uses this
+     * to drive the behavior automatically when registered via {@code agent.addBehavior()}.
+     */
+    @Override
+    public SchedulingHint getSchedulingHint() {
+        return interval != null ? SchedulingHint.CYCLIC : SchedulingHint.ONCE;
+    }
+
+    // -------------------------------------------------------------------------
+    // Execution
+    // -------------------------------------------------------------------------
 
     @Override
     public CompletableFuture<Void> execute() {
@@ -46,159 +150,109 @@ public class SequentialBehavior extends CompositeBehavior {
             return CompletableFuture.completedFuture(null);
         }
 
-        // For repeating sequences, execute only the current step
-        // The scheduler will call execute() again for the next cycle
-        if (repeatSequence) {
+        if (interval != null) {
+            // Repeating: each scheduler tick executes exactly one step
             return executeSingleStep();
         } else {
-            // For non-repeating, execute all steps in one go
+            // One-shot: chain all steps via CompletableFuture composition
             return executeCurrentBehavior();
         }
     }
 
     /**
-     * Execute only the current step (for repeating sequences)
+     * Executes the current step (repeating mode — one step per scheduler tick).
      */
     private CompletableFuture<Void> executeSingleStep() {
         if (!active) {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Check if we need to reset before executing
+        Behavior current = childBehaviors.get(currentIndex);
+        log.debug("Sequential behavior '{}' executing step {}/{}: {}",
+                behaviorId, currentIndex + 1, childBehaviors.size(), current.getBehaviorId());
+
+        CompletableFuture<Void> stepFuture = applyTimeout(current.execute());
+
+        // Advance index; wrap to 0 immediately after the last step so getCurrentStep()
+        // reflects the reset before the next scheduler tick.
+        currentIndex++;
         if (currentIndex >= childBehaviors.size()) {
-            currentIndex = 0; // Reset for next cycle
-            log.trace("Sequential behavior '{}' restarting sequence (pre-check)", behaviorId);
+            currentIndex = 0;
+            log.trace("Sequential behavior '{}' wrapped to beginning", behaviorId);
         }
 
-        Behavior currentBehavior = childBehaviors.get(currentIndex);
-        int stepNumber = currentIndex + 1; // For logging
-
-        log.trace("Sequential behavior '{}' executing step {}/{}: {} (currentIndex before: {})",
-                behaviorId, stepNumber, childBehaviors.size(),
-                currentBehavior.getBehaviorId(), currentIndex);
-
-        CompletableFuture<Void> executionFuture = currentBehavior.execute();
-
-        // Apply timeout if configured
-        if (stepTimeout != null) {
-            executionFuture = executionFuture.orTimeout(stepTimeout.toMillis(),
-                            java.util.concurrent.TimeUnit.MILLISECONDS)
-                    .exceptionally(throwable -> {
-                        if (throwable.getCause() instanceof java.util.concurrent.TimeoutException) {
-                            log.warn("Sequential behavior '{}' step {} timed out after {}",
-                                    behaviorId, stepNumber, stepTimeout);
-                        }
-                        throw new java.util.concurrent.CompletionException(throwable);
-                    });
-        }
-
-        return executionFuture
-                .whenComplete((result, throwable) -> {
-                    if (throwable != null) {
-                        log.error("Error in sequential behavior '{}' at step {}: {}",
-                                behaviorId, stepNumber, throwable.getMessage());
-                    }
-                    // Always increment, even on error
-                    int oldIndex = currentIndex;
-                    currentIndex++;
-                    log.trace("Sequential behavior '{}' step completed, index: {} → {}",
-                            behaviorId, oldIndex, currentIndex);
-
-                    // Reset if we've completed a full cycle
-                    if (currentIndex >= childBehaviors.size()) {
-                        currentIndex = 0;
-                        log.trace("Sequential behavior '{}' completed cycle, reset to start (index now: {})",
-                                behaviorId, currentIndex);
-                    }
-                })
-                .thenApply(v -> null); // Convert to Void
+        return stepFuture.exceptionally(ex -> {
+            log.warn("Sequential behavior '{}' step '{}' failed: {}",
+                    behaviorId, current.getBehaviorId(), ex.getMessage());
+            return null;
+        });
     }
 
     /**
-     * Execute current behavior and continue recursively (for non-repeating sequences)
+     * Chains all remaining steps sequentially (one-shot mode).
      */
     private CompletableFuture<Void> executeCurrentBehavior() {
-        // Check if we've reached the end
-        if (currentIndex >= childBehaviors.size()) {
-            active = false; // Sequential behavior is done
-            log.debug("Sequential behavior '{}' completed all steps", behaviorId);
+        if (!active || currentIndex >= childBehaviors.size()) {
+            // One-shot complete: mark inactive but leave currentIndex == size() so
+            // getCurrentStep() reports the total steps executed (not 0).
+            active = false;
             return CompletableFuture.completedFuture(null);
         }
 
-        // If not active, stop
-        if (!active) {
-            return CompletableFuture.completedFuture(null);
-        }
+        Behavior current = childBehaviors.get(currentIndex);
+        log.debug("Sequential behavior '{}' executing step {}/{}: {}",
+                behaviorId, currentIndex + 1, childBehaviors.size(), current.getBehaviorId());
 
-        Behavior currentBehavior = childBehaviors.get(currentIndex);
-        int stepNumber = currentIndex + 1; // For logging
-
-        log.trace("Sequential behavior '{}' executing step {}/{}: {}",
-                behaviorId, stepNumber, childBehaviors.size(),
-                currentBehavior.getBehaviorId());
-
-        CompletableFuture<Void> executionFuture = currentBehavior.execute();
-
-        // Apply timeout if configured
-        if (stepTimeout != null) {
-            executionFuture = executionFuture.orTimeout(stepTimeout.toMillis(),
-                            java.util.concurrent.TimeUnit.MILLISECONDS)
-                    .exceptionally(throwable -> {
-                        if (throwable.getCause() instanceof java.util.concurrent.TimeoutException) {
-                            log.warn("Sequential behavior '{}' step {} timed out after {}",
-                                    behaviorId, stepNumber, stepTimeout);
-                        }
-                        throw new java.util.concurrent.CompletionException(throwable);
-                    });
-        }
-
-        return executionFuture
-                .handle((result, throwable) -> {
-                    if (throwable != null) {
-                        log.error("Error in sequential behavior '{}' at step {}: {}",
-                                behaviorId, stepNumber, throwable.getMessage());
-                    }
-                    // Always increment and continue, even on error
-                    currentIndex++;
+        currentIndex++;
+        return applyTimeout(current.execute())
+                .exceptionally(ex -> {
+                    log.warn("Sequential behavior '{}' step '{}' failed: {}",
+                            behaviorId, current.getBehaviorId(), ex.getMessage());
                     return null;
                 })
-                .thenCompose(v -> executeCurrentBehavior()); // Continue to next step
+                .thenCompose(__ -> executeCurrentBehavior());
     }
 
-    /**
-     * Reset the sequence to start from the beginning
-     */
-    public void reset() {
-        currentIndex = 0;
-        log.debug("Sequential behavior '{}' reset to beginning", behaviorId);
+    private CompletableFuture<Void> applyTimeout(CompletableFuture<Void> future) {
+        if (stepTimeout == null) {
+            return future;
+        }
+        return future.orTimeout(stepTimeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+                .exceptionally(ex -> {
+                    if (ex instanceof TimeoutException || ex.getCause() instanceof TimeoutException) {
+                        log.warn("Sequential behavior '{}' step timed out after {}",
+                                behaviorId, stepTimeout);
+                    }
+                    throw ex instanceof RuntimeException re ? re : new RuntimeException(ex);
+                });
     }
 
-    /**
-     * Get current step index
-     */
+    // -------------------------------------------------------------------------
+    // API
+    // -------------------------------------------------------------------------
+
     public int getCurrentStep() {
         return currentIndex;
     }
 
-    /**
-     * Get total number of steps
-     */
     public int getTotalSteps() {
         return childBehaviors.size();
     }
 
-    /**
-     * Set timeout for each step
-     */
-    public void setStepTimeout(Duration timeout) {
-        this.stepTimeout = timeout;
-        log.debug("Sequential behavior '{}' step timeout set to: {}", behaviorId, timeout);
+    /** Returns {@code true} if this behavior runs in repeating (round-robin) mode. */
+    public boolean isRepeating() {
+        return interval != null;
     }
 
-    /**
-     * Get configured step timeout
-     */
+    public void reset() {
+        currentIndex = 0;
+    }
+
     public Duration getStepTimeout() {
         return stepTimeout;
+    }
+
+    public void setStepTimeout(Duration stepTimeout) {
+        this.stepTimeout = stepTimeout;
     }
 }

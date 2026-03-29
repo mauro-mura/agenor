@@ -656,7 +656,7 @@ class AnnotationProcessorTest {
             super("sequential", "Sequential Agent");
         }
         
-        @JenticBehavior(type = BehaviorType.SEQUENTIAL, repeatSequence = true, stepTimeout = "5s")
+        @JenticBehavior(type = BehaviorType.SEQUENTIAL, interval = "200ms", stepTimeout = "5s")
         public void sequentialAction() {
         }
     }

@@ -1,125 +1,118 @@
-# SequentialBehavior - Step-by-Step Execution
+# SequentialBehavior — Step-by-Step Execution
+
+**Since**: v0.3.0 | **Updated**: v0.4.0  
+**Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.jentic.runtime.behavior.composite`
 
 ## Overview
 
-`SequentialBehavior` executes child behaviors **one after another**, waiting for each to complete before starting the next. It supports both single-pass and repeating-sequence modes.
+`SequentialBehavior` executes child behaviors **one after another**, waiting for each to complete
+before starting the next. Calling `agent.addBehavior()` is sufficient to start it — no manual
+`execute()` call required.
 
-**Since**: v0.3.0 | **Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.jentic.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
+The execution mode is determined by whether an `interval` is provided:
 
----
+| Mode | Constructor | `SchedulingHint` | Behavior |
+|------|-------------|-----------------|----------|
+| **One-shot** | no `interval` | `ONCE` | Runs all steps once, then becomes inactive |
+| **Repeating** | `interval` provided | `CYCLIC` | Each scheduler tick advances one step; wraps around |
 
-## ⚠️ Scheduling Behaviour — Manual Trigger Required
-
-`SequentialBehavior` is an **on-demand** behavior. `SimpleBehaviorScheduler` does **not** auto-schedule it; calling `addBehavior()` only registers the instance so the framework can inject the agent reference. **You must call `execute()` yourself** to start the pipeline.
-
-```java
-// WRONG — pipeline is registered but never runs
-addBehavior(reportPipeline);
-
-// CORRECT — trigger explicitly after registration
-addBehavior(reportPipeline);
-reportPipeline.execute()
-    .thenRun(() -> log.info("Pipeline completed"))
-    .exceptionally(ex -> { log.error("Pipeline failed", ex); return null; });
-```
-
-This applies to all composite / control-flow behaviors: `SEQUENTIAL`, `PARALLEL`, `FSM`, `PIPELINE`, `RETRY`, `CIRCUIT_BREAKER`.
-
----
-
-## Execution Modes
-
-| Mode | `repeatSequence` | Behavior |
-|------|-----------------|----------|
-| **One-shot** (default) | `false` | Runs all steps once, then sets `active=false` |
-| **Repeating** | `true` | Each scheduler tick advances one step; wraps around |
-
-In **repeating** mode, the `BehaviorScheduler` calls `execute()` on each tick. Each call executes exactly one step, increments the internal index, then returns. When the last step finishes the index resets to 0 for the next tick.
-
-In **one-shot** mode, a single `execute()` call chains all steps internally via `CompletableFuture` composition and sets `active=false` when all steps are done.
-
----
-
-## Basic Usage
-
-### One-shot sequence
+## One-shot sequence
 
 ```java
 SequentialBehavior startup = new SequentialBehavior("startup");
 startup.addChildBehavior(new ConnectDatabaseBehavior());
-startup.addChildBehavior(new LoadConfigurationBehavior());
-startup.addChildBehavior(new RegisterWithDirectoryBehavior());
+        startup.addChildBehavior(new LoadConfigurationBehavior());
+        startup.addChildBehavior(new RegisterWithDirectoryBehavior());
 
-addBehavior(startup);         // register (injects agent reference)
-startup.execute();            // trigger — required, not automatic
+        agent.addBehavior(startup); // registers and triggers automatically
 ```
 
-### Repeating sequence (round-robin)
+## Repeating sequence (round-robin)
 
-In repeating mode `execute()` advances one step per call. Drive it from a `CyclicBehavior` or call it manually on each tick.
+Each scheduler tick advances exactly one step. Use `OneShotBehavior` children — their interval
+is irrelevant, the parent controls the tick rate.
 
 ```java
-SequentialBehavior roundRobin = new SequentialBehavior("round-robin", true);
-roundRobin.addChildBehavior(new ProcessQueueABehavior());
-roundRobin.addChildBehavior(new ProcessQueueBBehavior());
-roundRobin.addChildBehavior(new ProcessQueueCBehavior());
+// Advance one queue every 200ms, cycling through all children
+SequentialBehavior roundRobin = new SequentialBehavior("queue-poller", Duration.ofMillis(200));
+roundRobin.addChildBehavior(OneShotBehavior.from("poll-north",   this::pollNorth));
+        roundRobin.addChildBehavior(OneShotBehavior.from("poll-central", this::pollCentral));
+        roundRobin.addChildBehavior(OneShotBehavior.from("poll-south",   this::pollSouth));
 
-addBehavior(roundRobin);
-
-// drive from a cyclic ticker
-CyclicBehavior ticker = new CyclicBehavior("rr-ticker", Duration.ofSeconds(1),
-    () -> roundRobin.execute());
-addBehavior(ticker);
+        agent.addBehavior(roundRobin); // registers and schedules cyclically
 ```
 
----
-
-## Step Timeout
+## One-shot with step timeout
 
 ```java
-SequentialBehavior pipeline = new SequentialBehavior(
-    "pipeline",
-    false,
-    Duration.ofSeconds(10) // each step must complete within 10s
-);
+SequentialBehavior pipeline = new SequentialBehavior("pipeline")
+        .withStepTimeout(Duration.ofSeconds(10));
 pipeline.addChildBehavior(new StepOneBehavior());
-pipeline.addChildBehavior(new StepTwoBehavior());
+        pipeline.addChildBehavior(new StepTwoBehavior());
+
+        agent.addBehavior(pipeline);
 ```
 
----
+## Repeating with step timeout
+
+```java
+SequentialBehavior roundRobin = new SequentialBehavior("poller", Duration.ofMillis(200))
+        .withStepTimeout(Duration.ofSeconds(5));
+roundRobin.addChildBehavior(OneShotBehavior.from("poll-north", this::pollNorth));
+roundRobin.addChildBehavior(OneShotBehavior.from("poll-south", this::pollSouth));
+
+agent.addBehavior(roundRobin);
+```
 
 ## Constructors
 
 ```java
+// One-shot (most common)
 new SequentialBehavior(String behaviorId)
-new SequentialBehavior(String behaviorId, boolean repeatSequence)
-new SequentialBehavior(String behaviorId, boolean repeatSequence, Duration stepTimeout)
+
+// Repeating — interval drives the scheduler tick rate
+new SequentialBehavior(String behaviorId, Duration interval)
 ```
 
----
+## Step timeout
+
+Use the fluent `withStepTimeout()` method on either constructor:
+
+```java
+new SequentialBehavior("id").withStepTimeout(Duration.ofSeconds(10))
+new SequentialBehavior("id", Duration.ofMillis(200)).withStepTimeout(Duration.ofSeconds(5))
+```
 
 ## API Reference
 
 ```java
-// Inherited from CompositeBehavior
-behavior.addChildBehavior(Behavior child);          // add a child step
-List<Behavior> steps = behavior.getChildBehaviors(); // get steps (immutable)
+int      getCurrentStep()        // zero-based index of the next step to execute
+int      getTotalSteps()         // total number of child behaviors
+boolean  isRepeating()           // true if constructed with a non-null interval
+void     reset()                 // restart sequence from step 0
 
-// SequentialBehavior-specific
-int current = behavior.getCurrentStep();   // current step index (0-based); equals size when one-shot is done
-int total   = behavior.getTotalSteps();    // total number of child behaviors
-
-behavior.reset();                           // restart sequence from step 0
-
-behavior.setStepTimeout(Duration.ofSeconds(5));
-Duration t  = behavior.getStepTimeout();   // null if no timeout configured
+void     setStepTimeout(Duration t)
+Duration getStepTimeout()
 ```
-
----
 
 ## Error Handling
 
-Error handling differs between the two execution modes:
+If a step fails or times out, the error is logged and execution advances to the next step.
+The sequence never aborts mid-way due to a single-step failure.
 
-- **One-shot mode**: if a step throws or times out, the error is logged and execution **advances to the next step**. The sequence never aborts mid-way due to a single step failure.
-- **Repeating mode**: if a step throws or times out, the error is logged and the step index is incremented (so the next scheduler tick will execute the next step). However, the `CompletableFuture` returned by the current tick completes **exceptionally** — the exception is not suppressed.
+## How It Works — SchedulingHint
+
+`SequentialBehavior` derives its scheduling mode from the `interval` field:
+
+- `interval == null` → `SchedulingHint.ONCE` → scheduler calls `scheduleOneShot()`
+- `interval != null` → `SchedulingHint.CYCLIC` → scheduler calls `scheduleCyclic()`
+
+`SimpleBehaviorScheduler.scheduleComposite()` reads this hint and dispatches accordingly.
+Other composites that are genuinely on-demand (`FSM`, `RETRY`, `CIRCUIT_BREAKER`, `PIPELINE`)
+return `SchedulingHint.ON_DEMAND` and remain unscheduled.
+
+## See Also
+
+- [`ParallelBehavior`](ParallelBehavior.md) — concurrent fan-out, also auto-scheduled as ONCE
+- [`CyclicBehavior`](CyclicBehavior.md) — simpler periodic execution without child composition
+- [`SchedulingHint`](../core/SchedulingHint.md) — enum reference

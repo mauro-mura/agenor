@@ -154,20 +154,14 @@ import java.util.concurrent.CompletableFuture;
  * 
  * <p><strong>Example - Composite Behavior:</strong>
  * <pre>{@code
- * // Create a sequential workflow behavior
+ * // Create a sequential workflow — addBehavior() is sufficient to start it
  * SequentialBehavior orderWorkflow = new SequentialBehavior("order-workflow");
  * orderWorkflow.addChildBehavior(validateOrder);
  * orderWorkflow.addChildBehavior(checkInventory);
  * orderWorkflow.addChildBehavior(processPayment);
  * orderWorkflow.addChildBehavior(shipOrder);
  * 
- * // Execute the workflow
- * orderWorkflow.execute()
- *     .thenRun(() -> log.info("Order workflow completed"))
- *     .exceptionally(ex -> {
- *         log.error("Order workflow failed", ex);
- *         return null;
- *     });
+ * agent.addBehavior(orderWorkflow); // registers and triggers automatically
  * }</pre>
  * 
  * <p><strong>Implementation Guidelines:</strong>

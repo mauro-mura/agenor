@@ -1,36 +1,34 @@
-# ParallelBehavior - Concurrent Child Execution
+# ParallelBehavior — Concurrent Child Execution
+
+**Since**: v0.3.0 | **Updated**: v0.14.0  
+**Type**: `BehaviorType.PARALLEL` | **Package**: `dev.jentic.runtime.behavior.composite`
 
 ## Overview
 
-`ParallelBehavior` executes multiple child behaviors **concurrently** using virtual threads. It supports four completion strategies to control when the composite behavior itself is considered done.
+`ParallelBehavior` executes multiple child behaviors **concurrently** using virtual threads.
+Calling `agent.addBehavior()` is sufficient to start it — no manual `execute()` call required.
 
-**Since**: v0.3.0 | **Type**: `BehaviorType.PARALLEL` | **Package**: `dev.jentic.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
-
----
+It supports four completion strategies to control when the composite itself is considered done.
 
 ## Completion Strategies
 
 | Strategy | Completes when… |
 |----------|----------------|
-| `ALL` *(default)* | All child behaviors have finished |
+| `ALL` *(default)* | All children have finished |
 | `ANY` | At least one child has finished (others continue) |
-| `FIRST` | The first child finishes; remaining children are stopped |
+| `FIRST` | The first child finishes |
 | `N_OF_M` | At least N children have finished successfully |
-
----
 
 ## Basic Usage
 
 ```java
 ParallelBehavior parallel = new ParallelBehavior("data-fetch", CompletionStrategy.ALL);
-parallel.addChild(new FetchUsersBehavior());
-parallel.addChild(new FetchProductsBehavior());
-parallel.addChild(new FetchOrdersBehavior());
+parallel.addChildBehavior(new FetchUsersBehavior());
+parallel.addChildBehavior(new FetchProductsBehavior());
+parallel.addChildBehavior(new FetchOrdersBehavior());
 
-agent.addBehavior(parallel);
+agent.addBehavior(parallel); // registers and triggers automatically — no extra call needed
 ```
-
----
 
 ## Completion Strategy Examples
 
@@ -38,18 +36,20 @@ agent.addBehavior(parallel);
 
 ```java
 ParallelBehavior fastest = new ParallelBehavior("fastest-cache", CompletionStrategy.ANY);
-fastest.addChild(new ReadFromLocalCacheBehavior());
-fastest.addChild(new ReadFromRemoteCacheBehavior());
-fastest.addChild(new ReadFromDatabaseBehavior());
+fastest.addChildBehavior(new ReadFromLocalCacheBehavior());
+fastest.addChildBehavior(new ReadFromRemoteCacheBehavior());
+fastest.addChildBehavior(new ReadFromDatabaseBehavior());
+
 agent.addBehavior(fastest);
 ```
 
-### FIRST — race, cancel losers
+### FIRST — race, stop on first winner
 
 ```java
 ParallelBehavior race = new ParallelBehavior("geo-lookup", CompletionStrategy.FIRST);
-race.addChild(new GeoLookupProvider1Behavior());
-race.addChild(new GeoLookupProvider2Behavior());
+race.addChildBehavior(new GeoLookupProvider1Behavior());
+race.addChildBehavior(new GeoLookupProvider2Behavior());
+
 agent.addBehavior(race);
 ```
 
@@ -58,13 +58,12 @@ agent.addBehavior(race);
 ```java
 // Require 2 of 3 replicas to confirm
 ParallelBehavior quorum = new ParallelBehavior("write-quorum", CompletionStrategy.N_OF_M, 2);
-quorum.addChild(new WriteToReplica1Behavior());
-quorum.addChild(new WriteToReplica2Behavior());
-quorum.addChild(new WriteToReplica3Behavior());
+quorum.addChildBehavior(new WriteToReplica1Behavior());
+quorum.addChildBehavior(new WriteToReplica2Behavior());
+quorum.addChildBehavior(new WriteToReplica3Behavior());
+
 agent.addBehavior(quorum);
 ```
-
----
 
 ## Child Timeouts
 
@@ -75,11 +74,11 @@ ParallelBehavior parallel = new ParallelBehavior(
     0,
     Duration.ofSeconds(5) // each child times out after 5s
 );
-parallel.addChild(new SlowBehavior());
-parallel.addChild(new FastBehavior());
-```
+parallel.addChildBehavior(new SlowBehavior());
+parallel.addChildBehavior(new FastBehavior());
 
----
+agent.addBehavior(parallel);
+```
 
 ## Constructors
 
@@ -91,38 +90,29 @@ new ParallelBehavior(String behaviorId, CompletionStrategy strategy,
                      int requiredCompletions, Duration childTimeout)
 ```
 
-`requiredCompletions` is only used with `N_OF_M`. If out of range, falls back to `ALL`.
-
----
+`requiredCompletions` is only meaningful with `N_OF_M`.
 
 ## API Reference
 
 ```java
-CompletionStrategy s = behavior.getStrategy();
-int completed        = behavior.getCompletedCount();  // successful completions
-int finished         = behavior.getFinishedCount();   // success + failure
+int  getCompletedCount()      // successful child completions in the last execute()
+int  getFinishedCount()       // all finished (success + failure)
 
-behavior.setChildTimeout(Duration.ofSeconds(10));
-Duration t           = behavior.getChildTimeout();
+CompletionStrategy getStrategy()
+
+Duration getChildTimeout()
+void     setChildTimeout(Duration timeout)
 ```
 
----
+## How It Works — SchedulingHint
 
-## Error Handling
-
-- A child that throws or times out increments `finishedCount` but **not** `completedCount`.
-- The parallel behavior itself does not fail if a child fails; it logs a warning and continues.
-- For `N_OF_M`, only successful completions count towards the quorum.
-
----
+`ParallelBehavior` overrides `getSchedulingHint()` to return `SchedulingHint.ONCE`.
+`SimpleBehaviorScheduler` reads this and calls `scheduleOneShot()`, which fires `execute()`
+immediately after registration. After all children finish (per the completion strategy),
+the behavior becomes inactive.
 
 ## See Also
 
-- [SequentialBehavior](SequentialBehavior.md) - One-at-a-time execution
-- [FSMBehavior](FSMBehavior.md) - State-based composition
-- [Behavior Overview](README.md)
-
----
-
-**Since**: Jentic 0.3.0  
-**Status**: Production Ready ✅
+- [`SequentialBehavior`](SequentialBehavior.md) — ordered step-by-step execution, also auto-scheduled
+- [`CompletionStrategy`](../core/CompletionStrategy.md) — strategy enum reference
+- [`SchedulingHint`](../core/SchedulingHint.md) — how composites declare scheduling intent

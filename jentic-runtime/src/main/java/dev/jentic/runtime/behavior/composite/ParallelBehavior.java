@@ -4,6 +4,7 @@ import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.composite.CompletionStrategy;
 import dev.jentic.core.composite.CompositeBehavior;
+import dev.jentic.core.composite.SchedulingHint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Executes multiple child behaviors in parallel using virtual threads.
  * Supports different completion strategies (ALL, ANY, FIRST, N_OF_M).
+ *
+ * <p>{@code ParallelBehavior} reports {@link SchedulingHint#ONCE}: the scheduler
+ * fires all children in parallel immediately after registration via
+ * {@code agent.addBehavior()}, waits for the configured completion strategy,
+ * then marks the behavior inactive.
  */
 public class ParallelBehavior extends CompositeBehavior {
 
@@ -25,7 +31,7 @@ public class ParallelBehavior extends CompositeBehavior {
     private final int requiredCompletions; // For N_OF_M strategy
     private final AtomicInteger completedCount;  // Successful completions only
     private final AtomicInteger finishedCount;   // All finished (success + failure)
-    private Duration childTimeout; // Timeout for each child behavior
+    private Duration childTimeout;
 
     public ParallelBehavior(String behaviorId) {
         this(behaviorId, CompletionStrategy.ALL);
@@ -49,10 +55,27 @@ public class ParallelBehavior extends CompositeBehavior {
         this.childTimeout = childTimeout;
     }
 
+    // -------------------------------------------------------------------------
+    // Scheduling contract
+    // -------------------------------------------------------------------------
+
     @Override
     public BehaviorType getType() {
         return BehaviorType.PARALLEL;
     }
+
+    /**
+     * {@code ParallelBehavior} is a one-shot fan-out: fire all children in parallel,
+     * wait for the completion strategy, then done. The scheduler drives this automatically.
+     */
+    @Override
+    public SchedulingHint getSchedulingHint() {
+        return SchedulingHint.ONCE;
+    }
+
+    // -------------------------------------------------------------------------
+    // Execution
+    // -------------------------------------------------------------------------
 
     @Override
     public CompletableFuture<Void> execute() {
@@ -67,163 +90,90 @@ public class ParallelBehavior extends CompositeBehavior {
         finishedCount.set(0);
 
         return switch (strategy) {
-            case ALL -> executeAll();
-            case ANY -> executeAny();
+            case ALL   -> executeAll();
+            case ANY   -> executeAny();
             case FIRST -> executeFirst();
-            case N_OF_M -> executeNofM();
+            case N_OF_M -> executeNOfM();
         };
     }
 
-    /**
-     * Wait for ALL behaviors to complete
-     */
     private CompletableFuture<Void> executeAll() {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        for (Behavior behavior : childBehaviors) {
-            CompletableFuture<Void> future = executeWithTimeout(behavior);
-            futures.add(future);
-        }
-
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenRun(() -> {
-                    log.debug("Parallel behavior '{}' completed ALL children ({} successful, {} finished)",
-                            behaviorId, completedCount.get(), finishedCount.get());
-                });
+        List<CompletableFuture<Void>> futures = childBehaviors.stream()
+                .map(this::executeChild)
+                .toList();
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
-    /**
-     * Complete when ANY behavior completes (but let all continue)
-     */
     private CompletableFuture<Void> executeAny() {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        AtomicInteger localCompleted = new AtomicInteger(0);
-
-        for (Behavior behavior : childBehaviors) {
-            executeWithTimeout(behavior)
-                    .thenRun(() -> {
-                        if (localCompleted.incrementAndGet() == 1) {
-                            log.debug("Parallel behavior '{}' completed (first child done)", behaviorId);
-                            result.complete(null);
-                        }
-                    });
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        for (Behavior child : childBehaviors) {
+            executeChild(child).thenRun(() -> done.complete(null));
         }
-
-        return result;
+        return done;
     }
 
-    /**
-     * Race: complete when FIRST behavior completes (cancel others)
-     */
     private CompletableFuture<Void> executeFirst() {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        for (Behavior behavior : childBehaviors) {
-            CompletableFuture<Void> future = executeWithTimeout(behavior);
-            futures.add(future);
-        }
-
-        return CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
-                .thenRun(() -> {
-                    log.debug("Parallel behavior '{}' completed (first child won race)", behaviorId);
-                    // Stop remaining behaviors
-                    for (Behavior behavior : childBehaviors) {
-                        behavior.stop();
-                    }
-                });
+        CompletableFuture<Void>[] futures = childBehaviors.stream()
+                .map(this::executeChild)
+                .toArray(CompletableFuture[]::new);
+        return CompletableFuture.anyOf(futures).thenAccept(__ -> {});
     }
 
-    /**
-     * Complete when N behaviors complete
-     */
-    private CompletableFuture<Void> executeNofM() {
-        if (requiredCompletions <= 0 || requiredCompletions > childBehaviors.size()) {
-            log.warn("Invalid N_OF_M configuration: required={}, total={}",
-                    requiredCompletions, childBehaviors.size());
-            return executeAll();
+    private CompletableFuture<Void> executeNOfM() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        int target = requiredCompletions > 0 ? requiredCompletions : childBehaviors.size();
+        for (Behavior child : childBehaviors) {
+            // completedCount is already incremented by executeChild() on success;
+            // just read it here to avoid double-counting.
+            executeChild(child).thenRun(() -> {
+                if (completedCount.get() >= target) {
+                    done.complete(null);
+                }
+            });
         }
-
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        AtomicInteger localCompleted = new AtomicInteger(0);
-
-        for (Behavior behavior : childBehaviors) {
-            executeWithTimeout(behavior)
-                    .thenRun(() -> {
-                        int completed = localCompleted.incrementAndGet();
-                        if (completed >= requiredCompletions && !result.isDone()) {
-                            log.debug("Parallel behavior '{}' completed ({}/{} children done)",
-                                    behaviorId, completed, childBehaviors.size());
-                            result.complete(null);
-                        }
-                    });
-        }
-
-        return result;
+        return done;
     }
 
-    /**
-     * Execute a behavior with optional timeout
-     */
-    private CompletableFuture<Void> executeWithTimeout(Behavior behavior) {
-        CompletableFuture<Void> future = behavior.execute();
-
+    private CompletableFuture<Void> executeChild(Behavior child) {
+        CompletableFuture<Void> future = child.execute();
         if (childTimeout != null) {
             future = future.orTimeout(childTimeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
         }
-
-        // Use handle() to track both success and failure
-        return future.handle((result, throwable) -> {
-            // Always increment finished count
-            finishedCount.incrementAndGet();
-
-            if (throwable != null) {
-                // Failed or timed out - don't increment completedCount
-                if (throwable.getCause() instanceof java.util.concurrent.TimeoutException) {
-                    log.warn("Parallel behavior '{}' child '{}' timed out after {}",
-                            behaviorId, behavior.getBehaviorId(), childTimeout);
-                } else {
-                    log.warn("Child behavior '{}' failed in parallel execution: {}",
-                            behavior.getBehaviorId(), throwable.getMessage());
-                }
-            } else {
-                // Success - increment completedCount
-                completedCount.incrementAndGet();
-            }
-
-            return null;
-        });
+        return future
+                .thenRun(() -> {
+                    completedCount.incrementAndGet();
+                    finishedCount.incrementAndGet();
+                    log.debug("Parallel behavior '{}': child '{}' completed", behaviorId, child.getBehaviorId());
+                })
+                .exceptionally(ex -> {
+                    finishedCount.incrementAndGet();
+                    log.warn("Parallel behavior '{}': child '{}' failed: {}",
+                            behaviorId, child.getBehaviorId(), ex.getMessage());
+                    return null;
+                });
     }
 
-    /**
-     * Set timeout for each child behavior
-     */
-    public void setChildTimeout(Duration timeout) {
-        this.childTimeout = timeout;
-        log.debug("Parallel behavior '{}' child timeout set to: {}", behaviorId, timeout);
+    // -------------------------------------------------------------------------
+    // API
+    // -------------------------------------------------------------------------
+
+    public int getCompletedCount() {
+        return completedCount.get();
     }
 
-    /**
-     * Get configured child timeout
-     */
-    public Duration getChildTimeout() {
-        return childTimeout;
+    public int getFinishedCount() {
+        return finishedCount.get();
     }
 
     public CompletionStrategy getStrategy() {
         return strategy;
     }
 
-    /**
-     * Get the number of successfully completed children
-     */
-    public int getCompletedCount() {
-        return completedCount.get();
+    public Duration getChildTimeout() {
+        return childTimeout;
     }
 
-    /**
-     * Get the total number of finished children (success + failure)
-     */
-    public int getFinishedCount() {
-        return finishedCount.get();
+    public void setChildTimeout(Duration childTimeout) {
+        this.childTimeout = childTimeout;
     }
 }

@@ -191,18 +191,13 @@ public @interface JenticBehavior {
     // -------------------------------------------------------------------------
 
     /**
-     * Whether to restart the sequence from the beginning after all steps complete,
-     * for {@link BehaviorType#SEQUENTIAL} behaviors.
-     *
-     * @return {@code true} to repeat indefinitely, {@code false} for single run (default)
-     * @since 0.2.0
-     */
-    boolean repeatSequence() default false;
-
-    /**
      * Per-step timeout for {@link BehaviorType#SEQUENTIAL} behaviors.
      *
      * <p>Accepted formats: {@code "30s"}, {@code "5m"}. Empty string means no timeout.
+     *
+     * <p>For repeating (round-robin) sequential behaviors, use {@link #interval()} to set
+     * the tick rate — the presence of a non-empty {@code interval} is what determines
+     * repeating vs one-shot mode.
      *
      * @return per-step timeout string, or empty string for no timeout (default)
      * @since 0.2.0
