@@ -220,7 +220,7 @@ The starter targets Spring Boot **3.5.x**. Spring Boot 4.x is out of scope for v
 The auto-configuration API (`AutoConfiguration.imports`, `@ConditionalOnMissingBean`, etc.)
 is identical between the two major versions — migration effort is expected to be low
 (mainly BOM coordinate and `javax.*` → `jakarta.*` namespace changes).
-See [ADR-016](../adr/ADR-016-spring-boot-starter.md) for the rationale.
+See `ADR-016` for the rationale.
 
 ## See Also
 

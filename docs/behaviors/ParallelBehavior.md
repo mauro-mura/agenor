@@ -114,4 +114,3 @@ the behavior becomes inactive.
 ## See Also
 
 - [`SequentialBehavior`](SequentialBehavior.md) — ordered step-by-step execution, also auto-scheduled
-- [`CompletionStrategy`](../core/CompletionStrategy.md) — strategy enum reference
