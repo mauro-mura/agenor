@@ -6,6 +6,8 @@
 
 **Since**: v0.3.0 | **Type**: `BehaviorType.FSM` | **Package**: `dev.jentic.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
 
+> **Scheduling note**: `FSMBehavior` has type `BehaviorType.FSM`, which is **not scheduled automatically** by the `SimpleBehaviorScheduler`. You must drive it explicitly — see [Basic Usage](#basic-usage) below.
+
 ---
 
 ## Key Features
@@ -39,6 +41,8 @@ On each call to `execute()`:
 
 ## Basic Usage
 
+`FSMBehavior` is **not scheduled automatically** by `SimpleBehaviorScheduler` — its type `BehaviorType.FSM` is not in the set of types the scheduler drives. You must tick it explicitly using a `CyclicBehavior` driver that calls `execute()` at a fixed interval.
+
 ```java
 FSMBehavior fsm = FSMBehavior.builder("order-fsm", "IDLE")
     .state("IDLE",       new WaitForOrderBehavior())
@@ -49,8 +53,16 @@ FSMBehavior fsm = FSMBehavior.builder("order-fsm", "IDLE")
     .transition("DONE",       "IDLE",       fsm -> true) // always reset
     .build();
 
-agent.addBehavior(fsm);
+// FSMBehavior is on-demand: a CyclicBehavior driver ticks it at regular intervals
+CyclicBehavior driver = CyclicBehavior.from(
+        "order-fsm-driver",
+        Duration.ofMillis(300),
+        () -> fsm.execute());
+
+agent.addBehavior(driver);
 ```
+
+> **Common mistake**: calling `agent.addBehavior(fsm)` directly — the FSM is registered but never executed. Always add the driver, not the FSM itself.
 
 ---
 
@@ -129,6 +141,18 @@ Duration t    = fsm.getStateTimeout();
 
 ---
 
+## Scheduling Reference
+
+| Type | Scheduled by SimpleBehaviorScheduler | Notes |
+|---|---|---|
+| `ONE_SHOT` | ✅ Yes | Executed once immediately |
+| `CYCLIC` | ✅ Yes | Repeated at fixed interval |
+| `EVENT_DRIVEN` | ❌ No | Registered, responds to messages |
+| `WAKER` | ✅ Yes | Checks wake condition periodically |
+| `FSM` | ❌ No | On-demand — requires explicit `CyclicBehavior` driver |
+
+---
+
 ## Error Handling
 
 - If `currentState` is not found in the state map, the FSM logs an error, sets `active=false`, and returns a failed `CompletableFuture`.
@@ -148,12 +172,7 @@ Duration t    = fsm.getStateTimeout();
 
 ## See Also
 
-- [SequentialBehavior](SequentialBehavior.md) - Linear step-by-step execution
-- [ConditionalBehavior](ConditionalBehavior.md) - Single condition gate
-- [ParallelBehavior](ParallelBehavior.md) - Concurrent child execution
-- [Behavior Overview](README.md)
-
----
-
-**Since**: Jentic 0.3.0  
-**Status**: Production Ready ✅
+- [SequentialBehavior](https://www.jentic.dev/docs/behaviors/SequentialBehavior/) - Linear step-by-step execution
+- [ConditionalBehavior](https://www.jentic.dev/docs/behaviors/ConditionalBehavior/) - Single condition gate
+- [ParallelBehavior](https://www.jentic.dev/docs/behaviors/ParallelBehavior/) - Concurrent child execution
+- [Behavior Overview](https://www.jentic.dev/docs/behaviors/)
