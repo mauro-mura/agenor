@@ -4,6 +4,7 @@ import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.composite.CompositeBehavior;
 import dev.jentic.core.composite.SchedulingHint;
+import dev.jentic.runtime.behavior.BaseBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,6 +179,10 @@ public class SequentialBehavior extends CompositeBehavior {
         currentIndex++;
         if (currentIndex >= childBehaviors.size()) {
             currentIndex = 0;
+            childBehaviors.forEach(child -> {
+                // re-arm ONE_SHOT children for next cycle
+                if (child instanceof BaseBehavior b) b.activate();
+            });
             log.trace("Sequential behavior '{}' wrapped to beginning", behaviorId);
         }
 
