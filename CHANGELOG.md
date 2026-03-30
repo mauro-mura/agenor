@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `SequentialBehavior` (repeating mode): `ONE_SHOT` child behaviors were silently
+  skipped on the second and subsequent cycles because `isActive()` returned `false`
+  after their first execution. The index wrap-around now calls `activate()` on all
+  children (via `instanceof BaseBehavior` cast) to re-arm them for the next cycle.
+
 ## [0.14.0] - 2026-03-30
 
 ### Added
