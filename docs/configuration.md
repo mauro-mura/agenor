@@ -87,11 +87,11 @@ jentic:
       - "dev.example.legacy"
 
   messaging:
-    provider: inmemory             # default: inmemory | future: jms, kafka
+    provider: inmemory             # default: inmemory
     properties: {}                 # optional provider-specific properties
 
   directory:
-    provider: local                # default: local | future: database, consul
+    provider: local                # default: local
     properties: {}                 # optional provider-specific properties
 
   scheduler:
