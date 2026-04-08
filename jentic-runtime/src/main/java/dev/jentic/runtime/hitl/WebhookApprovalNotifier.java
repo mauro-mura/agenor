@@ -150,6 +150,12 @@ public class WebhookApprovalNotifier implements ApprovalNotifier {
                 log.warn("Webhook interrupted: requestId={}", requestId);
                 return;
             } catch (Exception e) {
+                // Clear the interrupt flag that HttpClient may set internally when a
+                // request timeout (HttpTimeoutException) cancels the I/O operation.
+                // Without this, the flag survives into the next attempt and causes
+                // httpClient.send() to throw InterruptedException, triggering the
+                // early-return branch and cutting the retry loop short.
+                Thread.interrupted();
                 log.warn("Webhook error: requestId={}, attempt={}/{} — {}",
                         requestId, attempt, maxRetries, e.getMessage());
             }
