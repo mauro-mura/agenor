@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency updates**: bumped `langchain4j` to version `1.12.2`.
 
 ### Fixed
+- **`WebhookApprovalNotifier`**: now correctly restores the interrupt flag on HTTP client timeout, ensuring retry loops are not interrupted prematurely.
 - **Dual source of truth for models**: synchronized `getAvailableModels()` and `ModelTokenLimits` in all providers to prevent divergence.
 - **Documentation**: updated `configuration.md` to remove outdated "future" references.
 
