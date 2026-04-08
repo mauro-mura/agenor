@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **.editorconfig**: added project-wide coding style configuration file.
+- **New models support (2026-04 update)**: updated LLM providers with current state-of-the-art models:
+  - OpenAI: GPT-4.1 family, o3/o4-mini.
+  - Anthropic: Claude 4.x series.
+  - Ollama: Llama 3.x, Qwen 2.5, DeepSeek-R1.
+
+### Changed
+- **`ModelTokenLimits` Decentralization (BREAKING CHANGE)**: moved token limit ownership from `jentic-runtime` to individual adapters (`jentic-adapters`).
+  - `ModelTokenLimits` is now a generic registry in `jentic-core` (`dev.jentic.core.memory.llm`).
+  - Adapters now register their own models and context sizes on class load.
+  - Dependency inversion fix: adapters no longer depend on runtime for model registration.
+- **Dependency updates**: bumped `langchain4j` to version `1.12.2`.
+
+### Fixed
+- **Dual source of truth for models**: synchronized `getAvailableModels()` and `ModelTokenLimits` in all providers to prevent divergence.
+- **Documentation**: updated `configuration.md` to remove outdated "future" references.
+
 ## [0.14.1] - 2026-03-30
 
 ### Fixed
