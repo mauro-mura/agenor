@@ -1,5 +1,6 @@
 package dev.jentic.adapters.llm.openai;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -372,7 +374,7 @@ class OpenAIProviderTest {
         assertThrows(IllegalStateException.class, () ->
                 OpenAIProvider.builder().build());
     }
-	
+
     @Nested
     @DisplayName("Builder Configuration Tests")
     class BuilderConfigurationTests {
@@ -1034,5 +1036,71 @@ class OpenAIProviderTest {
             List<ToolSpecification> specs = ToolConversionUtils.convertFunctionsToToolSpecs(Collections.emptyList());
             assertTrue(specs.isEmpty());
         }
+    }
+
+    @Nested
+    @DisplayName("Token Limit Registration")
+    class TokenLimitRegistrationTests {
+
+        @BeforeEach
+        void triggerClassLoad() {
+            OpenAIProvider.builder().apiKey("dummy-key").build();
+        }
+
+        @Test
+        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
+        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
+            OpenAIProvider provider = OpenAIProvider.builder().apiKey("dummy-key").build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertFalse(models.isEmpty());
+            models.forEach(model ->
+                assertTrue(ModelTokenLimits.hasModel(model),
+                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+        }
+
+        @Test
+        @DisplayName("gpt-4.1 → 1M")
+        void gpt41() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1")); }
+
+        @Test
+        @DisplayName("gpt-4.1-mini → 1M")
+        void gpt41Mini() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1-mini")); }
+
+        @Test
+        @DisplayName("gpt-4.1-nano → 1M")
+        void gpt41Nano() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1-nano")); }
+
+        @Test
+        @DisplayName("o3 → 200k")
+        void o3() { assertEquals(200_000, ModelTokenLimits.getLimit("o3")); }
+
+        @Test
+        @DisplayName("o4-mini → 200k")
+        void o4Mini() { assertEquals(200_000, ModelTokenLimits.getLimit("o4-mini")); }
+
+        @Test
+        @DisplayName("gpt-4o → 128k")
+        void gpt4o() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4o")); }
+
+        @Test
+        @DisplayName("gpt-4o-mini → 128k")
+        void gpt4oMini() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4o-mini")); }
+
+        @Test
+        @DisplayName("gpt-4-turbo → 128k")
+        void gpt4Turbo() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4-turbo")); }
+
+        @Test
+        @DisplayName("gpt-4 → 8192")
+        void gpt4() { assertEquals(8_192, ModelTokenLimits.getLimit("gpt-4")); }
+
+        @Test
+        @DisplayName("gpt-4-32k → 32768")
+        void gpt4_32k() { assertEquals(32_768, ModelTokenLimits.getLimit("gpt-4-32k")); }
+
+        @Test
+        @DisplayName("gpt-3.5-turbo → 16385")
+        void gpt35Turbo() { assertEquals(16_385, ModelTokenLimits.getLimit("gpt-3.5-turbo")); }
     }
 }

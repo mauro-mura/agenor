@@ -1,6 +1,7 @@
 package dev.jentic.adapters.llm.ollama;
 
 import dev.jentic.core.llm.*;
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -487,29 +489,6 @@ class OllamaProviderTest {
     }
 
     @Nested
-    @DisplayName("Available Models Tests")
-    class AvailableModelsTests {
-
-        @Test
-        @DisplayName("should return complete list of available models")
-        void getAvailableModels_shouldReturnAllModels() throws Exception {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
-
-            assertNotNull(models);
-            assertEquals(8, models.size());
-            assertTrue(models.contains("llama3.2"));
-            assertTrue(models.contains("llama3.1"));
-            assertTrue(models.contains("llama2"));
-            assertTrue(models.contains("mistral"));
-            assertTrue(models.contains("mixtral"));
-            assertTrue(models.contains("codellama"));
-            assertTrue(models.contains("phi3"));
-            assertTrue(models.contains("gemma2"));
-        }
-    }
-
-    @Nested
     @DisplayName("Provider Capabilities Tests")
     class ProviderCapabilitiesTests {
 
@@ -540,6 +519,106 @@ class OllamaProviderTest {
             OllamaProvider provider = OllamaProvider.builder().build();
             assertEquals("llama3.2", provider.getDefaultModel());
         }
+    }
+
+    @Nested
+    @DisplayName("Available Models Tests")
+    class AvailableModelsTests {
+
+        @Test
+        @DisplayName("should return non-empty model list")
+        void getAvailableModels_shouldNotBeEmpty() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertNotNull(models);
+            assertFalse(models.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should contain expected base models")
+        void getAvailableModels_shouldContainBaseModels() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            // Verify key model families are represented (no hardcoded count)
+            assertTrue(models.stream().anyMatch(m -> m.startsWith("llama")));
+            assertTrue(models.stream().anyMatch(m -> m.startsWith("mistral")));
+            assertTrue(models.stream().anyMatch(m -> m.startsWith("gemma")));
+        }
+
+        @Test
+        @DisplayName("should return consistent list across calls")
+        void getAvailableModels_calledMultipleTimes_shouldReturnSame() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models1 = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+            List<String> models2 = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertEquals(models1.size(), models2.size());
+            assertTrue(models1.containsAll(models2));
+        }
+    }
+
+    @Nested
+    @DisplayName("Token Limit Registration")
+    class TokenLimitRegistrationTests {
+
+        @BeforeEach
+        void triggerClassLoad() {
+            OllamaProvider.builder().build();
+        }
+
+        @Test
+        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
+        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertFalse(models.isEmpty());
+            models.forEach(model ->
+                assertTrue(ModelTokenLimits.hasModel(model),
+                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+        }
+
+        @Test
+        @DisplayName("llama3.2 → 128k")
+        void llama32() { assertEquals(128_000, ModelTokenLimits.getLimit("llama3.2")); }
+
+        @Test
+        @DisplayName("llama3.1 → 128k")
+        void llama31() { assertEquals(128_000, ModelTokenLimits.getLimit("llama3.1")); }
+
+        @Test
+        @DisplayName("llama3 → 8192")
+        void llama3() { assertEquals(8_192, ModelTokenLimits.getLimit("llama3")); }
+
+        @Test
+        @DisplayName("llama2 → 4096")
+        void llama2() { assertEquals(4_096, ModelTokenLimits.getLimit("llama2")); }
+
+        @Test
+        @DisplayName("mistral → 32768")
+        void mistral() { assertEquals(32_768, ModelTokenLimits.getLimit("mistral")); }
+
+        @Test
+        @DisplayName("mistral-nemo → 128k")
+        void mistralNemo() { assertEquals(128_000, ModelTokenLimits.getLimit("mistral-nemo")); }
+
+        @Test
+        @DisplayName("qwen2.5 → 128k")
+        void qwen25() { assertEquals(128_000, ModelTokenLimits.getLimit("qwen2.5")); }
+
+        @Test
+        @DisplayName("deepseek-r1 → 128k")
+        void deepseekR1() { assertEquals(128_000, ModelTokenLimits.getLimit("deepseek-r1")); }
+
+        @Test
+        @DisplayName("phi4 → 16384")
+        void phi4() { assertEquals(16_384, ModelTokenLimits.getLimit("phi4")); }
+
+        @Test
+        @DisplayName("codellama → 16384")
+        void codellama() { assertEquals(16_384, ModelTokenLimits.getLimit("codellama")); }
     }
 
     private OllamaProvider createProviderWithMocks(OllamaChatModel chatModel, OllamaStreamingChatModel streamingModel) {

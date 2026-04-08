@@ -2,6 +2,7 @@ package dev.jentic.adapters.llm.openai;
 
 import dev.jentic.adapters.llm.ToolConversionUtils;
 import dev.jentic.core.llm.*;
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -23,6 +24,47 @@ public class OpenAIProvider implements LLMProvider {
     private final OpenAiChatModel chatModel;
     private final OpenAiStreamingChatModel streamingModel;
     private final String modelName;
+
+    // -------------------------------------------------------------------------
+    // Single source of truth for OpenAI model → context window size.
+    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
+    // Source: https://platform.openai.com/docs/models — Last verified: 2026-04
+    // -------------------------------------------------------------------------
+    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+        // GPT-4.1 family (1M context)
+        Map.entry("gpt-4.1",                  1_000_000),
+        Map.entry("gpt-4.1-mini",             1_000_000),
+        Map.entry("gpt-4.1-nano",             1_000_000),
+        // o-series reasoning models
+        Map.entry("o3",                          200_000),
+        Map.entry("o4-mini",                     200_000),
+        Map.entry("o3-mini",                     200_000),
+        Map.entry("o1",                          200_000),
+        Map.entry("o1-mini",                     128_000),
+        Map.entry("o1-preview",                  128_000),
+        // GPT-4o family
+        Map.entry("gpt-4o",                      128_000),
+        Map.entry("gpt-4o-mini",                 128_000),
+        // GPT-4 Turbo
+        Map.entry("gpt-4-turbo",                 128_000),
+        Map.entry("gpt-4-turbo-preview",         128_000),
+        Map.entry("gpt-4-1106-preview",          128_000),
+        Map.entry("gpt-4-0125-preview",          128_000),
+        // GPT-4 original
+        Map.entry("gpt-4",                         8_192),
+        Map.entry("gpt-4-0314",                    8_192),
+        Map.entry("gpt-4-0613",                    8_192),
+        Map.entry("gpt-4-32k",                    32_768),
+        // GPT-3.5 (legacy)
+        Map.entry("gpt-3.5-turbo",                16_385),
+        Map.entry("gpt-3.5-turbo-16k",            16_385),
+        Map.entry("gpt-3.5-turbo-1106",           16_385),
+        Map.entry("gpt-3.5-turbo-0125",           16_385)
+    );
+
+    static {
+        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+    }
 
     private OpenAIProvider(Builder builder) {
         this.modelName = builder.modelName;
@@ -144,8 +186,7 @@ public class OpenAIProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(
-                List.of("gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"));
+        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
     }
 
     @Override

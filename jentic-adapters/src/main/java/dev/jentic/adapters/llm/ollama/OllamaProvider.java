@@ -1,6 +1,7 @@
 package dev.jentic.adapters.llm.ollama;
 
 import dev.jentic.core.llm.*;
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.data.message.*;
@@ -23,6 +24,65 @@ public class OllamaProvider implements LLMProvider {
     private final OllamaStreamingChatModel streamingModel;
     private final String modelName;
     private final String baseUrl;
+
+    // -------------------------------------------------------------------------
+    // Single source of truth for well-known Ollama models → context window size.
+    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
+    // Note: Ollama runs locally; the actual available models depend on what the
+    // user has pulled. This list covers common defaults.
+    // Source: https://ollama.com/library — Last verified: 2026-04
+    // -------------------------------------------------------------------------
+    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+        // Llama 3.x (Meta)
+        Map.entry("llama3.2",              128_000),
+        Map.entry("llama3.2:1b",           128_000),
+        Map.entry("llama3.2:3b",           128_000),
+        Map.entry("llama3.1",              128_000),
+        Map.entry("llama3.1:8b",           128_000),
+        Map.entry("llama3.1:70b",          128_000),
+        Map.entry("llama3.1:405b",         128_000),
+        Map.entry("llama3",                  8_192),
+        Map.entry("llama3:8b",               8_192),
+        Map.entry("llama3:70b",              8_192),
+        // Llama 2 (legacy)
+        Map.entry("llama2",                  4_096),
+        Map.entry("llama2:7b",               4_096),
+        Map.entry("llama2:13b",              4_096),
+        Map.entry("llama2:70b",              4_096),
+        // Mistral / Mixtral
+        Map.entry("mistral",                32_768),
+        Map.entry("mistral:7b",             32_768),
+        Map.entry("mixtral",                32_768),
+        Map.entry("mixtral:8x7b",           32_768),
+        Map.entry("mixtral:8x22b",          65_536),
+        Map.entry("mistral-nemo",          128_000),
+        // Qwen 2.5 (Alibaba)
+        Map.entry("qwen2.5",               128_000),
+        Map.entry("qwen2.5:7b",            128_000),
+        Map.entry("qwen2.5:72b",           128_000),
+        Map.entry("qwen2.5-coder",         128_000),
+        // Gemma (Google)
+        Map.entry("gemma3",                  8_192),
+        Map.entry("gemma2",                  8_192),
+        Map.entry("gemma",                   8_192),
+        // Phi (Microsoft)
+        Map.entry("phi4",                   16_384),
+        Map.entry("phi3",                    4_096),
+        Map.entry("phi3.5",                  4_096),
+        // DeepSeek
+        Map.entry("deepseek-r1",           128_000),
+        Map.entry("deepseek-coder-v2",     128_000),
+        // Code-focused
+        Map.entry("codellama",              16_384),
+        Map.entry("codellama:7b",           16_384),
+        Map.entry("codellama:13b",          16_384),
+        Map.entry("codellama:34b",          16_384),
+        Map.entry("codegemma",               8_192)
+    );
+
+    static {
+        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+    }
 
     private OllamaProvider(Builder builder) {
         this.modelName = builder.modelName;
@@ -144,20 +204,7 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.supplyAsync(() -> {
-            // Ollama provides model listing through its API
-            return Arrays.asList(
-                    "llama3.2",
-                    "llama3.1",
-                    "llama2",
-                    "mistral",
-                    "mixtral",
-                    "codellama",
-                    "phi3",
-                    "gemma2"
-            );
-
-        });
+        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
     }
 
     @Override

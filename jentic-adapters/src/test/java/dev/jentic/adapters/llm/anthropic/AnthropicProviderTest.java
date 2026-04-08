@@ -1,5 +1,6 @@
 package dev.jentic.adapters.llm.anthropic;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -355,7 +357,7 @@ class AnthropicProviderTest {
                         .logResponses(true)
                         .build());
     }
-    
+
     @Nested
     @DisplayName("Builder Tests")
     class BuilderTests {
@@ -616,6 +618,72 @@ class AnthropicProviderTest {
             assertDoesNotThrow(() -> streamFuture.get());
             assertFalse(fullResponse.toString().isEmpty());
         }
+    }
+
+    @Nested
+    @DisplayName("Token Limit Registration")
+    class TokenLimitRegistrationTests {
+
+        @BeforeEach
+        void triggerClassLoad() {
+            LLMProviderFactory.anthropic().apiKey("dummy-key").build();
+        }
+
+        @Test
+        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
+        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
+            AnthropicProvider provider = AnthropicProvider.builder().apiKey("dummy-key").build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertFalse(models.isEmpty());
+            models.forEach(model ->
+                assertTrue(ModelTokenLimits.hasModel(model),
+                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+        }
+
+        @Test
+        @DisplayName("claude-opus-4-6 → 200k")
+        void claudeOpus46() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-opus-4-6")); }
+
+        @Test
+        @DisplayName("claude-sonnet-4-6 → 200k")
+        void claudeSonnet46() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-sonnet-4-6")); }
+
+        @Test
+        @DisplayName("claude-opus-4-5-20251101 → 200k")
+        void claudeOpus45() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-opus-4-5-20251101")); }
+
+        @Test
+        @DisplayName("claude-3-7-sonnet-20250219 → 200k")
+        void claude37Sonnet() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-7-sonnet-20250219")); }
+
+        @Test
+        @DisplayName("claude-3-5-sonnet-20241022 → 200k")
+        void claude35Sonnet() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-5-sonnet-20241022")); }
+
+        @Test
+        @DisplayName("claude-3-5-haiku-20241022 → 200k")
+        void claude35Haiku() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-5-haiku-20241022")); }
+
+        @Test
+        @DisplayName("claude-3-opus-20240229 → 200k")
+        void claude3Opus() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-opus-20240229")); }
+
+        @Test
+        @DisplayName("claude-3-haiku-20240307 → 200k")
+        void claude3Haiku() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-haiku-20240307")); }
+
+        @Test
+        @DisplayName("claude-2.1 → 200k")
+        void claude21() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-2.1")); }
+
+        @Test
+        @DisplayName("claude-2.0 → 100k")
+        void claude20() { assertEquals(100_000, ModelTokenLimits.getLimit("claude-2.0")); }
+
+        @Test
+        @DisplayName("claude-instant-1.2 → 100k")
+        void claudeInstant() { assertEquals(100_000, ModelTokenLimits.getLimit("claude-instant-1.2")); }
     }
 
     private static void assumeTrue(boolean condition, String message) {

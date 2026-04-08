@@ -2,6 +2,7 @@ package dev.jentic.adapters.llm.anthropic;
 
 import dev.jentic.adapters.llm.ToolConversionUtils;
 import dev.jentic.core.llm.*;
+import dev.jentic.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.anthropic.AnthropicChatModel;
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
 import dev.langchain4j.data.message.*;
@@ -17,11 +18,44 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class AnthropicProvider implements LLMProvider {
-    
+
     private final AnthropicChatModel chatModel;
     private final AnthropicStreamingChatModel streamingModel;
     private final String modelName;
-    
+
+    // -------------------------------------------------------------------------
+    // Single source of truth for Anthropic model → context window size.
+    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
+    // Source: https://platform.claude.com/docs/en/about-claude/models/overview
+    // Last verified: 2026-04
+    // -------------------------------------------------------------------------
+    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+        // Claude 4.x family
+        Map.entry("claude-opus-4-6",              200_000),
+        Map.entry("claude-sonnet-4-6",            200_000),
+        Map.entry("claude-opus-4-5-20251101",     200_000),
+        Map.entry("claude-opus-4-1",              200_000),
+        Map.entry("claude-opus-4-20250514",       200_000),
+        Map.entry("claude-sonnet-4-5",            200_000),
+        Map.entry("claude-sonnet-4-20250514",     200_000),
+        Map.entry("claude-haiku-4-5-20251001",    200_000),
+        // Claude 3.x family
+        Map.entry("claude-3-7-sonnet-20250219",   200_000),
+        Map.entry("claude-3-5-sonnet-20241022",   200_000),
+        Map.entry("claude-3-5-haiku-20241022",    200_000),
+        Map.entry("claude-3-5-sonnet-20240620",   200_000),
+        Map.entry("claude-3-opus-20240229",       200_000),
+        Map.entry("claude-3-haiku-20240307",      200_000),
+        // Claude 2.x (legacy)
+        Map.entry("claude-2.1",                   200_000),
+        Map.entry("claude-2.0",                   100_000),
+        Map.entry("claude-instant-1.2",           100_000)
+    );
+
+    static {
+        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+    }
+
     private AnthropicProvider(Builder builder) {
         this.modelName = builder.modelName;
         this.chatModel = AnthropicChatModel.builder()
@@ -34,7 +68,7 @@ public class AnthropicProvider implements LLMProvider {
                 .logRequests(builder.logRequests)
                 .logResponses(builder.logResponses)
                 .build();
-        
+
         this.streamingModel = AnthropicStreamingChatModel.builder()
                 .apiKey(builder.apiKey)
                 .baseUrl(builder.baseUrl)
@@ -44,7 +78,7 @@ public class AnthropicProvider implements LLMProvider {
                 .timeout(builder.timeout)
                 .build();
     }
-    
+
     @Override
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
         return CompletableFuture.supplyAsync(() -> {
@@ -98,7 +132,7 @@ public class AnthropicProvider implements LLMProvider {
 
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> handler) {
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -140,19 +174,12 @@ public class AnthropicProvider implements LLMProvider {
         );
         return future;
     }
-    
+
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(List.of(
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
-            "claude-3-7-sonnet-20250219"
-        ));
+        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
     }
-    
+
     @Override
     public String getProviderName() {
         return "Anthropic";
@@ -169,11 +196,11 @@ public class AnthropicProvider implements LLMProvider {
         }).collect(Collectors.toList());
     }
 
-    
+
     public static Builder builder() {
         return new Builder();
     }
-    
+
     public static class Builder {
         private String apiKey;
         private String baseUrl;
@@ -183,7 +210,7 @@ public class AnthropicProvider implements LLMProvider {
         private Duration timeout = Duration.ofSeconds(60);
         private boolean logRequests = false;
         private boolean logResponses = false;
-        
+
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
             return this;
@@ -193,42 +220,42 @@ public class AnthropicProvider implements LLMProvider {
             this.baseUrl = baseUrl;
             return this;
         }
-        
+
         public Builder modelName(String modelName) {
             this.modelName = modelName;
             return this;
         }
-        
+
         public Builder model(String modelName) {
             this.modelName = modelName;
             return this;
         }
-        
+
         public Builder temperature(Double temperature) {
             this.temperature = temperature;
             return this;
         }
-        
+
         public Builder maxTokens(Integer maxTokens) {
             this.maxTokens = maxTokens;
             return this;
         }
-        
+
         public Builder timeout(Duration timeout) {
             this.timeout = timeout;
             return this;
         }
-        
+
         public Builder logRequests(boolean logRequests) {
             this.logRequests = logRequests;
             return this;
         }
-        
+
         public Builder logResponses(boolean logResponses) {
             this.logResponses = logResponses;
             return this;
         }
-        
+
         public AnthropicProvider build() {
             if (apiKey == null || apiKey.isBlank()) {
                 throw new IllegalArgumentException("API key is required");
