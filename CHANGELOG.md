@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ollama: Llama 3.x, Qwen 2.5, DeepSeek-R1.
 
 ### Changed
+- **Model Enums Implementation**: replaced static maps with provider-specific enums (`OpenAIModel`, `AnthropicModel`, `OllamaModel`) for better type safety and maintainability.
 - **`ModelTokenLimits` Decentralization (BREAKING CHANGE)**: moved token limit ownership from `jentic-runtime` to individual adapters (`jentic-adapters`).
   - `ModelTokenLimits` is now a generic registry in `jentic-core` (`dev.jentic.core.memory.llm`).
   - Adapters now register their own models and context sizes on class load.
