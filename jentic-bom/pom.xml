@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-bom</artifactId>
-    <version>0.15.0-SNAPSHOT</version>
+    <version>0.15.0</version>
     <packaging>pom</packaging>
 
     <name>Jentic BOM</name>
@@ -22,25 +22,25 @@
                 <artifactId>jentic-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>dev.jentic</groupId>
                 <artifactId>jentic-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>dev.jentic</groupId>
                 <artifactId>jentic-adapters</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>dev.jentic</groupId>
                 <artifactId>jentic-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <dependency>
 			    <groupId>dev.jentic</groupId>
 			    <artifactId>jentic-spring-boot-starter</artifactId>
@@ -48,7 +48,7 @@
 			</dependency>
         </dependencies>
     </dependencyManagement>
-    
+
     <build>
 	    <plugins>
 	        <plugin>
