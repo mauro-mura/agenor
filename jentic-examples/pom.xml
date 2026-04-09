@@ -8,7 +8,7 @@
     <parent>
         <groupId>dev.jentic</groupId>
         <artifactId>jentic</artifactId>
-        <version>0.15.0</version>
+        <version>0.16.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>jentic-examples</artifactId>
