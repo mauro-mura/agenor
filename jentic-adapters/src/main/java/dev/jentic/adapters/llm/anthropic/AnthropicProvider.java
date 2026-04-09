@@ -24,36 +24,44 @@ public class AnthropicProvider implements LLMProvider {
     private final String modelName;
 
     // -------------------------------------------------------------------------
-    // Single source of truth for Anthropic model → context window size.
-    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
+    // Model enum — single source of truth for model ID + context window size.
     // Source: https://platform.claude.com/docs/en/about-claude/models/overview
     // Last verified: 2026-04
     // -------------------------------------------------------------------------
-    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+    public enum Models {
         // Claude 4.x family
-        Map.entry("claude-opus-4-6",              200_000),
-        Map.entry("claude-sonnet-4-6",            200_000),
-        Map.entry("claude-opus-4-5-20251101",     200_000),
-        Map.entry("claude-opus-4-1",              200_000),
-        Map.entry("claude-opus-4-20250514",       200_000),
-        Map.entry("claude-sonnet-4-5",            200_000),
-        Map.entry("claude-sonnet-4-20250514",     200_000),
-        Map.entry("claude-haiku-4-5-20251001",    200_000),
+        CLAUDE_OPUS_4_6      ("claude-opus-4-6",            200_000),
+        CLAUDE_SONNET_4_6    ("claude-sonnet-4-6",          200_000),
+        CLAUDE_OPUS_4_5      ("claude-opus-4-5-20251101",   200_000),
+        CLAUDE_OPUS_4_1      ("claude-opus-4-1",            200_000),
+        CLAUDE_OPUS_4        ("claude-opus-4-20250514",     200_000),
+        CLAUDE_SONNET_4_5    ("claude-sonnet-4-5",          200_000),
+        CLAUDE_SONNET_4      ("claude-sonnet-4-20250514",   200_000),
+        CLAUDE_HAIKU_4_5     ("claude-haiku-4-5-20251001",  200_000),
         // Claude 3.x family
-        Map.entry("claude-3-7-sonnet-20250219",   200_000),
-        Map.entry("claude-3-5-sonnet-20241022",   200_000),
-        Map.entry("claude-3-5-haiku-20241022",    200_000),
-        Map.entry("claude-3-5-sonnet-20240620",   200_000),
-        Map.entry("claude-3-opus-20240229",       200_000),
-        Map.entry("claude-3-haiku-20240307",      200_000),
+        CLAUDE_3_7_SONNET    ("claude-3-7-sonnet-20250219", 200_000),
+        CLAUDE_3_5_SONNET    ("claude-3-5-sonnet-20241022", 200_000),
+        CLAUDE_3_5_HAIKU     ("claude-3-5-haiku-20241022",  200_000),
+        CLAUDE_3_5_SONNET_V1 ("claude-3-5-sonnet-20240620", 200_000),
+        CLAUDE_3_OPUS        ("claude-3-opus-20240229",     200_000),
+        CLAUDE_3_HAIKU       ("claude-3-haiku-20240307",    200_000),
         // Claude 2.x (legacy)
-        Map.entry("claude-2.1",                   200_000),
-        Map.entry("claude-2.0",                   100_000),
-        Map.entry("claude-instant-1.2",           100_000)
-    );
+        CLAUDE_2_1           ("claude-2.1",                 200_000),
+        CLAUDE_2_0           ("claude-2.0",                 100_000),
+        CLAUDE_INSTANT_1_2   ("claude-instant-1.2",         100_000);
+
+        public final String id;
+        public final int contextWindow;
+
+        Models(String id, int contextWindow) {
+            this.id = id;
+            this.contextWindow = contextWindow;
+        }
+    }
 
     static {
-        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+        Arrays.stream(Models.values())
+            .forEach(m -> ModelTokenLimits.register(m.id, m.contextWindow));
     }
 
     private AnthropicProvider(Builder builder) {
@@ -177,13 +185,18 @@ public class AnthropicProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
+        return CompletableFuture.completedFuture(
+            Arrays.stream(Models.values()).map(m -> m.id).toList()
+        );
     }
 
     @Override
     public String getProviderName() {
         return "Anthropic";
     }
+
+    @Override
+    public String getDefaultModel() { return Models.CLAUDE_SONNET_4_6.id; }
 
     private List<ChatMessage> convertMessages(LLMRequest request) {
         return request.messages().stream().map(msg -> {
@@ -204,7 +217,7 @@ public class AnthropicProvider implements LLMProvider {
     public static class Builder {
         private String apiKey;
         private String baseUrl;
-        private String modelName = "claude-3-5-sonnet-20241022";
+        private String modelName = Models.CLAUDE_SONNET_4_6.id;
         private Double temperature = 0.7;
         private Integer maxTokens = 4096;
         private Duration timeout = Duration.ofSeconds(60);
@@ -221,13 +234,15 @@ public class AnthropicProvider implements LLMProvider {
             return this;
         }
 
+        /** Set model by string ID (for custom/external models). */
         public Builder modelName(String modelName) {
             this.modelName = modelName;
             return this;
         }
 
-        public Builder model(String modelName) {
-            this.modelName = modelName;
+        /** Set model by enum constant — preferred for known models. */
+        public Builder modelName(Models model) {
+            this.modelName = model.id;
             return this;
         }
 

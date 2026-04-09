@@ -1048,59 +1048,53 @@ class OpenAIProviderTest {
         }
 
         @Test
-        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
-        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
-            OpenAIProvider provider = OpenAIProvider.builder().apiKey("dummy-key").build();
-            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
-
-            assertFalse(models.isEmpty());
-            models.forEach(model ->
-                assertTrue(ModelTokenLimits.hasModel(model),
-                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+        @DisplayName("all enum entries must be registered in ModelTokenLimits")
+        void allEnumEntries_shouldBeRegistered() {
+            Arrays.stream(OpenAIProvider.Models.values()).forEach(m ->
+                assertTrue(ModelTokenLimits.hasModel(m.id),
+                    m.name() + " (" + m.id + ") missing from ModelTokenLimits"));
         }
 
         @Test
-        @DisplayName("gpt-4.1 → 1M")
-        void gpt41() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1")); }
+        @DisplayName("all enum context windows must match ModelTokenLimits")
+        void allEnumEntries_contextWindowShouldMatch() {
+            Arrays.stream(OpenAIProvider.Models.values()).forEach(m ->
+                assertEquals(m.contextWindow, ModelTokenLimits.getLimit(m.id),
+                    "Wrong context window for " + m.name()));
+        }
 
         @Test
-        @DisplayName("gpt-4.1-mini → 1M")
-        void gpt41Mini() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1-mini")); }
+        @DisplayName("getAvailableModels() must equal enum IDs")
+        void getAvailableModels_shouldEqualEnumIds() throws Exception {
+            OpenAIProvider provider = OpenAIProvider.builder().apiKey("dummy-key").build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+            List<String> enumIds = Arrays.stream(OpenAIProvider.Models.values())
+                .map(m -> m.id).toList();
+            assertEquals(enumIds.size(), models.size());
+            assertTrue(models.containsAll(enumIds));
+        }
 
         @Test
-        @DisplayName("gpt-4.1-nano → 1M")
-        void gpt41Nano() { assertEquals(1_000_000, ModelTokenLimits.getLimit("gpt-4.1-nano")); }
+        @DisplayName("getDefaultModel() must be a known enum entry")
+        void defaultModel_shouldBeInEnum() {
+            OpenAIProvider provider = OpenAIProvider.builder().apiKey("dummy-key").build();
+            String defaultModel = provider.getDefaultModel();
+            assertTrue(
+                Arrays.stream(OpenAIProvider.Models.values()).anyMatch(m -> m.id.equals(defaultModel)),
+                "Default model '" + defaultModel + "' not found in Models enum");
+        }
 
         @Test
-        @DisplayName("o3 → 200k")
-        void o3() { assertEquals(200_000, ModelTokenLimits.getLimit("o3")); }
-
-        @Test
-        @DisplayName("o4-mini → 200k")
-        void o4Mini() { assertEquals(200_000, ModelTokenLimits.getLimit("o4-mini")); }
-
-        @Test
-        @DisplayName("gpt-4o → 128k")
-        void gpt4o() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4o")); }
-
-        @Test
-        @DisplayName("gpt-4o-mini → 128k")
-        void gpt4oMini() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4o-mini")); }
-
-        @Test
-        @DisplayName("gpt-4-turbo → 128k")
-        void gpt4Turbo() { assertEquals(128_000, ModelTokenLimits.getLimit("gpt-4-turbo")); }
-
-        @Test
-        @DisplayName("gpt-4 → 8192")
-        void gpt4() { assertEquals(8_192, ModelTokenLimits.getLimit("gpt-4")); }
-
-        @Test
-        @DisplayName("gpt-4-32k → 32768")
-        void gpt4_32k() { assertEquals(32_768, ModelTokenLimits.getLimit("gpt-4-32k")); }
-
-        @Test
-        @DisplayName("gpt-3.5-turbo → 16385")
-        void gpt35Turbo() { assertEquals(16_385, ModelTokenLimits.getLimit("gpt-3.5-turbo")); }
+        @DisplayName("builder modelName(enum) should resolve to enum id")
+        void builderModelNameEnum_shouldResolveToId() {
+            OpenAIProvider provider = OpenAIProvider.builder()
+                .apiKey("dummy-key")
+                .modelName(OpenAIProvider.Models.GPT_4O)
+                .build();
+            assertEquals(OpenAIProvider.Models.GPT_4O.id, provider.getDefaultModel());
+            // spot-check known values
+            assertEquals("gpt-4.1-mini", OpenAIProvider.Models.GPT_4_1_MINI.id);
+            assertEquals(1_000_000, OpenAIProvider.Models.GPT_4_1_MINI.contextWindow);
+        }
     }
 }

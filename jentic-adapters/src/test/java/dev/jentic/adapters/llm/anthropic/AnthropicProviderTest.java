@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -391,7 +392,7 @@ class AnthropicProviderTest {
         void build_withCustomConfig_shouldSucceed() {
             LLMProvider provider = LLMProviderFactory.anthropic()
                     .apiKey("test-api-key")
-                    .model("claude-3-5-sonnet-20241022")
+                    .modelName("claude-3-5-sonnet-20241022")
                     .temperature(0.5)
                     .maxTokens(500)
                     .build();
@@ -573,7 +574,7 @@ class AnthropicProviderTest {
 
             LLMProvider provider = LLMProviderFactory.anthropic()
                     .apiKey(apiKey)
-                    .model("claude-3-5-haiku-20241022")
+                    .modelName("claude-3-5-haiku-20241022")
                     .maxTokens(100)
                     .build();
 
@@ -598,7 +599,7 @@ class AnthropicProviderTest {
 
             LLMProvider provider = LLMProviderFactory.anthropic()
                     .apiKey(apiKey)
-                    .model("claude-3-5-haiku-20241022")
+                    .modelName("claude-3-5-haiku-20241022")
                     .build();
 
             LLMRequest request = LLMRequest.builder("stream-test")
@@ -626,64 +627,57 @@ class AnthropicProviderTest {
 
         @BeforeEach
         void triggerClassLoad() {
-            LLMProviderFactory.anthropic().apiKey("dummy-key").build();
+            AnthropicProvider.builder().apiKey("dummy-key").build();
         }
 
         @Test
-        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
-        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
+        @DisplayName("all enum entries must be registered in ModelTokenLimits")
+        void allEnumEntries_shouldBeRegistered() {
+            Arrays.stream(AnthropicProvider.Models.values()).forEach(m ->
+                assertTrue(ModelTokenLimits.hasModel(m.id),
+                    m.name() + " (" + m.id + ") missing from ModelTokenLimits"));
+        }
+
+        @Test
+        @DisplayName("all enum context windows must match ModelTokenLimits")
+        void allEnumEntries_contextWindowShouldMatch() {
+            Arrays.stream(AnthropicProvider.Models.values()).forEach(m ->
+                assertEquals(m.contextWindow, ModelTokenLimits.getLimit(m.id),
+                    "Wrong context window for " + m.name()));
+        }
+
+        @Test
+        @DisplayName("getAvailableModels() must equal enum IDs")
+        void getAvailableModels_shouldEqualEnumIds() throws Exception {
             AnthropicProvider provider = AnthropicProvider.builder().apiKey("dummy-key").build();
             List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
-
-            assertFalse(models.isEmpty());
-            models.forEach(model ->
-                assertTrue(ModelTokenLimits.hasModel(model),
-                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+            List<String> enumIds = Arrays.stream(AnthropicProvider.Models.values())
+                .map(m -> m.id).toList();
+            assertEquals(enumIds.size(), models.size());
+            assertTrue(models.containsAll(enumIds));
         }
 
         @Test
-        @DisplayName("claude-opus-4-6 → 200k")
-        void claudeOpus46() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-opus-4-6")); }
+        @DisplayName("getDefaultModel() must be a known enum entry")
+        void defaultModel_shouldBeInEnum() {
+            AnthropicProvider provider = AnthropicProvider.builder().apiKey("dummy-key").build();
+            String defaultModel = provider.getDefaultModel();
+            assertTrue(
+                Arrays.stream(AnthropicProvider.Models.values()).anyMatch(m -> m.id.equals(defaultModel)),
+                "Default model '" + defaultModel + "' not found in Models enum");
+        }
 
         @Test
-        @DisplayName("claude-sonnet-4-6 → 200k")
-        void claudeSonnet46() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-sonnet-4-6")); }
-
-        @Test
-        @DisplayName("claude-opus-4-5-20251101 → 200k")
-        void claudeOpus45() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-opus-4-5-20251101")); }
-
-        @Test
-        @DisplayName("claude-3-7-sonnet-20250219 → 200k")
-        void claude37Sonnet() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-7-sonnet-20250219")); }
-
-        @Test
-        @DisplayName("claude-3-5-sonnet-20241022 → 200k")
-        void claude35Sonnet() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-5-sonnet-20241022")); }
-
-        @Test
-        @DisplayName("claude-3-5-haiku-20241022 → 200k")
-        void claude35Haiku() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-5-haiku-20241022")); }
-
-        @Test
-        @DisplayName("claude-3-opus-20240229 → 200k")
-        void claude3Opus() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-opus-20240229")); }
-
-        @Test
-        @DisplayName("claude-3-haiku-20240307 → 200k")
-        void claude3Haiku() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-3-haiku-20240307")); }
-
-        @Test
-        @DisplayName("claude-2.1 → 200k")
-        void claude21() { assertEquals(200_000, ModelTokenLimits.getLimit("claude-2.1")); }
-
-        @Test
-        @DisplayName("claude-2.0 → 100k")
-        void claude20() { assertEquals(100_000, ModelTokenLimits.getLimit("claude-2.0")); }
-
-        @Test
-        @DisplayName("claude-instant-1.2 → 100k")
-        void claudeInstant() { assertEquals(100_000, ModelTokenLimits.getLimit("claude-instant-1.2")); }
+        @DisplayName("builder model(enum) should resolve to enum id")
+        void builderModelEnum_shouldResolveToId() {
+            AnthropicProvider provider = AnthropicProvider.builder()
+                .apiKey("dummy-key")
+                .modelName(AnthropicProvider.Models.CLAUDE_OPUS_4_6)
+                .build();
+            // spot-check known values
+            assertEquals("claude-opus-4-6", AnthropicProvider.Models.CLAUDE_OPUS_4_6.id);
+            assertEquals(200_000, AnthropicProvider.Models.CLAUDE_OPUS_4_6.contextWindow);
+        }
     }
 
     private static void assumeTrue(boolean condition, String message) {

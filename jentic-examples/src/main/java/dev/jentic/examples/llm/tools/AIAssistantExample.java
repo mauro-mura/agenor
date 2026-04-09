@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import dev.jentic.adapters.llm.openai.OpenAIProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,7 @@ import dev.jentic.runtime.JenticRuntime;
 
 /**
  * Example demonstrating how to use the AIAssistantAgent in a Jentic application.
- * 
+ *
  * This example shows:
  * - Proper Jentic runtime setup
  * - Agent registration and lifecycle
@@ -26,9 +27,9 @@ import dev.jentic.runtime.JenticRuntime;
  * - Error handling and cleanup
  */
 public class AIAssistantExample {
-    
+
     private static final Logger log = LoggerFactory.getLogger(AIAssistantExample.class);
-    
+
     public static void main(String[] args) throws Exception {
         // Check for required API key
         String apiKey = System.getenv("OPENAI_API_KEY");
@@ -37,18 +38,18 @@ public class AIAssistantExample {
             System.err.println("Get your API key from: https://platform.openai.com/api-keys");
             System.exit(1);
         }
-        
+
         AIAssistantExample example = new AIAssistantExample();
         example.runInteractiveDemo();
     }
-    
+
     public void runInteractiveDemo() throws Exception {
         log.info("Starting AI Assistant Example");
 
         // Create AI Assistant with OpenAI provider
         LLMProvider llmProvider = LLMProviderFactory.openai()
                 .apiKey(System.getenv("OPENAI_API_KEY"))
-                .modelName("gpt-4.1")
+                .modelName(OpenAIProvider.Models.GPT_4_1)
                 .temperature(0.7)
                 .maxTokens(1500)
                 .build();
@@ -62,23 +63,23 @@ public class AIAssistantExample {
         // Start runtime
         log.info("Starting Jentic runtime...");
         runtime.start().join();
-        
+
         try {
             // Wait for agents to start
             Thread.sleep(1000);
-            
+
             // Run interactive session
             runChatSession(runtime);
-            
+
         } finally {
             // Clean shutdown
             log.info("Shutting down Jentic runtime...");
             runtime.stop().join();
         }
-        
+
         log.info("AI Assistant Example completed");
     }
-    
+
     private void runChatSession(JenticRuntime runtime) {
         System.out.println();
         System.out.println("=== AI Assistant Chat Demo ===");
@@ -96,44 +97,44 @@ public class AIAssistantExample {
         System.out.println();
         System.out.println("Type 'quit' to exit");
         System.out.println("----------------------------------------");
-        
+
         Scanner scanner = new Scanner(System.in);
-        
+
         while (true) {
             System.out.print("You: ");
             String input = scanner.nextLine().trim();
-            
+
             if (input.equalsIgnoreCase("quit") || input.equalsIgnoreCase("exit")) {
                 System.out.println("Goodbye!");
                 break;
             }
-            
+
             if (input.isEmpty()) {
                 continue;
             }
-            
+
             // Send chat request and wait for response
             try {
                 String response = sendChatRequest(runtime, input);
                 System.out.println("AI: " + response);
                 System.out.println();
-                
+
             } catch (Exception e) {
                 System.err.println("Error: " + e.getMessage());
                 System.out.println();
             }
         }
-        
+
         scanner.close();
     }
-    
+
     private String sendChatRequest(JenticRuntime runtime, String userInput) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         StringBuilder response = new StringBuilder();
-        
+
         // Generate correlation ID for request tracking
         String correlationId = UUID.randomUUID().toString();
-        
+
         // Listen for response
         runtime.getMessageService().subscribe("ai.chat.response", message -> {
             if (correlationId.equals(message.correlationId())) {
@@ -142,7 +143,7 @@ public class AIAssistantExample {
             }
             return CompletableFuture.completedFuture(null);
         });
-        
+
         // Listen for errors
         runtime.getMessageService().subscribe("ai.chat.error", message -> {
             if (correlationId.equals(message.correlationId())) {
@@ -151,7 +152,7 @@ public class AIAssistantExample {
             }
             return CompletableFuture.completedFuture(null);
         });
-        
+
         // Send chat request
         Message chatRequest = Message.builder()
             .id(correlationId)
@@ -159,40 +160,40 @@ public class AIAssistantExample {
             .senderId("user")
             .content(userInput)
             .build();
-        
+
         runtime.getMessageService().send(chatRequest);
-        
+
         // Wait for response (timeout after 30 seconds)
         boolean received = latch.await(30, TimeUnit.SECONDS);
         if (!received) {
             throw new RuntimeException("Timeout waiting for AI response");
         }
-        
+
         return response.toString();
     }
-    
+
     /**
      * Demonstrate programmatic tool execution without chat interface.
      */
     public void demonstrateToolExecution() throws Exception {
         log.info("Starting Tool Execution Demo");
-        
+
         // Setup runtime
         JenticRuntime runtime = JenticRuntime.builder().build();
-        
+
         LLMProvider llmProvider = LLMProviderFactory.openai()
             .apiKey(System.getenv("OPENAI_API_KEY"))
-            .modelName("gpt-4o")
+            .modelName(OpenAIProvider.Models.GPT_4O)
             .build();
-        
+
         AIAssistantAgent aiAgent = new AIAssistantAgent(llmProvider);
         runtime.registerAgent(aiAgent);
         runtime.start().join();
-        
+
         try {
             // Direct tool execution examples
             System.out.println("=== Direct Tool Execution Demo ===\n");
-            
+
             // Example 1: Weather tool
             System.out.println("1. Testing weather tool:");
             String weatherResult = executeToolDirectly(runtime, "get_weather", Map.of(
@@ -201,7 +202,7 @@ public class AIAssistantExample {
             ));
             System.out.println(weatherResult);
             System.out.println();
-            
+
             // Example 2: Calculator tool
             System.out.println("2. Testing calculator tool:");
             String calcResult = executeToolDirectly(runtime, "calculate", Map.of(
@@ -209,7 +210,7 @@ public class AIAssistantExample {
             ));
             System.out.println(calcResult);
             System.out.println();
-            
+
             // Example 3: Time tool
             System.out.println("3. Testing time tool:");
             String timeResult = executeToolDirectly(runtime, "get_time", Map.of(
@@ -217,25 +218,25 @@ public class AIAssistantExample {
             ));
             System.out.println(timeResult);
             System.out.println();
-            
+
         } finally {
             runtime.stop().join();
         }
     }
-    
-    private String executeToolDirectly(JenticRuntime runtime, String toolName, Map<String, Object> arguments) 
+
+    private String executeToolDirectly(JenticRuntime runtime, String toolName, Map<String, Object> arguments)
             throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         StringBuilder result = new StringBuilder();
-        
+
         String correlationId = UUID.randomUUID().toString();
-        
+
         // Listen for tool result
         runtime.getMessageService().subscribe("ai.tool.result", message -> {
             if (correlationId.equals(message.correlationId())) {
-                AIAssistantAgent.ToolExecutionResponse response = 
+                AIAssistantAgent.ToolExecutionResponse response =
                     message.getContent(AIAssistantAgent.ToolExecutionResponse.class);
-                
+
                 if (response.success()) {
                     result.append(response.result().toString());
                 } else {
@@ -245,26 +246,26 @@ public class AIAssistantExample {
             }
             return CompletableFuture.completedFuture(null);
         });
-        
+
         // Send tool execution request
-        AIAssistantAgent.ToolExecutionRequest request = 
+        AIAssistantAgent.ToolExecutionRequest request =
             new AIAssistantAgent.ToolExecutionRequest(toolName, arguments);
-        
+
         Message toolMessage = Message.builder()
             .id(correlationId)
             .topic("ai.tool.execute")
             .senderId("demo")
             .content(request)
             .build();
-        
+
         runtime.getMessageService().send(toolMessage);
-        
+
         // Wait for result
         boolean received = latch.await(10, TimeUnit.SECONDS);
         if (!received) {
             throw new RuntimeException("Timeout waiting for tool execution result");
         }
-        
+
         return result.toString();
     }
 }

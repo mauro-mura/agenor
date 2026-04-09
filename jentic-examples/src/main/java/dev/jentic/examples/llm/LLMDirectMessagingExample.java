@@ -33,7 +33,7 @@ public class LLMDirectMessagingExample {
 
         LLMProvider llmProvider = OpenAIProvider.builder()
             .apiKey(apiKey)
-            .modelName("gpt-4")
+            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
             .temperature(0.7)
             .maxTokens(1500)
             .build();

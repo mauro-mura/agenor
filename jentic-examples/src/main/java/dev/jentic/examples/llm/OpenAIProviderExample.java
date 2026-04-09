@@ -1,6 +1,7 @@
 package dev.jentic.examples.llm;
 
 import dev.jentic.adapters.llm.LLMProviderFactory;
+import dev.jentic.adapters.llm.openai.OpenAIProvider;
 import dev.jentic.core.llm.*;
 
 import java.util.Scanner;
@@ -8,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Example demonstrating OpenAI provider usage in Jentic framework.
- * 
+ *
  * Features:
  * - Basic chat
  * - Streaming responses
@@ -44,7 +45,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .modelName("gpt-4o-mini")
+            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
             .temperature(0.7)
             .maxTokens(150)
             .build();
@@ -71,7 +72,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
                 .apiKey(apiKey)
-                .modelName("gpt-4o-mini")
+                .modelName(OpenAIProvider.Models.GPT_4O_MINI)
                 .build();
 
         LLMRequest request = LLMRequest.builder("streaming-chat")
@@ -101,7 +102,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .modelName("gpt-4o-mini")
+            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
             .maxTokens(200)
             .build();
 
@@ -127,7 +128,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .modelName("gpt-4o")
+            .modelName(OpenAIProvider.Models.GPT_4O)
             .build();
 
         // Define weather tool
@@ -166,7 +167,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .modelName("gpt-4o-mini")
+            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
             .temperature(0.8)
             .build();
 
@@ -197,7 +198,7 @@ public class OpenAIProviderExample {
 
                 System.out.print("AI: ");
                 StringBuilder response = new StringBuilder();
-                
+
                 CompletableFuture<Void> future = provider.chatStream(
                     request,
                     chunk -> {
@@ -207,7 +208,7 @@ public class OpenAIProviderExample {
                         }
                     }
                 );
-                
+
                 future.get();
                 System.out.println();
 

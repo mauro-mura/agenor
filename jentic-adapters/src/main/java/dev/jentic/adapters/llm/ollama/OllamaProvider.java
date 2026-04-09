@@ -26,62 +26,74 @@ public class OllamaProvider implements LLMProvider {
     private final String baseUrl;
 
     // -------------------------------------------------------------------------
-    // Single source of truth for well-known Ollama models → context window size.
-    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
-    // Note: Ollama runs locally; the actual available models depend on what the
-    // user has pulled. This list covers common defaults.
+    // Model enum — family/base names with their context window size.
+    // Versioned tags (":8b", ":70b") share the base context window and are
+    // registered separately in the static block below.
     // Source: https://ollama.com/library — Last verified: 2026-04
     // -------------------------------------------------------------------------
-    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+    public enum Models {
         // Llama 3.x (Meta)
-        Map.entry("llama3.2",              128_000),
-        Map.entry("llama3.2:1b",           128_000),
-        Map.entry("llama3.2:3b",           128_000),
-        Map.entry("llama3.1",              128_000),
-        Map.entry("llama3.1:8b",           128_000),
-        Map.entry("llama3.1:70b",          128_000),
-        Map.entry("llama3.1:405b",         128_000),
-        Map.entry("llama3",                  8_192),
-        Map.entry("llama3:8b",               8_192),
-        Map.entry("llama3:70b",              8_192),
+        LLAMA_3_2     ("llama3.2",      128_000),
+        LLAMA_3_1     ("llama3.1",      128_000),
+        LLAMA_3       ("llama3",          8_192),
         // Llama 2 (legacy)
-        Map.entry("llama2",                  4_096),
-        Map.entry("llama2:7b",               4_096),
-        Map.entry("llama2:13b",              4_096),
-        Map.entry("llama2:70b",              4_096),
+        LLAMA_2       ("llama2",          4_096),
         // Mistral / Mixtral
-        Map.entry("mistral",                32_768),
-        Map.entry("mistral:7b",             32_768),
-        Map.entry("mixtral",                32_768),
-        Map.entry("mixtral:8x7b",           32_768),
-        Map.entry("mixtral:8x22b",          65_536),
-        Map.entry("mistral-nemo",          128_000),
+        MISTRAL       ("mistral",        32_768),
+        MIXTRAL       ("mixtral",        32_768),
+        MISTRAL_NEMO  ("mistral-nemo",  128_000),
         // Qwen 2.5 (Alibaba)
-        Map.entry("qwen2.5",               128_000),
-        Map.entry("qwen2.5:7b",            128_000),
-        Map.entry("qwen2.5:72b",           128_000),
-        Map.entry("qwen2.5-coder",         128_000),
+        QWEN_2_5      ("qwen2.5",       128_000),
+        QWEN_2_5_CODER("qwen2.5-coder", 128_000),
         // Gemma (Google)
-        Map.entry("gemma3",                  8_192),
-        Map.entry("gemma2",                  8_192),
-        Map.entry("gemma",                   8_192),
+        GEMMA_3       ("gemma3",          8_192),
+        GEMMA_2       ("gemma2",          8_192),
+        GEMMA         ("gemma",           8_192),
         // Phi (Microsoft)
-        Map.entry("phi4",                   16_384),
-        Map.entry("phi3",                    4_096),
-        Map.entry("phi3.5",                  4_096),
+        PHI_4         ("phi4",           16_384),
+        PHI_3         ("phi3",            4_096),
+        PHI_3_5       ("phi3.5",          4_096),
         // DeepSeek
-        Map.entry("deepseek-r1",           128_000),
-        Map.entry("deepseek-coder-v2",     128_000),
+        DEEPSEEK_R1        ("deepseek-r1",       128_000),
+        DEEPSEEK_CODER_V2  ("deepseek-coder-v2", 128_000),
         // Code-focused
-        Map.entry("codellama",              16_384),
-        Map.entry("codellama:7b",           16_384),
-        Map.entry("codellama:13b",          16_384),
-        Map.entry("codellama:34b",          16_384),
-        Map.entry("codegemma",               8_192)
-    );
+        CODELLAMA     ("codellama",      16_384),
+        CODEGEMMA     ("codegemma",       8_192);
+
+        public final String id;
+        public final int contextWindow;
+
+        Models(String id, int contextWindow) {
+            this.id = id;
+            this.contextWindow = contextWindow;
+        }
+    }
 
     static {
-        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+        // Register base model names from enum
+        Arrays.stream(Models.values())
+            .forEach(m -> ModelTokenLimits.register(m.id, m.contextWindow));
+
+        // Register versioned tags — same context window as the base family.
+        // These are not in the enum because the tag combinations are open-ended.
+        ModelTokenLimits.register("llama3.2:1b",    Models.LLAMA_3_2.contextWindow);
+        ModelTokenLimits.register("llama3.2:3b",    Models.LLAMA_3_2.contextWindow);
+        ModelTokenLimits.register("llama3.1:8b",    Models.LLAMA_3_1.contextWindow);
+        ModelTokenLimits.register("llama3.1:70b",   Models.LLAMA_3_1.contextWindow);
+        ModelTokenLimits.register("llama3.1:405b",  Models.LLAMA_3_1.contextWindow);
+        ModelTokenLimits.register("llama3:8b",      Models.LLAMA_3.contextWindow);
+        ModelTokenLimits.register("llama3:70b",     Models.LLAMA_3.contextWindow);
+        ModelTokenLimits.register("llama2:7b",      Models.LLAMA_2.contextWindow);
+        ModelTokenLimits.register("llama2:13b",     Models.LLAMA_2.contextWindow);
+        ModelTokenLimits.register("llama2:70b",     Models.LLAMA_2.contextWindow);
+        ModelTokenLimits.register("mistral:7b",     Models.MISTRAL.contextWindow);
+        ModelTokenLimits.register("mixtral:8x7b",   Models.MIXTRAL.contextWindow);
+        ModelTokenLimits.register("mixtral:8x22b",  65_536);
+        ModelTokenLimits.register("qwen2.5:7b",     Models.QWEN_2_5.contextWindow);
+        ModelTokenLimits.register("qwen2.5:72b",    Models.QWEN_2_5.contextWindow);
+        ModelTokenLimits.register("codellama:7b",   Models.CODELLAMA.contextWindow);
+        ModelTokenLimits.register("codellama:13b",  Models.CODELLAMA.contextWindow);
+        ModelTokenLimits.register("codellama:34b",  Models.CODELLAMA.contextWindow);
     }
 
     private OllamaProvider(Builder builder) {
@@ -204,7 +216,10 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
+        // Returns base model names only; versioned tags can be used freely via modelName(String).
+        return CompletableFuture.completedFuture(
+            Arrays.stream(Models.values()).map(m -> m.id).toList()
+        );
     }
 
     @Override
@@ -223,9 +238,7 @@ public class OllamaProvider implements LLMProvider {
     }
 
     @Override
-    public String getDefaultModel() {
-        return "llama3.2";
-    }
+    public String getDefaultModel() { return Models.LLAMA_3_2.id; }
 
     private List<ChatMessage> convertMessages(List<LLMMessage> messages) {
         return messages.stream()
@@ -270,7 +283,7 @@ public class OllamaProvider implements LLMProvider {
 
     public static class Builder {
         private String baseUrl = "http://localhost:11434";
-        private String modelName = "llama3.2";
+        private String modelName = Models.LLAMA_3_2.id;
         private Double temperature;
         private Duration timeout = Duration.ofMinutes(5);
         private boolean logRequests = false;
@@ -281,8 +294,15 @@ public class OllamaProvider implements LLMProvider {
             return this;
         }
 
+        /** Set model by string ID — use for versioned tags (e.g. "llama3.2:70b"). */
         public Builder modelName(String modelName) {
             this.modelName = modelName;
+            return this;
+        }
+
+        /** Set model by enum constant — preferred for base model names. */
+        public Builder modelName(Models model) {
+            this.modelName = model.id;
             return this;
         }
 

@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -569,56 +570,72 @@ class OllamaProviderTest {
         }
 
         @Test
-        @DisplayName("getAvailableModels() and ModelTokenLimits must be consistent")
-        void getAvailableModels_shouldAllBeRegisteredInTokenLimits() throws Exception {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
-
-            assertFalse(models.isEmpty());
-            models.forEach(model ->
-                assertTrue(ModelTokenLimits.hasModel(model),
-                    model + " is in getAvailableModels() but not in ModelTokenLimits"));
+        @DisplayName("all enum entries must be registered in ModelTokenLimits")
+        void allEnumEntries_shouldBeRegistered() {
+            Arrays.stream(OllamaProvider.Models.values()).forEach(m ->
+                assertTrue(ModelTokenLimits.hasModel(m.id),
+                    m.name() + " (" + m.id + ") missing from ModelTokenLimits"));
         }
 
         @Test
-        @DisplayName("llama3.2 → 128k")
-        void llama32() { assertEquals(128_000, ModelTokenLimits.getLimit("llama3.2")); }
+        @DisplayName("all enum context windows must match ModelTokenLimits")
+        void allEnumEntries_contextWindowShouldMatch() {
+            Arrays.stream(OllamaProvider.Models.values()).forEach(m ->
+                assertEquals(m.contextWindow, ModelTokenLimits.getLimit(m.id),
+                    "Wrong context window for " + m.name()));
+        }
 
         @Test
-        @DisplayName("llama3.1 → 128k")
-        void llama31() { assertEquals(128_000, ModelTokenLimits.getLimit("llama3.1")); }
+        @DisplayName("versioned tags must be registered with correct context window")
+        void versionedTags_shouldBeRegistered() {
+            // Tags inherit their base model's context window
+            assertEquals(OllamaProvider.Models.LLAMA_3_2.contextWindow,
+                ModelTokenLimits.getLimit("llama3.2:3b"));
+            assertEquals(OllamaProvider.Models.LLAMA_3_1.contextWindow,
+                ModelTokenLimits.getLimit("llama3.1:70b"));
+            assertEquals(OllamaProvider.Models.CODELLAMA.contextWindow,
+                ModelTokenLimits.getLimit("codellama:34b"));
+            assertEquals(65_536, ModelTokenLimits.getLimit("mixtral:8x22b"));
+        }
 
         @Test
-        @DisplayName("llama3 → 8192")
-        void llama3() { assertEquals(8_192, ModelTokenLimits.getLimit("llama3")); }
+        @DisplayName("getAvailableModels() must equal enum base IDs")
+        void getAvailableModels_shouldEqualEnumIds() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+            List<String> enumIds = Arrays.stream(OllamaProvider.Models.values())
+                .map(m -> m.id).toList();
+            assertEquals(enumIds.size(), models.size());
+            assertTrue(models.containsAll(enumIds));
+        }
 
         @Test
-        @DisplayName("llama2 → 4096")
-        void llama2() { assertEquals(4_096, ModelTokenLimits.getLimit("llama2")); }
+        @DisplayName("getDefaultModel() must be a known enum entry")
+        void defaultModel_shouldBeInEnum() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String defaultModel = provider.getDefaultModel();
+            assertTrue(
+                Arrays.stream(OllamaProvider.Models.values()).anyMatch(m -> m.id.equals(defaultModel)),
+                "Default model '" + defaultModel + "' not found in Models enum");
+        }
 
         @Test
-        @DisplayName("mistral → 32768")
-        void mistral() { assertEquals(32_768, ModelTokenLimits.getLimit("mistral")); }
+        @DisplayName("builder modelName(enum) should resolve to enum id")
+        void builderModelNameEnum_shouldResolveToId() {
+            // spot-check known values
+            assertEquals("llama3.2", OllamaProvider.Models.LLAMA_3_2.id);
+            assertEquals(128_000,    OllamaProvider.Models.LLAMA_3_2.contextWindow);
+        }
 
         @Test
-        @DisplayName("mistral-nemo → 128k")
-        void mistralNemo() { assertEquals(128_000, ModelTokenLimits.getLimit("mistral-nemo")); }
-
-        @Test
-        @DisplayName("qwen2.5 → 128k")
-        void qwen25() { assertEquals(128_000, ModelTokenLimits.getLimit("qwen2.5")); }
-
-        @Test
-        @DisplayName("deepseek-r1 → 128k")
-        void deepseekR1() { assertEquals(128_000, ModelTokenLimits.getLimit("deepseek-r1")); }
-
-        @Test
-        @DisplayName("phi4 → 16384")
-        void phi4() { assertEquals(16_384, ModelTokenLimits.getLimit("phi4")); }
-
-        @Test
-        @DisplayName("codellama → 16384")
-        void codellama() { assertEquals(16_384, ModelTokenLimits.getLimit("codellama")); }
+        @DisplayName("builder modelName(String) should accept versioned tag")
+        void builderModelNameString_shouldAcceptVersionedTag() {
+            OllamaProvider provider = OllamaProvider.builder()
+                .modelName("llama3.1:70b")
+                .build();
+            assertNotNull(provider);
+            assertTrue(ModelTokenLimits.hasModel("llama3.1:70b"));
+        }
     }
 
     private OllamaProvider createProviderWithMocks(OllamaChatModel chatModel, OllamaStreamingChatModel streamingModel) {

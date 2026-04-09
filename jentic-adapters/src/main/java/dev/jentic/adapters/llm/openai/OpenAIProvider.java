@@ -26,44 +26,52 @@ public class OpenAIProvider implements LLMProvider {
     private final String modelName;
 
     // -------------------------------------------------------------------------
-    // Single source of truth for OpenAI model → context window size.
-    // Both getAvailableModels() and ModelTokenLimits registration derive from here.
+    // Model enum — single source of truth for model ID + context window size.
     // Source: https://platform.openai.com/docs/models — Last verified: 2026-04
     // -------------------------------------------------------------------------
-    private static final Map<String, Integer> KNOWN_MODELS = Map.ofEntries(
+    public enum Models {
         // GPT-4.1 family (1M context)
-        Map.entry("gpt-4.1",                  1_000_000),
-        Map.entry("gpt-4.1-mini",             1_000_000),
-        Map.entry("gpt-4.1-nano",             1_000_000),
+        GPT_4_1             ("gpt-4.1",               1_000_000),
+        GPT_4_1_MINI        ("gpt-4.1-mini",          1_000_000),
+        GPT_4_1_NANO        ("gpt-4.1-nano",          1_000_000),
         // o-series reasoning models
-        Map.entry("o3",                          200_000),
-        Map.entry("o4-mini",                     200_000),
-        Map.entry("o3-mini",                     200_000),
-        Map.entry("o1",                          200_000),
-        Map.entry("o1-mini",                     128_000),
-        Map.entry("o1-preview",                  128_000),
+        O3                  ("o3",                      200_000),
+        O4_MINI             ("o4-mini",                 200_000),
+        O3_MINI             ("o3-mini",                 200_000),
+        O1                  ("o1",                      200_000),
+        O1_MINI             ("o1-mini",                 128_000),
+        O1_PREVIEW          ("o1-preview",              128_000),
         // GPT-4o family
-        Map.entry("gpt-4o",                      128_000),
-        Map.entry("gpt-4o-mini",                 128_000),
+        GPT_4O              ("gpt-4o",                  128_000),
+        GPT_4O_MINI         ("gpt-4o-mini",             128_000),
         // GPT-4 Turbo
-        Map.entry("gpt-4-turbo",                 128_000),
-        Map.entry("gpt-4-turbo-preview",         128_000),
-        Map.entry("gpt-4-1106-preview",          128_000),
-        Map.entry("gpt-4-0125-preview",          128_000),
+        GPT_4_TURBO         ("gpt-4-turbo",             128_000),
+        GPT_4_TURBO_PREVIEW ("gpt-4-turbo-preview",     128_000),
+        GPT_4_1106_PREVIEW  ("gpt-4-1106-preview",      128_000),
+        GPT_4_0125_PREVIEW  ("gpt-4-0125-preview",      128_000),
         // GPT-4 original
-        Map.entry("gpt-4",                         8_192),
-        Map.entry("gpt-4-0314",                    8_192),
-        Map.entry("gpt-4-0613",                    8_192),
-        Map.entry("gpt-4-32k",                    32_768),
+        GPT_4               ("gpt-4",                     8_192),
+        GPT_4_0314          ("gpt-4-0314",                8_192),
+        GPT_4_0613          ("gpt-4-0613",                8_192),
+        GPT_4_32K           ("gpt-4-32k",                32_768),
         // GPT-3.5 (legacy)
-        Map.entry("gpt-3.5-turbo",                16_385),
-        Map.entry("gpt-3.5-turbo-16k",            16_385),
-        Map.entry("gpt-3.5-turbo-1106",           16_385),
-        Map.entry("gpt-3.5-turbo-0125",           16_385)
-    );
+        GPT_3_5_TURBO       ("gpt-3.5-turbo",            16_385),
+        GPT_3_5_TURBO_16K   ("gpt-3.5-turbo-16k",        16_385),
+        GPT_3_5_TURBO_1106  ("gpt-3.5-turbo-1106",       16_385),
+        GPT_3_5_TURBO_0125  ("gpt-3.5-turbo-0125",       16_385);
+
+        public final String id;
+        public final int contextWindow;
+
+        Models(String id, int contextWindow) {
+            this.id = id;
+            this.contextWindow = contextWindow;
+        }
+    }
 
     static {
-        KNOWN_MODELS.forEach(ModelTokenLimits::register);
+        Arrays.stream(Models.values())
+            .forEach(m -> ModelTokenLimits.register(m.id, m.contextWindow));
     }
 
     private OpenAIProvider(Builder builder) {
@@ -186,13 +194,18 @@ public class OpenAIProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(List.copyOf(KNOWN_MODELS.keySet()));
+        return CompletableFuture.completedFuture(
+            Arrays.stream(Models.values()).map(m -> m.id).toList()
+        );
     }
 
     @Override
     public String getProviderName() {
         return "OpenAI";
     }
+
+    @Override
+    public String getDefaultModel() { return Models.GPT_4O.id; }
 
     // ========================================================================
     // Conversion Methods
@@ -302,7 +315,7 @@ public class OpenAIProvider implements LLMProvider {
     public static class Builder {
         private String apiKey;
         private String baseUrl;
-        private String modelName = "gpt-4o";
+        private String modelName = Models.GPT_4O.id;;
         private Double temperature = 0.7;
         private Integer maxTokens = 2000;
         private Duration timeout = Duration.ofSeconds(60);
@@ -319,8 +332,15 @@ public class OpenAIProvider implements LLMProvider {
             return this;
         }
 
+        /** Set model by string ID (for custom/external models). */
         public Builder modelName(String modelName) {
             this.modelName = modelName;
+            return this;
+        }
+
+        /** Set model by enum constant — preferred for known models. */
+        public Builder modelName(Models model) {
+            this.modelName = model.id;
             return this;
         }
 
