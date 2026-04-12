@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.16.0] - Unreleased
+## [0.16.0] - 2026-04-12
 
 ### Added
 - **ADR-017 — `LLMRequest.model` optional with provider fallback**: the `model` field on `LLMRequest` is now optional. Providers resolve the effective model using this precedence: `request.model()` (explicit per-request override) → provider's configured `modelName` → `LLMException("No model specified")`.
