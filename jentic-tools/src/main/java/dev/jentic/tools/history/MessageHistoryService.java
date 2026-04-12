@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -33,6 +34,7 @@ public class MessageHistoryService {
     private final ConcurrentLinkedDeque<StoredMessage> messages;
     private final int maxSize;
     private final AtomicInteger currentSize;
+    private final ReentrantLock storeLock = new ReentrantLock();
 
     /**
      * Stored message wrapper with additional metadata.
@@ -119,20 +121,21 @@ public class MessageHistoryService {
         Objects.requireNonNull(message, "message cannot be null");
 
         var stored = StoredMessage.from(message);
-        messages.addFirst(stored);
-
-        int size = currentSize.incrementAndGet();
-        while (size > maxSize) {
-            var removed = messages.pollLast();
-            if (removed != null) {
-                size = currentSize.decrementAndGet();
-                log.trace("Evicted oldest message: {}", removed.id());
-            } else {
-                break;
+        storeLock.lock();
+        try {
+            messages.addFirst(stored);
+            int size = currentSize.incrementAndGet();
+            if (size > maxSize) {
+                var removed = messages.pollLast();
+                if (removed != null) {
+                    size = currentSize.decrementAndGet();
+                    log.trace("Evicted oldest message: {}", removed.id());
+                }
             }
+            log.debug("Stored message: id={}, topic={}, size={}", message.id(), message.topic(), size);
+        } finally {
+            storeLock.unlock();
         }
-
-        log.debug("Stored message: id={}, topic={}, size={}", message.id(), message.topic(), size);
     }
 
     /**
@@ -258,8 +261,13 @@ public class MessageHistoryService {
      * Clears all stored messages.
      */
     public void clear() {
-        messages.clear();
-        currentSize.set(0);
+        storeLock.lock();
+        try {
+            messages.clear();
+            currentSize.set(0);
+        } finally {
+            storeLock.unlock();
+        }
         log.info("Message history cleared");
     }
 

@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `LLMProvider.validateRequest()` no longer rejects a null model; resolution happens at execution time inside each adapter.
   - `OpenAIProvider`, `AnthropicProvider`, and `OllamaProvider` each implement a private `resolveModel(LLMRequest)` method that applies the precedence rule.
 
+### Fixed
+- **`MessageHistoryService` race condition in `store()`**: concurrent calls could corrupt the size counter and evict extra messages due to a TOCTOU gap between `addFirst`, `incrementAndGet`, and `pollLast`. The add-increment-evict sequence is now protected by a `ReentrantLock`, making writes fully atomic. `clear()` acquires the same lock to prevent interleaving with concurrent stores.
+
 ### Changed
 - **`LLMRequest.builder(String model)` deprecated** (`since = "0.16.0"`, `forRemoval = true`): replaced by `LLMRequest.builder()` + optional `.model(String)` call. Existing callers compile with a deprecation warning and behave identically.
 - **`DefaultReflectionStrategy`**: removed the hard-coded `"critique"` placeholder model from its internal `LLMRequest`; the injected provider's configured model is now used automatically.
