@@ -240,7 +240,7 @@ public class SummarizationStrategy implements ContextWindowStrategy {
         requestMessages.add(LLMMessage.system(SUMMARY_SYSTEM_PROMPT));
         requestMessages.addAll(oldMessages);
 
-        LLMRequest summaryRequest = LLMRequest.builder(model)
+        LLMRequest summaryRequest = LLMRequest.builder().model(model)
                 .messages(requestMessages)
                 .maxTokens(ESTIMATED_SUMMARY_TOKENS)
                 .temperature(0.3)

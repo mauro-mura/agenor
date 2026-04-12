@@ -153,7 +153,7 @@ public class ReflectionExample {
                     iterationNumber);
 
             String output = generationProvider.chat(
-                    LLMRequest.builder("gpt-4o-mini")
+                    LLMRequest.builder()
                             .addMessage(LLMMessage.system(GENERATION_SYSTEM))
                             .addMessage(LLMMessage.user("Task: " + TASK))
                             .build())
@@ -177,7 +177,7 @@ public class ReflectionExample {
             log.info("Feedback: {}", feedbackSummary);
 
             String revised = generationProvider.chat(
-                    LLMRequest.builder("gpt-4o-mini")
+                    LLMRequest.builder()
                             .addMessage(LLMMessage.system(REVISION_SYSTEM))
                             .addMessage(LLMMessage.user(
                                     "Task: " + TASK + "\n\n" +

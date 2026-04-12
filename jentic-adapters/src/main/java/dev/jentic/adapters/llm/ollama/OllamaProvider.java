@@ -137,7 +137,7 @@ public class OllamaProvider implements LLMProvider {
 
                 return LLMResponse.builder(
                                 UUID.randomUUID().toString(),
-                                modelName != null ? modelName : request.model()
+                                resolveModel(request)
                         )
                         .content(response.aiMessage().text())
                         .role(LLMMessage.Role.ASSISTANT)
@@ -157,6 +157,7 @@ public class OllamaProvider implements LLMProvider {
 
         try {
             List<ChatMessage> messages = convertMessages(request.messages());
+            final String resolvedModel = resolveModel(request);
             final String streamId = UUID.randomUUID().toString();
             final int[] chunkIndex = {0};
 
@@ -175,7 +176,7 @@ public class OllamaProvider implements LLMProvider {
                 public void onPartialResponse(String partialResponse) {
                     StreamingChunk chunk = StreamingChunk.of(
                             streamId,
-                            modelName != null ? modelName : request.model(),
+                            resolvedModel,
                             partialResponse,
                             chunkIndex[0]++
                     );
@@ -192,7 +193,7 @@ public class OllamaProvider implements LLMProvider {
 
                     StreamingChunk finalChunk = StreamingChunk.of(
                             streamId,
-                            modelName != null ? modelName : request.model(),
+                            resolvedModel,
                             "",
                             finishReason,
                             chunkIndex[0]
@@ -239,6 +240,11 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public String getDefaultModel() { return Models.LLAMA_3_2.id; }
+
+    private String resolveModel(LLMRequest request) {
+        if (request.model() != null && !request.model().isBlank()) return request.model();
+        return modelName;
+    }
 
     private List<ChatMessage> convertMessages(List<LLMMessage> messages) {
         return messages.stream()

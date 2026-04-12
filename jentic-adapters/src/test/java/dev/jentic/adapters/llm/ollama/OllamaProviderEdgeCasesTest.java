@@ -52,7 +52,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .temperature(0.5)
                     .build();
@@ -75,7 +75,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .maxTokens(200)
                     .build();
@@ -97,7 +97,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -129,7 +129,7 @@ class OllamaProviderEdgeCasesTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -162,7 +162,7 @@ class OllamaProviderEdgeCasesTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -192,7 +192,7 @@ class OllamaProviderEdgeCasesTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .temperature(0.7)
                     .build();
@@ -218,7 +218,7 @@ class OllamaProviderEdgeCasesTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .maxTokens(150)
                     .build();
@@ -235,8 +235,8 @@ class OllamaProviderEdgeCasesTest {
     class ResponseHandlingEdgeCases {
 
         @Test
-        @DisplayName("should use modelName from builder when request model differs")
-        void chat_withDifferentRequestModel_shouldUseBuilderModel() throws Exception {
+        @DisplayName("explicit request model takes priority over provider's configured model")
+        void chat_withExplicitRequestModel_requestModelTakesPriority() throws Exception {
             AiMessage aiMessage = AiMessage.from("Response");
             ChatResponse chatResponse = ChatResponse.builder()
                     .aiMessage(aiMessage)
@@ -244,37 +244,43 @@ class OllamaProviderEdgeCasesTest {
 
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
+            // Provider configured with "mistral", request explicitly overrides with "llama3.2"
             OllamaProvider provider = createProviderWithModelName("mistral");
-            
-            LLMRequest request = LLMRequest.builder("llama3.2")
+
+            LLMRequest request = LLMRequest.builder()
+                    .model("llama3.2")
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
             CompletableFuture<LLMResponse> future = provider.chat(request);
             LLMResponse response = future.get(5, TimeUnit.SECONDS);
 
-            assertEquals("mistral", response.model());
+            // request.model() takes priority per ADR-017
+            assertEquals("llama3.2", response.model());
         }
 
         @Test
-        @DisplayName("should use request model when builder modelName is null")
-        void chat_withNullBuilderModel_shouldUseRequestModel() throws Exception {
+        @DisplayName("provider's configured model is used when request has no model")
+        void chat_withNoRequestModel_usesProviderDefault() throws Exception {
             AiMessage aiMessage = AiMessage.from("Response");
             ChatResponse chatResponse = ChatResponse.builder()
                     .aiMessage(aiMessage)
                     .build();
 
-            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            // Provider configured with "mistral"; request has no model set
+            OllamaProvider provider = createProviderWithModelName("mistral");
+
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
             CompletableFuture<LLMResponse> future = provider.chat(request);
             LLMResponse response = future.get(5, TimeUnit.SECONDS);
 
-            assertNotNull(response.model());
+            // Falls back to provider's configured model (getDefaultModel() = "mistral")
+            assertEquals("mistral", response.model());
         }
 
         @Test
@@ -293,7 +299,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -320,7 +326,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("You are helpful"))
                     .addMessage(LLMMessage.user("Hello"))
                     .addMessage(LLMMessage.assistant("Hi there"))
@@ -345,7 +351,7 @@ class OllamaProviderEdgeCasesTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("System only"))
                     .build();
 

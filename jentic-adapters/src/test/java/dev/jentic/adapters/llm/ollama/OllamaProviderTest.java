@@ -68,7 +68,7 @@ class OllamaProviderTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -96,7 +96,7 @@ class OllamaProviderTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .temperature(0.8)
                     .maxTokens(500)
@@ -126,7 +126,7 @@ class OllamaProviderTest {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
             when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -145,7 +145,7 @@ class OllamaProviderTest {
             when(mockChatModel.chat(any(ChatRequest.class)))
                     .thenThrow(new RuntimeException("API Error"));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -183,7 +183,7 @@ class OllamaProviderTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Say hello"))
                     .build();
 
@@ -223,7 +223,7 @@ class OllamaProviderTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .temperature(0.5)
                     .maxTokens(100)
@@ -253,7 +253,7 @@ class OllamaProviderTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -279,7 +279,7 @@ class OllamaProviderTest {
                 return null;
             }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -299,7 +299,7 @@ class OllamaProviderTest {
             doThrow(new RuntimeException("Setup error"))
                     .when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -320,7 +320,7 @@ class OllamaProviderTest {
         @DisplayName("should convert SYSTEM message correctly")
         void convertMessage_systemRole_shouldReturnSystemMessage() {
             OllamaProvider provider = OllamaProvider.builder().build();
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("System prompt"))
                     .addMessage(LLMMessage.user("User message"))
                     .build();
@@ -334,7 +334,7 @@ class OllamaProviderTest {
         @DisplayName("should convert USER message correctly")
         void convertMessage_userRole_shouldReturnUserMessage() {
             OllamaProvider provider = OllamaProvider.builder().build();
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("User message"))
                     .build();
 
@@ -345,7 +345,7 @@ class OllamaProviderTest {
         @DisplayName("should convert ASSISTANT message correctly")
         void convertMessage_assistantRole_shouldReturnAiMessage() {
             OllamaProvider provider = OllamaProvider.builder().build();
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("User message"))
                     .addMessage(LLMMessage.assistant("Assistant response"))
                     .build();
@@ -360,7 +360,7 @@ class OllamaProviderTest {
 
             // FUNCTION role is not supported by Ollama's convertMessage method
             LLMMessage functionMessage = new LLMMessage(LLMMessage.Role.FUNCTION, "Function result", "test_function", null);
-            LLMRequest request = LLMRequest.builder("llama3.2")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(functionMessage)
                     .build();
 

@@ -43,7 +43,7 @@ var adapter = new McpFunctionAdapter(registry);
 // 4 — build function list and attach to LLM request
 List<FunctionDefinition> functions = adapter.buildFunctionDefinitions().get();
  
-LLMRequest.Builder builder = LLMRequest.builder("claude-3-5-haiku-20241022")
+LLMRequest.Builder builder = LLMRequest.builder()
         .maxTokens(512);
 functions.forEach(builder::addFunction);
 builder.addMessage(LLMMessage.user("List /tmp"));

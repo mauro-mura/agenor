@@ -124,7 +124,7 @@ public class LLMDirectMessagingExample {
                 ctx.topic, ctx.priority
             );
 
-            LLMRequest request = LLMRequest.builder("gpt-4")
+            LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are an expert research planner."))
                 .addMessage(LLMMessage.user(planningPrompt))
                 .temperature(0.7)
@@ -190,7 +190,7 @@ public class LLMDirectMessagingExample {
                 allFindings
             );
 
-            LLMRequest request = LLMRequest.builder("gpt-4")
+            LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are an expert research synthesizer."))
                 .addMessage(LLMMessage.user(synthPrompt))
                 .temperature(0.5)
@@ -263,7 +263,7 @@ public class LLMDirectMessagingExample {
                     "maturity", "scalability", "security", "performance")
                 .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4")
+            LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are a senior technical architect."))
                 .addMessage(LLMMessage.user(String.format(
                     "Technical analysis of: '%s'\nFocus on: core technologies, feasibility, " +
@@ -331,7 +331,7 @@ public class LLMDirectMessagingExample {
                     "size", "growth", "penetration", "competition")
                 .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4")
+            LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are a market research analyst."))
                 .addMessage(LLMMessage.user(String.format(
                     "Market analysis of: '%s'\nFocus on: market size, drivers, customer segments, " +
@@ -409,7 +409,7 @@ public class LLMDirectMessagingExample {
                     "strategy", "products", "pricing", "marketing")
                 .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4")
+            LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are a competitive intelligence expert."))
                 .addMessage(LLMMessage.user(String.format(
                     "Competitive analysis of: '%s'\nFocus on: major players, competitive advantages, " +

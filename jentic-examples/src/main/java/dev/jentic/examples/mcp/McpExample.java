@@ -109,7 +109,7 @@ public class McpExample {
                 "You have filesystem access via tools. Use them to answer the user."));
         history.add(LLMMessage.user("List the contents of " + ROOT + "."));
 
-        LLMRequest.Builder requestBuilder = LLMRequest.builder(MODEL)
+        LLMRequest.Builder requestBuilder = LLMRequest.builder().model(MODEL)
                 .maxTokens(512);
         functions.forEach(requestBuilder::addFunction);
 
@@ -126,7 +126,7 @@ public class McpExample {
                 history.add(toolResult);
             }
 
-            LLMRequest.Builder nextBuilder = LLMRequest.builder(MODEL).maxTokens(512);
+            LLMRequest.Builder nextBuilder = LLMRequest.builder().model(MODEL).maxTokens(512);
             functions.forEach(nextBuilder::addFunction);
             response = provider.chat(nextBuilder.messages(history).build()).get();
         }

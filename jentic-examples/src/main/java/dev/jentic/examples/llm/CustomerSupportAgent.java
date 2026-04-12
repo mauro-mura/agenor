@@ -38,7 +38,7 @@ public class CustomerSupportAgent extends BaseAgent {
         String ticketContent = message.content().toString();
 
         llmProvider.chat(
-                LLMRequest.builder(model)
+                LLMRequest.builder().model(model)
                         .addMessage(LLMMessage.system(
                                 "You are a customer support analyzer. Analyze tickets and provide:\n" +
                                         "1. Sentiment (positive/neutral/negative)\n" +
@@ -81,7 +81,7 @@ public class CustomerSupportAgent extends BaseAgent {
         String priority = parts[2];
 
         llmProvider.chat(
-                LLMRequest.builder(model)
+                LLMRequest.builder().model(model)
                         .addMessage(LLMMessage.system(
                                 "You are a professional customer support agent. " +
                                         "Generate helpful, empathetic responses to customer issues."
@@ -125,7 +125,7 @@ public class CustomerSupportAgent extends BaseAgent {
                 .build();
 
         llmProvider.chat(
-                LLMRequest.builder(model)
+                LLMRequest.builder().model(model)
                         .addMessage(LLMMessage.user("Classify this ticket: " + ticketContent))
                         .addFunction(classifyFunction)
                         .build()

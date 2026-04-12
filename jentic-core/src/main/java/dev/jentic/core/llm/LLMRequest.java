@@ -12,17 +12,25 @@ import java.util.Objects;
  * represents all parameters needed for an LLM request. It is designed to
  * work across different LLM providers with reasonable defaults.
  * 
- * <p>Example usage:
+ * <p>Example usage (model inferred from provider):
  * <pre>{@code
- * LLMRequest request = LLMRequest.builder("gpt-4")
+ * LLMRequest request = LLMRequest.builder()
  *     .addMessage(LLMMessage.system("You are a helpful assistant."))
  *     .addMessage(LLMMessage.user("What is the capital of France?"))
  *     .temperature(0.7)
  *     .maxTokens(100)
  *     .build();
  * }</pre>
- * 
- * @param model the model to use (e.g., "gpt-4", "claude-3-opus")
+ *
+ * <p>Explicit per-request model override:
+ * <pre>{@code
+ * LLMRequest request = LLMRequest.builder()
+ *     .model("gpt-4o")
+ *     .addMessage(LLMMessage.user("Solve this complex problem..."))
+ *     .build();
+ * }</pre>
+ *
+ * @param model the model to use, or {@code null} to defer to the provider's configured model
  * @param messages list of messages in the conversation
  * @param temperature sampling temperature (0.0 to 2.0)
  * @param maxTokens maximum tokens to generate in response
@@ -56,7 +64,6 @@ public record LLMRequest(
      * Compact constructor with validation and defensive copying.
      */
     public LLMRequest {
-        Objects.requireNonNull(model, "Model cannot be null");
         Objects.requireNonNull(messages, "Messages cannot be null");
         
         if (messages.isEmpty()) {
@@ -97,11 +104,25 @@ public record LLMRequest(
     }
     
     /**
-     * Create a new builder for the specified model.
-     * 
-     * @param model the model to use (e.g., "gpt-4", "claude-3-opus")
+     * Create a new builder with no pre-set model.
+     * The provider's configured model will be used at execution time.
+     *
      * @return a new builder instance
      */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Create a new builder for the specified model.
+     *
+     * @param model the model to use (e.g., "gpt-4o"); may be {@code null} to defer to the provider
+     * @return a new builder instance
+     * @deprecated since 0.16.0 — use {@link #builder()} and call {@link Builder#model(String)}
+     *             when an explicit per-request override is needed. The model will be resolved
+     *             from the provider's configured default when not specified.
+     */
+    @Deprecated(since = "0.16.0", forRemoval = true)
     public static Builder builder(String model) {
         return new Builder(model);
     }
@@ -110,7 +131,7 @@ public record LLMRequest(
      * Builder for creating LLMRequest instances.
      */
     public static class Builder {
-        private final String model;
+        private String model;
         private final List<LLMMessage> messages = new ArrayList<>();
         private Double temperature;
         private Integer maxTokens;
@@ -123,10 +144,28 @@ public record LLMRequest(
         private Double frequencyPenalty;
         private Map<String, Object> additionalParameters;
         
-        private Builder(String model) {
-            this.model = Objects.requireNonNull(model, "Model cannot be null");
+        private Builder() {
+            this.model = null;
         }
-        
+
+        private Builder(String model) {
+            this.model = model;
+        }
+
+        /**
+         * Set the model for this specific request.
+         *
+         * <p>When set, overrides the provider's configured default model for this request only.
+         * If not called, the provider will use its configured model at execution time.
+         *
+         * @param model the model identifier, or {@code null} to use the provider's default
+         * @return this builder
+         */
+        public Builder model(String model) {
+            this.model = model;
+            return this;
+        }
+
         /**
          * Add a message to the conversation.
          * 

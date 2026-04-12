@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - Unreleased
+
+### Added
+- **ADR-017 — `LLMRequest.model` optional with provider fallback**: the `model` field on `LLMRequest` is now optional. Providers resolve the effective model using this precedence: `request.model()` (explicit per-request override) → provider's configured `modelName` → `LLMException("No model specified")`.
+  - New `LLMRequest.builder()` no-arg factory — preferred entry point when no per-request override is needed.
+  - New `LLMRequest.Builder.model(String)` setter for explicit per-request overrides.
+  - `LLMProvider.validateRequest()` no longer rejects a null model; resolution happens at execution time inside each adapter.
+  - `OpenAIProvider`, `AnthropicProvider`, and `OllamaProvider` each implement a private `resolveModel(LLMRequest)` method that applies the precedence rule.
+
+### Changed
+- **`LLMRequest.builder(String model)` deprecated** (`since = "0.16.0"`, `forRemoval = true`): replaced by `LLMRequest.builder()` + optional `.model(String)` call. Existing callers compile with a deprecation warning and behave identically.
+- **`DefaultReflectionStrategy`**: removed the hard-coded `"critique"` placeholder model from its internal `LLMRequest`; the injected provider's configured model is now used automatically.
+
 ## [0.15.0] - 2026-04-09
 
 ### Added

@@ -134,7 +134,7 @@ class CapabilityCoordinator extends BaseAgent {
             ctx.topic, ctx.analysisType
         );
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a research planner."))
             .addMessage(LLMMessage.user(planningPrompt))
             .temperature(0.7)
@@ -321,7 +321,7 @@ class CapabilityCoordinator extends BaseAgent {
         String allFindings = String.join("\n\n", ctx.findings.values());
         String synthPrompt = "Synthesize research findings:\n\n" + allFindings;
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a research synthesizer."))
             .addMessage(LLMMessage.user(synthPrompt))
             .temperature(0.5)
@@ -418,7 +418,7 @@ class CapabilityTechSpecialist extends BaseAgent {
 
         String prompt = String.format("Technical analysis of: %s\nFocus: %s", topic, capability);
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user(prompt))
             .temperature(0.6)
             .maxTokens(700)
@@ -472,7 +472,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
 
         String prompt = "Market analysis of: " + topic;
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user(prompt))
             .temperature(0.6)
             .maxTokens(700)
@@ -504,7 +504,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
 
         String prompt = "Forecast trends for: " + topic;
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user(prompt))
             .temperature(0.6)
             .maxTokens(700)
@@ -558,7 +558,7 @@ class CapabilityCompetitorSpecialist extends BaseAgent {
 
         String prompt = "Competitive analysis of: " + topic;
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user(prompt))
             .temperature(0.6)
             .maxTokens(700)

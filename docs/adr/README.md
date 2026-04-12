@@ -22,6 +22,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-014](ADR-014-guardrails-layer.md)                              | Guardrails Layer                         | Accepted | 2026-03-23 |
 | [ADR-015](ADR-015-hitl-checkpoint.md)                               | Human-in-the-Loop Checkpoint             | Accepted | 2026-03-24 |
 | [ADR-016](ADR-016-spring-boot-starter.md)                           | Spring Boot Starter Module               | Proposed | 2026-03-26 |
+| [ADR-017](ADR-017-llmrequest-model-optional.md)                     | LLMRequest model field — optional        | Accepted | 2026-04-12 |
 
 ---
 
@@ -162,6 +163,7 @@ graph TD
 - **ADR-006** (Annotations) builds on **ADR-005** (Message Format)
 - **ADR-015** (HITL) builds on ADR-001, ADR-005, ADR-006, ADR-014
 - **ADR-016** (Spring Boot Starter) builds on ADR-003, ADR-004, ADR-007
+- **ADR-017** (LLMRequest optional model) refines ADR-007 (LLMProvider as Core Interface)
 
 ---
 

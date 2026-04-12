@@ -41,7 +41,7 @@ import java.util.List;
  * );
  * 
  * // Use in LLM request
- * LLMRequest request = LLMRequest.builder("gpt-4")
+ * LLMRequest request = LLMRequest.builder()
  *     .messages(selected)
  *     .maxTokens(500)
  *     .build();

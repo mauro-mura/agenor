@@ -106,7 +106,7 @@ class OpenAIProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Hi"))
                 .build();
 
@@ -127,7 +127,7 @@ class OpenAIProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are a helpful assistant"))
                 .addMessage(LLMMessage.user("Help me"))
                 .build();
@@ -146,7 +146,7 @@ class OpenAIProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("First"))
                 .addMessage(LLMMessage.assistant("Response"))
                 .addMessage(LLMMessage.user("Continue"))
@@ -167,7 +167,7 @@ class OpenAIProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Question"))
                 .build();
 
@@ -194,7 +194,7 @@ class OpenAIProviderTest {
                 .stringParameter("location", "City name", true)
                 .build();
 
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("What's the weather?"))
                 .functions(List.of(func))
                 .build();
@@ -214,7 +214,7 @@ class OpenAIProviderTest {
                 .thenThrow(new RuntimeException("API error"));
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Test"))
                 .build();
 
@@ -237,7 +237,7 @@ class OpenAIProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Stream this"))
                 .build();
 
@@ -265,7 +265,7 @@ class OpenAIProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Empty"))
                 .build();
 
@@ -288,7 +288,7 @@ class OpenAIProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Null response"))
                 .build();
 
@@ -309,7 +309,7 @@ class OpenAIProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         OpenAIProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Error test"))
                 .build();
 
@@ -336,7 +336,7 @@ class OpenAIProviderTest {
                 .parameter("x", "integer", "First number", true)
                 .build();
 
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Calculate 2+2"))
                 .functions(List.of(func))
                 .build();
@@ -489,7 +489,7 @@ class OpenAIProviderTest {
         @Test
         @DisplayName("should convert system message correctly")
         void convertMessages_withSystemMessage_shouldCreateSystemMessage() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("You are a helpful assistant"))
                     .build();
 
@@ -501,7 +501,7 @@ class OpenAIProviderTest {
         @Test
         @DisplayName("should convert assistant message correctly")
         void convertMessages_withAssistantMessage_shouldCreateAiMessage() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.assistant("I can help you with that"))
                     .build();
 
@@ -512,7 +512,7 @@ class OpenAIProviderTest {
         @Test
         @DisplayName("should convert user message correctly")
         void convertMessages_withUserMessage_shouldCreateUserMessage() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("What is the weather?"))
                     .build();
 
@@ -525,7 +525,7 @@ class OpenAIProviderTest {
         void convertMessages_withFunctionCallsNoContent_shouldHandleGracefully() {
             assertDoesNotThrow(() -> {
                 FunctionCall call = new FunctionCall("id", "func", "{}");
-                LLMRequest.builder("test-id")
+                LLMRequest.builder()
                         .addMessage(new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call)))
                         .build();
             });
@@ -534,7 +534,7 @@ class OpenAIProviderTest {
         @Test
         @DisplayName("should convert multi-turn conversation")
         void convertMessages_withMultiTurnConversation_shouldPreserveOrder() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("You are a math tutor"))
                     .addMessage(LLMMessage.user("What is 5 + 3?"))
                     .addMessage(LLMMessage.assistant("5 + 3 equals 8"))
@@ -562,7 +562,7 @@ class OpenAIProviderTest {
                     .stringParameter("unit", "Temperature unit (celsius/fahrenheit)", false)
                     .build();
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("What's the weather in Paris?"))
                     .addFunction(getWeather)
                     .build();
@@ -585,7 +585,7 @@ class OpenAIProviderTest {
                     .stringParameter("timezone", "Timezone", true)
                     .build();
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("What's the weather and time?"))
                     .addFunction(func1)
                     .addFunction(func2)
@@ -606,7 +606,7 @@ class OpenAIProviderTest {
                     .booleanParameter("inStock", "Only in stock", false)
                     .build();
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Search for laptops"))
                     .addFunction(complexFunc)
                     .build();
@@ -623,7 +623,7 @@ class OpenAIProviderTest {
                     .description("Get a random joke")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Tell me a joke"))
                     .addFunction(simpleFunc)
                     .build();
@@ -693,7 +693,7 @@ class OpenAIProviderTest {
         @Test
         @DisplayName("should create valid request with all parameters")
         void createRequest_withAllParameters_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder().model("test-id")
                     .addMessage(LLMMessage.user("Hello"))
                     .temperature(0.7)
                     .maxTokens(500)
@@ -715,14 +715,14 @@ class OpenAIProviderTest {
         @DisplayName("should require at least one message")
         void createRequest_withNoMessages_shouldThrow() {
             assertThrows(IllegalArgumentException.class, () -> {
-                LLMRequest.builder("test-id").build();
+                LLMRequest.builder().build();
             });
         }
 
         @Test
         @DisplayName("should handle optional parameters as null")
         void createRequest_withMinimalParameters_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -743,7 +743,7 @@ class OpenAIProviderTest {
                     .apiKey("test-key")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("stream-test")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Count to 3"))
                     .build();
 
@@ -767,7 +767,7 @@ class OpenAIProviderTest {
                     .description("Get data")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("stream-test")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Get me some data"))
                     .addFunction(func)
                     .build();
@@ -882,7 +882,7 @@ class OpenAIProviderTest {
                     .build();
 
             // Empty content message
-            LLMRequest emptyContentRequest = LLMRequest.builder("test-id")
+            LLMRequest emptyContentRequest = LLMRequest.builder()
                     .addMessage(LLMMessage.user(""))
                     .build();
 
@@ -915,7 +915,7 @@ class OpenAIProviderTest {
         void chat_withLongMessage_shouldSucceed() {
             String longContent = "a".repeat(10000);
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(longContent))
                     .build();
 
@@ -928,7 +928,7 @@ class OpenAIProviderTest {
         void chat_withSpecialCharacters_shouldSucceed() {
             String specialContent = "Special chars: \n\t\r\"'\\{}[]<>";
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(specialContent))
                     .build();
 
@@ -940,7 +940,7 @@ class OpenAIProviderTest {
         void chat_withUnicodeCharacters_shouldSucceed() {
             String unicodeContent = "Unicode: 你好 🌍 мир";
 
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(unicodeContent))
                     .build();
 

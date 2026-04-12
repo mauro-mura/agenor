@@ -49,7 +49,7 @@ class OllamaProviderIntegrationTest {
                 .timeout(Duration.ofMinutes(3))
                 .build();
 
-        LLMRequest request = LLMRequest.builder("qwen2.5:0.5b")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Say hello in exactly 2 words"))
                 .temperature(0.0)
                 .maxTokens(10)
@@ -80,7 +80,7 @@ class OllamaProviderIntegrationTest {
                 .timeout(Duration.ofMinutes(3))
                 .build();
 
-        LLMRequest request = LLMRequest.builder("qwen2.5:0.5b")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Count: 1, 2, 3"))
                 .temperature(0.0)
                 .maxTokens(20)
@@ -153,7 +153,7 @@ class OllamaProviderIntegrationTest {
 
         // Send multiple requests
         for (int i = 1; i <= 3; i++) {
-            LLMRequest request = LLMRequest.builder("qwen2.5:0.5b")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Reply with number: " + i))
                     .temperature(0.0)
                     .maxTokens(10)
@@ -182,7 +182,7 @@ class OllamaProviderIntegrationTest {
                 .build();
 
         // Build a multi-turn conversation
-        LLMRequest conversationRequest = LLMRequest.builder("qwen2.5:0.5b")
+        LLMRequest conversationRequest = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are a helpful assistant. Be concise."))
                 .addMessage(LLMMessage.user("My favorite color is blue"))
                 .addMessage(LLMMessage.assistant("I understand your favorite color is blue."))
@@ -217,7 +217,7 @@ class OllamaProviderIntegrationTest {
                 .timeout(Duration.ofSeconds(30))
                 .build();
 
-        LLMRequest request = LLMRequest.builder("nonexistent-model")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Test"))
                 .build();
 

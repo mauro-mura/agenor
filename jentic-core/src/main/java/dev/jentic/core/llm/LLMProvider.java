@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  * <pre>{@code
  * LLMProvider provider = new OpenAIProvider(apiKey);
  * 
- * LLMRequest request = LLMRequest.builder("gpt-4")
+ * LLMRequest request = LLMRequest.builder()
  *     .addMessage(LLMMessage.user("What is the capital of France?"))
  *     .temperature(0.7)
  *     .maxTokens(100)
@@ -148,8 +148,6 @@ public interface LLMProvider {
         if (request.messages() == null || request.messages().isEmpty()) {
             throw new LLMException("Request must contain at least one message");
         }
-        if (request.model() == null || request.model().isBlank()) {
-            throw new LLMException("Request must specify a model");
-        }
+        // model null is allowed — resolved at execution time by the provider's chat() implementation
     }
 }

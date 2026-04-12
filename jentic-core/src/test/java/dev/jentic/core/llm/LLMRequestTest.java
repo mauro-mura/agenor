@@ -14,7 +14,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should build basic request")
     void testBasicRequest() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Hello")
             .build();
         
@@ -26,7 +26,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should build request with multiple messages")
     void testMultipleMessages() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .systemMessage("You are helpful")
             .userMessage("Question 1")
             .assistantMessage("Answer 1")
@@ -43,7 +43,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set temperature")
     void testTemperature() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .temperature(0.8)
             .build();
@@ -55,14 +55,14 @@ class LLMRequestTest {
     @DisplayName("Should reject invalid temperature")
     void testInvalidTemperature() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .temperature(-0.1)
                 .build();
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .temperature(2.1)
                 .build();
@@ -72,7 +72,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set max tokens")
     void testMaxTokens() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .maxTokens(100)
             .build();
@@ -84,14 +84,14 @@ class LLMRequestTest {
     @DisplayName("Should reject invalid max tokens")
     void testInvalidMaxTokens() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .maxTokens(0)
                 .build();
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .maxTokens(-100)
                 .build();
@@ -106,7 +106,7 @@ class LLMRequestTest {
             .stringParameter("arg1", "Argument 1", true)
             .build();
         
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .addFunction(func)
             .build();
@@ -119,7 +119,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set function call directive")
     void testFunctionCall() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .functionCall("auto")
             .build();
@@ -130,7 +130,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set top_p")
     void testTopP() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .topP(0.9)
             .build();
@@ -142,14 +142,14 @@ class LLMRequestTest {
     @DisplayName("Should reject invalid top_p")
     void testInvalidTopP() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .topP(-0.1)
                 .build();
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .topP(1.1)
                 .build();
@@ -159,7 +159,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set stop sequences")
     void testStopSequences() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .stop(List.of("END", "STOP"))
             .build();
@@ -172,7 +172,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set presence penalty")
     void testPresencePenalty() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .presencePenalty(0.5)
             .build();
@@ -184,14 +184,14 @@ class LLMRequestTest {
     @DisplayName("Should reject invalid presence penalty")
     void testInvalidPresencePenalty() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .presencePenalty(-2.1)
                 .build();
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .presencePenalty(2.1)
                 .build();
@@ -201,7 +201,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should set frequency penalty")
     void testFrequencyPenalty() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .frequencyPenalty(0.3)
             .build();
@@ -213,14 +213,14 @@ class LLMRequestTest {
     @DisplayName("Should reject invalid frequency penalty")
     void testInvalidFrequencyPenalty() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .frequencyPenalty(-2.1)
                 .build();
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4")
+            LLMRequest.builder().model("gpt-4")
                 .userMessage("Test")
                 .frequencyPenalty(2.1)
                 .build();
@@ -228,25 +228,47 @@ class LLMRequestTest {
     }
     
     @Test
-    @DisplayName("Should reject null model")
+    @DisplayName("Should allow null model — deferred to provider")
+    @SuppressWarnings("deprecation")
     void testNullModel() {
-        assertThrows(NullPointerException.class, () -> {
-            LLMRequest.builder(null);
-        });
+        // builder(null) is deprecated but must not throw; model is resolved at execution time
+        LLMRequest request = LLMRequest.builder(null)
+                .userMessage("Hello")
+                .build();
+        assertNull(request.model());
+    }
+
+    @Test
+    @DisplayName("Should build request with no-arg builder (model deferred to provider)")
+    void testNoArgBuilder() {
+        LLMRequest request = LLMRequest.builder()
+                .userMessage("Hello")
+                .build();
+        assertNull(request.model());
+    }
+
+    @Test
+    @DisplayName("Should set model via model() setter on builder")
+    void testModelSetter() {
+        LLMRequest request = LLMRequest.builder()
+                .model("gpt-4o")
+                .userMessage("Hello")
+                .build();
+        assertEquals("gpt-4o", request.model());
     }
     
     @Test
     @DisplayName("Should reject empty messages")
     void testEmptyMessages() {
         assertThrows(IllegalArgumentException.class, () -> {
-            LLMRequest.builder("gpt-4").build();
+            LLMRequest.builder().model("gpt-4").build();
         });
     }
     
     @Test
     @DisplayName("Should get last user message")
     void testGetLastUserMessage() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .systemMessage("System")
             .userMessage("First question")
             .assistantMessage("Answer")
@@ -261,7 +283,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should return null when no user message")
     void testNoUserMessage() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .systemMessage("System only")
             .build();
         
@@ -271,7 +293,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should count messages correctly")
     void testMessageCount() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .systemMessage("System")
             .userMessage("User")
             .assistantMessage("Assistant")
@@ -283,7 +305,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should create immutable messages list")
     void testImmutableMessages() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .build();
         
@@ -300,7 +322,7 @@ class LLMRequestTest {
             LLMMessage.user("New user")
         );
         
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Old message")
             .messages(newMessages)
             .build();
@@ -313,7 +335,7 @@ class LLMRequestTest {
     @Test
     @DisplayName("Should handle all optional parameters as null")
     void testAllOptionalNull() {
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder().model("gpt-4")
             .userMessage("Test")
             .build();
         

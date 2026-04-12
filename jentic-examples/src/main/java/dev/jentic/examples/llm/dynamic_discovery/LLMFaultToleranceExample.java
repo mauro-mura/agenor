@@ -145,7 +145,7 @@ class DynamicCoordinator extends BaseAgent {
             ctx.topic
         );
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a research planning expert."))
             .addMessage(LLMMessage.user(planningPrompt))
             .temperature(0.7)
@@ -280,7 +280,7 @@ class DynamicCoordinator extends BaseAgent {
             allFindings, ctx.receivedResponses.size()
         );
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are an expert research synthesizer."))
             .addMessage(LLMMessage.user(synthPrompt))
             .temperature(0.5)
@@ -395,7 +395,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
                 "maturity", "scalability", "security", "cost")
             .build();
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a senior technical architect."))
             .addMessage(LLMMessage.user(analysisPrompt))
             .addFunction(techTool)
@@ -484,7 +484,7 @@ class DynamicMarketResearcher extends BaseAgent {
                 "size", "growth", "saturation", "competition")
             .build();
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a market research analyst."))
             .addMessage(LLMMessage.user(analysisPrompt))
             .addFunction(marketTool)
@@ -573,7 +573,7 @@ class DynamicCompetitorResearcher extends BaseAgent {
                 "strategy", "products", "pricing", "partnerships")
             .build();
 
-        LLMRequest request = LLMRequest.builder("gpt-4")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a competitive intelligence expert."))
             .addMessage(LLMMessage.user(analysisPrompt))
             .addFunction(compTool)

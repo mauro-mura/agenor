@@ -86,7 +86,7 @@ public class DefaultReflectionStrategy implements ReflectionStrategy {
 
         String promptText = buildPrompt(originalOutput, task, config);
 
-        LLMRequest request = LLMRequest.builder("critique")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user(promptText))
                 .build();
 

@@ -114,7 +114,7 @@ public class GuardrailsExample {
             String safeInput = applyInputGuardrails(userInput, ctx);
 
             // LLM call
-            LLMRequest request = LLMRequest.builder("stub-model")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(safeInput))
                     .build();
             String rawOutput = provider.chat(request).join().content();

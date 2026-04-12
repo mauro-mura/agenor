@@ -198,6 +198,7 @@ public class AnthropicProvider implements LLMProvider {
     @Override
     public String getDefaultModel() { return Models.CLAUDE_SONNET_4_6.id; }
 
+
     private List<ChatMessage> convertMessages(LLMRequest request) {
         return request.messages().stream().map(msg -> {
             return switch (msg.role()) {

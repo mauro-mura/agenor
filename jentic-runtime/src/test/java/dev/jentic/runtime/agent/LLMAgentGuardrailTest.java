@@ -66,7 +66,7 @@ class LLMAgentGuardrailTest {
 
             String safeInput = applyInputGuardrails(userPrompt, ctx);
 
-            LLMRequest request = LLMRequest.builder("test-model")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(safeInput))
                     .build();
             String rawOutput = provider.chat(request).join().content();

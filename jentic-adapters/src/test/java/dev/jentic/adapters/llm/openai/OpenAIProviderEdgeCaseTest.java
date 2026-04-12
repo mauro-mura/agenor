@@ -21,7 +21,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle minimum valid maxTokens")
         void request_withMinimalMaxTokens_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Short"))
                     .maxTokens(1)
                     .build();
@@ -32,7 +32,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle maximum maxTokens")
         void request_withMaximalMaxTokens_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Long response needed"))
                     .maxTokens(100000)
                     .build();
@@ -43,12 +43,12 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle topP at boundaries")
         void request_withBoundaryTopP_shouldSucceed() {
-            LLMRequest request1 = LLMRequest.builder("gpt-4o")
+            LLMRequest request1 = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .topP(0.0)
                     .build();
 
-            LLMRequest request2 = LLMRequest.builder("gpt-4o")
+            LLMRequest request2 = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .topP(1.0)
                     .build();
@@ -60,7 +60,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle penalties at boundaries")
         void request_withBoundaryPenalties_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .presencePenalty(-2.0)
                     .frequencyPenalty(2.0)
@@ -73,7 +73,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle zero penalties")
         void request_withZeroPenalties_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .presencePenalty(0.0)
                     .frequencyPenalty(0.0)
@@ -192,7 +192,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should handle message with only whitespace")
         void message_withWhitespace_shouldPreserveIt() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("   \n\t  "))
                     .build();
 
@@ -203,7 +203,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with newlines")
         void message_withNewlines_shouldPreserveThem() {
             String multiline = "Line 1\nLine 2\nLine 3";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(multiline))
                     .build();
 
@@ -214,7 +214,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with tabs")
         void message_withTabs_shouldPreserveThem() {
             String tabbed = "Column1\tColumn2\tColumn3";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(tabbed))
                     .build();
 
@@ -225,7 +225,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with JSON content")
         void message_withJSON_shouldPreserveIt() {
             String json = "{\"key\":\"value\",\"number\":42,\"nested\":{\"inner\":true}}";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(json))
                     .build();
 
@@ -236,7 +236,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with XML content")
         void message_withXML_shouldPreserveIt() {
             String xml = "<root><item id=\"1\">Value</item></root>";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(xml))
                     .build();
 
@@ -247,7 +247,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with code blocks")
         void message_withCodeBlocks_shouldPreserveThem() {
             String code = "```python\ndef hello():\n    print('Hello')\n```";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(code))
                     .build();
 
@@ -258,7 +258,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with emoji")
         void message_withEmoji_shouldPreserveThem() {
             String emoji = "Hello 👋 World 🌍";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(emoji))
                     .build();
 
@@ -269,7 +269,7 @@ class OpenAIProviderEdgeCaseTest {
         @DisplayName("should handle message with math symbols")
         void message_withMathSymbols_shouldPreserveThem() {
             String math = "∑(x² + y²) = π × r² ≈ 3.14159";
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user(math))
                     .build();
 
@@ -493,7 +493,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should build request with single message")
         void request_withSingleMessage_shouldBuild() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -503,7 +503,7 @@ class OpenAIProviderEdgeCaseTest {
         @Test
         @DisplayName("should build request with many messages")
         void request_withManyMessages_shouldBuild() {
-            LLMRequest.Builder builder = LLMRequest.builder("gpt-4o");
+            LLMRequest.Builder builder = LLMRequest.builder();
             
             for (int i = 0; i < 20; i++) {
                 if (i % 2 == 0) {
@@ -524,7 +524,7 @@ class OpenAIProviderEdgeCaseTest {
                     .description("Test")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Call function"))
                     .addFunction(func)
                     .build();
@@ -541,7 +541,7 @@ class OpenAIProviderEdgeCaseTest {
                     .stringParameter("param", "Parameter", true)
                     .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("System"))
                     .addMessage(LLMMessage.user("User"))
                     .addFunction(func)

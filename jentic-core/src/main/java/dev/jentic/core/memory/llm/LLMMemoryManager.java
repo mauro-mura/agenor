@@ -50,7 +50,7 @@ import java.util.concurrent.CompletableFuture;
  * ).join();
  * 
  * // Use in LLM request
- * LLMRequest request = LLMRequest.builder("gpt-4")
+ * LLMRequest request = LLMRequest.builder()
  *     .messages(history)
  *     .addMessage(LLMMessage.user("What did we discuss?"))
  *     .build();

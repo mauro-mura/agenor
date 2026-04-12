@@ -81,7 +81,7 @@ public class LLMResponseGenerator {
                 : PromptTemplates.buildUserPrompt(userQuery, documents);
             
             // Create LLM request
-            LLMRequest request = LLMRequest.builder(modelName)
+            LLMRequest request = LLMRequest.builder().model(modelName)
                 .systemMessage(systemPrompt)
                 .userMessage(userPrompt)
                 .temperature(0.7)
@@ -122,7 +122,7 @@ public class LLMResponseGenerator {
             PromptTemplates.getDomainContext(intent);
         String userPrompt = PromptTemplates.buildUserPrompt(userQuery, documents);
         
-        LLMRequest request = LLMRequest.builder(modelName)
+        LLMRequest request = LLMRequest.builder().model(modelName)
             .systemMessage(systemPrompt)
             .userMessage(userPrompt)
             .temperature(0.7)

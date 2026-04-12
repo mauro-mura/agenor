@@ -45,7 +45,7 @@ class OpenAIProviderMockTest {
                     .apiKey("test-key")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -350,7 +350,7 @@ class OpenAIProviderMockTest {
         @Test
         @DisplayName("should create request with custom temperature")
         void request_withCustomTemperature_shouldStoreIt() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .temperature(0.3)
                     .build();
@@ -361,7 +361,7 @@ class OpenAIProviderMockTest {
         @Test
         @DisplayName("should create request with custom max tokens")
         void request_withCustomMaxTokens_shouldStoreIt() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .maxTokens(2048)
                     .build();
@@ -372,7 +372,7 @@ class OpenAIProviderMockTest {
         @Test
         @DisplayName("should create request with all penalty parameters")
         void request_withAllPenalties_shouldStoreThem() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .topP(0.95)
                     .presencePenalty(0.5)
@@ -387,7 +387,7 @@ class OpenAIProviderMockTest {
         @Test
         @DisplayName("should handle request with default parameters")
         void request_withDefaults_shouldHaveNullOptionals() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Test"))
                     .build();
 
@@ -440,7 +440,7 @@ class OpenAIProviderMockTest {
         @Test
         @DisplayName("should handle all message roles")
         void messages_withAllRoles_shouldConvertCorrectly() {
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("System prompt"))
                     .addMessage(LLMMessage.user("User question"))
                     .addMessage(LLMMessage.assistant("Assistant answer"))
@@ -459,7 +459,7 @@ class OpenAIProviderMockTest {
             String userContent = "What is 2+2?";
             String assistantContent = "2+2 equals 4";
 
-            LLMRequest request = LLMRequest.builder("gpt-4o")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system(systemContent))
                     .addMessage(LLMMessage.user(userContent))
                     .addMessage(LLMMessage.assistant(assistantContent))
@@ -485,7 +485,7 @@ class OpenAIProviderMockTest {
             List<CompletableFuture<LLMResponse>> futures = new ArrayList<>();
             
             for (int i = 0; i < 5; i++) {
-                LLMRequest request = LLMRequest.builder("gpt-4o")
+                LLMRequest request = LLMRequest.builder()
                         .addMessage(LLMMessage.user("Request " + i))
                         .build();
                 futures.add(provider.chat(request));
@@ -505,7 +505,7 @@ class OpenAIProviderMockTest {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             
             for (int i = 0; i < 5; i++) {
-                LLMRequest request = LLMRequest.builder("gpt-4o")
+                LLMRequest request = LLMRequest.builder()
                         .addMessage(LLMMessage.user("Stream request " + i))
                         .build();
                 futures.add(provider.chatStream(request, chunk -> {}));

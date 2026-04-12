@@ -50,7 +50,7 @@ public class OpenAIProviderExample {
             .maxTokens(150)
             .build();
 
-        LLMRequest request = LLMRequest.builder("basic-chat")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user("Explain quantum computing in one sentence"))
             .build();
 
@@ -75,7 +75,7 @@ public class OpenAIProviderExample {
                 .modelName(OpenAIProvider.Models.GPT_4O_MINI)
                 .build();
 
-        LLMRequest request = LLMRequest.builder("streaming-chat")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user("Write a haiku about artificial intelligence"))
             .build();
 
@@ -106,7 +106,7 @@ public class OpenAIProviderExample {
             .maxTokens(200)
             .build();
 
-        LLMRequest request = LLMRequest.builder("conversation")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.system("You are a helpful math tutor"))
             .addMessage(LLMMessage.user("What is 15 * 8?"))
             .addMessage(LLMMessage.assistant("15 * 8 = 120"))
@@ -138,7 +138,7 @@ public class OpenAIProviderExample {
             .parameter("units", "string", "celsius or fahrenheit", false)
             .build();
 
-        LLMRequest request = LLMRequest.builder("function-call")
+        LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user("What's the weather in Tokyo?"))
             .addFunction(weatherFunction)
             .build();
@@ -192,7 +192,7 @@ public class OpenAIProviderExample {
 
                 conversation.addMessage(LLMMessage.user(userInput));
 
-                LLMRequest request = LLMRequest.builder("interactive")
+                LLMRequest request = LLMRequest.builder()
                     .messages(conversation.getMessages())
                     .build();
 

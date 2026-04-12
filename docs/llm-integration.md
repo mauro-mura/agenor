@@ -126,12 +126,23 @@ All methods return `CompletableFuture` for non-blocking execution. Providers are
 
 ### Building LLMRequest
 
+Since 0.16.0 the `model` field is **optional**. When omitted, the provider uses its configured
+model (set via `modelName(...)` at construction time). Supply an explicit model only when you
+want to route a specific request to a different model than the provider default.
+
 ```java
-LLMRequest request = LLMRequest.builder("gpt-4o")
+// Common case — model inferred from provider configuration
+LLMRequest request = LLMRequest.builder()
     .systemMessage("You are a helpful assistant.")
     .userMessage("What is the capital of France?")
     .temperature(0.7)
     .maxTokens(200)
+    .build();
+
+// Explicit per-request override — routes this request to a different model
+LLMRequest expensiveRequest = LLMRequest.builder()
+    .model("o3")
+    .userMessage("Prove the Riemann hypothesis.")
     .build();
 ```
 
@@ -142,7 +153,7 @@ List<LLMMessage> history = new ArrayList<>();
 history.add(LLMMessage.system("You are a helpful assistant."));
 history.add(LLMMessage.user("What is photosynthesis?"));
 
-LLMRequest request = LLMRequest.builder("gpt-4o")
+LLMRequest request = LLMRequest.builder()
     .messages(history)
     .build();
 ```
@@ -199,7 +210,7 @@ FunctionDefinition weather = FunctionDefinition.builder("get_weather")
 ### Send a request with functions
 
 ```java
-LLMRequest request = LLMRequest.builder("gpt-4o")
+LLMRequest request = LLMRequest.builder()
     .userMessage("What's the weather in Paris?")
     .addFunction(weather)
     .build();
@@ -218,7 +229,7 @@ provider.chat(request).thenAccept(response -> {
         String result = fetchWeather(location, unit);
 
         // Continue conversation with the function result
-        LLMRequest followUp = LLMRequest.builder("gpt-4o")
+        LLMRequest followUp = LLMRequest.builder()
             .messages(request.messages())
             .addMessage(response.toMessage())
             .addMessage(LLMMessage.function("get_weather", result))
@@ -306,7 +317,7 @@ public class SupportAgent extends LLMAgent {
 
         // Call the LLM
         String answer = provider.chat(
-            LLMRequest.builder("gpt-4o").messages(prompt).build()
+            LLMRequest.builder().messages(prompt).build()
         ).join().content();
 
         // Record the assistant turn
@@ -580,7 +591,7 @@ public class MockLLMProvider implements LLMProvider {
 void agentRespondsToUserMessage() {
     LLMProvider mock = new MockLLMProvider("Paris is the capital of France.");
 
-    LLMRequest request = LLMRequest.builder("test-model")
+    LLMRequest request = LLMRequest.builder()
         .userMessage("What is the capital of France?")
         .build();
 

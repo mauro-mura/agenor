@@ -202,7 +202,7 @@ public class AIAssistantAgent extends BaseAgent {
         trimConversationHistory();
         
         // Create LLM request with available functions
-        LLMRequest request = LLMRequest.builder("gpt-4o")
+        LLMRequest request = LLMRequest.builder()
             .messages(conversationHistory)
             .addFunction(createWeatherFunction())
             .addFunction(createCalculatorFunction())
@@ -247,7 +247,7 @@ public class AIAssistantAgent extends BaseAgent {
                 }
                 
                 // Make follow-up request with function results
-                LLMRequest followUpRequest = LLMRequest.builder("gpt-4o")
+                LLMRequest followUpRequest = LLMRequest.builder()
                     .messages(conversationHistory)
                     .temperature(0.7)
                     .maxTokens(1500)

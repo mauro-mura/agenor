@@ -102,7 +102,7 @@ class AnthropicProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.system("You are helpful"))
                 .addMessage(LLMMessage.user("Hello"))
                 .build();
@@ -122,7 +122,7 @@ class AnthropicProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Tell me something"))
                 .build();
 
@@ -144,7 +144,7 @@ class AnthropicProviderTest {
         when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("First turn"))
                 .addMessage(LLMMessage.assistant("My previous response"))
                 .addMessage(LLMMessage.user("Continue"))
@@ -169,7 +169,7 @@ class AnthropicProviderTest {
                 .stringParameter("query", "Search query", true)
                 .build();
 
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Search for AI news"))
                 .functions(List.of(func))
                 .build();
@@ -189,7 +189,7 @@ class AnthropicProviderTest {
                 .thenThrow(new RuntimeException("Anthropic API down"));
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Test"))
                 .build();
 
@@ -210,7 +210,7 @@ class AnthropicProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Stream"))
                 .build();
 
@@ -236,7 +236,7 @@ class AnthropicProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Empty"))
                 .build();
 
@@ -256,7 +256,7 @@ class AnthropicProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Null test"))
                 .build();
 
@@ -276,7 +276,7 @@ class AnthropicProviderTest {
         }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
 
         AnthropicProvider provider = createProviderWithMocks();
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("Error test"))
                 .build();
 
@@ -301,7 +301,7 @@ class AnthropicProviderTest {
                 .description("Get current time")
                 .build();
 
-        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+        LLMRequest request = LLMRequest.builder()
                 .addMessage(LLMMessage.user("What time is it?"))
                 .functions(List.of(func))
                 .build();
@@ -467,7 +467,7 @@ class AnthropicProviderTest {
         @Test
         @DisplayName("should convert simple user message")
         void convertMessages_withUserMessage_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
 
@@ -478,7 +478,7 @@ class AnthropicProviderTest {
         @Test
         @DisplayName("should convert system and user messages")
         void convertMessages_withSystemAndUser_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.system("You are helpful"))
                     .addMessage(LLMMessage.user("Hello"))
                     .build();
@@ -491,7 +491,7 @@ class AnthropicProviderTest {
         @Test
         @DisplayName("should handle conversation history")
         void convertMessages_withConversationHistory_shouldSucceed() {
-            LLMRequest request = LLMRequest.builder("test-id")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("What is 2+2?"))
                     .addMessage(LLMMessage.assistant("2+2 equals 4"))
                     .addMessage(LLMMessage.user("What about 3+3?"))
@@ -513,7 +513,7 @@ class AnthropicProviderTest {
                     .build();
 
             assertThrows(IllegalArgumentException.class, () -> {
-                LLMRequest.builder("test-id").build();
+                LLMRequest.builder().build();
             });
         }
 
@@ -578,7 +578,7 @@ class AnthropicProviderTest {
                     .maxTokens(100)
                     .build();
 
-            LLMRequest request = LLMRequest.builder("integration-test")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Say 'Hello' and nothing else"))
                     .build();
 
@@ -602,7 +602,7 @@ class AnthropicProviderTest {
                     .modelName("claude-3-5-haiku-20241022")
                     .build();
 
-            LLMRequest request = LLMRequest.builder("stream-test")
+            LLMRequest request = LLMRequest.builder()
                     .addMessage(LLMMessage.user("Count to 5"))
                     .build();
 

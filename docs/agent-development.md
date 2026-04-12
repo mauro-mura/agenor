@@ -147,7 +147,7 @@ public class ChatBot extends LLMAgent {
         List<LLMMessage> prompt = buildLLMPrompt(userInput, 2000).join();
 
         // Call your LLM provider
-        String reply = myProvider.chat(LLMRequest.builder("gpt-4").messages(prompt).build())
+        String reply = myProvider.chat(LLMRequest.builder().messages(prompt).build())
                                  .join().content();
 
         // Record the assistant turn
