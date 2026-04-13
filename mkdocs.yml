@@ -81,6 +81,7 @@ nav:
   - LLM Integration:
     - Overview: llm-integration.md
     - Memory Management: memory.md
+    - Agent State Persistence: persistence.md
     - Guardrails: guardrails.md
   - Adapters:
     - MCP: adapters/mcp.md

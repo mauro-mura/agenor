@@ -331,6 +331,7 @@ mvn exec:java -pl jentic-examples \
 - [Dialogue Protocol](docs/dialog-protocol.md)
 - [LLM Integration Guide](docs/llm-integration.md)
 - [Memory Guide](docs/memory.md)
+- [Agent State Persistence Guide](docs/persistence.md)
 - [Message Filtering Guide](docs/message-filtering.md)
 - [Architecture Decision Records](docs/adr/README.md)
 

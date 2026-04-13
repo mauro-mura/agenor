@@ -1,12 +1,19 @@
 # Memory Guide
 
-This guide covers Jentic's memory system: the core interfaces, the `BaseAgent` helper API, shared memory for multi-agent coordination, the `InMemoryStore` implementation, and agent state persistence with `FilePersistenceService`.
+This guide covers Jentic's **key-value memory system**: `MemoryStore`, `MemoryScope`, `MemoryEntry`,
+the `BaseAgent` helper API, shared memory for multi-agent coordination, and the `InMemoryStore`
+implementation.
+
+> **Looking for agent state persistence?** (`Stateful`, `captureState`, `@JenticPersistenceConfig`,
+> `FilePersistenceService`) — see the dedicated **[Agent State Persistence Guide](persistence.md)**.
+> The two systems are independent; this guide covers key-value memory only.
 
 The memory subsystem spans two modules:
-- **`jentic-core`** (`dev.jentic.core.memory`, `dev.jentic.core.persistence`) — interfaces and records
-- **`jentic-runtime`** (`dev.jentic.runtime.memory`, `dev.jentic.runtime.persistence`) — implementations
+- **`jentic-core`** (`dev.jentic.core.memory`) — interfaces and records
+- **`jentic-runtime`** (`dev.jentic.runtime.memory`) — implementations
 
-For LLM-specific memory (conversation history, context window strategies) see [LLM Integration](llm-integration.md).
+For LLM-specific memory (conversation history, context window strategies) see
+[LLM Integration](llm-integration.md).
 
 ---
 
@@ -21,30 +28,28 @@ jentic-core / dev.jentic.core.memory
 ├── MemoryStats.java       # Stats record
 └── MemoryException.java   # Typed error hierarchy
 
-jentic-core / dev.jentic.core.persistence
-├── Stateful.java          # Mixin: agents with persistent state
-├── AgentState.java        # Serializable state snapshot
-├── PersistenceService.java# Save/load interface
-└── PersistenceStrategy.java # When to auto-save (enum)
-
 jentic-runtime / dev.jentic.runtime.memory
 └── InMemoryStore.java     # Default MemoryStore implementation
-
-jentic-runtime / dev.jentic.runtime.persistence
-├── FilePersistenceService.java # JSON file-based PersistenceService
-└── PersistenceManager.java     # Auto-save orchestrator
 ```
+
+Agent state persistence classes (`dev.jentic.core.persistence`, `dev.jentic.runtime.persistence`)
+are documented in [persistence.md](persistence.md).
 
 ---
 
 ## Memory Scopes
 
-`MemoryScope` controls the lifecycle of stored entries.
+`MemoryScope` is a *hint* that controls how `MemoryStore` implementations should treat an entry.
+Actual durability is implementation-defined: `InMemoryStore` is volatile for **both** scopes.
 
 | Scope | Lifetime | Use cases |
 |-------|----------|-----------|
-| `SHORT_TERM` | In-process, cleared on restart | Session context, task state, cached computations |
-| `LONG_TERM` | Persistent across restarts | Learned facts, user profiles, historical patterns |
+| `SHORT_TERM` | In-process; cleared on process exit or explicit `clearMemory()` | Session context, task state, cached computations |
+| `LONG_TERM` | Intended to survive restarts; **requires a durable `MemoryStore`** | Learned facts, user profiles, historical patterns |
+
+> **`SHORT_TERM` without TTL**: entries stored via `rememberShort(key, value, null)` have no expiry
+> and live until the process exits or `forget()` / `clearMemory()` is called. They are **not**
+> cleared on agent stop/restart if the JVM stays alive.
 
 ```java
 MemoryScope.SHORT_TERM.isShortTerm();  // true
@@ -202,7 +207,7 @@ Key behaviours:
 
 ### Limitations
 
-`InMemoryStore` is not suitable for long-term persistence across JVM restarts. For durable `LONG_TERM` memories use `FilePersistenceService` + `PersistenceManager` (see [Agent State Persistence](#agent-state-persistence) below) or a custom `MemoryStore` backed by a database.
+`InMemoryStore` is not suitable for long-term persistence across JVM restarts. For durable `LONG_TERM` memories use a custom `MemoryStore` backed by a database, or see [persistence.md](persistence.md) for agent state persistence options.
 
 ---
 
@@ -340,182 +345,6 @@ memoryStore.store("shared:task-result", entry, MemoryScope.SHORT_TERM).join();
 
 ---
 
-## Agent State Persistence
-
-Agent state persistence is **separate** from key-value memory. It serialises the agent's business fields to JSON on disk and restores them on the next startup.
-
-### Stateful interface
-
-An agent opts into persistence by implementing `Stateful`:
-
-```java
-@JenticAgent("order-processor")
-@JenticPersistenceConfig(
-    strategy = PersistenceStrategy.ON_STOP,
-    autoSnapshot = true,
-    snapshotInterval = "1h",
-    maxSnapshots = 24
-)
-public class OrderProcessorAgent extends BaseAgent implements Stateful {
-
-    private int ordersProcessed = 0;
-    private String currentOrderId;
-
-    @Override
-    public AgentState captureState() {
-        return AgentState.builder(getAgentId())
-            .agentName(getAgentName())
-            .agentType("processor")
-            .status(isRunning() ? AgentStatus.RUNNING : AgentStatus.STOPPED)
-            .data("ordersProcessed", ordersProcessed)
-            .data("currentOrderId", currentOrderId)
-            .version(getStateVersion() + 1)
-            .build();
-    }
-
-    @Override
-    public void restoreState(AgentState state) {
-        Integer saved = state.getData("ordersProcessed", Integer.class);
-        ordersProcessed = saved != null ? saved : 0;
-        currentOrderId  = state.getData("currentOrderId", String.class);
-    }
-}
-```
-
-Guidelines for `captureState()`:
-- Include all mutable fields that must survive a restart.
-- Produce a point-in-time snapshot; avoid holding locks across the call.
-- Increment or preserve `version()` for optimistic locking.
-
-Guidelines for `restoreState()`:
-- Handle missing keys gracefully with defaults.
-- Do not start behaviors or connect to external systems here; use `onStart()` for that.
-- This method may be called before `start()`.
-
-### @JenticPersistenceConfig
-
-`@JenticPersistenceConfig` sets the automatic-save policy at class level. When absent, the strategy defaults to `MANUAL`.
-
-| Attribute | Default | Description |
-|-----------|---------|-------------|
-| `strategy` | `MANUAL` | When to save automatically |
-| `interval` | `"60s"` | Used by `PERIODIC` and `DEBOUNCED` |
-| `autoSnapshot` | `false` | Enable periodic snapshots |
-| `snapshotInterval` | `"1h"` | How often to create a snapshot |
-| `maxSnapshots` | `10` | Max snapshots to retain (oldest purged) |
-
-### PersistenceStrategy values
-
-| Value | Description |
-|-------|-------------|
-| `MANUAL` | Agent must call `persistState()` explicitly |
-| `IMMEDIATE` | Save on every state change |
-| `PERIODIC` | Save at fixed intervals (`interval` attribute) |
-| `ON_STOP` | Save when agent stops |
-| `DEBOUNCED` | Save after changes with a debounce window |
-| `SNAPSHOT` | Create periodic snapshots |
-
-### AgentState fields
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `agentId` | `String` | Required |
-| `agentName` | `String?` | Display name |
-| `agentType` | `String` | Defaults to `"unknown"` |
-| `status` | `AgentStatus` | Defaults to `UNKNOWN` |
-| `data` | `Map<String,Object>` | Business state; any serializable value |
-| `metadata` | `Map<String,String>` | System/config state; String values only |
-| `version` | `long` | Optimistic locking counter |
-| `savedAt` | `Instant` | Auto-set when saving |
-
-```java
-// Type-safe data access
-int count  = state.getData("ordersProcessed", Integer.class);
-String id  = state.getData("currentOrderId",  String.class);
-```
-
-### FilePersistenceService
-
-`FilePersistenceService` is the default `PersistenceService` implementation. It writes agent state as JSON (Jackson) to `<dataDirectory>/<agentId>.json` using an atomic `REPLACE_EXISTING` move. Snapshots go to `<dataDirectory>/snapshots/<agentId>/<snapshotId>.json`.
-
-```java
-// Default directory: data/persistence
-FilePersistenceService service = new FilePersistenceService();
-
-// Custom directory
-FilePersistenceService service = new FilePersistenceService(Path.of("var/agent-states"));
-
-// Custom directory, no pretty-print
-FilePersistenceService service = new FilePersistenceService(Path.of("var/agent-states"), false);
-```
-
-#### Available operations
-
-```java
-// Save
-service.saveState(agentId, state).join();
-
-// Load
-Optional<AgentState> loaded = service.loadState(agentId).join();
-
-// Check existence
-boolean exists = service.existsState(agentId).join();
-
-// Delete (also removes all snapshots)
-service.deleteState(agentId).join();
-
-// Create a snapshot (returns the snapshot ID)
-String snapshotId = service.createSnapshot(agentId, null).join(); // auto-generated ID
-String snapshotId = service.createSnapshot(agentId, "before-migration").join();
-
-// Restore a snapshot (also restores the current state file)
-Optional<AgentState> snapshot = service.restoreSnapshot(agentId, snapshotId).join();
-
-// List snapshots
-List<String> snapshots = service.listSnapshots(agentId).join();
-```
-
-### PersistenceManager
-
-`PersistenceManager` wires `FilePersistenceService` (or any `PersistenceService`) to the runtime. It automatically registers agents that implement `Stateful` and honour `@JenticPersistenceConfig`, schedules periodic saves or snapshots, and flushes all states on shutdown.
-
-```java
-PersistenceService  persistence = new FilePersistenceService(Path.of("data/agents"));
-PersistenceManager  manager     = new PersistenceManager(persistence);
-
-// Start the manager
-manager.start().join();
-
-// Register agents explicitly (done automatically by JenticRuntime)
-manager.registerAgent(myAgent);
-
-// Manual save
-manager.saveAgent(myAgent).join();
-
-// Stop: cancels scheduled tasks and saves all agents
-manager.stop().join();
-```
-
-#### Integration with JenticRuntime
-
-Register `PersistenceManager` as a service so the runtime wires it automatically:
-
-```java
-var persistence = new FilePersistenceService(Path.of("data/agents"));
-var manager     = new PersistenceManager(persistence);
-
-var runtime = JenticRuntime.builder()
-    .scanPackage("com.example.agents")
-    .service(PersistenceManager.class, manager)
-    .build();
-
-runtime.start();
-```
-
-When registered, `PersistenceManager.registerAgent()` is called for every agent that implements `Stateful` at startup. `unregisterAgent()` is called on shutdown, saving the final state before the agent stops.
-
----
-
 ## MemoryException Error Handling
 
 ```java
@@ -574,18 +403,17 @@ System.out.println("Empty?             : " + stats.isEmpty());
 | Scenario | Recommended approach |
 |----------|---------------------|
 | Session-scoped data (cleared on restart) | `rememberShort` / `MemoryScope.SHORT_TERM` |
-| Facts that survive restarts | `rememberLong` / `MemoryScope.LONG_TERM` + `InMemoryStore` (or DB-backed store) |
+| Facts that survive restarts | `rememberLong` / `MemoryScope.LONG_TERM` + a **durable** `MemoryStore` (not `InMemoryStore`) |
 | Cross-agent data sharing | `shareMemory` / `recallShared` |
-| Agent business state (counters, queues) | `Stateful` + `FilePersistenceService` |
+| Agent business state (counters, queues) | See [persistence.md](persistence.md) — `Stateful` + `FilePersistenceService` |
 | LLM conversation history | `LLMMemoryManager` (see `docs/llm-integration.md`) |
-| Scheduled auto-save | `@JenticPersistenceConfig(strategy=PERIODIC)` |
-| Save on stop only | `@JenticPersistenceConfig(strategy=ON_STOP)` |
-| Point-in-time rollback | `FilePersistenceService.createSnapshot` + `restoreSnapshot` |
+| Scheduled auto-save / snapshots | See [persistence.md](persistence.md) — `@JenticPersistenceConfig` |
 
 ---
 
 ## See Also
 
+- [Agent State Persistence Guide](persistence.md) — `Stateful`, `AgentState`, `FilePersistenceService`, `PersistenceManager`
 - [Agent Development Guide](agent-development.md) — `@JenticPersist`, `@JenticPersistenceConfig` annotations
 - [LLM Integration Guide](llm-integration.md) — `LLMMemoryManager`, `ContextWindowStrategy`
 - [Architecture Guide](architecture.md) — module overview
