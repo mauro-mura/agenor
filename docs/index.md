@@ -16,7 +16,8 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 | [Configuration Guide](configuration.md) | YAML config, environment variables |
 | [LLM Integration Guide](llm-integration.md) | OpenAI, Anthropic, Ollama providers |
 | [Guardrails Guide](guardrails.md) | The Guardrails Layer |
-| [Memory Guide](memory.md) | MemoryStore, persistence, `@JenticPersist` |
+| [Memory Guide](memory.md) | `MemoryStore`, `MemoryScope`, `InMemoryStore`, `BaseAgent` memory API |
+| [Agent State Persistence Guide](persistence.md) | `Stateful`, `FilePersistenceService`, `@JenticPersistenceConfig` |
 | [Dialogue Protocol](dialog-protocol.md) | A2A protocol, request/reply, CFP |
 | [Message Filtering Guide](message-filtering.md) | Filters, rate limiting |
 
