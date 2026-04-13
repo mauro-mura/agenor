@@ -90,6 +90,65 @@ Guidelines for `restoreState()`:
 
 ---
 
+## @JenticPersist
+
+`@JenticPersist` is a **field- and method-level** annotation that lets the runtime discover which
+members to include in the persisted state automatically, without requiring a manual
+`captureState()`/`restoreState()` implementation.
+
+### Field usage
+
+```java
+@JenticAgent("order-processor")
+public class OrderProcessorAgent extends BaseAgent implements Stateful {
+
+    @JenticPersist
+    private int ordersProcessed = 0;
+
+    @JenticPersist("customer_id")       // explicit key — stable across field renames
+    private String customerId;
+
+    @JenticPersist(required = true)     // restoration fails if key is absent in the saved document
+    private String sessionToken;
+
+    @JenticPersist(encrypted = true)    // value is encrypted at rest
+    private String apiKey;
+}
+```
+
+### Method usage
+
+When placed on a getter, the framework calls the getter on save and the matching setter on restore.
+
+```java
+@JenticPersist("order_state")
+public OrderState getOrderState() { return orderState; }
+```
+
+### Attribute reference
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `value` | `String` | `""` (member name) | Key used in the persisted document. Set explicitly to keep the schema stable across renames. |
+| `required` | `boolean` | `false` | When `true`, restoration throws an exception if the key is missing. Use for fields that are essential to resume correct operation. |
+| `encrypted` | `boolean` | `false` | When `true`, the value is encrypted before writing and decrypted transparently on restore. Suitable for secrets (API keys, tokens). |
+
+### @JenticPersist vs manual captureState / restoreState
+
+| | `@JenticPersist` | Manual `captureState` / `restoreState` |
+|---|---|---|
+| Boilerplate | Minimal — annotate fields | Explicit builder calls for each field |
+| Control | Framework-driven | Full control over snapshot shape |
+| Schema stability | Use `value` to pin keys | Manage keys manually |
+| Conditional logic | Not supported | Any logic in `restoreState` |
+| Encrypted fields | `encrypted = true` | Manual |
+
+Use `@JenticPersist` for straightforward persistence of individual fields. Implement
+`captureState` / `restoreState` manually when you need custom logic, derived values, or
+transformations during save/restore.
+
+---
+
 ## @JenticPersistenceConfig
 
 Sets the automatic-save policy at class level. When absent, the strategy defaults to `MANUAL`.
