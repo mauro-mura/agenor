@@ -251,16 +251,11 @@ public class JenticRuntime {
             baseAgent.setAgentDirectory(agentDirectory);
             baseAgent.setBehaviorScheduler(behaviorScheduler);
             if (memoryStore != null) {
-            	baseAgent.setMemoryStore(memoryStore);
-            	
-            	if (agent instanceof LLMMemoryAware llmAware
-            			&& memoryStore != null
-            			&& llmMemoryManagerFactory != null) {
-            		LLMMemoryManager llmMemory = llmMemoryManagerFactory.apply(agent.getAgentId());
-            		llmAware.setLLMMemoryManager(llmMemory);
-            	}
-            	
+                baseAgent.setMemoryStore(memoryStore);
             }
+        }
+        if (agent instanceof LLMMemoryAware llmAware && llmMemoryManagerFactory != null) {
+            llmAware.setLLMMemoryManager(llmMemoryManagerFactory.apply(agent.getAgentId()));
         }
         
         // Inject guardrail chain from @WithGuardrails annotation (LLMAgent only)

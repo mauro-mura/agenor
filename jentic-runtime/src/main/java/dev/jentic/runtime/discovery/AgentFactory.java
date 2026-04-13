@@ -31,12 +31,14 @@ import dev.jentic.runtime.agent.BaseAgent;
 
 /**
  * Factory for creating agent instances from annotated classes.
- * Handles dependency injection and configuration.
+ * Responsible for instantiation and descriptor creation only — service injection
+ * is handled by {@link dev.jentic.runtime.JenticRuntime#registerAgent}.
  *
  * <p>Supports two agent styles:
  * <ul>
- *   <li><b>BaseAgent subclass</b> (classic): services injected via setters after instantiation.</li>
- *   <li><b>Plain Agent implementor</b>: services injected via constructor.
+ *   <li><b>BaseAgent subclass</b> (classic): instantiated via constructor; services are
+ *       injected by the runtime after creation.</li>
+ *   <li><b>Plain Agent implementor</b>: core services available for constructor injection.
  *       Declare an {@link AgentContext} parameter to receive all core services at once,
  *       or individual service parameters ({@link MessageService}, {@link AgentDirectory}, etc.).</li>
  * </ul>
@@ -109,11 +111,9 @@ public class AgentFactory {
     }
 
     /**
-     * Create a single agent instance.
-     *
-     * <p>If the agent extends {@link BaseAgent}, services are injected via setters
-     * (backwards-compatible path). Otherwise services must have been injected via
-     * constructor (plain {@link Agent} implementors).
+     * Create a single agent instance and set its descriptor.
+     * Service injection is performed separately by
+     * {@link dev.jentic.runtime.JenticRuntime#registerAgent}.
      */
     public <T extends Agent> T createAgent(Class<T> agentClass) throws AgentException {
         try {
@@ -122,11 +122,8 @@ public class AgentFactory {
             // Try constructor-based dependency injection
             T agent = tryConstructorInjection(agentClass);
 
-            // Configure agent services if it's a BaseAgent (setter-injection path)
+            // Set descriptor with annotation metadata (BaseAgent only)
             if (agent instanceof BaseAgent baseAgent) {
-                configureBaseAgent(baseAgent);
-
-                // Set descriptor with annotation metadata
                 AgentDescriptor descriptor = createDescriptor(agentClass, agent);
                 baseAgent.setAgentDescriptor(descriptor);
             }
@@ -187,21 +184,6 @@ public class AgentFactory {
         }
 
         return args;
-    }
-
-    /**
-     * Configure BaseAgent with required services
-     */
-    private void configureBaseAgent(BaseAgent baseAgent) {
-        baseAgent.setMessageService(messageService);
-        baseAgent.setAgentDirectory(agentDirectory);
-        baseAgent.setBehaviorScheduler(behaviorScheduler);
-
-        if (memoryStore != null) {
-            baseAgent.setMemoryStore(memoryStore);
-        }
-
-        log.debug("Configured BaseAgent: {}", baseAgent.getAgentId());
     }
 
     /**
