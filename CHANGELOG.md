@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **`AgentFactory` — removed redundant service injection**: `configureBaseAgent()` was duplicating the service injection already performed by `JenticRuntime.registerAgent()`. `AgentFactory.createAgent()` now only handles instantiation and descriptor creation; all service injection (including `LLMMemoryManager`) is the sole responsibility of `registerAgent()`.
+
+### Tests
+- **`JenticRuntimeTest` — added coverage for `LLMMemoryManager` injection**: four new tests verify the scenarios addressed by the fix: injection into a `BaseAgent`+`LLMMemoryAware` agent, injection without a `MemoryStore`, injection into a plain `Agent` implementor that is `LLMMemoryAware`, and absence of injection (no NPE) when no factory is configured.
 - **Docs — split memory and persistence guides**: extracted the Agent State Persistence section from `docs/memory.md` into a dedicated `docs/persistence.md`. The memory guide now covers the key-value memory system only (`MemoryStore`, `MemoryScope`, `InMemoryStore`); persistence concepts (`Stateful`, `AgentState`, `FilePersistenceService`, `PersistenceManager`, `@JenticPersistenceConfig`) are documented in the new guide. Cross-links and the `mkdocs.yml` nav updated accordingly.
 
 ## [0.16.0] - 2026-04-12
