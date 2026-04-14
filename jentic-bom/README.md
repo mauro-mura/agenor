@@ -12,7 +12,7 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>0.17.0-SNAPSHOT</version>
+            <version>0.17.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -82,7 +82,7 @@ dependencies {
             <dependency>
                 <groupId>dev.jentic</groupId>
                 <artifactId>jentic-bom</artifactId>
-                <version>0.17.0-SNAPSHOT</version>
+                <version>0.17.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

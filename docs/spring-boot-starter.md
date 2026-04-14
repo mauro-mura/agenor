@@ -10,7 +10,7 @@ and Jentic starts with the Spring context.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
-    <version>0.17.0-SNAPSHOT</version>
+    <version>0.17.0</version>
 </dependency>
 ```
 
