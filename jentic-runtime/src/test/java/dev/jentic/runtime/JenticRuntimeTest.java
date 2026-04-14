@@ -1,9 +1,13 @@
 package dev.jentic.runtime;
 
 import dev.jentic.core.Agent;
+import dev.jentic.core.Behavior;
 import dev.jentic.core.JenticConfiguration;
+import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.config.ConfigurationException;
+import dev.jentic.core.llm.LLMMemoryAware;
+import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
@@ -14,8 +18,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class JenticRuntimeTest {
 
@@ -433,6 +439,61 @@ class JenticRuntimeTest {
                 .isInstanceOf(ConfigurationException.class);
     }
 
+    // ========== LLM MEMORY INJECTION ==========
+
+    @Test
+    void registerAgent_shouldInjectLLMMemoryManagerIntoLLMMemoryAwareBaseAgent() {
+        LLMMemoryManager manager = mock(LLMMemoryManager.class);
+        var agent = new LLMMemoryAwareTestAgent("llm-aware-agent", "LLM Aware Agent");
+        JenticRuntime runtime = JenticRuntime.builder()
+            .llmMemoryManagerFactory(agentId -> manager)
+            .build();
+
+        runtime.registerAgent(agent);
+
+        assertThat(agent.getReceivedManager()).isSameAs(manager);
+    }
+
+    @Test
+    void registerAgent_shouldInjectLLMMemoryManagerEvenWithoutMemoryStore() {
+        // Regression: before the fix, injection was gated behind a memoryStore null-check
+        LLMMemoryManager manager = mock(LLMMemoryManager.class);
+        var agent = new LLMMemoryAwareTestAgent("llm-no-store", "LLM No Store");
+        JenticRuntime runtime = JenticRuntime.builder()
+            .llmMemoryManagerFactory(agentId -> manager)
+            // no memoryStore configured
+            .build();
+
+        runtime.registerAgent(agent);
+
+        assertThat(agent.getReceivedManager()).isSameAs(manager);
+    }
+
+    @Test
+    void registerAgent_shouldInjectLLMMemoryManagerIntoPlainLLMMemoryAwareAgent() {
+        // Regression: before the fix, only BaseAgent subclasses were wired
+        LLMMemoryManager manager = mock(LLMMemoryManager.class);
+        var agent = new PlainLLMMemoryAwareAgent("plain-llm-agent");
+        JenticRuntime runtime = JenticRuntime.builder()
+            .llmMemoryManagerFactory(agentId -> manager)
+            .build();
+
+        runtime.registerAgent(agent);
+
+        assertThat(agent.getReceivedManager()).isSameAs(manager);
+    }
+
+    @Test
+    void registerAgent_shouldNotInjectLLMMemoryManagerWhenFactoryIsAbsent() {
+        var agent = new LLMMemoryAwareTestAgent("no-factory-agent", "No Factory");
+        JenticRuntime runtime = JenticRuntime.builder()
+            // no llmMemoryManagerFactory configured
+            .build();
+
+        assertThatCode(() -> runtime.registerAgent(agent)).doesNotThrowAnyException();
+        assertThat(agent.getReceivedManager()).isNull();
+    }
+
     // ========== HELPERS ==========
 
     static class TestAgent extends BaseAgent {
@@ -460,4 +521,49 @@ class JenticRuntimeTest {
     }
 
     static class SampleService {}
+
+    static class LLMMemoryAwareTestAgent extends BaseAgent implements LLMMemoryAware {
+        private LLMMemoryManager receivedManager;
+
+        LLMMemoryAwareTestAgent(String agentId, String agentName) {
+            super(agentId, agentName);
+        }
+
+        @Override
+        public void setLLMMemoryManager(LLMMemoryManager manager) {
+            this.receivedManager = manager;
+        }
+
+        public LLMMemoryManager getReceivedManager() {
+            return receivedManager;
+        }
+    }
+
+    @JenticAgent("plain-llm-agent")
+    static class PlainLLMMemoryAwareAgent implements Agent, LLMMemoryAware {
+        private final String agentId;
+        private LLMMemoryManager receivedManager;
+
+        PlainLLMMemoryAwareAgent(String agentId) {
+            this.agentId = agentId;
+        }
+
+        @Override public String getAgentId() { return agentId; }
+        @Override public String getAgentName() { return agentId; }
+        @Override public boolean isRunning() { return false; }
+        @Override public CompletableFuture<Void> start() { return CompletableFuture.completedFuture(null); }
+        @Override public CompletableFuture<Void> stop() { return CompletableFuture.completedFuture(null); }
+        @Override public void addBehavior(Behavior behavior) {}
+        @Override public void removeBehavior(String behaviorId) {}
+        @Override public MessageService getMessageService() { return null; }
+
+        @Override
+        public void setLLMMemoryManager(LLMMemoryManager manager) {
+            this.receivedManager = manager;
+        }
+
+        public LLMMemoryManager getReceivedManager() {
+            return receivedManager;
+        }
+    }
 }
