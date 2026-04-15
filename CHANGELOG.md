@@ -1,9 +1,18 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+aAll notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+- **`jentic-spring-boot-starter` — migrated to Spring Boot 4.0.5** (from 3.5.13): Spring Boot 3.x reaches end of open-source support in June 2026. Spring Boot 4.0.5 requires Spring Framework 7 and Jakarta EE 11.
+  - Spring Boot BOM version updated to `4.0.5`; redundant SnakeYAML version pin removed (managed by Boot BOM).
+  - `SmartLifecycle` implementation now overrides `isPauseable()` returning `false` — Spring Framework 7 introduced context-pausing support; the Jentic runtime has no pause/resume semantics.
+  - **Breaking change for actuator users**: Spring Boot 4.0 renamed the actuator health package from `org.springframework.boot.actuate.health` to `org.springframework.boot.health.contributor`. `JenticHealthIndicator` and the `@ConditionalOnClass` guard in `JenticAutoConfiguration.ActuatorConfiguration` updated accordingly. Applications using a custom `HealthIndicator` bean that overrides Jentic's must update their import.
+- **ADR-016** updated to reflect the completed Spring Boot 4.0.x migration and document the actuator package rename.
 
 ## [0.17.0] - 2026-04-14
 
