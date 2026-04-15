@@ -13,11 +13,11 @@
 
     <artifactId>jentic-spring-boot-starter</artifactId>
     <name>Jentic Spring Boot Starter</name>
-    <description>Spring Boot 3.5.x auto-configuration for Jentic</description>
+    <description>Spring Boot 4.0.x auto-configuration for Jentic</description>
 
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->
-        <spring-boot.version>3.5.13</spring-boot.version>
+        <spring-boot.version>4.0.5</spring-boot.version>
     </properties>
 
     <dependencyManagement>
@@ -30,12 +30,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-            <dependency>
-			    <groupId>org.yaml</groupId>
-			    <artifactId>snakeyaml</artifactId>
-			    <version>2.5</version>
-			</dependency>
         </dependencies>
     </dependencyManagement>
 
