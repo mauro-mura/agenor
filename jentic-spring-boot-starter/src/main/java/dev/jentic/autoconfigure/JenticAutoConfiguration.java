@@ -103,6 +103,11 @@ public class JenticAutoConfiguration {
             }
 
             @Override
+            public boolean isPauseable() {
+                return false;
+            }
+
+            @Override
             public int getPhase() {
                 return Integer.MAX_VALUE - 1;
             }
@@ -193,12 +198,12 @@ public class JenticAutoConfiguration {
      * is present and a {@link JenticRuntime} bean exists in the context.
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(name = "org.springframework.boot.actuate.health.HealthIndicator")
+    @ConditionalOnClass(name = "org.springframework.boot.health.contributor.HealthIndicator")
     static class ActuatorConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        org.springframework.boot.actuate.health.HealthIndicator jenticHealthIndicator(
+        org.springframework.boot.health.contributor.HealthIndicator jenticHealthIndicator(
                 JenticRuntime jenticRuntime) {
             return new JenticHealthIndicator(jenticRuntime);
         }

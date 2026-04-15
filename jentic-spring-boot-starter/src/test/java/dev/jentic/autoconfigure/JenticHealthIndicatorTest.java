@@ -2,8 +2,8 @@ package dev.jentic.autoconfigure;
 
 import dev.jentic.runtime.JenticRuntime;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.Status;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
@@ -69,10 +69,10 @@ class JenticHealthIndicatorTest {
             .withUserConfiguration(UserHealthConfig.class)
             .run(ctx -> {
                 assertThat(ctx).hasSingleBean(
-                        org.springframework.boot.actuate.health.HealthIndicator.class);
+                        org.springframework.boot.health.contributor.HealthIndicator.class);
                 // user bean must be the one present
                 assertThat(ctx.getBean(
-                        org.springframework.boot.actuate.health.HealthIndicator.class))
+                        org.springframework.boot.health.contributor.HealthIndicator.class))
                     .isInstanceOf(UserHealthConfig.CustomIndicator.class);
             });
     }
@@ -110,13 +110,13 @@ class JenticHealthIndicatorTest {
     @org.springframework.context.annotation.Configuration
     static class UserHealthConfig {
         static class CustomIndicator
-                implements org.springframework.boot.actuate.health.HealthIndicator {
+                implements org.springframework.boot.health.contributor.HealthIndicator {
             @Override
             public Health health() { return Health.up().build(); }
         }
 
         @org.springframework.context.annotation.Bean
-        org.springframework.boot.actuate.health.HealthIndicator jenticHealthIndicator() {
+        org.springframework.boot.health.contributor.HealthIndicator jenticHealthIndicator() {
             return new CustomIndicator();
         }
     }

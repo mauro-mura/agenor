@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-03-26  
+**Updated**: 2026-04-15 — migrated to Spring Boot 4.0.5 (see Decision update below)  
 **Authors**: Jentic Team  
   
 
@@ -38,12 +39,13 @@ Forces in tension:
 ## Decision
 
 Add a `jentic-spring-boot-starter` Maven module to the monorepo that provides automatic
-wiring of `JenticRuntime` (and optionally an `LLMProvider`) into any Spring Boot **3.5.x**
+wiring of `JenticRuntime` (and optionally an `LLMProvider`) into any Spring Boot **4.0.x**
 application via Spring Boot's standard auto-configuration mechanism.
 
-**Spring Boot 4.x is explicitly out of scope for v1.0.0.** A follow-up ADR (ADR-016b or a
-revision of this document) will govern the upgrade once the 3.x user base has had sufficient
-time to migrate, or when Spring Boot 3.x approaches end of open-source support.
+**Update (2026-04-15):** The module was originally targeting Spring Boot **3.5.x**. With
+Spring Boot 3.x approaching end of open-source support (June 2026), the starter has been
+migrated to **Spring Boot 4.0.5** (Spring Framework 7, Jakarta EE 11). No follow-up ADR
+(ADR-016b) is required — this document is the authoritative record.
 
 Key constraints:
 1. All Spring Boot dependencies declared as `optional=true` — no Spring Boot on the transitive
@@ -66,9 +68,10 @@ Key constraints:
 - `@ConditionalOnMissingBean` pattern gives full escape hatch without needing `spring.autoconfigure.exclude`.
 - Actuator health integration provides operational visibility at no cost to the developer.
 - Module lives in the monorepo: versions always aligned with core, no coordination overhead.
-- Spring Boot 3.5.x covers the largest active user base while Spring Boot 4.x adoption ramps up.
-- The `AutoConfiguration.imports` API is unchanged between 3.x and 4.x — upgrade cost is low
-  when the time comes (mainly dependency coordinates and Jakarta EE namespace).
+- Spring Boot 4.0.x is the current stable line; Spring Boot 3.x reaches end of open-source
+  support in June 2026.
+- The `AutoConfiguration.imports` API is unchanged between 3.x and 4.x — the migration
+  required only the BOM version bump, SnakeYAML pin removal, and a `isPauseable()` override.
 
 ### Cons
 - Spring Boot 4.x users must wait for a follow-up release or shim the starter themselves.
@@ -191,16 +194,22 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 - Broad ecosystem coverage during the Spring Boot 3.x → 4.x transition period.
 
 ### Negative
-- Spring Boot 4.x users are not supported until a follow-up release.
+- Spring Boot 3.x users must upgrade to 4.x (or stay on the previous starter release).
 - Spring Boot 2.x users are excluded (EOL — acceptable).
 
 ### Neutral
 - `jentic-examples` may add a new Spring Boot 3.5.x example sub-module demonstrating the starter.
-- **Spring Boot 4.x upgrade path**: the auto-configuration mechanism is identical; the main
-  migration effort will be updating Spring Boot BOM coordinates and switching from
-  `javax.*` to `jakarta.*` imports if any are used directly. No Jentic core changes are
-  expected. Target milestone: after Spring Boot 3.x open-source support ends or when 4.x
-  adoption reaches a threshold agreed by the team.
+- **Spring Boot 4.x migration (completed 2026-04-15)**: the auto-configuration mechanism was
+  identical; the migration required the following changes:
+  - BOM version updated to 4.0.5; redundant SnakeYAML version pin removed.
+  - `isPauseable() { return false; }` added to the `SmartLifecycle` implementation (Spring
+    Framework 7 introduced context-pausing; the Jentic runtime has no pause/resume semantics).
+  - **Breaking change — actuator health package renamed**: `org.springframework.boot.actuate.health`
+    → `org.springframework.boot.health.contributor`. Updated in `JenticHealthIndicator`,
+    `JenticAutoConfiguration.ActuatorConfiguration` (`@ConditionalOnClass` guard + return type),
+    and all test classes (`JenticHealthIndicatorTest`, `JenticStarterIntegrationTest`).
+  - No `javax.*` → `jakarta.*` changes were needed — the starter already used only `jakarta.*`
+    namespaces. No Jentic core changes were required.
 - GraalVM native image hints are deferred to a post-1.0.0 milestone.
 
 ## Compliance
