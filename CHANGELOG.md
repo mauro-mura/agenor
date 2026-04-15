@@ -5,7 +5,7 @@ aAll notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.18.0] - 2026-04-15
 
 ### Changed
 - **`jentic-spring-boot-starter` — migrated to Spring Boot 4.0.5** (from 3.5.13): Spring Boot 3.x reaches end of open-source support in June 2026. Spring Boot 4.0.5 requires Spring Framework 7 and Jakarta EE 11.
@@ -316,7 +316,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/mauro-mura/jentic/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/mauro-mura/jentic/compare/v0.16.0...v0.17.0
+[0.16.0]: https://github.com/mauro-mura/jentic/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/mauro-mura/jentic/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/mauro-mura/jentic/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/mauro-mura/jentic/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/mauro-mura/jentic/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/mauro-mura/jentic/compare/v0.10.0...v0.11.0
