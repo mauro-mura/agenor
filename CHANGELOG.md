@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.17.0] - 2026-04-14
 
 ### Fixed
 - **`JenticRuntime` — `LLMMemoryManager` not injected into non-`BaseAgent` `LLMMemoryAware` agents**: the injection block was nested inside `if (agent instanceof BaseAgent)`, so any plain `Agent` implementor that implemented `LLMMemoryAware` never received an `LLMMemoryManager`. The check is now independent of the `BaseAgent` guard.
