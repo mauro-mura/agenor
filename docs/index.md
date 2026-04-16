@@ -1,6 +1,8 @@
 # Jentic Documentation
 
-Jentic is a pragmatic multi-agent framework for Java that lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments.
+> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+
+Jentic lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments. Built on Java 21+ virtual threads, with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
 
 New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 

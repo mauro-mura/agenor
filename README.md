@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Build Status](https://github.com/mauro-mura/jentic/actions/workflows/build.yml/badge.svg)](https://github.com/mauro-mura/jentic/actions/workflows/build.yml)
 
-> **Jentic** - Modern Multi-Agent Framework for Java
+> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
 Jentic is a contemporary multi-agent framework that modernizes the concepts pioneered by JADE, bringing them into the cloud-native era with Java 21, virtual threads, and a pragmatic approach to distributed systems.
 
@@ -171,7 +171,7 @@ jentic:
     basePackage: "com.example.agents"
 
   messaging:
-    provider: in-memory 
+    provider: inmemory 
 
   directory:
     provider: local      
@@ -273,7 +273,7 @@ That's it — `JenticRuntime` is started and stopped automatically by the Spring
 - [x] Human-in-the-Loop Checkpoint
 - [x] Guardrail layer
 - [x] MCP adapter
-- [x] Spring Boot 3.5.x autoconfiguration (jentic-spring-boot-starter)
+- [x] Spring Boot 4.0.x autoconfiguration (jentic-spring-boot-starter)
 
 
 ## 📚 Examples

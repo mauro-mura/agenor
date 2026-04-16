@@ -1,9 +1,11 @@
 # Architecture Guide
 
-This document describes the architecture of Jentic, a modern, interface‑first multi‑agent framework for Java 21+.
+> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
-- Audience: developers evaluating or building on Jentic
-- Scope: high‑level structure, core abstractions, runtime behavior, and extension points
+This document describes Jentic's architecture: an interface-first, Java 21+ multi-agent framework with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
+
+- **Audience**: developers evaluating or building on Jentic
+- **Scope**: high-level structure, core abstractions, runtime behavior, and extension points
 
 ## 1. Architectural Overview
 

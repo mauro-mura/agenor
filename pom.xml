@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
 
     <name>Jentic Multi-Agent Framework</name>
-    <description>Modern Multi-Agent Framework for Java</description>
+    <description>Java meets Agentic - enterprise-grade agent framework for the JVM</description>
     <url>https://jentic.dev</url>
 
     <properties>

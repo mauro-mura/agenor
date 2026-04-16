@@ -13,7 +13,7 @@
 
     <artifactId>jentic-spring-boot-starter</artifactId>
     <name>Jentic Spring Boot Starter</name>
-    <description>Spring Boot 4.0.x auto-configuration for Jentic</description>
+    <description>Spring Boot 4.0.x auto-configuration for Jentic - the enterprise-grade agent framework for the JVM</description>
 
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->

@@ -1,6 +1,8 @@
 # Contributing to Jentic
 
-Thank you for your interest in contributing to Jentic! This document provides guidelines and information for contributors.
+> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+
+Thank you for your interest in contributing to Jentic. This document provides guidelines for contributors and explains how to propose changes, report issues, and get your work merged.
 
 ## 🌟 Getting Started
 
