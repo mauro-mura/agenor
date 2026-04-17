@@ -1,6 +1,6 @@
 # jentic-adapters
 
-This module provides concrete implementations of interfaces defined in `jentic-core`. It bridges Jentic agents to external systems: LLM APIs and the A2A interoperability protocol.
+This module provides concrete implementations of interfaces defined in `jentic-core`. It bridges Jentic agents to external systems: LLM APIs, the A2A interoperability protocol, MCP tool servers, and embedding providers.
 
 ---
 
@@ -17,12 +17,23 @@ dev.jentic.adapters
 │   │   └── AnthropicProvider.java   # Anthropic chat + streaming + function calling
 │   └── ollama/
 │       └── OllamaProvider.java      # Ollama (local) chat + streaming
-└── a2a/
-    ├── JenticA2AAdapter.java        # Smart router: internal vs external A2A
-    ├── JenticA2AClient.java         # HTTP/JSON-RPC client for external A2A agents
-    ├── JenticAgentExecutor.java     # Expose a Jentic agent as A2A server
-    ├── A2AAdapterConfig.java        # Configuration + AgentCard builder
-    └── DialogueA2AConverter.java    # DialogueMessage ↔ A2A Task/Message
+├── a2a/
+│   ├── JenticA2AAdapter.java        # Smart router: internal vs external A2A
+│   ├── JenticA2AClient.java         # HTTP/JSON-RPC client for external A2A agents
+│   ├── JenticAgentExecutor.java     # Expose a Jentic agent as A2A server
+│   ├── A2AAdapterConfig.java        # Configuration + AgentCard builder
+│   └── DialogueA2AConverter.java   # DialogueMessage ↔ A2A Task/Message
+├── mcp/
+│   ├── McpClientFactory.java        # Recommended entry point (SSE + STDIO transports)
+│   ├── JenticMcpClientAdapter.java  # McpClient implementation wrapping the MCP SDK
+│   ├── McpToolRegistry.java         # Tool discovery and caching with TTL support
+│   └── McpFunctionAdapter.java      # Maps MCP tools to Jentic function-calling framework
+└── knowledge/
+    ├── EmbeddingProviderFactory.java     # Recommended entry point
+    ├── openai/
+    │   └── OpenAIEmbeddingProvider.java  # OpenAI Embeddings API (text-embedding-3-*)
+    └── ollama/
+        └── OllamaEmbeddingProvider.java  # Ollama local embeddings API
 ```
 
 ---
@@ -37,7 +48,7 @@ dev.jentic.adapters
 </dependency>
 ```
 
-This module depends on `jentic-core` and brings in `langchain4j` (LLM transport) and the `io.a2a` Java SDK (A2A protocol).
+This module depends on `jentic-core` and brings in `langchain4j` (LLM transport), the `io.a2a` Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
 
 ---
 
@@ -52,7 +63,7 @@ import dev.jentic.core.llm.LLMProvider;
 // OpenAI
 LLMProvider openai = LLMProviderFactory.openai()
     .apiKey(System.getenv("OPENAI_API_KEY"))
-    .modelName("gpt-4o")           // default: gpt-4o
+    .modelName(OpenAIProvider.Models.GPT_4_1)  // preferred — default: GPT_4O
     .temperature(0.7)
     .maxTokens(2000)
     .timeout(Duration.ofSeconds(60))
@@ -61,7 +72,7 @@ LLMProvider openai = LLMProviderFactory.openai()
 // Anthropic
 LLMProvider anthropic = LLMProviderFactory.anthropic()
     .apiKey(System.getenv("ANTHROPIC_API_KEY"))
-    .modelName("claude-3-5-sonnet-20241022")  // default
+    .modelName(AnthropicProvider.Models.CLAUDE_SONNET_4_6)  // preferred — default: CLAUDE_SONNET_4_6
     .temperature(0.7)
     .maxTokens(4096)
     .build();
@@ -69,7 +80,7 @@ LLMProvider anthropic = LLMProviderFactory.anthropic()
 // Ollama (local, no API key)
 LLMProvider ollama = LLMProviderFactory.ollama()
     .baseUrl("http://localhost:11434")  // default
-    .modelName("llama3.2")
+    .modelName(OllamaProvider.Models.LLAMA_3_2)  // preferred — default: LLAMA_3_2
     .timeout(Duration.ofMinutes(2))
     .build();
 ```
@@ -86,16 +97,17 @@ LLMProvider ollama = LLMProviderFactory.ollama()
 
 | Provider | Streaming | Function calling | Available models |
 |----------|-----------|-----------------|-----------------|
-| `OpenAIProvider` | ✅ | ✅ | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo |
-| `AnthropicProvider` | ✅ | ✅ | claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022, claude-3-opus-20240229, claude-3-haiku-20240307 |
-| `OllamaProvider` | ✅ | ❌ | Any model installed locally |
+| `OpenAIProvider` | ✅ | ✅ | GPT-4.1 family, o-series (o3, o4-mini), GPT-4o family, GPT-4 Turbo, GPT-4, GPT-3.5 — see `OpenAIProvider.Models` |
+| `AnthropicProvider` | ✅ | ✅ | Claude 4.x family, Claude 3.7/3.5/3 — see `AnthropicProvider.Models` |
+| `OllamaProvider` | ✅ | ❌ | Llama, Mistral, Qwen, Gemma, Phi, DeepSeek and more — see `OllamaProvider.Models` |
 
 ### Builder options (all providers)
 
 | Method | Default | Description |
 |--------|---------|-------------|
 | `apiKey(String)` | — | API key (required for OpenAI/Anthropic) |
-| `modelName(String)` | see above | Model identifier |
+| `modelName(String)` | see above | Model identifier (string form, for custom/external models) |
+| `modelName(Models)` | — | **Preferred** — type-safe enum constant (e.g. `OpenAIProvider.Models.GPT_4_1`) |
 | `baseUrl(String)` | provider default | Custom endpoint or Ollama server URL |
 | `temperature(Double)` | `0.7` | Sampling temperature (0.0–2.0) |
 | `maxTokens(Integer)` | `2000` (OpenAI/Ollama), `4096` (Anthropic) | Max output tokens |
@@ -115,7 +127,7 @@ List<ToolSpecification> specs = ToolConversionUtils.convertFunctionsToToolSpecs(
 ### Using LLMProvider directly
 
 ```java
-LLMRequest request = LLMRequest.builder("gpt-4o")
+LLMRequest request = LLMRequest.builder()
     .systemMessage("You are a helpful assistant.")
     .userMessage("What is the capital of France?")
     .maxTokens(100)
