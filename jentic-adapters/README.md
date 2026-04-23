@@ -48,7 +48,70 @@ dev.jentic.adapters
 </dependency>
 ```
 
-This module depends on `jentic-core` and brings in `langchain4j` (LLM transport), the `io.a2a` Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
+This module depends on `jentic-core` and brings in `langchain4j` (LLM transport), the `io.a2a`
+Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
+
+---
+
+## Optional adapter dependencies
+
+Some backends in this module are declared `optional=true` in the POM. They are available at
+compile time when you build against `jentic-adapters`, but they are **not** included on the
+transitive classpath of consumers that declare `jentic-adapters` without also declaring the
+optional library explicitly. This follows **[ADR-018 — Optional Adapter Dependencies Pattern](../docs/adr/ADR-018-optional-adapter-dependencies-pattern.md)**.
+
+| Backend | Optional library | When to add it |
+|---------|-----------------|----------------|
+| OpenTelemetry | `io.opentelemetry:opentelemetry-sdk` | You want distributed tracing / metrics |
+| Redis messaging | `io.lettuce:lettuce-core` | You want Redis Streams-based messaging |
+
+### Opting in — OpenTelemetry
+
+Add the OTel SDK alongside `jentic-adapters` in your POM:
+
+```xml
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-adapters</artifactId>
+    <version>${jentic.version}</version>
+</dependency>
+<dependency>
+    <groupId>io.opentelemetry</groupId>
+    <artifactId>opentelemetry-sdk</artifactId>
+    <version>${opentelemetry.version}</version>
+</dependency>
+```
+
+If you use the Spring Boot starter (`jentic-spring-boot-starter`), OTel auto-configuration
+activates automatically via `@ConditionalOnClass(OpenTelemetry.class)` — no extra YAML is
+needed beyond `jentic.telemetry.enabled: true`.
+
+### Opting in — Redis messaging
+
+```xml
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-adapters</artifactId>
+    <version>${jentic.version}</version>
+</dependency>
+<dependency>
+    <groupId>io.lettuce</groupId>
+    <artifactId>lettuce-core</artifactId>
+    <version>${lettuce.version}</version>
+</dependency>
+```
+
+### Gradle note
+
+Gradle's `implementation` scope does **not** skip optional Maven deps. If you use Gradle, add
+the optional library explicitly (same as Maven) — otherwise it will appear on your runtime
+classpath even if you don't use the backend.
+
+### Default behaviour (no optional libs declared)
+
+If you declare only `jentic-adapters` with no optional libraries, the runtime automatically
+falls back to the in-memory implementations (`NoopJenticTelemetry`, `InMemoryMessageDispatcher`).
+No `ClassNotFoundException` is thrown; no configuration is required.
 
 ---
 
