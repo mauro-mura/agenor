@@ -1,11 +1,48 @@
 # Changelog
 
-aAll notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.19.0] - 2026-04-26
+
+### Added
+
+- **OpenTelemetry integration (ADR-019)** — distributed tracing is now a first-class feature of the Jentic framework:
+  - **`jentic-core` — observability SPI** (`JenticTelemetry`, `Span`, `SpanBuilder`, `SpanStatus`, `NoopJenticTelemetry`): a thin, dependency-free interface layer so `jentic-core` remains free of third-party imports (ADR-002). `NoopJenticTelemetry` is the zero-allocation default used whenever no OTel SDK is present.
+  - **`jentic-adapters` — OTel SDK adapter** (`OtelJenticTelemetry`, `OtelTelemetryFactory`): backed by `opentelemetry-sdk` and `opentelemetry-exporter-otlp`, both declared `optional=true` per ADR-018. `OtelTelemetryFactory` provides a fluent builder and a `fromEnvironment()` factory respecting the standard `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_EXPORTER_TYPE` environment variables. Supports `otlp-http`, `otlp-grpc`, and `none` exporter types.
+  - **`jentic-runtime` — `InstrumentedLLMProvider`**: decorator that wraps any `LLMProvider` and emits `llm.chat` / `llm.chat.stream` spans with `llm.provider`, `llm.model`, `llm.tokens.input`, `llm.tokens.output`, and `llm.latency_ms` attributes.
+  - **Instrumentation points** — the following components now emit spans when a non-noop `JenticTelemetry` is installed:
+
+    | Component | Span name | Key attributes |
+    |-----------|-----------|----------------|
+    | `InstrumentedLLMProvider` | `llm.chat`, `llm.chat.stream` | `llm.provider`, `llm.model`, `llm.tokens.input/output`, `llm.latency_ms` |
+    | `GuardrailChain` | `guardrail.evaluate` | `guardrail.name`, `guardrail.decision` |
+    | `HumanCheckpointBehavior` | `hitl.approval` | `hitl.request_id`, `hitl.decision`, `hitl.wait_ms` |
+    | `SimpleBehaviorScheduler` | `behavior.execute` | `behavior.id`, `behavior.type`, `agent.id` |
+    | `JenticMcpClientAdapter` | `mcp.tool.call` | `mcp.tool.name`, `mcp.transport` |
+    | `ReflectionBehavior` | `reflection.iteration` | `reflection.iteration`, `reflection.accepted` |
+
+  - **`JenticRuntime.Builder.telemetry(JenticTelemetry)`**: wires a telemetry instance into the runtime; all components receive it automatically. Falls back to `NoopJenticTelemetry` when not set.
+  - **`LLMAgent.installTelemetry(JenticTelemetry)`**: wraps the agent's `LLMProvider` in `InstrumentedLLMProvider`; called automatically by `JenticRuntime.registerAgent()`.
+  - **Spring Boot starter — `TelemetryConfiguration`** (`@ConditionalOnClass(OpenTelemetry.class)`): auto-configures `OtelJenticTelemetry` when the OTel SDK is on the classpath. New YAML properties: `jentic.telemetry.enabled`, `jentic.telemetry.exporter` (`otlp-http` | `otlp-grpc` | `none`), `jentic.telemetry.endpoint`, `jentic.telemetry.service-name`. Falls back to `NoopJenticTelemetry` when OTel is absent or `jentic.telemetry.enabled=false`.
+  - **`jentic-examples` — `ObservabilityExample`** and companion `docker-compose.yml` (Jaeger all-in-one): a runnable example demonstrating opt-in OTel activation via `OtelTelemetryFactory`, LLM calls with guardrails, and trace visualisation in Jaeger at `http://localhost:16686`.
+  - **`docs/observability.md`**: span taxonomy, metrics reference, OTel Collector setup guide, and step-by-step opt-in instructions for both programmatic and Spring Boot wiring.
+- **ADR-018 — Optional adapter dependencies pattern**: codifies when to use `optional=true` inside `jentic-adapters` vs a dedicated Maven sub-module. Prevents per-adapter re-debate as new backends (Redis, JDBC, Kafka) are added. ADR-003 updated to cross-reference ADR-018; `jentic-adapters/README.md` extended with the opt-in contract and a minimum consumer POM snippet.
+- **ADR-019 — OpenTelemetry instrumentation strategy**: documents the no-op abstraction layer, the `optional=true` dependency placement, the instrumentation points, context propagation via `ScopedValue` on virtual threads, and the classpath-isolation guarantee.
+
+### Changed
+
+- **`OtelJenticTelemetry` now implements `AutoCloseable`**: retains a reference to the `OpenTelemetrySdk` instance (previously discarded after construction, making the SDK eligible for GC along with its `BatchSpanProcessor`). `close()` calls `OpenTelemetrySdk.close()`, which blocks until the `BatchSpanProcessor` has exported all buffered spans.
+- **`JenticRuntime.stop()` flushes telemetry on shutdown**: after stopping all agents and the behavior scheduler, `stop()` calls `close()` on the `JenticTelemetry` instance if it implements `AutoCloseable`. This ensures the OTel `BatchSpanProcessor` exports its buffer before the process exits.
+
+### Fixed
+
+- **`OtelJenticTelemetry` — spans silently discarded on process exit**: the `OpenTelemetrySdk` instance created by `OtelTelemetryFactory.build()` was not retained by `OtelJenticTelemetry`. Only the `Tracer` was stored; the SDK (including its `BatchSpanProcessor` and export queue) became eligible for GC immediately after `build()` returned. Combined with the missing `stop()` integration, all buffered spans were dropped on shutdown and never reached the collector. Fixed by retaining the SDK reference and calling `sdk.close()` from the new `AutoCloseable.close()` implementation.
+- **`OtelTelemetryFactory` — HTTP exporter returned HTTP 404 from Jaeger**: `OtlpHttpSpanExporter.setEndpoint()` takes the full URL including the signal path — it does **not** auto-append `/v1/traces`. Passing a bare base URL (e.g. `http://localhost:4318`, as produced by the standard `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable) caused Jaeger to return HTTP 404. The factory now appends `/v1/traces` when the supplied endpoint does not already contain a `/v1/` path segment. The internal `DEFAULT_ENDPOINT_HTTP` constant is updated to `http://localhost:4318/v1/traces` accordingly.
 
 ## [0.18.0] - 2026-04-15
 
