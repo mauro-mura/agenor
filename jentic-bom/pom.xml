@@ -46,6 +46,7 @@
 			    <artifactId>jentic-spring-boot-starter</artifactId>
 			    <version>${project.version}</version>
 			</dependency>
+
         </dependencies>
     </dependencyManagement>
 

@@ -17,7 +17,34 @@
 
 	<properties>
 	    <maven.javadoc.skip>true</maven.javadoc.skip>
+	    <!-- Align with the version used in jentic-adapters (ADR-018: consumer manages own OTel dep) -->
+	    <opentelemetry.version>1.51.0</opentelemetry.version>
 	</properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--
+              Force a consistent Kotlin stdlib version to resolve the conflict
+              between opentelemetry-exporter-otlp (via okhttp → 1.8.x) and
+              langchain4j dependencies (1.9.x). Both are binary-compatible.
+            -->
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib-jdk8</artifactId>
+                <version>1.9.10</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib-jdk7</artifactId>
+                <version>1.9.10</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>1.9.10</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -33,6 +60,24 @@
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-tools</artifactId>
+        </dependency>
+
+        <!--
+          OpenTelemetry — explicit (non-optional) consumer.
+          Demonstrates the opt-in path described in ADR-018:
+          consumers that want traces declare these deps directly.
+          The SDK is needed at runtime to materialise spans; only the
+          opentelemetry-exporter-otlp artifact sends them to a collector.
+        -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>${opentelemetry.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+            <version>${opentelemetry.version}</version>
         </dependency>
     </dependencies>
 </project>

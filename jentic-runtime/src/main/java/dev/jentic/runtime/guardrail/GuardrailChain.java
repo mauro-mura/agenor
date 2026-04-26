@@ -5,6 +5,9 @@ import dev.jentic.core.guardrail.GuardrailResult;
 import dev.jentic.core.guardrail.GuardrailViolationException;
 import dev.jentic.core.guardrail.InputGuardrail;
 import dev.jentic.core.guardrail.OutputGuardrail;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.Span;
+import dev.jentic.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,10 +54,23 @@ public final class GuardrailChain {
 
     private final List<InputGuardrail>  inputGuardrails;
     private final List<OutputGuardrail> outputGuardrails;
+    private volatile JenticTelemetry telemetry;
 
     private GuardrailChain(Builder builder) {
         this.inputGuardrails  = Collections.unmodifiableList(new ArrayList<>(builder.inputGuardrails));
         this.outputGuardrails = Collections.unmodifiableList(new ArrayList<>(builder.outputGuardrails));
+        this.telemetry        = builder.telemetry;
+    }
+
+    /**
+     * Sets the telemetry instance used to emit {@code guardrail.evaluate} spans.
+     * Can be called after construction (e.g. by {@code JenticRuntime} after registration).
+     *
+     * @param telemetry the telemetry instance; {@code null} is treated as noop
+     * @since 0.19.0
+     */
+    public void setTelemetry(JenticTelemetry telemetry) {
+        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -81,7 +97,21 @@ public final class GuardrailChain {
     public String applyInput(String input, GuardrailContext ctx) throws GuardrailViolationException {
         Objects.requireNonNull(input, "input must not be null");
         Objects.requireNonNull(ctx,   "ctx must not be null");
-        return executeChain(input, ctx, inputGuardrails, "input");
+        Span span = telemetry.spanBuilder("guardrail.evaluate")
+                .setAttribute("guardrail.direction", "input")
+                .startSpan();
+        try {
+            String result = executeChain(input, ctx, inputGuardrails, "input");
+            span.setAttribute("guardrail.decision", "passed").setStatus(SpanStatus.OK);
+            return result;
+        } catch (GuardrailViolationException e) {
+            span.setAttribute("guardrail.decision", "blocked")
+                .setAttribute("guardrail.name", e.blockedBy())
+                .setStatus(SpanStatus.ERROR);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 
     /**
@@ -95,7 +125,21 @@ public final class GuardrailChain {
     public String applyOutput(String output, GuardrailContext ctx) throws GuardrailViolationException {
         Objects.requireNonNull(output, "output must not be null");
         Objects.requireNonNull(ctx,    "ctx must not be null");
-        return executeChain(output, ctx, outputGuardrails, "output");
+        Span span = telemetry.spanBuilder("guardrail.evaluate")
+                .setAttribute("guardrail.direction", "output")
+                .startSpan();
+        try {
+            String result = executeChain(output, ctx, outputGuardrails, "output");
+            span.setAttribute("guardrail.decision", "passed").setStatus(SpanStatus.OK);
+            return result;
+        } catch (GuardrailViolationException e) {
+            span.setAttribute("guardrail.decision", "blocked")
+                .setAttribute("guardrail.name", e.blockedBy())
+                .setStatus(SpanStatus.ERROR);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 
     /**
@@ -203,8 +247,21 @@ public final class GuardrailChain {
 
         private final List<InputGuardrail>  inputGuardrails  = new ArrayList<>();
         private final List<OutputGuardrail> outputGuardrails = new ArrayList<>();
+        private JenticTelemetry telemetry = JenticTelemetry.noop();
 
         private Builder() {}
+
+        /**
+         * Sets the telemetry instance that will emit {@code guardrail.evaluate} spans.
+         *
+         * @param telemetry the telemetry instance; {@code null} uses noop
+         * @return {@code this}
+         * @since 0.19.0
+         */
+        public Builder telemetry(JenticTelemetry telemetry) {
+            this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+            return this;
+        }
 
         /**
          * Appends an input guardrail to the chain.

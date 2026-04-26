@@ -57,7 +57,8 @@ public record JenticProperties(
         @DefaultValue Scheduler scheduler,
         @DefaultValue Messaging messaging,
         @DefaultValue Directory directory,
-        @DefaultValue Llm llm
+        @DefaultValue Llm llm,
+        @DefaultValue Telemetry telemetry
 ) {
 
 	/**
@@ -130,7 +131,7 @@ public record JenticProperties(
 
     /**
      * LLM
-     * 
+     *
      * @param provider LLM provider to activate ({@code none}, {@code openai},
      *                 {@code anthropic}, {@code ollama}); default {@code none}
      * @param apiKey   API key for cloud providers (required for {@code openai} and
@@ -144,6 +145,27 @@ public record JenticProperties(
             String apiKey,
             String model,
             String baseUrl
+    ) {}
+
+    /**
+     * Telemetry (OpenTelemetry tracing).
+     *
+     * <p>Only effective when {@code jentic-adapters} is on the classpath and OTel
+     * dependencies are present (declared as {@code optional}).
+     *
+     * @param enabled     whether telemetry is enabled; default {@code true}
+     * @param exporter    exporter type: {@code otlp-http} (default), {@code otlp-grpc},
+     *                    or {@code none} to disable exporting while keeping noop
+     * @param endpoint    OTLP collector endpoint; defaults to {@code http://localhost:4318}
+     *                    for HTTP and {@code http://localhost:4317} for gRPC
+     * @param serviceName {@code service.name} resource attribute; default {@code jentic}
+     * @since 0.19.0
+     */
+    public record Telemetry(
+            @DefaultValue("true")    boolean enabled,
+            @DefaultValue("none")    String exporter,
+            String endpoint,
+            @DefaultValue("jentic")  String serviceName
     ) {}
 
     // ── Conversion ────────────────────────────────────────────────────────────

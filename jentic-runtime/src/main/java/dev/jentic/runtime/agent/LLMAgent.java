@@ -7,6 +7,7 @@ import dev.jentic.core.llm.LLMMessage;
 import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.llm.ContextWindowStrategy;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
+import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.guardrail.GuardrailChain;
 import dev.jentic.runtime.memory.llm.ContextWindowStrategies;
 import dev.jentic.core.llm.LLMProvider;
@@ -14,6 +15,7 @@ import dev.jentic.core.reflection.CritiqueResult;
 import dev.jentic.core.reflection.ReflectionConfig;
 import dev.jentic.core.reflection.ReflectionStrategy;
 import dev.jentic.runtime.reflection.DefaultReflectionStrategy;
+import dev.jentic.runtime.telemetry.InstrumentedLLMProvider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -276,6 +278,29 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	 */
 	public GuardrailChain getGuardrailChain() {
 		return guardrailChain;
+	}
+
+	/**
+	 * Installs telemetry instrumentation on this agent.
+	 *
+	 * <p>Wraps the current {@link LLMProvider} (if set) with an
+	 * {@link InstrumentedLLMProvider} and propagates telemetry to the
+	 * {@link GuardrailChain} (if present). Called by {@code JenticRuntime}
+	 * at agent registration time.
+	 *
+	 * @param telemetry the telemetry instance; {@code null} is silently ignored
+	 * @since 0.19.0
+	 */
+	public void installTelemetry(JenticTelemetry telemetry) {
+		if (telemetry == null) {
+			return;
+		}
+		if (llmProvider != null && !(llmProvider instanceof InstrumentedLLMProvider)) {
+			llmProvider = new InstrumentedLLMProvider(llmProvider, telemetry);
+		}
+		if (guardrailChain != null) {
+			guardrailChain.setTelemetry(telemetry);
+		}
 	}
 
 	// -------------------------------------------------------------------------

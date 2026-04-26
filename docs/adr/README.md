@@ -24,6 +24,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-016](ADR-016-spring-boot-starter.md)                           | Spring Boot Starter Module               | Proposed | 2026-03-26 |
 | [ADR-017](ADR-017-llmrequest-model-optional.md)                     | LLMRequest model field — optional        | Accepted | 2026-04-12 |
 | [ADR-018](ADR-018-optional-adapter-dependencies-pattern.md)         | Optional Adapter Dependencies Pattern    | Accepted | 2026-04-23 |
+| [ADR-019](ADR-019-opentelemetry-instrumentation.md)                 | OpenTelemetry Instrumentation            | Accepted | 2026-04-23 |
 
 ---
 
@@ -165,7 +166,8 @@ graph TD
 - **ADR-015** (HITL) builds on ADR-001, ADR-005, ADR-006, ADR-014
 - **ADR-016** (Spring Boot Starter) builds on ADR-003, ADR-004, ADR-007
 - **ADR-017** (LLMRequest optional model) refines ADR-007 (LLMProvider as Core Interface)
-- **ADR-018** (Optional Adapter Deps) governs ADR-019, ADR-021, ADR-022
+- **ADR-018** (Optional Adapter Deps) governs ADR-019 and future adapter ADRs
+- **ADR-019** (OTel Instrumentation) builds on ADR-002, ADR-003, ADR-018
 
 ---
 

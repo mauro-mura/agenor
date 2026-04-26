@@ -1,6 +1,7 @@
 package dev.jentic.autoconfigure;
 
 import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,8 @@ public class JenticAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JenticRuntime jenticRuntime(JenticProperties props,
-                                       ObjectProvider<LLMProvider> llmProvider) {
+                                       ObjectProvider<LLMProvider> llmProvider,
+                                       ObjectProvider<JenticTelemetry> telemetry) {
         JenticRuntime.Builder builder = JenticRuntime.builder()
                 .withConfiguration(props.toJenticConfiguration());
 
@@ -58,6 +60,8 @@ public class JenticAutoConfiguration {
             log.debug("Wiring LLMProvider '{}' into JenticRuntime", provider.getProviderName());
             builder.service(LLMProvider.class, provider);
         });
+
+        builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
 
         log.debug("Building JenticRuntime: runtime.name={}", props.runtime().name());
         return builder.build();
@@ -112,6 +116,42 @@ public class JenticAutoConfiguration {
                 return Integer.MAX_VALUE - 1;
             }
         };
+    }
+
+    // -------------------------------------------------------------------------
+    // Telemetry bean — active only when OTel + jentic-adapters are on the classpath
+    // -------------------------------------------------------------------------
+
+    /**
+     * Produces a {@link JenticTelemetry} bean when OpenTelemetry is on the classpath
+     * and {@code jentic.telemetry.enabled=true} (the default).
+     *
+     * <p>When the exporter is {@code "none"} (the out-of-the-box default) or when the
+     * user supplies their own {@code JenticTelemetry} bean, this configuration is skipped.
+     *
+     * @since 0.19.0
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "dev.jentic.adapters.telemetry.OtelTelemetryFactory")
+    @ConditionalOnProperty(prefix = "jentic.telemetry", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    static class TelemetryConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean(JenticTelemetry.class)
+        public JenticTelemetry jenticTelemetry(JenticProperties props) {
+            JenticProperties.Telemetry t = props.telemetry();
+            if ("none".equalsIgnoreCase(t.exporter())) {
+                return JenticTelemetry.noop();
+            }
+            var builder = dev.jentic.adapters.telemetry.OtelTelemetryFactory.builder()
+                    .serviceName(t.serviceName())
+                    .exporter(t.exporter());
+            if (t.endpoint() != null && !t.endpoint().isBlank()) {
+                builder.endpoint(t.endpoint());
+            }
+            return builder.build();
+        }
     }
 
     // -------------------------------------------------------------------------

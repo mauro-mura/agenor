@@ -85,6 +85,8 @@ nav:
     - Guardrails: guardrails.md
   - Adapters:
     - MCP: adapters/mcp.md
-  - Integrations:                             
+  - Observability:
+    - OpenTelemetry: observability.md
+  - Integrations:
     - Spring Boot Starter: spring-boot-starter.md
   - API Reference: api/index.html

@@ -6,6 +6,9 @@ import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.core.hitl.ApprovalNotifier;
 import dev.jentic.core.hitl.ApprovalRequest;
 import dev.jentic.core.hitl.ApprovalTimeoutException;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.Span;
+import dev.jentic.core.telemetry.SpanStatus;
 import dev.jentic.runtime.behavior.BaseBehavior;
 import dev.jentic.runtime.hitl.ApprovalService;
 import org.slf4j.Logger;
@@ -66,6 +69,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
     private final String actionName;
     private final Duration timeout;
     private final Consumer<ApprovalDecision> decisionHandler;
+    private final JenticTelemetry telemetry;
 
     /**
      * Creates a new {@code HumanCheckpointBehavior}.
@@ -87,6 +91,32 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
             String actionName,
             Duration timeout,
             Consumer<ApprovalDecision> decisionHandler) {
+        this(behaviorId, gate, notifier, payload, actionName, timeout, decisionHandler, JenticTelemetry.noop());
+    }
+
+    /**
+     * Creates a new {@code HumanCheckpointBehavior} with telemetry support.
+     *
+     * @param behaviorId      unique identifier for this behavior
+     * @param gate            gate used to park the virtual thread until a decision arrives
+     * @param notifier        notifier invoked before the gate parks (fire-and-forget)
+     * @param payload         data describing the action to be approved
+     * @param actionName      human-readable action name included in the {@link ApprovalRequest}
+     * @param timeout         maximum wait time for a human decision
+     * @param decisionHandler called with the {@link ApprovalDecision} when one is received
+     * @param telemetry       telemetry instance for emitting {@code hitl.approval} spans;
+     *                        {@code null} uses noop
+     * @since 0.19.0
+     */
+    public HumanCheckpointBehavior(
+            String behaviorId,
+            ApprovalGate gate,
+            ApprovalNotifier notifier,
+            T payload,
+            String actionName,
+            Duration timeout,
+            Consumer<ApprovalDecision> decisionHandler,
+            JenticTelemetry telemetry) {
 
         super(behaviorId, BehaviorType.ONE_SHOT, null);
         this.gate = Objects.requireNonNull(gate, "gate must not be null");
@@ -95,6 +125,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
         this.actionName = Objects.requireNonNull(actionName, "actionName must not be null");
         this.timeout = Objects.requireNonNull(timeout, "timeout must not be null");
         this.decisionHandler = Objects.requireNonNull(decisionHandler, "decisionHandler must not be null");
+        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -118,12 +149,30 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
                     getBehaviorId(), notifier.getClass().getSimpleName(), e);
         }
 
-        // Park the virtual thread until the gate future is completed
-        ApprovalDecision decision = gate.requestApproval(request).join();
+        Span span = telemetry.spanBuilder("hitl.approval")
+                .setAttribute("hitl.request_id", request.requestId().toString())
+                .setAttribute("hitl.action", actionName)
+                .startSpan();
 
-        log.debug("Approval decision received: requestId={}, decision={}",
-                request.requestId(), decision.getClass().getSimpleName());
+        long startMs = System.currentTimeMillis();
+        try {
+            // Park the virtual thread until the gate future is completed
+            ApprovalDecision decision = gate.requestApproval(request).join();
 
-        decisionHandler.accept(decision);
+            long waitMs = System.currentTimeMillis() - startMs;
+            span.setAttribute("hitl.decision", decision.getClass().getSimpleName())
+                .setAttribute("hitl.wait_ms", waitMs)
+                .setStatus(SpanStatus.OK);
+
+            log.debug("Approval decision received: requestId={}, decision={}",
+                    request.requestId(), decision.getClass().getSimpleName());
+
+            decisionHandler.accept(decision);
+        } catch (Exception e) {
+            span.recordException(e).setStatus(SpanStatus.ERROR);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 }

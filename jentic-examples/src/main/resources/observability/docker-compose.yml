@@ -1,0 +1,24 @@
+version: "3.9"
+
+# Starts a Jaeger all-in-one instance that accepts OTLP over HTTP (port 4318)
+# and exposes the UI on http://localhost:16686.
+#
+# Usage:
+#   docker compose -f src/main/resources/observability/docker-compose.yml up
+#
+# Then run ObservabilityExample with:
+#   OTEL_EXPORTER_TYPE=otlp-http mvn exec:java \
+#       -pl jentic-examples \
+#       -Dexec.mainClass="dev.jentic.examples.observability.ObservabilityExample"
+#
+# Open http://localhost:16686 → select service "jentic-example" → Find Traces.
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP (used by ObservabilityExample)
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"

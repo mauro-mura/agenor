@@ -11,6 +11,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import dev.jentic.core.Agent;
 import dev.jentic.core.composite.SchedulingHint;
 import dev.jentic.core.console.ConsoleEventListener;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.Span;
+import dev.jentic.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,13 +32,19 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     private final ConcurrentHashMap<String, ScheduledFuture<?>> scheduledBehaviors = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile ConsoleEventListener eventListener = ConsoleEventListener.noOp();
-    
+    private final JenticTelemetry telemetry;
+
     public SimpleBehaviorScheduler() {
-        this(4); // Default thread pool size
+        this(4, JenticTelemetry.noop());
     }
-    
+
     public SimpleBehaviorScheduler(int threadPoolSize) {
-        this.scheduler = new ScheduledThreadPoolExecutor(threadPoolSize);
+        this(threadPoolSize, JenticTelemetry.noop());
+    }
+
+    public SimpleBehaviorScheduler(int threadPoolSize, JenticTelemetry telemetry) {
+        this.scheduler  = new ScheduledThreadPoolExecutor(threadPoolSize);
+        this.telemetry  = telemetry != null ? telemetry : JenticTelemetry.noop();
     }
 
     /**
@@ -232,20 +241,30 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     }
     
     private void executeBehavior(Behavior behavior) {
+        Agent agent = behavior.getAgent();
+        String agentId = agent != null ? agent.getAgentId() : "unknown";
+
+        Span span = telemetry.spanBuilder("behavior.execute")
+                .setAttribute("behavior.id",   behavior.getBehaviorId())
+                .setAttribute("behavior.type", behavior.getType().name())
+                .setAttribute("agent.id",      agentId)
+                .startSpan();
+
         long startTime = System.currentTimeMillis();
         boolean success = true;
         String error = null;
 
         try {
             behavior.execute().join();
+            span.setStatus(SpanStatus.OK);
         } catch (Exception e) {
             success = false;
             error = e.getMessage();
+            span.recordException(e).setStatus(SpanStatus.ERROR);
             log.error("Error executing behavior: {}", behavior.getBehaviorId(), e);
         } finally {
             long durationMs = System.currentTimeMillis() - startTime;
-            Agent agent = behavior.getAgent();
-            String agentId = agent != null ? agent.getAgentId() : "unknown";
+            span.setAttribute("behavior.duration_ms", durationMs).end();
             eventListener.onBehaviorExecuted(agentId, behavior.getBehaviorId(),
                     durationMs, success, error);
         }

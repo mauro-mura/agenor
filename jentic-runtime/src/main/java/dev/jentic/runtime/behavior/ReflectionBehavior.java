@@ -3,6 +3,8 @@ package dev.jentic.runtime.behavior;
 import dev.jentic.core.reflection.CritiqueResult;
 import dev.jentic.core.reflection.ReflectionConfig;
 import dev.jentic.core.reflection.ReflectionStrategy;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +60,7 @@ public class ReflectionBehavior extends OneShotBehavior {
     private final ReflectionStrategy strategy;
     private final ReflectionConfig config;
     private final Consumer<String> onResult;
+    private final JenticTelemetry telemetry;
 
     /** Stores the best output produced during the loop; readable after execution. */
     private final AtomicReference<String> result = new AtomicReference<>("");
@@ -70,6 +73,7 @@ public class ReflectionBehavior extends OneShotBehavior {
         this.strategy = builder.strategy;
         this.config = builder.config;
         this.onResult = builder.onResult;
+        this.telemetry = builder.telemetry != null ? builder.telemetry : JenticTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -88,25 +92,42 @@ public class ReflectionBehavior extends OneShotBehavior {
 
             CritiqueResult critique = strategy.critique(currentOutput, task, config).join();
 
-            if (critique.score() > bestScore) {
-                bestScore = critique.score();
-                bestOutput = currentOutput;
+            boolean accepted = critique.score() >= config.scoreThreshold();
+
+            var span = telemetry.spanBuilder("reflection.iteration")
+                    .setAttribute("reflection.iteration", (long) (iteration + 1))
+                    .setAttribute("reflection.score", String.valueOf(critique.score()))
+                    .setAttribute("reflection.accepted", accepted)
+                    .startSpan();
+
+            try {
+                if (critique.score() > bestScore) {
+                    bestScore = critique.score();
+                    bestOutput = currentOutput;
+                }
+
+                log.debug("Critique score={} shouldRevise={}", critique.score(), critique.shouldRevise());
+
+                span.setStatus(SpanStatus.OK);
+
+                // Early stop: a quality threshold reached
+                if (accepted) {
+                    log.debug("Early stop: score {} >= threshold {}", critique.score(), config.scoreThreshold());
+                    break;
+                }
+
+                // No more iterations after the last round
+                if (!critique.shouldRevise() || iteration == config.maxIterations() - 1) {
+                    break;
+                }
+
+                currentOutput = revise.apply(currentOutput, critique.feedback());
+            } catch (Exception e) {
+                span.recordException(e).setStatus(SpanStatus.ERROR);
+                throw e;
+            } finally {
+                span.end();
             }
-
-            log.debug("Critique score={} shouldRevise={}", critique.score(), critique.shouldRevise());
-
-            // Early stop: a quality threshold reached
-            if (critique.score() >= config.scoreThreshold()) {
-                log.debug("Early stop: score {} >= threshold {}", critique.score(), config.scoreThreshold());
-                break;
-            }
-
-            // No more iterations after the last round
-            if (!critique.shouldRevise() || iteration == config.maxIterations() - 1) {
-                break;
-            }
-
-            currentOutput = revise.apply(currentOutput, critique.feedback());
         }
 
         result.set(bestOutput);
@@ -163,6 +184,7 @@ public class ReflectionBehavior extends OneShotBehavior {
         private ReflectionStrategy strategy;
         private ReflectionConfig config = ReflectionConfig.defaults();
         private Consumer<String> onResult;
+        private JenticTelemetry telemetry;
 
         private Builder(String behaviorId) {
             this.behaviorId = behaviorId;
@@ -205,6 +227,18 @@ public class ReflectionBehavior extends OneShotBehavior {
         /** Optional callback invoked with the final best output after the loop completes. */
         public Builder onResult(Consumer<String> onResult) {
             this.onResult = onResult;
+            return this;
+        }
+
+        /**
+         * Sets the telemetry instance used to emit {@code reflection.iteration} spans.
+         *
+         * @param telemetry the telemetry instance; {@code null} uses noop
+         * @return {@code this}
+         * @since 0.19.0
+         */
+        public Builder telemetry(JenticTelemetry telemetry) {
+            this.telemetry = telemetry;
             return this;
         }
 

@@ -1,6 +1,7 @@
 package dev.jentic.adapters.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jentic.core.telemetry.JenticTelemetry;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
@@ -58,6 +59,29 @@ public final class McpClientFactory {
      * @param executor  executor used for {@code supplyAsync()} calls
      */
     public static JenticMcpClientAdapter fromSse(String serverUrl, Executor executor) {
+        return fromSse(serverUrl, executor, JenticTelemetry.noop());
+    }
+
+    /**
+     * Connects to an MCP server via SSE with telemetry support.
+     *
+     * @param serverUrl base URL of the MCP server
+     * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
+     * @since 0.19.0
+     */
+    public static JenticMcpClientAdapter fromSse(String serverUrl, JenticTelemetry telemetry) {
+        return fromSse(serverUrl, ForkJoinPool.commonPool(), telemetry);
+    }
+
+    /**
+     * Connects to an MCP server via SSE using a custom executor and telemetry.
+     *
+     * @param serverUrl base URL of the MCP server
+     * @param executor  executor used for {@code supplyAsync()} calls
+     * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
+     * @since 0.19.0
+     */
+    public static JenticMcpClientAdapter fromSse(String serverUrl, Executor executor, JenticTelemetry telemetry) {
         var transport = HttpClientSseClientTransport.builder(serverUrl)
                 .jsonMapper(DEFAULT_JSON_MAPPER)
                 .build();
@@ -65,7 +89,7 @@ public final class McpClientFactory {
                 .requestTimeout(DEFAULT_TIMEOUT)
                 .build();
         sdkClient.initialize();
-        return new JenticMcpClientAdapter(sdkClient, executor);
+        return new JenticMcpClientAdapter(sdkClient, executor, telemetry, "sse");
     }
 
     // -------------------------------------------------------------------------
@@ -94,6 +118,32 @@ public final class McpClientFactory {
      * @param args     remaining arguments
      */
     public static JenticMcpClientAdapter fromStdio(Executor executor, String command, String... args) {
+        return fromStdio(executor, JenticTelemetry.noop(), command, args);
+    }
+
+    /**
+     * Launches a local MCP server subprocess with telemetry support.
+     *
+     * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
+     * @param command   first element of the command line
+     * @param args      remaining arguments
+     * @since 0.19.0
+     */
+    public static JenticMcpClientAdapter fromStdio(JenticTelemetry telemetry, String command, String... args) {
+        return fromStdio(ForkJoinPool.commonPool(), telemetry, command, args);
+    }
+
+    /**
+     * Launches a local MCP server subprocess using a custom executor and telemetry.
+     *
+     * @param executor  executor used for {@code supplyAsync()} calls
+     * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
+     * @param command   first element of the command line
+     * @param args      remaining arguments
+     * @since 0.19.0
+     */
+    public static JenticMcpClientAdapter fromStdio(Executor executor, JenticTelemetry telemetry,
+                                                   String command, String... args) {
         var fullCommand = new ArrayList<String>();
         fullCommand.add(command);
         fullCommand.addAll(List.of(args));
@@ -106,6 +156,6 @@ public final class McpClientFactory {
                 .requestTimeout(DEFAULT_TIMEOUT)
                 .build();
         sdkClient.initialize();
-        return new JenticMcpClientAdapter(sdkClient, executor);
+        return new JenticMcpClientAdapter(sdkClient, executor, telemetry, "stdio");
     }
 }

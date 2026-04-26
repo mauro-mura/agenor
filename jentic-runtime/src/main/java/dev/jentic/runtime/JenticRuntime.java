@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import dev.jentic.core.context.AgentContext;
+import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.hitl.ApprovalService;
 import dev.jentic.runtime.hitl.HitlAnnotationProcessor;
 import dev.jentic.runtime.hitl.InMemoryApprovalGate;
@@ -64,6 +65,7 @@ public class JenticRuntime {
     private final BehaviorScheduler behaviorScheduler;
     private final MemoryStore memoryStore;
     private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
+    private final JenticTelemetry telemetry;
 
     // HITL: singleton gate and service — lazily initialized, shared across all agents
     private final InMemoryApprovalGate approvalGate = new InMemoryApprovalGate();
@@ -91,12 +93,13 @@ public class JenticRuntime {
         logConfigurationInfo();
 
         // Initialize services
+        this.telemetry = builder.telemetry != null ? builder.telemetry : JenticTelemetry.noop();
         this.messageService = builder.messageService != null ?
                 builder.messageService : new InMemoryMessageService();
         this.agentDirectory = builder.agentDirectory != null ?
                 builder.agentDirectory : new LocalAgentDirectory();
         this.behaviorScheduler = builder.behaviorScheduler != null ?
-                builder.behaviorScheduler : new SimpleBehaviorScheduler();
+                builder.behaviorScheduler : new SimpleBehaviorScheduler(4, this.telemetry);
         this.memoryStore = builder.memoryStore; // optional
 
         this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
@@ -261,6 +264,7 @@ public class JenticRuntime {
         // Inject guardrail chain from @WithGuardrails annotation (LLMAgent only)
         if (agent instanceof LLMAgent llmAgent) {
             GuardrailAnnotationProcessor.process(llmAgent);
+            llmAgent.installTelemetry(telemetry);
         }
 
         // Wrap behaviors annotated with @RequiresApproval (BaseAgent and subclasses)
@@ -382,6 +386,16 @@ public class JenticRuntime {
                 configuration.agents().getAllScanPackages().size(),
                 serviceInstances.size()
         );
+    }
+
+    /**
+     * Returns the {@link JenticTelemetry} instance wired into this runtime.
+     *
+     * @return the telemetry instance; never {@code null} (falls back to noop)
+     * @since 0.19.0
+     */
+    public JenticTelemetry getTelemetry() {
+        return telemetry;
     }
 
     /**
@@ -595,6 +609,7 @@ public class JenticRuntime {
         private BehaviorScheduler behaviorScheduler;
         private MemoryStore memoryStore;
         private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
+        private JenticTelemetry telemetry;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
 
@@ -681,6 +696,19 @@ public class JenticRuntime {
         
         public Builder llmMemoryManagerFactory(Function<String, LLMMemoryManager> factory) {
             this.llmMemoryManagerFactory = factory;
+            return this;
+        }
+
+        /**
+         * Sets the telemetry instance used to emit spans for LLM calls, guardrails,
+         * behavior execution, and HITL approvals.
+         *
+         * @param telemetry the telemetry instance; {@code null} uses noop
+         * @return {@code this}
+         * @since 0.19.0
+         */
+        public Builder telemetry(JenticTelemetry telemetry) {
+            this.telemetry = telemetry;
             return this;
         }
 
