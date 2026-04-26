@@ -39,7 +39,7 @@ import java.util.Objects;
  */
 public final class OtelTelemetryFactory {
 
-    private static final String DEFAULT_ENDPOINT_HTTP = "http://localhost:4318";
+    private static final String DEFAULT_ENDPOINT_HTTP = "http://localhost:4318/v1/traces";
     private static final String DEFAULT_ENDPOINT_GRPC = "http://localhost:4317";
     private static final String DEFAULT_SERVICE_NAME  = "jentic";
 
@@ -117,7 +117,15 @@ public final class OtelTelemetryFactory {
 
         /**
          * Sets the OTLP collector endpoint URL.
-         * Defaults to {@code http://localhost:4318} for HTTP and {@code http://localhost:4317} for gRPC.
+         *
+         * <p>For HTTP exporters this must be the full URL including the signal path,
+         * e.g. {@code http://localhost:4318/v1/traces}. A bare base URL such as
+         * {@code http://localhost:4318} is also accepted — the factory appends
+         * {@code /v1/traces} automatically when no {@code /v1/} path is present.
+         * This mirrors the behaviour of the standard {@code OTEL_EXPORTER_OTLP_ENDPOINT}
+         * environment variable, which conventionally carries only the host and port.
+         *
+         * <p>For gRPC exporters pass only the base URL, e.g. {@code http://localhost:4317}.
          *
          * @param endpoint the endpoint URL, or {@code null} to use the default
          * @return {@code this}
@@ -165,7 +173,14 @@ public final class OtelTelemetryFactory {
                     yield OtlpGrpcSpanExporter.builder().setEndpoint(ep).build();
                 }
                 default -> { // "otlp-http" and anything else
+                    // OtlpHttpSpanExporter.setEndpoint() takes the full URL — it does NOT
+                    // auto-append /v1/traces (unlike the OTel SDK's own default).
+                    // The standard OTEL_EXPORTER_OTLP_ENDPOINT env var is typically a base
+                    // URL (host:port only), so we append the signal path when it is absent.
                     String ep = endpoint != null ? endpoint : DEFAULT_ENDPOINT_HTTP;
+                    if (!ep.contains("/v1/")) {
+                        ep = ep.replaceAll("/+$", "") + "/v1/traces";
+                    }
                     yield OtlpHttpSpanExporter.builder().setEndpoint(ep).build();
                 }
             };

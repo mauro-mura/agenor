@@ -8,6 +8,7 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import java.util.Objects;
 
@@ -32,20 +33,42 @@ import java.util.Objects;
  *
  * @since 0.19.0
  */
-public final class OtelJenticTelemetry implements JenticTelemetry {
+public final class OtelJenticTelemetry implements JenticTelemetry, AutoCloseable {
 
     static final String INSTRUMENTATION_NAME = "dev.jentic";
 
+    private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
 
     /**
      * Creates an {@code OtelJenticTelemetry} backed by the given {@link OpenTelemetry} instance.
      *
+     * <p>The instance is retained so that {@link #close()} can flush and shut down the
+     * underlying {@link io.opentelemetry.sdk.OpenTelemetrySdk} (including its
+     * {@link io.opentelemetry.sdk.trace.export.BatchSpanProcessor}) when the runtime stops.
+     * Without holding a reference the SDK would be eligible for GC immediately after
+     * construction, silently discarding all buffered spans.
+     *
      * @param openTelemetry the configured OTel instance; never {@code null}
      */
     public OtelJenticTelemetry(OpenTelemetry openTelemetry) {
         Objects.requireNonNull(openTelemetry, "openTelemetry must not be null");
+        this.openTelemetry = openTelemetry;
         this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
+    }
+
+    /**
+     * Flushes and shuts down the underlying OTel SDK.
+     *
+     * <p>Forces the {@link io.opentelemetry.sdk.trace.export.BatchSpanProcessor} to export
+     * any buffered spans before the process exits. Called automatically by
+     * {@link dev.jentic.runtime.JenticRuntime#stop()} when telemetry is {@link AutoCloseable}.
+     */
+    @Override
+    public void close() {
+        if (openTelemetry instanceof OpenTelemetrySdk sdk) {
+            sdk.close();
+        }
     }
 
     @Override

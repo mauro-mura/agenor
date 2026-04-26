@@ -68,7 +68,7 @@ public class ObservabilityExample {
         //    - "none" → noop (safe default, no collector required)
         //    - "otlp-http" → exports to Jaeger / any OTLP collector
         // ------------------------------------------------------------------
-        String exporterType = System.getenv().getOrDefault("OTEL_EXPORTER_TYPE", "none");
+        String exporterType = System.getenv().getOrDefault("OTEL_EXPORTER_TYPE", "otlp-http");
         String endpoint     = System.getenv().getOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT",
                                                            "http://localhost:4318");
         String serviceName  = System.getenv().getOrDefault("OTEL_SERVICE_NAME", "jentic-example");
@@ -123,9 +123,10 @@ public class ObservabilityExample {
         }
 
         // ------------------------------------------------------------------
-        // 6. Graceful shutdown (flushes OTel BatchSpanProcessor)
+        // 6. Graceful shutdown — runtime.stop() closes OtelJenticTelemetry
+        //    which calls OpenTelemetrySdk.close(), forcing the BatchSpanProcessor
+        //    to flush all buffered spans before the process exits.
         // ------------------------------------------------------------------
-        Thread.sleep(500); // let async span processor flush
         runtime.stop().join();
 
         log.info("Done. Open http://localhost:16686 to view traces in Jaeger.");

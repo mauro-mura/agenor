@@ -213,6 +213,15 @@ public class JenticRuntime {
                 // Stop core services
                 behaviorScheduler.stop().join();
 
+                // Flush and shut down telemetry (forces BatchSpanProcessor export)
+                if (telemetry instanceof AutoCloseable closeable) {
+                    try {
+                        closeable.close();
+                    } catch (Exception e) {
+                        log.warn("Error closing telemetry during shutdown", e);
+                    }
+                }
+
                 running = false;
                 log.info("Jentic Runtime stopped successfully");
 

@@ -10,7 +10,7 @@ real OpenTelemetry SDK integration lives in `jentic-adapters` and is entirely **
 ### 1 — Add the OTel dependency
 
 `jentic-adapters` declares `opentelemetry-sdk` as an **optional** dependency (per
-[ADR-018](../docs/adr/ADR-018-optional-adapter-dependencies-pattern.md)). You must
+`ADR-018`). You must
 explicitly pull it in your own `pom.xml`:
 
 ```xml
