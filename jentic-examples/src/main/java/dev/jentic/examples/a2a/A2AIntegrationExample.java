@@ -6,15 +6,12 @@ import dev.jentic.adapters.a2a.JenticA2AClient;
 import dev.jentic.adapters.a2a.JenticAgentExecutor;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.dialogue.DialogueCapability;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCard;
 
@@ -104,7 +101,7 @@ public class A2AIntegrationExample {
         // Create executor for handling incoming A2A requests
         AgentExecutor executor = new JenticAgentExecutor(
             processor.getAgentId(),
-            processor.getMessageService(),
+            runtime.getMessageDispatcher(),
             Duration.ofMinutes(5)
         );
         
@@ -122,7 +119,7 @@ public class A2AIntegrationExample {
         
         // Create A2A adapter for sending messages
         JenticA2AAdapter adapter = new JenticA2AAdapter(
-            runtime.getMessageService(),
+            runtime.getMessageDispatcher(),
             runtime.getAgentDirectory(),
             "client-agent",
             Duration.ofMinutes(5)
@@ -199,16 +196,16 @@ public class A2AIntegrationExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
-                dialogue.initialize(messageService);
+                dialogue.initialize(getMessageDispatcher());
                 running = true;
                 System.out.println("[OrderProcessor] Started");
             });
         }
-        
+
         @Override
         public CompletableFuture<Void> stop() {
             return CompletableFuture.runAsync(() -> {
-                dialogue.shutdown(messageService);
+                dialogue.shutdown();
                 running = false;
             });
         }

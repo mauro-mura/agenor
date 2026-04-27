@@ -22,7 +22,7 @@ public class SystemLoggerAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Subscribe to sensor.temperature only
-        messageService.subscribe("sensor.temperature", message -> {
+        getMessageDispatcher().subscribeTopic("sensor.temperature", message -> {
         	messageCount++;
         	log.debug("[MSG #{}] {} -> {} : {}",
                     messageCount,
@@ -41,11 +41,12 @@ public class SystemLoggerAgent extends BaseAgent {
     public void reportStats() {
         log.info("Messages processed: {}", messageCount);
         
-        messageService.send(Message.builder()
+        var statsMsg = Message.builder()
                 .topic("system.stats")
                 .senderId(getAgentId())
                 .content(new Stats(messageCount))
-                .build());
+                .build();
+        getMessageDispatcher().publish(statsMsg.topic(), statsMsg);
     }
 
     private String summarize(Object content) {

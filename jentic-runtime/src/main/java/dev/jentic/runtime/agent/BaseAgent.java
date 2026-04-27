@@ -23,6 +23,7 @@ import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.MemoryQuery;
 import dev.jentic.core.memory.MemoryScope;
@@ -303,7 +304,20 @@ public abstract class BaseAgent implements Agent {
     public MessageService getMessageService() {
         return messageService;
     }
-    
+
+    /**
+     * Returns the message dispatcher for this agent.
+     *
+     * <p>Prefer this over {@link #getMessageService()} for new code. Use
+     * {@code publish(topic, msg)} for topic messages and {@code sendTo(agentId, msg)}
+     * for point-to-point messages.
+     *
+     * @since 0.20.0
+     */
+    public MessageDispatcher getMessageDispatcher() {
+        return messageService;
+    }
+
     /**
      * Set the message service for this agent
      */

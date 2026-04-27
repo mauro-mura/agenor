@@ -1,7 +1,7 @@
 package dev.jentic.runtime.dialogue;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import dev.jentic.core.dialogue.protocol.ProtocolState;
@@ -19,16 +19,16 @@ import static org.mockito.Mockito.when;
 
 class DefaultConversationManagerTest {
     
-    private MessageService messageService;
+    private MessageDispatcher messageDispatcher;
     private DefaultConversationManager manager;
-    
+
     @BeforeEach
     void setUp() {
-        messageService = mock(MessageService.class);
-        when(messageService.send(any(Message.class)))
+        messageDispatcher = mock(MessageDispatcher.class);
+        when(messageDispatcher.sendTo(any(), any(Message.class)))
             .thenReturn(CompletableFuture.completedFuture(null));
-        
-        manager = new DefaultConversationManager("local-agent", messageService);
+
+        manager = new DefaultConversationManager("local-agent", messageDispatcher);
     }
     
     @Test

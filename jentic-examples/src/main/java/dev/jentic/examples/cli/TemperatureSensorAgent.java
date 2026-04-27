@@ -34,21 +34,23 @@ public class TemperatureSensorAgent extends BaseAgent {
         log.info("[{}] Temperature: {}°C", timestamp, tempFormatted);
 
         // Send temperature reading
-        messageService.send(Message.builder()
+        var tempMsg = Message.builder()
                 .topic("sensor.temperature")
                 .senderId(getAgentId())
                 .content(new TemperatureReading(temp, timestamp))
                 .header("unit", "celsius")
-                .build());
+                .build();
+        getMessageDispatcher().publish(tempMsg.topic(), tempMsg);
 
         // Trigger alert if too high
         if (temp > 30.0) {
-            messageService.send(Message.builder()
+            var alertMsg = Message.builder()
                     .topic("sensor.alert.temperature")
                     .senderId(getAgentId())
                     .content("High temperature alert: " + tempFormatted + "°C")
                     .header("severity", "WARNING")
-                    .build());
+                    .build();
+            getMessageDispatcher().publish(alertMsg.topic(), alertMsg);
         }
     }
 

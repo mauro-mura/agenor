@@ -49,14 +49,14 @@ public class TransactionAgent extends BaseAgent implements ConsultableAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
-        messageService.subscribe("support.transaction", MessageHandler.sync(this::handleTransactionQuery));
+        dialogue.initialize(getMessageDispatcher());
+        getMessageDispatcher().subscribeTopic("support.transaction", MessageHandler.sync(this::handleTransactionQuery));
         log.info("Transaction Agent started with dialogue support");
     }
-    
+
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
         log.info("Transaction Agent stopped");
     }
     
@@ -365,7 +365,7 @@ public class TransactionAgent extends BaseAgent implements ConsultableAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
     }
     
     private SupportQuery extractQuery(Message message) {

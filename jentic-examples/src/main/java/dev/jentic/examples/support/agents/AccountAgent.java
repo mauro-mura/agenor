@@ -49,14 +49,14 @@ public class AccountAgent extends BaseAgent implements ConsultableAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
-        messageService.subscribe("support.account", MessageHandler.sync(this::handleAccountQuery));
+        dialogue.initialize(getMessageDispatcher());
+        getMessageDispatcher().subscribeTopic("support.account", MessageHandler.sync(this::handleAccountQuery));
         log.info("Account Agent started with dialogue support");
     }
-    
+
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
         log.info("Account Agent stopped");
     }
     
@@ -350,7 +350,7 @@ public class AccountAgent extends BaseAgent implements ConsultableAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
     }
     
     private SupportQuery extractQuery(Message message) {

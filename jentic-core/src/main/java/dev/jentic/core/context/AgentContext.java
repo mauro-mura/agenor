@@ -4,6 +4,7 @@ import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.memory.MemoryStore;
+import dev.jentic.core.messaging.MessageDispatcher;
 
 /**
  * Aggregates the core services available to every agent.
@@ -65,5 +66,14 @@ public record AgentContext(
     public AgentContext(MessageService messageService, AgentDirectory agentDirectory,
                         BehaviorScheduler behaviorScheduler) {
         this(messageService, agentDirectory, behaviorScheduler, null);
+    }
+
+    /**
+     * Returns the {@link MessageDispatcher} view of the message service.
+     *
+     * @since 0.20.0
+     */
+    public MessageDispatcher messageDispatcher() {
+        return messageService;
     }
 }

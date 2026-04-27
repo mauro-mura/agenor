@@ -1,7 +1,8 @@
 package dev.jentic.adapters.a2a;
 
 import dev.jentic.core.AgentDirectory;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.Message;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.dialogue.DialogueMessage;
 import io.a2a.spec.AgentCard;
 import org.slf4j.Logger;
@@ -17,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 
  * <p>Features:
  * <ul>
- *   <li>Auto-routing: internal agents via MessageService, external via A2A HTTP</li>
+ *   <li>Auto-routing: internal agents via MessageDispatcher, external via A2A HTTP</li>
  *   <li>Agent card caching for external agents</li>
  *   <li>Streaming support for long-running tasks</li>
  * </ul>
@@ -26,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <pre>{@code
  * // Create adapter
  * var adapter = new JenticA2AAdapter(
- *     messageService,
+ *     messageDispatcher,
  *     agentDirectory,
  *     "my-agent",
  *     Duration.ofMinutes(5)
@@ -53,22 +54,22 @@ public class JenticA2AAdapter {
     
     private static final Logger log = LoggerFactory.getLogger(JenticA2AAdapter.class);
     
-    private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final AgentDirectory agentDirectory;
     private final JenticA2AClient externalClient;
     private final String localAgentId;
     private final Duration timeout;
-    
+
     // Cache for external agent cards
     private final Map<String, CachedAgentCard> agentCardCache = new ConcurrentHashMap<>();
     private final Duration cacheExpiry = Duration.ofMinutes(10);
-    
+
     public JenticA2AAdapter(
-            MessageService messageService,
+            MessageDispatcher messageDispatcher,
             AgentDirectory agentDirectory,
             String localAgentId,
             Duration timeout) {
-        this.messageService = messageService;
+        this.messageDispatcher = messageDispatcher;
         this.agentDirectory = agentDirectory;
         this.externalClient = new JenticA2AClient(timeout);
         this.localAgentId = localAgentId;
@@ -104,11 +105,18 @@ public class JenticA2AAdapter {
     }
     
     /**
-     * Sends a message to an internal agent via MessageService.
+     * Sends a message to an internal agent via MessageDispatcher.
      */
     public CompletableFuture<DialogueMessage> sendInternal(DialogueMessage message) {
-        return messageService.sendAndWait(message.toMessage(), timeout.toMillis())
-            .thenApply(DialogueMessage::fromMessage);
+        CompletableFuture<Message> replyFuture = new CompletableFuture<>();
+        String replyTo = message.senderId() != null ? message.senderId() : localAgentId;
+        var subscription = messageDispatcher.subscribeRecipient(replyTo,
+                msg -> { replyFuture.complete(msg); return CompletableFuture.completedFuture(null); });
+        messageDispatcher.sendTo(message.receiverId(), message.toMessage());
+        return replyFuture
+                .orTimeout(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+                .whenComplete((r, ex) -> subscription.unsubscribe())
+                .thenApply(DialogueMessage::fromMessage);
     }
     
     /**

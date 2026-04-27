@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-04-26
+
+### Added
+
+- **Core API Refactor — Capability-Sized Interfaces (ADR-020)**: the monolithic `MessageService` and `AgentDirectory` interfaces have been decomposed into focused capability interfaces that compose cleanly and work with distributed backends (Redis, JDBC, Kafka, etc.) without semantic compromise.
+
+  **Messaging** — new interfaces in `dev.jentic.core.messaging`:
+  - `TopicPublisher` — `publish(topic, msg)`
+  - `TopicSubscriber` — `subscribeTopic(topic, handler)` → `Subscription`
+  - `DirectMessenger` — `sendTo(agentId, msg)` with `AgentNotFoundException` on unknown agents
+  - `DirectReceiver` — `subscribeRecipient(localAgentId, handler)` → `Subscription`
+  - `FilterableSubscriber` — `subscribeFiltered(Predicate<Message>, handler)` → `Subscription`
+  - `MessageDispatcher` — composite of the four core messaging interfaces
+  - `Subscription` — replaces raw `String` subscription IDs; call `subscription.unsubscribe()` to cancel
+  - `MessageTransport` — low-level transport abstraction for future remote backends
+
+  **Directory** — new interfaces in `dev.jentic.core.directory`:
+  - `AgentRegistry` — `register`, `unregister`, `updateStatus`
+  - `AgentResolver` — `resolveEndpoint(agentId)` → `Optional<AgentEndpoint>`
+  - `AgentDiscovery` — `findById`, `findByCapability`, `findByType`, `findAgents(AgentQuery, PageRequest)`
+  - `AgentPresence` — `heartbeat`, `getStatus`
+  - `AgentDirectory` — composite of all four directory interfaces
+
+  **New value types** in `dev.jentic.core`:
+  - `AgentEndpoint(nodeId, transportType, transportProps)` — transport routing record; `AgentEndpoint.local(nodeId)` factory
+  - `TransportEndpoint(transportType, address, properties)` — low-level transport address record
+  - `Page<T>(content, totalElements, pageNumber, pageSize)` — paginated result record
+  - `PageRequest(page, size)` — pagination parameters; `PageRequest.of(page, size)` and `PageRequest.first(size)` factories
+  - `AgentQuery.all()` — factory matching every registered agent
+  - `AgentQuery.customFilter` deprecated; not evaluated by `InMemoryAgentDirectory` (documented in ADR-020)
+
+  **New exception**: `AgentNotFoundException` in `dev.jentic.core.exceptions` — thrown by `sendTo` when the recipient agent is not registered.
+
+  **`jentic-runtime` — new default implementations**:
+  - `InMemoryMessageDispatcher` — replaces `InMemoryMessageService` as the default dispatcher. Delivers messages via virtual threads. Routes `sendTo` via `AgentResolver`; throws `AgentNotFoundException` for unknown recipients. Emits `message.send` OTel spans.
+  - `InMemoryAgentDirectory` — replaces `LocalAgentDirectory` as the default directory. Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans.
+
+  **`JenticRuntime.Builder`** — new capability setter methods (`messageDispatcher`, `agentRegistry`, `agentResolver`, `agentDiscovery`, `agentPresence`) for per-capability overrides without replacing the entire directory.
+
+  **Spring Boot starter** — new capability beans: `jenticMessageDispatcher`, `jenticAgentDirectory`, `jenticAgentRegistry`, `jenticAgentResolver`, `jenticAgentDiscovery`, `jenticAgentPresence`. Each is `@ConditionalOnMissingBean`, so user-provided implementations always win.
+
+  **Docs**: `docs/messaging.md` and `docs/directory.md` — full API reference with migration tables, Spring Boot wiring, and custom backend extension points.
+
+- **ADR-020 — Core API Refactor for Distributed Backends**: documents the decomposition rationale, backward-compat strategy, removal timeline (0.22.0), and the decision not to evaluate `customFilter` in the paginated `findAgents` path.
+
+### Deprecated
+
+> These APIs will be removed in **0.22.0**. Migrate at your own pace — all deprecated code continues to compile and run unchanged.
+
+- `dev.jentic.core.MessageService` — use `dev.jentic.core.messaging.MessageDispatcher` (and `FilterableSubscriber` for predicate subscriptions).
+- `dev.jentic.core.AgentDirectory` — use `dev.jentic.core.directory.AgentDirectory`.
+- `dev.jentic.runtime.messaging.InMemoryMessageService` — use `dev.jentic.runtime.messaging.InMemoryMessageDispatcher`.
+- `dev.jentic.runtime.directory.LocalAgentDirectory` — use `dev.jentic.runtime.directory.InMemoryAgentDirectory`.
+- `JenticRuntime.getMessageService()` — use `JenticRuntime.getMessageDispatcher()`.
+- `JenticRuntime.Builder.messageService()` — use `Builder.messageDispatcher()`.
+- `JenticRuntime.Builder.agentDirectory()` — use `Builder.agentRegistry()` / `agentResolver()` / `agentDiscovery()` / `agentPresence()`.
+- `AgentDirectory.listAll()` — use `AgentDiscovery.findAgents(AgentQuery.all(), PageRequest.first(n))`.
+- `AgentDiscovery.findAgents(AgentQuery)` (non-paginated) — use `findAgents(AgentQuery, PageRequest)`.
+- `AgentQuery.customFilter` field and builder method — not evaluated by the paginated path; use `AgentQuery` structured fields instead.
+- `AgentDescriptor(8-arg constructor)` — use `AgentDescriptor.builder(agentId)...build()`.
+
+### Migration Guide (0.19.x → 0.20.0)
+
+```java
+// Before (0.19.x)
+MessageService svc = runtime.getMessageService();
+svc.send(msg);
+String id = svc.subscribe("my.topic", handler);
+svc.unsubscribe(id);
+
+// After (0.20.0)
+MessageDispatcher dispatcher = runtime.getMessageDispatcher();
+dispatcher.publish("my.topic", msg);
+Subscription sub = dispatcher.subscribeTopic("my.topic", handler);
+sub.unsubscribe();
+```
+
+```java
+// Before (0.19.x)
+List<AgentDescriptor> all = directory.listAll().join();
+
+// After (0.20.0)
+Page<AgentDescriptor> page = directory
+    .findAgents(AgentQuery.all(), PageRequest.first(100)).join();
+List<AgentDescriptor> all = page.content();
+```
+
 ## [0.19.0] - 2026-04-26
 
 ### Added

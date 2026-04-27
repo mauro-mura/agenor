@@ -3,14 +3,17 @@ package dev.jentic.adapters.a2a;
 import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.MessageHandler;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
+import dev.jentic.core.messaging.MessageDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -21,8 +24,9 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,25 +35,25 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class JenticA2AAdapterTest {
-    
+
     @Mock
-    private MessageService messageService;
-    
+    private MessageDispatcher messageDispatcher;
+
     @Mock
     private AgentDirectory agentDirectory;
-    
+
     private JenticA2AAdapter adapter;
-    
+
     @BeforeEach
     void setUp() {
         adapter = new JenticA2AAdapter(
-            messageService,
+            messageDispatcher,
             agentDirectory,
             "local-agent",
             Duration.ofSeconds(30)
         );
     }
-    
+
     @Test
     void shouldIdentifyInternalAgent() {
         // Given
@@ -73,7 +77,7 @@ class JenticA2AAdapterTest {
         assertThat(adapter.isExternalA2AUrl("internal-agent")).isFalse();
         assertThat(adapter.isExternalA2AUrl(null)).isFalse();
     }
-    
+
     @Test
     void shouldRouteToInternalAgent() throws Exception {
         // Given
@@ -90,8 +94,7 @@ class JenticA2AAdapterTest {
             .header("performative", "INFORM")
             .build();
 
-        when(messageService.sendAndWait(any(Message.class), anyLong()))
-            .thenReturn(CompletableFuture.completedFuture(responseMsg));
+        stubDispatcherToReplyImmediately(responseMsg);
 
         DialogueMessage request = DialogueMessage.builder()
             .conversationId("conv-1")
@@ -107,7 +110,8 @@ class JenticA2AAdapterTest {
         // Then
         assertThat(response.performative()).isEqualTo(Performative.INFORM);
         assertThat(response.content()).isEqualTo("Done");
-        verify(messageService).sendAndWait(any(Message.class), eq(30000L));
+        verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
+        verify(messageDispatcher).sendTo(eq("internal-agent"), any(Message.class));
     }
 
     @Test
@@ -149,8 +153,8 @@ class JenticA2AAdapterTest {
             .receiverId("local-agent")
             .header("performative", "INFORM")
             .build();
-        when(messageService.sendAndWait(any(Message.class), anyLong()))
-            .thenReturn(CompletableFuture.completedFuture(responseMsg));
+
+        stubDispatcherToReplyImmediately(responseMsg);
 
         DialogueMessage request = DialogueMessage.builder()
             .senderId("local-agent")
@@ -162,7 +166,7 @@ class JenticA2AAdapterTest {
         adapter.send(request).get(5, TimeUnit.SECONDS);
 
         // Then - should route internally, not externally
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).sendTo(eq("https://local-agent.com"), any(Message.class));
     }
 
     @Test
@@ -180,7 +184,7 @@ class JenticA2AAdapterTest {
     void shouldProvideExternalClient() {
         assertThat(adapter.getExternalClient()).isNotNull();
     }
-    
+
     // -----------------------------------------------------------------------
     // sendWithStreaming - non-external URL routes to send()
     // -----------------------------------------------------------------------
@@ -200,8 +204,8 @@ class JenticA2AAdapterTest {
                 .header("conversationId", "conv-stream")
                 .header("performative", "INFORM")
                 .build();
-        when(messageService.sendAndWait(any(Message.class), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(responseMsg));
+
+        stubDispatcherToReplyImmediately(responseMsg);
 
         DialogueMessage request = DialogueMessage.builder()
                 .conversationId("conv-stream")
@@ -316,8 +320,8 @@ class JenticA2AAdapterTest {
                 .header("conversationId", "c-1")
                 .header("performative", "AGREE")
                 .build();
-        when(messageService.sendAndWait(any(Message.class), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(responseMsg));
+
+        stubDispatcherToReplyImmediately(responseMsg);
 
         DialogueMessage request = DialogueMessage.builder()
                 .conversationId("c-1")
@@ -331,5 +335,28 @@ class JenticA2AAdapterTest {
 
         // Then
         assertThat(response.performative()).isEqualTo(Performative.AGREE);
+        verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
+        verify(messageDispatcher).sendTo(eq("agent-a"), any(Message.class));
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Stubs the dispatcher to immediately invoke the MessageHandler registered via
+     * subscribeRecipient, simulating synchronous message delivery for test purposes.
+     */
+    private void stubDispatcherToReplyImmediately(Message replyMsg) throws Exception {
+        Subscription mockSub = mock(Subscription.class);
+        Answer<Subscription> triggerHandler = invocation -> {
+            MessageHandler handler = invocation.getArgument(1);
+            handler.handle(replyMsg);
+            return mockSub;
+        };
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenAnswer(triggerHandler);
+        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
     }
 }

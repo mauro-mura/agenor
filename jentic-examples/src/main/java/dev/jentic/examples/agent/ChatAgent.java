@@ -133,13 +133,14 @@ public class ChatAgent extends LLMAgent {
                 })
                 .thenAccept(response -> {
                     // Send response back
-                    getMessageService().send(Message.builder()
+                    var responseMsg = Message.builder()
                             .topic("agent.response")
                             .senderId(getAgentId())
                             .content(response)
                             .header("agentId", getAgentId())
                             .header("conversationTokens", String.valueOf(getConversationTokens()))
-                            .build()).join();
+                            .build();
+                    getMessageDispatcher().publish(responseMsg.topic(), responseMsg).join();
 
                     log.info("Sent response: {} (total tokens: {})",
                             response, getConversationTokens());
@@ -169,11 +170,12 @@ public class ChatAgent extends LLMAgent {
                     log.info("Conversation cleared and reset");
 
                     // Send confirmation
-                    getMessageService().send(Message.builder()
+                    var notifMsg = Message.builder()
                             .topic("agent.notification")
                             .senderId(getAgentId())
                             .content("Conversation history cleared")
-                            .build()).join();
+                            .build();
+                    getMessageDispatcher().publish(notifMsg.topic(), notifMsg).join();
                 })
                 .exceptionally(e -> {
                     log.error("Error clearing conversation", e);
@@ -207,11 +209,12 @@ public class ChatAgent extends LLMAgent {
                     log.info("Summarization complete: {}", summary);
 
                     // Send summary
-                    getMessageService().send(Message.builder()
+                    var summaryMsg = Message.builder()
                             .topic("agent.notification")
                             .senderId(getAgentId())
                             .content("Summarized " + finalCount + " messages: " + summary)
-                            .build()).join();
+                            .build();
+                    getMessageDispatcher().publish(summaryMsg.topic(), summaryMsg).join();
                 })
                 .exceptionally(e -> {
                     log.error("Error summarizing conversation", e);
@@ -235,11 +238,12 @@ public class ChatAgent extends LLMAgent {
                 "defaultStrategy", defaultStrategy.toString()
         );
 
-        getMessageService().send(Message.builder()
+        var statusMsg = Message.builder()
                 .topic("agent.status")
                 .senderId(getAgentId())
                 .content(status)
-                .build()).join();
+                .build();
+        getMessageDispatcher().publish(statusMsg.topic(), statusMsg).join();
     }
 
     /**

@@ -1,7 +1,7 @@
 package dev.jentic.adapters.a2a;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -18,24 +18,25 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Implements A2A SDK AgentExecutor to expose Jentic agents as A2A servers.
  * 
- * <p>Routes incoming A2A requests to internal Jentic agents via MessageService.
+ * <p>Routes incoming A2A requests to internal Jentic agents via MessageDispatcher.
  * Uses the official A2A Java SDK v0.3.2.Final API.
- * 
+ *
  * <p>Usage with CDI/Quarkus:
  * <pre>{@code
  * @ApplicationScoped
  * public class MyAgentExecutorProducer {
  *     @Inject
- *     MessageService messageService;
- *     
+ *     MessageDispatcher messageDispatcher;
+ *
  *     @Produces
  *     public AgentExecutor createExecutor() {
- *         return new JenticAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
+ *         return new JenticAgentExecutor("my-agent", messageDispatcher, Duration.ofMinutes(5));
  *     }
  * }
  * }</pre>
@@ -47,13 +48,19 @@ public class JenticAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(JenticAgentExecutor.class);
     
     private final String internalAgentId;
-    private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final Duration timeout;
     private final DialogueA2AConverter converter;
-    
-    public JenticAgentExecutor(String internalAgentId, MessageService messageService, Duration timeout) {
+
+    /**
+     * @param internalAgentId   the Jentic agent ID to route A2A requests to
+     * @param messageDispatcher the runtime message dispatcher
+     * @param timeout           per-request timeout
+     * @since 0.20.0
+     */
+    public JenticAgentExecutor(String internalAgentId, MessageDispatcher messageDispatcher, Duration timeout) {
         this.internalAgentId = internalAgentId;
-        this.messageService = messageService;
+        this.messageDispatcher = messageDispatcher;
         this.timeout = timeout;
         this.converter = new DialogueA2AConverter();
     }
@@ -91,32 +98,38 @@ public class JenticAgentExecutor implements AgentExecutor {
                 .content(userMessage)
                 .build();
             
-            // Send to internal agent and wait for response
-            Message responseMsg = messageService.sendAndWait(
-                incomingMsg.toMessage(),
-                timeout.toMillis()
-            ).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            
+            // Subscribe for the reply before sending to avoid races; unsubscribe when done
+            CompletableFuture<Message> replyFuture = new CompletableFuture<>();
+            var subscription = messageDispatcher.subscribeRecipient(externalSenderId,
+                    msg -> { replyFuture.complete(msg); return java.util.concurrent.CompletableFuture.completedFuture(null); });
+            Message responseMsg;
+            try {
+                messageDispatcher.sendTo(internalAgentId, incomingMsg.toMessage());
+                responseMsg = replyFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } finally {
+                subscription.unsubscribe();
+            }
+
             // Convert response
             DialogueMessage responseDialogue = DialogueMessage.fromMessage(responseMsg);
-            
+
             // Create response part
-            String responseText = responseDialogue.content() != null 
-                ? responseDialogue.content().toString() 
+            String responseText = responseDialogue.content() != null
+                ? responseDialogue.content().toString()
                 : "";
             TextPart responsePart = new TextPart(responseText, null);
             List<Part<?>> parts = List.of(responsePart);
-            
+
             // Add artifact and complete based on performative
             updater.addArtifact(parts, null, null, null);
-            
+
             if (responseDialogue.performative() == Performative.FAILURE ||
                 responseDialogue.performative() == Performative.REFUSE) {
                 updater.fail();
             } else {
                 updater.complete();
             }
-            
+
             log.info("A2A request completed: taskId={}", taskId);
             
         } catch (java.util.concurrent.TimeoutException e) {
@@ -154,7 +167,7 @@ public class JenticAgentExecutor implements AgentExecutor {
                 .content("Cancelled by A2A client")
                 .build();
             
-            messageService.send(cancelMsg.toMessage());
+            messageDispatcher.sendTo(internalAgentId, cancelMsg.toMessage());
             
             // Update A2A task status
             updater.cancel();

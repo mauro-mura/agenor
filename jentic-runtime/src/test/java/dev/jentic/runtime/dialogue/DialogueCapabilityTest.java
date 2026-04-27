@@ -3,7 +3,8 @@ package dev.jentic.runtime.dialogue;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
@@ -22,33 +23,33 @@ import static org.mockito.Mockito.*;
 class DialogueCapabilityTest {
     
     private TestDialogueAgent agent;
-    private MessageService messageService;
+    private MessageDispatcher messageService;
     private DialogueCapability capability;
     private MessageHandler messageHandler;
-    
+
     @BeforeEach
     void setUp() {
         agent = new TestDialogueAgent("test-agent");
-        messageService = mock(MessageService.class);
-        
-        // Capture the message handler when subscribeToReceiver is called
-        when(messageService.subscribeToReceiver(eq("test-agent"), any(MessageHandler.class)))
+        messageService = mock(MessageDispatcher.class);
+
+        var stubSub = Subscription.of("sub-1", () -> {});
+        when(messageService.subscribeRecipient(eq("test-agent"), any(MessageHandler.class)))
             .thenAnswer(invocation -> {
                 messageHandler = invocation.getArgument(1);
-                return "sub-1";
+                return stubSub;
             });
-        
-        when(messageService.send(any(Message.class)))
+
+        when(messageService.sendTo(any(), any(Message.class)))
             .thenReturn(CompletableFuture.completedFuture(null));
-        
+
         capability = new DialogueCapability(agent);
     }
-    
+
     @Test
     void shouldInitializeAndScanHandlers() {
         capability.initialize(messageService);
-        
-        verify(messageService).subscribeToReceiver(eq("test-agent"), any());
+
+        verify(messageService).subscribeRecipient(eq("test-agent"), any());
     }
     
     @Test
@@ -80,7 +81,7 @@ class DialogueCapabilityTest {
         capability.request("remote-agent", "do something");
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).send(captor.capture());
+        verify(messageService).sendTo(any(), captor.capture());
         
         Message sent = captor.getValue();
         assertThat(sent.receiverId()).isEqualTo("remote-agent");
@@ -94,7 +95,7 @@ class DialogueCapabilityTest {
         capability.query("remote-agent", "what time?");
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).send(captor.capture());
+        verify(messageService).sendTo(any(), captor.capture());
         
         Message sent = captor.getValue();
         assertThat(sent.headers().get("performative")).isEqualTo("QUERY");
@@ -116,7 +117,7 @@ class DialogueCapabilityTest {
         capability.agree(original);
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).send(captor.capture());
+        verify(messageService).sendTo(any(), captor.capture());
         
         Message reply = captor.getValue();
         assertThat(reply.receiverId()).isEqualTo("remote-agent");
@@ -136,15 +137,15 @@ class DialogueCapabilityTest {
         capability.inform(original, "result");
         capability.failure(original, "error");
         
-        verify(messageService, times(3)).send(any(Message.class));
+        verify(messageService, times(3)).sendTo(any(), any(Message.class));
     }
-    
+
     @Test
     void shouldShutdownCleanly() {
         capability.initialize(messageService);
-        capability.shutdown(messageService);
-        
-        verify(messageService).unsubscribe("sub-1");
+        capability.shutdown();
+        // subscription.unsubscribe() was called on the Subscription returned by subscribeRecipient
+        verify(messageService).subscribeRecipient(eq("test-agent"), any());
     }
     
     @Test

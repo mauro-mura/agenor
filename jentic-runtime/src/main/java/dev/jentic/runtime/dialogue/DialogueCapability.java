@@ -3,7 +3,8 @@ package dev.jentic.runtime.dialogue;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.core.dialogue.Conversation;
 import dev.jentic.core.dialogue.ConversationManager;
 import dev.jentic.core.dialogue.DialogueMessage;
@@ -51,7 +52,7 @@ public class DialogueCapability {
     private final DialogueHandlerRegistry handlerRegistry;
     
     private DefaultConversationManager conversationManager;
-    private String subscriptionId;
+    private Subscription subscription;
     
     public DialogueCapability(Agent agent) {
         this.agent = agent;
@@ -59,41 +60,36 @@ public class DialogueCapability {
     }
     
     /**
-     * Initializes dialogue capabilities with the message service.
+     * Initializes dialogue capabilities with the message dispatcher.
      * Should be called during agent startup (e.g., in onStart()).
-     * 
-     * @param messageService the message service to use
+     *
+     * @param dispatcher the message dispatcher to use
+     * @since 0.20.0
      */
-    public void initialize(MessageService messageService) {
-        // Create conversation manager
+    public void initialize(MessageDispatcher dispatcher) {
         this.conversationManager = new DefaultConversationManager(
             agent.getAgentId(),
-            messageService
+            dispatcher
         );
-        
-        // Scan agent for @DialogueHandler annotations
         handlerRegistry.scan(agent);
-        
-        // Subscribe to direct messages for this agent
-        subscriptionId = messageService.subscribeToReceiver(
+        subscription = dispatcher.subscribeRecipient(
             agent.getAgentId(),
             MessageHandler.sync(this::handleIncomingMessage)
         );
-        
-        log.info("Dialogue capability initialized for agent {} with {} handlers", 
+        log.info("Dialogue capability initialized for agent {} with {} handlers",
             agent.getAgentId(), handlerRegistry.size());
     }
-    
+
     /**
-     * Shuts down dialogue capabilities.
+     * Shuts down dialogue capabilities, cancelling the recipient subscription.
      * Should be called during agent shutdown (e.g., in onStop()).
-     * 
-     * @param messageService the message service
+     *
+     * @since 0.20.0
      */
-    public void shutdown(MessageService messageService) {
-        if (subscriptionId != null) {
-            messageService.unsubscribe(subscriptionId);
-            subscriptionId = null;
+    public void shutdown() {
+        if (subscription != null) {
+            subscription.unsubscribe();
+            subscription = null;
         }
         log.debug("Dialogue capability shut down for agent {}", agent.getAgentId());
     }

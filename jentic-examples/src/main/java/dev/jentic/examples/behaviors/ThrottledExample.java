@@ -59,6 +59,6 @@ class APICallerAgent extends BaseAgent {
             .content("API call successful")
             .build();
         
-        messageService.send(result);
+        getMessageDispatcher().publish(result.topic(), result);
     }
 }

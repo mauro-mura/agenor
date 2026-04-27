@@ -60,7 +60,7 @@ public class LLMDirectMessagingExample {
             .content(Map.of("topic", researchTopic, "priority", "high"))
             .build();
 
-        runtime.getMessageService().send(request);
+        runtime.getMessageDispatcher().sendTo(request.receiverId(), request);
 
         Thread.sleep(60000);
 
@@ -142,21 +142,24 @@ public class LLMDirectMessagingExample {
         }
 
         private void delegateResearch(ResearchContext ctx) {
-            messageService.send(Message.builder()
+            var techMsg = Message.builder()
                 .topic("research.task.technical").senderId(getAgentId())
                 .receiverId("tech-researcher")
                 .content(Map.of("requestId", ctx.requestId, "topic", ctx.topic, "plan", ctx.plan))
-                .build());
-            messageService.send(Message.builder()
+                .build();
+            getMessageDispatcher().sendTo(techMsg.receiverId(), techMsg);
+            var marketMsg = Message.builder()
                 .topic("research.task.market").senderId(getAgentId())
                 .receiverId("market-researcher")
                 .content(Map.of("requestId", ctx.requestId, "topic", ctx.topic, "plan", ctx.plan))
-                .build());
-            messageService.send(Message.builder()
+                .build();
+            getMessageDispatcher().sendTo(marketMsg.receiverId(), marketMsg);
+            var compMsg = Message.builder()
                 .topic("research.task.competitor").senderId(getAgentId())
                 .receiverId("competitor-researcher")
                 .content(Map.of("requestId", ctx.requestId, "topic", ctx.topic, "plan", ctx.plan))
-                .build());
+                .build();
+            getMessageDispatcher().sendTo(compMsg.receiverId(), compMsg);
             log.info("🚀 Research tasks delegated to all specialists");
         }
 
@@ -280,11 +283,12 @@ public class LLMDirectMessagingExample {
                 content.put("requestId", requestId);
                 content.put("findings", response.content());
 
-                messageService.send(Message.builder()
+                var techReplyMsg = Message.builder()
                     .topic("research.findings.technical")
                     .senderId(getAgentId()).receiverId(message.senderId())
                     .content(content).correlationId(message.id())
-                    .build());
+                    .build();
+                getMessageDispatcher().sendTo(techReplyMsg.receiverId(), techReplyMsg);
             }).exceptionally(ex -> {
                 log.error("❌ Error in technical analysis", ex);
                 return null;
@@ -349,22 +353,24 @@ public class LLMDirectMessagingExample {
                 }
                 log.info("✅ Market analysis complete");
 
-                messageService.send(Message.builder()
+                var marketReplyMsg = Message.builder()
                     .topic("research.findings.market")
                     .senderId(getAgentId()).receiverId(message.senderId())
                     .content(Map.of("requestId", requestId, "findings", findings))
                     .correlationId(message.id())
-                    .build());
+                    .build();
+                getMessageDispatcher().sendTo(marketReplyMsg.receiverId(), marketReplyMsg);
 
             }).exceptionally(ex -> {
                 log.error("❌ Error in market analysis", ex);
-                messageService.send(Message.builder()
+                var marketErrMsg = Message.builder()
                     .topic("research.findings.market")
                     .senderId(getAgentId()).receiverId(message.senderId())
                     .content(Map.of("requestId", requestId,
                         "findings", "Error during analysis: " + ex.getMessage(), "error", true))
                     .correlationId(message.id())
-                    .build());
+                    .build();
+                getMessageDispatcher().sendTo(marketErrMsg.receiverId(), marketErrMsg);
                 return null;
             });
         }
@@ -427,22 +433,24 @@ public class LLMDirectMessagingExample {
                 }
                 log.info("✅ Competitive analysis complete");
 
-                messageService.send(Message.builder()
+                var compReplyMsg = Message.builder()
                     .topic("research.findings.competitor")
                     .senderId(getAgentId()).receiverId(message.senderId())
                     .content(Map.of("requestId", requestId, "findings", findings))
                     .correlationId(message.id())
-                    .build());
+                    .build();
+                getMessageDispatcher().sendTo(compReplyMsg.receiverId(), compReplyMsg);
 
             }).exceptionally(ex -> {
                 log.error("❌ Error in competitor analysis", ex);
-                messageService.send(Message.builder()
+                var compErrMsg = Message.builder()
                     .topic("research.findings.competitor")
                     .senderId(getAgentId()).receiverId(message.senderId())
                     .content(Map.of("requestId", requestId,
                         "findings", "Error during analysis: " + ex.getMessage(), "error", true))
                     .correlationId(message.id())
-                    .build());
+                    .build();
+                getMessageDispatcher().sendTo(compErrMsg.receiverId(), compErrMsg);
                 return null;
             });
         }

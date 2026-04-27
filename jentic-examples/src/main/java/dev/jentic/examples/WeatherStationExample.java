@@ -98,7 +98,7 @@ public class WeatherStationExample {
                 .build();
             
             log.info("Collected: {}", data);
-            messageService.send(message);
+            getMessageDispatcher().publish(message.topic(), message);
         }
         
         @Override
@@ -148,7 +148,8 @@ public class WeatherStationExample {
             }
             
             log.debug("Processed weather data for {}", rawData.location());
-            messageService.send(processedMessage.build());
+            var built = processedMessage.build();
+            getMessageDispatcher().publish(built.topic(), built);
         }
         
         @Override

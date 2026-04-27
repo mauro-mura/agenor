@@ -50,14 +50,14 @@ public class SecurityAgent extends BaseAgent implements ConsultableAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
-        messageService.subscribe("support.security", MessageHandler.sync(this::handleSecurityQuery));
+        dialogue.initialize(getMessageDispatcher());
+        getMessageDispatcher().subscribeTopic("support.security", MessageHandler.sync(this::handleSecurityQuery));
         log.info("Security Agent started with dialogue support");
     }
-    
+
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
         log.info("Security Agent stopped");
     }
     
@@ -441,7 +441,7 @@ public class SecurityAgent extends BaseAgent implements ConsultableAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
     }
     
     private SupportQuery extractQuery(Message message) {

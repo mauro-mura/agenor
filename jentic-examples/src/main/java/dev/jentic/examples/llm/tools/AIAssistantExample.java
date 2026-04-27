@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import dev.jentic.adapters.llm.LLMProviderFactory;
 import dev.jentic.core.Message;
 import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.JenticRuntime;
 
 /**
@@ -136,7 +137,7 @@ public class AIAssistantExample {
         String correlationId = UUID.randomUUID().toString();
 
         // Listen for response
-        runtime.getMessageService().subscribe("ai.chat.response", message -> {
+        runtime.getMessageDispatcher().subscribeTopic("ai.chat.response", message -> {
             if (correlationId.equals(message.correlationId())) {
                 response.append(message.getContent(String.class));
                 latch.countDown();
@@ -145,7 +146,7 @@ public class AIAssistantExample {
         });
 
         // Listen for errors
-        runtime.getMessageService().subscribe("ai.chat.error", message -> {
+        runtime.getMessageDispatcher().subscribeTopic("ai.chat.error", message -> {
             if (correlationId.equals(message.correlationId())) {
                 response.append("Error: ").append(message.getContent(String.class));
                 latch.countDown();
@@ -161,7 +162,7 @@ public class AIAssistantExample {
             .content(userInput)
             .build();
 
-        runtime.getMessageService().send(chatRequest);
+        runtime.getMessageDispatcher().publish(chatRequest.topic(), chatRequest);
 
         // Wait for response (timeout after 30 seconds)
         boolean received = latch.await(30, TimeUnit.SECONDS);
@@ -232,7 +233,7 @@ public class AIAssistantExample {
         String correlationId = UUID.randomUUID().toString();
 
         // Listen for tool result
-        runtime.getMessageService().subscribe("ai.tool.result", message -> {
+        runtime.getMessageDispatcher().subscribeTopic("ai.tool.result", message -> {
             if (correlationId.equals(message.correlationId())) {
                 AIAssistantAgent.ToolExecutionResponse response =
                     message.getContent(AIAssistantAgent.ToolExecutionResponse.class);
@@ -258,7 +259,7 @@ public class AIAssistantExample {
             .content(request)
             .build();
 
-        runtime.getMessageService().send(toolMessage);
+        runtime.getMessageDispatcher().publish(toolMessage.topic(), toolMessage);
 
         // Wait for result
         boolean received = latch.await(10, TimeUnit.SECONDS);

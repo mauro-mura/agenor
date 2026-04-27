@@ -3,6 +3,7 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.examples.support.context.ConversationContext;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.context.SentimentAnalyzer;
@@ -56,9 +57,9 @@ public class RouterAgent extends BaseAgent {
     // Track query start times for response time calculation
     private final Map<String, QueryTracker> pendingQueries = new ConcurrentHashMap<>();
 
-    // Store subscription IDs
-    private String querySubscriptionId;
-    private String responseSubscriptionId;
+    // Store subscriptions
+    private Subscription querySubscription;
+    private Subscription responseSubscription;
 
     // Keyword mappings for intent detection
     private static final Map<SupportIntent, Set<String>> INTENT_KEYWORDS = Map.of(
@@ -112,21 +113,21 @@ public class RouterAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Subscribe to incoming support requests
-        querySubscriptionId = messageService.subscribe("support.query", MessageHandler.sync(this::handleQuery));
-        
+        querySubscription = getMessageDispatcher().subscribeTopic("support.query", MessageHandler.sync(this::handleQuery));
+
         // Subscribe to responses for metrics tracking
-        responseSubscriptionId = messageService.subscribe("support.response", MessageHandler.sync(this::trackResponse));
-        
+        responseSubscription = getMessageDispatcher().subscribeTopic("support.response", MessageHandler.sync(this::trackResponse));
+
         log.info("Router Agent started - listening on support.query and support.response");
     }
-    
+
     @Override
     protected void onStop() {
-        if (querySubscriptionId != null) {
-            messageService.unsubscribe(querySubscriptionId);
+        if (querySubscription != null) {
+            querySubscription.unsubscribe();
         }
-        if (responseSubscriptionId != null) {
-            messageService.unsubscribe(responseSubscriptionId);
+        if (responseSubscription != null) {
+            responseSubscription.unsubscribe();
         }
         log.info("Router Agent stopped");
     }
@@ -220,7 +221,7 @@ public class RouterAgent extends BaseAgent {
             .header("language", detectedLanguage.getCode())
             .build();
         
-        messageService.send(routedMessage);
+        getMessageDispatcher().publish(routedMessage.topic(), routedMessage);
         log.debug("Routed to topic: {}", targetTopic);
     }
     
@@ -288,9 +289,9 @@ public class RouterAgent extends BaseAgent {
             .content(response)
             .build();
         
-        messageService.send(responseMsg);
+        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
     }
-    
+
     /**
      * Tracks pending query info for response time calculation.
      */
@@ -328,9 +329,9 @@ public class RouterAgent extends BaseAgent {
             .header("type", "escalation-suggestion")
             .build();
         
-        messageService.send(suggestionMsg);
+        getMessageDispatcher().publish(suggestionMsg.topic(), suggestionMsg);
     }
-    
+
     /**
      * Classifies the intent of a query using keyword matching.
      */

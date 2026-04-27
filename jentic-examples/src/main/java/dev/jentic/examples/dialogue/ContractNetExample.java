@@ -91,14 +91,14 @@ public class ContractNetExample {
         @Override
         protected void onStart() {
             super.onStart();
-            dialogue.initialize(messageService);
+            dialogue.initialize(getMessageDispatcher());
             System.out.println("[Manager] Started");
         }
 
         @Override
         protected void onStop() {
             super.onStop();
-            dialogue.shutdown(messageService);
+            dialogue.shutdown();
         }
         
         CompletableFuture<String> allocateTask(Task task, List<String> workerIds) {
@@ -166,14 +166,14 @@ public class ContractNetExample {
         @Override
         protected void onStart() {
             super.onStart();
-            dialogue.initialize(messageService);
+            dialogue.initialize(getMessageDispatcher());
             System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
         }
 
         @Override
         protected void onStop() {
             super.onStop();
-            dialogue.shutdown(messageService);
+            dialogue.shutdown();
         }
 
         @DialogueHandler(performatives = Performative.CFP)

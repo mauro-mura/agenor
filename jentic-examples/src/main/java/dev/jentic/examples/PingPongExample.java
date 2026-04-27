@@ -1,6 +1,8 @@
 package dev.jentic.examples;
 
+import dev.jentic.core.AgentQuery;
 import dev.jentic.core.Message;
+import dev.jentic.core.PageRequest;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
@@ -14,6 +16,11 @@ import static dev.jentic.core.BehaviorType.CYCLIC;
 /**
  * Example demonstrating two agents communicating via messages.
  * PingAgent sends periodic ping messages, PongAgent responds with pong messages.
+ *
+ * <p><strong>Migration note (0.20.0):</strong> this example intentionally uses the deprecated
+ * {@link dev.jentic.core.MessageService} API to serve as a migration reference.
+ * See {@link dev.jentic.examples.agent.ChatAgentExample} for the updated
+ * {@link dev.jentic.core.messaging.MessageDispatcher} API.
  */
 public class PingPongExample {
 
@@ -33,11 +40,13 @@ public class PingPongExample {
         runtime.getAgents().forEach(agent ->
             log.info("  - {} ({})", agent.getAgentName(), agent.getAgentId()));
 
-        runtime.getAgentDirectory().listAll().thenAccept(agents -> {
-            log.info("Agents in directory: {}", agents.size());
-            agents.forEach(descriptor ->
-                log.info("  - {} [{}]", descriptor.agentId(), descriptor.status()));
-        }).join();
+        runtime.getAgentDirectory()
+                .findAgents(AgentQuery.all(), PageRequest.first(100))
+                .thenAccept(page -> {
+                    log.info("Agents in directory: {}", page.totalElements());
+                    page.content().forEach(descriptor ->
+                        log.info("  - {} [{}]", descriptor.agentId(), descriptor.status()));
+                }).join();
 
         Thread.sleep(20_000);
 

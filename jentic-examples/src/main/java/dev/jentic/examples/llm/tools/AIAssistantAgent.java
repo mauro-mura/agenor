@@ -71,11 +71,12 @@ public class AIAssistantAgent extends BaseAgent {
         log.info("AI Assistant Agent started with {} registered tools", toolRegistry.getToolCount());
         
         // Send startup message
-        messageService.send(Message.builder()
+        var startMsg = Message.builder()
             .topic("ai.assistant.started")
             .senderId(getAgentId())
             .content("AI Assistant is ready to help!")
-            .build());
+            .build();
+        getMessageDispatcher().publish(startMsg.topic(), startMsg);
     }
     
     @Override
@@ -83,11 +84,12 @@ public class AIAssistantAgent extends BaseAgent {
         log.info("AI Assistant Agent stopped");
         
         // Send shutdown message
-        messageService.send(Message.builder()
-            .topic("ai.assistant.stopped") 
+        var stopMsg = Message.builder()
+            .topic("ai.assistant.stopped")
             .senderId(getAgentId())
             .content("AI Assistant is shutting down")
-            .build());
+            .build();
+        getMessageDispatcher().publish(stopMsg.topic(), stopMsg);
     }
     
     /**
@@ -113,23 +115,23 @@ public class AIAssistantAgent extends BaseAgent {
                         .content(response)
                         .build();
                     
-                    messageService.send(responseMessage);
-                    
+                    getMessageDispatcher().publish(responseMessage.topic(), responseMessage);
+
                     log.info("Chat response sent for request: {}", correlationId);
                 })
                 .exceptionally(throwable -> {
                     log.error("Error processing chat request: {}", correlationId, throwable);
-                    
+
                     // Send error response
                     Message errorMessage = Message.builder()
                         .topic("ai.chat.error")
-                        .correlationId(correlationId) 
+                        .correlationId(correlationId)
                         .senderId(getAgentId())
-                        .content("I apologize, but I encountered an error processing your request: " + 
+                        .content("I apologize, but I encountered an error processing your request: " +
                                 throwable.getMessage())
                         .build();
-                    
-                    messageService.send(errorMessage);
+
+                    getMessageDispatcher().publish(errorMessage.topic(), errorMessage);
                     return null;
                 });
                 
@@ -167,7 +169,7 @@ public class AIAssistantAgent extends BaseAgent {
                         .content(response)
                         .build();
                     
-                    messageService.send(responseMessage);
+                    getMessageDispatcher().publish(responseMessage.topic(), responseMessage);
                 })
                 .exceptionally(throwable -> {
                     ToolExecutionResponse response = new ToolExecutionResponse(
@@ -176,15 +178,15 @@ public class AIAssistantAgent extends BaseAgent {
                         false,
                         throwable.getMessage()
                     );
-                    
+
                     Message errorMessage = Message.builder()
                         .topic("ai.tool.result")
                         .correlationId(correlationId)
-                        .senderId(getAgentId()) 
+                        .senderId(getAgentId())
                         .content(response)
                         .build();
-                    
-                    messageService.send(errorMessage);
+
+                    getMessageDispatcher().publish(errorMessage.topic(), errorMessage);
                     return null;
                 });
                 

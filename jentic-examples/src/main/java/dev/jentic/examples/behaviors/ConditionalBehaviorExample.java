@@ -96,7 +96,7 @@ class ResourceAwareAgent extends BaseAgent {
                 .content("Task completed at low system load")
                 .build();
 
-        messageService.send(result);
+        getMessageDispatcher().publish(result.topic(), result);
     }
 }
 
@@ -133,7 +133,7 @@ class BusinessHoursAgent extends BaseAgent {
                 .content("Business notification sent during working hours")
                 .build();
 
-        messageService.send(notification);
+        getMessageDispatcher().publish(notification.topic(), notification);
     }
 }
 

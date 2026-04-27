@@ -2,7 +2,7 @@ package dev.jentic.examples.support.a2a;
 
 import dev.jentic.adapters.a2a.A2AAdapterConfig;
 import dev.jentic.adapters.a2a.JenticAgentExecutor;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCard;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import java.time.Duration;
  * public class SupportAgentProducer {
  *     
  *     {@literal @}Inject
- *     MessageService messageService;
+ *     MessageDispatcher messageService;
  *     
  *     {@literal @}Produces
  *     {@literal @}PublicAgentCard
@@ -43,7 +43,7 @@ import java.time.Duration;
  * <pre>
  * // Get executor for custom server integration
  * AgentExecutor executor = SupportA2AServer.createExecutor(
- *     runtime.getMessageService(),
+ *     runtime.getMessageDispatcher(),
  *     Duration.ofMinutes(2)
  * );
  * 
@@ -83,7 +83,7 @@ public final class SupportA2AServer {
      * @param messageService the runtime's message service
      * @return executor ready for A2A server registration
      */
-    public static AgentExecutor createExecutor(MessageService messageService) {
+    public static AgentExecutor createExecutor(MessageDispatcher messageService) {
         return createExecutor(messageService, DEFAULT_TIMEOUT);
     }
     
@@ -94,7 +94,7 @@ public final class SupportA2AServer {
      * @param timeout request timeout
      * @return executor ready for A2A server registration
      */
-    public static AgentExecutor createExecutor(MessageService messageService, Duration timeout) {
+    public static AgentExecutor createExecutor(MessageDispatcher messageService, Duration timeout) {
         log.info("Creating A2A executor routing to: {}", DEFAULT_ROUTER_AGENT);
         return new JenticAgentExecutor(DEFAULT_ROUTER_AGENT, messageService, timeout);
     }
@@ -107,7 +107,7 @@ public final class SupportA2AServer {
      * @param timeout request timeout
      * @return executor ready for A2A server registration
      */
-    public static AgentExecutor createExecutor(MessageService messageService, 
+    public static AgentExecutor createExecutor(MessageDispatcher messageService, 
                                                 String targetAgentId, 
                                                 Duration timeout) {
         log.info("Creating A2A executor routing to: {}", targetAgentId);

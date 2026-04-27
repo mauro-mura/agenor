@@ -31,6 +31,11 @@ import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.JenticConfiguration;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.directory.AgentDiscovery;
+import dev.jentic.core.directory.AgentPresence;
+import dev.jentic.core.directory.AgentRegistry;
+import dev.jentic.core.directory.AgentResolver;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.config.ConfigurationLoader;
 import dev.jentic.core.config.ConfigurationException;
 import dev.jentic.core.llm.LLMMemoryAware;
@@ -40,6 +45,7 @@ import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.agent.LLMAgent;
 import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
 import dev.jentic.runtime.config.DefaultConfigurationLoader;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
@@ -48,6 +54,7 @@ import dev.jentic.runtime.guardrail.GuardrailAnnotationProcessor;
 import dev.jentic.runtime.lifecycle.LifecycleListener;
 import dev.jentic.runtime.lifecycle.LifecycleManager;
 import dev.jentic.runtime.memory.llm.DefaultLLMMemoryManager;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 
@@ -61,6 +68,7 @@ public class JenticRuntime {
 
     private final JenticConfiguration configuration;
     private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
     private final MemoryStore memoryStore;
@@ -94,10 +102,32 @@ public class JenticRuntime {
 
         // Initialize services
         this.telemetry = builder.telemetry != null ? builder.telemetry : JenticTelemetry.noop();
-        this.messageService = builder.messageService != null ?
-                builder.messageService : new InMemoryMessageService();
-        this.agentDirectory = builder.agentDirectory != null ?
-                builder.agentDirectory : new LocalAgentDirectory();
+
+        // Directory: prefer new InMemoryAgentDirectory; fall back to builder-provided instances
+        InMemoryAgentDirectory defaultDir = new InMemoryAgentDirectory(
+                java.util.UUID.randomUUID().toString(), this.telemetry);
+        this.agentDirectory = builder.agentDirectory != null
+                ? builder.agentDirectory
+                : defaultDir;
+
+        // Dispatcher: prefer explicitly provided dispatcher; default to InMemoryMessageDispatcher
+        // wired against the directory (which also implements AgentResolver)
+        AgentResolver resolverForDispatcher = (this.agentDirectory instanceof AgentResolver ar)
+                ? ar : defaultDir;
+        this.messageDispatcher = builder.messageDispatcher != null
+                ? builder.messageDispatcher
+                : new InMemoryMessageDispatcher(resolverForDispatcher, this.telemetry);
+
+        // Legacy MessageService field: use builder value, or wrap the dispatcher if it implements
+        // MessageService (InMemoryMessageService does), otherwise fall back to InMemoryMessageService
+        if (builder.messageService != null) {
+            this.messageService = builder.messageService;
+        } else if (this.messageDispatcher instanceof MessageService ms) {
+            this.messageService = ms;
+        } else {
+            // Deprecated fallback: create InMemoryMessageService so legacy code still works
+            this.messageService = new InMemoryMessageService();
+        }
         this.behaviorScheduler = builder.behaviorScheduler != null ?
                 builder.behaviorScheduler : new SimpleBehaviorScheduler(4, this.telemetry);
         this.memoryStore = builder.memoryStore; // optional
@@ -327,8 +357,23 @@ public class JenticRuntime {
     }
 
     /**
-     * Get the message service
+     * Returns the {@link MessageDispatcher} for this runtime.
+     *
+     * <p>Prefer this over {@link #getMessageService()} for new code.
+     *
+     * @return the message dispatcher; never null
+     * @since 0.20.0
      */
+    public MessageDispatcher getMessageDispatcher() {
+        return messageDispatcher;
+    }
+
+    /**
+     * Returns the legacy {@link MessageService}.
+     *
+     * @deprecated since 0.20.0. Use {@link #getMessageDispatcher()}.
+     */
+    @Deprecated(since = "0.20.0", forRemoval = true)
     public MessageService getMessageService() {
         return messageService;
     }
@@ -611,10 +656,18 @@ public class JenticRuntime {
         return new Builder();
     }
 
+    @SuppressWarnings("deprecation")
     public static class Builder {
         private JenticConfiguration configuration;
+        // Legacy (deprecated) composite setters
         private MessageService messageService;
         private AgentDirectory agentDirectory;
+        // New per-capability setters
+        private MessageDispatcher messageDispatcher;
+        private AgentRegistry agentRegistry;
+        private AgentResolver agentResolver;
+        private AgentDiscovery agentDiscovery;
+        private AgentPresence agentPresence;
         private BehaviorScheduler behaviorScheduler;
         private MemoryStore memoryStore;
         private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
@@ -683,11 +736,91 @@ public class JenticRuntime {
             return this;
         }
 
+        /**
+         * Sets the message dispatcher.
+         *
+         * @param dispatcher the dispatcher to use; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder messageDispatcher(MessageDispatcher dispatcher) {
+            this.messageDispatcher = dispatcher;
+            return this;
+        }
+
+        /**
+         * Sets the agent registry capability.
+         *
+         * <p>When individual capability setters are used, the runtime assembles a composite
+         * directory from all provided capabilities.
+         *
+         * @param registry the registry implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentRegistry(AgentRegistry registry) {
+            this.agentRegistry = registry;
+            return this;
+        }
+
+        /**
+         * Sets the agent resolver capability.
+         *
+         * @param resolver the resolver implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentResolver(AgentResolver resolver) {
+            this.agentResolver = resolver;
+            return this;
+        }
+
+        /**
+         * Sets the agent discovery capability.
+         *
+         * @param discovery the discovery implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentDiscovery(AgentDiscovery discovery) {
+            this.agentDiscovery = discovery;
+            return this;
+        }
+
+        /**
+         * Sets the agent presence capability.
+         *
+         * @param presence the presence implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentPresence(AgentPresence presence) {
+            this.agentPresence = presence;
+            return this;
+        }
+
+        /**
+         * Sets the composite legacy message service.
+         *
+         * @param messageService the message service; must not be null
+         * @return this builder
+         * @deprecated since 0.20.0. Use {@link #messageDispatcher(MessageDispatcher)}.
+         */
+        @Deprecated(since = "0.20.0", forRemoval = true)
         public Builder messageService(MessageService messageService) {
             this.messageService = messageService;
             return this;
         }
 
+        /**
+         * Sets the composite legacy agent directory.
+         *
+         * @param agentDirectory the directory; must not be null
+         * @return this builder
+         * @deprecated since 0.20.0. Use per-capability setters such as
+         *     {@link #agentRegistry}, {@link #agentResolver}, etc.
+         */
+        @Deprecated(since = "0.20.0", forRemoval = true)
         public Builder agentDirectory(AgentDirectory agentDirectory) {
             this.agentDirectory = agentDirectory;
             return this;

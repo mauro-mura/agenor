@@ -18,9 +18,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * In-memory implementation of MessageService.
- * Uses virtual threads for message delivery.
+ * In-memory implementation of the deprecated {@link dev.jentic.core.MessageService}.
+ *
+ * @deprecated since 0.20.0. Use {@link InMemoryMessageDispatcher} instead.
  */
+@Deprecated(since = "0.20.0", forRemoval = true)
+@SuppressWarnings("deprecation")
 public class InMemoryMessageService implements MessageService {
     
     private static final Logger log = LoggerFactory.getLogger(InMemoryMessageService.class);

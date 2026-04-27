@@ -1,6 +1,12 @@
 package dev.jentic.autoconfigure;
 
+import dev.jentic.core.AgentDirectory;
+import dev.jentic.core.directory.AgentDiscovery;
+import dev.jentic.core.directory.AgentPresence;
+import dev.jentic.core.directory.AgentRegistry;
+import dev.jentic.core.directory.AgentResolver;
 import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
@@ -46,8 +52,17 @@ public class JenticAutoConfiguration {
      * {@link JenticRuntime.Builder#service}. If no provider bean is present (the default when
      * {@code jentic.llm.provider=none}), the runtime starts without LLM support.
      *
+     * <p>The runtime builds its own default messaging and directory components internally
+     * ({@code InMemoryMessageDispatcher} and {@code InMemoryAgentDirectory}). These are
+     * exposed as individual capability beans by the methods below so that application code
+     * can inject the narrowest interface it needs. To replace a capability with a custom
+     * implementation, declare your own {@link JenticRuntime} bean and configure it via
+     * {@link JenticRuntime.Builder} directly — user-declared beans always win due to
+     * {@code @ConditionalOnMissingBean}.
+     *
      * <p>Lifecycle is handled separately by {@link #jenticRuntimeLifecycle}.
      */
+    @SuppressWarnings("deprecation")
     @Bean
     @ConditionalOnMissingBean
     public JenticRuntime jenticRuntime(JenticProperties props,
@@ -60,11 +75,87 @@ public class JenticAutoConfiguration {
             log.debug("Wiring LLMProvider '{}' into JenticRuntime", provider.getProviderName());
             builder.service(LLMProvider.class, provider);
         });
-
         builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
 
         log.debug("Building JenticRuntime: runtime.name={}", props.runtime().name());
         return builder.build();
+    }
+
+    // -------------------------------------------------------------------------
+    // Capability beans derived from JenticRuntime
+    // -------------------------------------------------------------------------
+
+    /**
+     * Exposes the {@link MessageDispatcher} bean from the runtime.
+     *
+     * <p>Consumers that want to override messaging should declare their own
+     * {@link MessageDispatcher} bean — the runtime will pick it up via the
+     * {@link ObjectProvider} in {@link #jenticRuntime}.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MessageDispatcher jenticMessageDispatcher(JenticRuntime jenticRuntime) {
+        return jenticRuntime.getMessageDispatcher();
+    }
+
+    /**
+     * Exposes the {@link AgentDirectory} bean from the runtime.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentDirectory.class)
+    public AgentDirectory jenticAgentDirectory(JenticRuntime jenticRuntime) {
+        return jenticRuntime.getAgentDirectory();
+    }
+
+    /**
+     * Exposes the {@link AgentRegistry} capability bean.
+     *
+     * <p>Consumers that want a custom registry should declare their own
+     * {@link AgentRegistry} bean and it will be wired into the runtime automatically.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentRegistry jenticAgentRegistry(AgentDirectory agentDirectory) {
+        return agentDirectory;
+    }
+
+    /**
+     * Exposes the {@link AgentResolver} capability bean.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentResolver jenticAgentResolver(AgentDirectory agentDirectory) {
+        return agentDirectory;
+    }
+
+    /**
+     * Exposes the {@link AgentDiscovery} capability bean.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentDiscovery jenticAgentDiscovery(AgentDirectory agentDirectory) {
+        return agentDirectory;
+    }
+
+    /**
+     * Exposes the {@link AgentPresence} capability bean.
+     *
+     * @since 0.20.0
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentPresence jenticAgentPresence(AgentDirectory agentDirectory) {
+        return agentDirectory;
     }
 
     /**

@@ -4,6 +4,8 @@ import java.util.concurrent.CompletableFuture;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.messaging.FilterableSubscriber;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.filter.TopicFilter;
 
@@ -19,7 +21,7 @@ public class AlertHandlerAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Subscribe to alert topics
-        messageService.subscribe(TopicFilter.wildcard("sensor.alert.*"), message -> {
+        ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(TopicFilter.wildcard("sensor.alert.*"), message -> {
         	handleAlert(message);
         	return CompletableFuture.completedFuture(null);
         });
@@ -31,11 +33,12 @@ public class AlertHandlerAgent extends BaseAgent {
         log.warn("[ALERT][{}] {}: {}", severity, message.topic(), message.content());
 
         // Acknowledge the alert
-        messageService.send(Message.builder()
+        var ackMsg = Message.builder()
                 .topic("notification.processed")
                 .senderId(getAgentId())
                 .content("Processed: " + message.topic())
                 .correlationId(message.id())
-                .build());
+                .build();
+        getMessageDispatcher().publish(ackMsg.topic(), ackMsg);
     }
 }

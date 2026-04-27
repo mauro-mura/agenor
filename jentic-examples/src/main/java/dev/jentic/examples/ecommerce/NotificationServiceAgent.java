@@ -18,10 +18,8 @@ public class NotificationServiceAgent extends BaseAgent {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationServiceAgent.class);
 
-    public NotificationServiceAgent(MessageService messageService,
-                                    AgentDirectory agentDirectory,
+    public NotificationServiceAgent(AgentDirectory agentDirectory,
                                     BehaviorScheduler behaviorScheduler) {
-        this.messageService = messageService;
         this.agentDirectory = agentDirectory;
         this.behaviorScheduler = behaviorScheduler;
     }

@@ -72,7 +72,7 @@ public class LLMFaultToleranceExample {
 
         // Example 1: Standard research with all specialists
         System.out.println("=== Example 1: Full Research Team ===");
-        sendResearchRequest(coordinator, "Artificial General Intelligence - Path to 2030");
+        sendResearchRequest(runtime, coordinator.getAgentId(), "Artificial General Intelligence - Path to 2030");
         Thread.sleep(20000);
 
         // Example 2: Simulate specialist going offline
@@ -81,7 +81,7 @@ public class LLMFaultToleranceExample {
         marketResearcher.stop().join();
         Thread.sleep(2000);
 
-        sendResearchRequest(coordinator, "Neural Network Hardware Acceleration");
+        sendResearchRequest(runtime, coordinator.getAgentId(), "Neural Network Hardware Acceleration");
         Thread.sleep(20000);
 
         // Shutdown
@@ -89,11 +89,11 @@ public class LLMFaultToleranceExample {
         runtime.stop().join();
     }
 
-    private static void sendResearchRequest(Agent coordinator, String topic) {
+    private static void sendResearchRequest(JenticRuntime runtime, String coordinatorId, String topic) {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")
-            .receiverId(coordinator.getAgentId())
+            .receiverId(coordinatorId)
             .content(Map.of(
                 "topic", topic,
                 "priority", "high",
@@ -101,7 +101,7 @@ public class LLMFaultToleranceExample {
             ))
             .build();
 
-        coordinator.getMessageService().send(request);
+        runtime.getMessageDispatcher().sendTo(request.receiverId(), request);
     }
 }
 
@@ -229,7 +229,7 @@ class DynamicCoordinator extends BaseAgent {
             ))
             .build();
 
-        messageService.send(taskMsg);
+        getMessageDispatcher().sendTo(taskMsg.receiverId(), taskMsg);
     }
 
     @JenticMessageHandler(value = "research.findings.technical", autoSubscribe = true)
@@ -423,7 +423,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         }).exceptionally(ex -> {
             log.error("❌ Technical analysis failed", ex);
             return null;
@@ -512,7 +512,7 @@ class DynamicMarketResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         }).exceptionally(ex -> {
             log.error("❌ Market analysis failed", ex);
             return null;
@@ -601,7 +601,7 @@ class DynamicCompetitorResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         }).exceptionally(ex -> {
             log.error("❌ Competitive analysis failed", ex);
             return null;

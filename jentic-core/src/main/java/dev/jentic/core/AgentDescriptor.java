@@ -8,13 +8,18 @@ import java.util.Set;
 
 /**
  * Immutable descriptor containing agent metadata for discovery.
- * 
+ *
+ * <p>The {@code endpoint} field was added in 0.20.0 to carry transport routing information.
+ * It is nullable for backward compatibility: agents registered before 0.20.0 or via the
+ * deprecated {@code LocalAgentDirectory} may have a {@code null} endpoint.
+ *
  * @param agentId       unique identifier of the agent
  * @param agentName     human-readable display name
  * @param agentType     fully-qualified class name of the agent implementation
  * @param status        current lifecycle status; defaults to {@link AgentStatus#UNKNOWN} if null
  * @param capabilities  immutable set of capability tags declared by this agent; empty if null
  * @param metadata      immutable map of arbitrary key/value metadata; empty if null
+ * @param endpoint      transport endpoint for routing; nullable (populated by {@code InMemoryAgentDirectory})
  * @param registeredAt  timestamp of first registration; defaults to {@code Instant.now()} if null
  * @param lastSeen      timestamp of last heartbeat or status update; defaults to {@code Instant.now()} if null
  * @since 0.1.0
@@ -26,6 +31,7 @@ public record AgentDescriptor(
         @JsonProperty("status") AgentStatus status,
         @JsonProperty("capabilities") Set<String> capabilities,
         @JsonProperty("metadata") Map<String, String> metadata,
+        @JsonProperty("endpoint") AgentEndpoint endpoint,
         @JsonProperty("registeredAt") Instant registeredAt,
         @JsonProperty("lastSeen") Instant lastSeen
 ) {
@@ -38,6 +44,7 @@ public record AgentDescriptor(
             @JsonProperty("status") AgentStatus status,
             @JsonProperty("capabilities") Set<String> capabilities,
             @JsonProperty("metadata") Map<String, String> metadata,
+            @JsonProperty("endpoint") AgentEndpoint endpoint,
             @JsonProperty("registeredAt") Instant registeredAt,
             @JsonProperty("lastSeen") Instant lastSeen
     ) {
@@ -47,12 +54,29 @@ public record AgentDescriptor(
         this.status = status != null ? status : AgentStatus.UNKNOWN;
         this.capabilities = capabilities != null ? Set.copyOf(capabilities) : Set.of();
         this.metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
+        this.endpoint = endpoint;
         this.registeredAt = registeredAt != null ? registeredAt : Instant.now();
         this.lastSeen = lastSeen != null ? lastSeen : Instant.now();
     }
 
     /**
-     * Create a builder for constructing agent descriptors
+     * Backward-compatible constructor without {@code endpoint} — sets endpoint to {@code null}.
+     *
+     * @deprecated since 0.20.0. Use the builder ({@link #builder(String)}) or the 9-arg
+     *     constructor. Will be removed at 0.22.0.
+     */
+    @Deprecated(since = "0.20.0", forRemoval = true)
+    public AgentDescriptor(
+            String agentId, String agentName, String agentType, AgentStatus status,
+            Set<String> capabilities, Map<String, String> metadata,
+            Instant registeredAt, Instant lastSeen) {
+        this(agentId, agentName, agentType, status, capabilities, metadata,
+                null, registeredAt, lastSeen);
+    }
+
+    /**
+     * Create a builder for constructing agent descriptors.
+     *
      * @param agentId the agent ID
      * @return new agent descriptor builder
      */
@@ -67,6 +91,7 @@ public record AgentDescriptor(
         private AgentStatus status = AgentStatus.UNKNOWN;
         private Set<String> capabilities = Set.of();
         private Map<String, String> metadata = Map.of();
+        private AgentEndpoint endpoint;
         private Instant registeredAt;
         private Instant lastSeen;
 
@@ -91,7 +116,6 @@ public record AgentDescriptor(
 
         public AgentDescriptorBuilder capabilities(Set<String> capabilities) {
             if (capabilities != null) {
-                // Add to existing capabilities
                 var allCapabilities = new java.util.HashSet<>(this.capabilities);
                 allCapabilities.addAll(capabilities);
                 this.capabilities = Set.copyOf(allCapabilities);
@@ -110,7 +134,6 @@ public record AgentDescriptor(
 
         public AgentDescriptorBuilder metadata(Map<String, String> metadata) {
             if (metadata != null) {
-                // Add to existing metadata
                 var allMetadata = new java.util.HashMap<>(this.metadata);
                 allMetadata.putAll(metadata);
                 this.metadata = Map.copyOf(allMetadata);
@@ -127,6 +150,18 @@ public record AgentDescriptor(
             return this;
         }
 
+        /**
+         * Sets the transport endpoint for this agent.
+         *
+         * @param endpoint the transport endpoint; may be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public AgentDescriptorBuilder endpoint(AgentEndpoint endpoint) {
+            this.endpoint = endpoint;
+            return this;
+        }
+
         public AgentDescriptorBuilder registeredAt(Instant registeredAt) {
             this.registeredAt = registeredAt;
             return this;
@@ -139,7 +174,7 @@ public record AgentDescriptor(
 
         public AgentDescriptor build() {
             return new AgentDescriptor(agentId, agentName, agentType, status,
-                    capabilities, metadata, registeredAt, lastSeen);
+                    capabilities, metadata, endpoint, registeredAt, lastSeen);
         }
     }
 }

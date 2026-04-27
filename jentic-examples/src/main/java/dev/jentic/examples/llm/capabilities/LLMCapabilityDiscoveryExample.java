@@ -57,35 +57,33 @@ public class LLMCapabilityDiscoveryExample {
 
         Thread.sleep(3000);
 
-        Agent coordinator = runtime.getAgent("capability-coordinator")
-            .orElseThrow(() -> new RuntimeException("Coordinator not found!"));
-
         // Example 1: Standard research
         System.out.println("=== Example 1: Full Analysis ===");
-        sendResearchRequest(coordinator, "Blockchain in Supply Chain Management", "comprehensive");
+        sendResearchRequest(runtime, "capability-coordinator", "Blockchain in Supply Chain Management", "comprehensive");
         Thread.sleep(30000);
 
         // Example 2: Only market analysis
         System.out.println("\n=== Example 2: Market Focus Only ===");
-        sendResearchRequest(coordinator, "5G Network Infrastructure", "market-only");
+        sendResearchRequest(runtime, "capability-coordinator", "5G Network Infrastructure", "market-only");
         Thread.sleep(30000);
 
         System.out.println("\n=== Shutting Down ===");
         runtime.stop().join();
     }
 
-    private static void sendResearchRequest(Agent coordinator, String topic, String analysisType) {
+    private static void sendResearchRequest(JenticRuntime runtime, String coordinatorId,
+                                             String topic, String analysisType) {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")
-            .receiverId(coordinator.getAgentId())
+            .receiverId(coordinatorId)
             .content(Map.of(
                 "topic", topic,
                 "analysisType", analysisType  // comprehensive, market-only, technical-only
             ))
             .build();
 
-        coordinator.getMessageService().send(request);
+        runtime.getMessageDispatcher().sendTo(request.receiverId(), request);
     }
 }
 
@@ -271,7 +269,7 @@ class CapabilityCoordinator extends BaseAgent {
                 ))
                 .build();
 
-            messageService.send(taskMsg);
+            getMessageDispatcher().sendTo(taskMsg.receiverId(), taskMsg);
             log.info("📤 Delegated {} to: {} (ID: {})",
                     capability, selectedAgent.agentName(), selectedAgent.agentId());
         });
@@ -434,7 +432,7 @@ class CapabilityTechSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         });
     }
 }
@@ -488,7 +486,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         });
     }
 
@@ -520,7 +518,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         });
     }
 }
@@ -574,7 +572,7 @@ class CapabilityCompetitorSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            messageService.send(reply);
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
         });
     }
 }

@@ -132,7 +132,7 @@ public class BatchProcessingExample {
                     .header("level", event.level())
                     .header("service", event.service())
                     .build();
-                messageService.send(message);
+                getMessageDispatcher().publish(message.topic(), message);
             }
             log.debug("Generated {} events (total: {})", eventsThisCycle, eventCounter);
         }

@@ -49,14 +49,14 @@ public class BudgetAgent extends BaseAgent implements ConsultableAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
-        messageService.subscribe("support.budget", MessageHandler.sync(this::handleBudgetQuery));
+        dialogue.initialize(getMessageDispatcher());
+        getMessageDispatcher().subscribeTopic("support.budget", MessageHandler.sync(this::handleBudgetQuery));
         log.info("Budget Agent started with dialogue support");
     }
-    
+
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
         log.info("Budget Agent stopped");
     }
     
@@ -418,7 +418,7 @@ public class BudgetAgent extends BaseAgent implements ConsultableAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
     }
     
     private SupportQuery extractQuery(Message message) {

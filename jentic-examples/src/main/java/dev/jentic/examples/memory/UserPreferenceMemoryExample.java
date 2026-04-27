@@ -6,7 +6,7 @@ import java.util.Map;
 
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
@@ -67,7 +67,7 @@ public class UserPreferenceMemoryExample {
         System.out.println("Runtime stats: " + runtime.getStats() + "\n");
         
         // 5. Simulate user interactions
-        simulateInteractions(runtime.getMessageService(), agent.getAgentId());
+        simulateInteractions(runtime.getMessageDispatcher(), agent.getAgentId());
         
         // 6. Wait for processing
         Thread.sleep(2000);
@@ -99,9 +99,9 @@ public class UserPreferenceMemoryExample {
         System.out.println("\n=== Example completed ===");
     }
     
-    private static void simulateInteractions(MessageService messageService, String agentId) {
+    private static void simulateInteractions(MessageDispatcher dispatcher, String agentId) {
         System.out.println("Simulating user interactions:\n");
-        
+
         // 1. Update user preference
         System.out.println("1. Updating user preference...");
         Message prefUpdate = Message.builder()
@@ -110,9 +110,9 @@ public class UserPreferenceMemoryExample {
             .content("dark-mode")
             .header("userId", "user123")
             .build();
-        messageService.send(prefUpdate);
+        dispatcher.publish(prefUpdate.topic(), prefUpdate);
         sleep(300);
-        
+
         // 2. Track interactions
         System.out.println("2. Tracking user interactions...");
         for (int i = 1; i <= 3; i++) {
@@ -122,10 +122,10 @@ public class UserPreferenceMemoryExample {
                 .content("Clicked button " + i)
                 .header("userId", "user123")
                 .build();
-            messageService.send(interaction);
+            dispatcher.publish(interaction.topic(), interaction);
             sleep(200);
         }
-        
+
         // 3. Get preference
         System.out.println("3. Retrieving user preference...");
         Message prefGet = Message.builder()
@@ -133,9 +133,9 @@ public class UserPreferenceMemoryExample {
             .senderId("example-client")
             .header("userId", "user123")
             .build();
-        messageService.send(prefGet);
+        dispatcher.publish(prefGet.topic(), prefGet);
         sleep(300);
-        
+
         // 4. Search history
         System.out.println("4. Searching user history...");
         Message historySearch = Message.builder()
@@ -143,7 +143,7 @@ public class UserPreferenceMemoryExample {
             .senderId("example-client")
             .content("dark")
             .build();
-        messageService.send(historySearch);
+        dispatcher.publish(historySearch.topic(), historySearch);
         sleep(300);
     }
     

@@ -47,10 +47,11 @@ public class QuickStartEvaluationExample {
                     
                     // Send 5 increment messages
                     for (int i = 0; i < 5; i++) {
-                        rt.getMessageService().send(Message.builder()
+                        var incMsg = Message.builder()
                             .topic("counter.increment")
                             .content(1)
-                            .build());
+                            .build();
+                        rt.getMessageDispatcher().publish(incMsg.topic(), incMsg);
                     }
                     
                     // Wait for processing
@@ -113,13 +114,11 @@ public class QuickStartEvaluationExample {
         
         @Override
         protected void onStart() {
-            if (messageService != null) {
-                messageService.subscribe("counter.increment", msg -> {
-                    int increment = msg.content() instanceof Integer i ? i : 1;
-                    count.addAndGet(increment);
-                    return java.util.concurrent.CompletableFuture.completedFuture(null);
-                });
-            }
+            getMessageDispatcher().subscribeTopic("counter.increment", msg -> {
+                int increment = msg.content() instanceof Integer i ? i : 1;
+                count.addAndGet(increment);
+                return java.util.concurrent.CompletableFuture.completedFuture(null);
+            });
         }
         
         @JenticBehavior(type = CYCLIC, interval = "1s")

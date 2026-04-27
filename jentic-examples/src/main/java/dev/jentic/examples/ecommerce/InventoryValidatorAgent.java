@@ -19,10 +19,8 @@ public class InventoryValidatorAgent extends BaseAgent {
     
     private static final Logger log = LoggerFactory.getLogger(InventoryValidatorAgent.class);
     
-    public InventoryValidatorAgent(MessageService messageService,
-                                   AgentDirectory agentDirectory,
+    public InventoryValidatorAgent(AgentDirectory agentDirectory,
                                    BehaviorScheduler behaviorScheduler) {
-        this.messageService = messageService;
         this.agentDirectory = agentDirectory;
         this.behaviorScheduler = behaviorScheduler;
     }
@@ -49,7 +47,7 @@ public class InventoryValidatorAgent extends BaseAgent {
                 .topic("validation-result")
                 .build();
 
-        getMessageService().send(reply);
+        getMessageDispatcher().sendTo(reply.receiverId(), reply);
     }
 
     private void simulateWork(long millis) {

@@ -1,7 +1,7 @@
 package dev.jentic.examples.agent;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.memory.InMemoryStore;
 
@@ -58,8 +58,8 @@ public class ChatAgentExample {
         runtime.registerAgent(agent);
         System.out.println("   ✓ Created ChatAgent (LLM memory auto-configured)");
         
-        // Get message service from runtime
-        MessageService messageService = runtime.getMessageService();
+        // Get message dispatcher from runtime (since 0.20.0)
+        MessageDispatcher messageService = runtime.getMessageDispatcher();
         
         System.out.println();
         
@@ -69,7 +69,7 @@ public class ChatAgentExample {
         
         CountDownLatch responseLatch = new CountDownLatch(1);
         
-        messageService.subscribe("agent.response", msg -> {
+        messageService.subscribeTopic("agent.response", msg -> {
             String response = msg.getContent(String.class);
             
             // Parse tokens from header (default to 0)
@@ -92,7 +92,7 @@ public class ChatAgentExample {
             return CompletableFuture.completedFuture(null);
         });
         
-        messageService.subscribe("agent.notification", msg -> {
+        messageService.subscribeTopic("agent.notification", msg -> {
             String notification = msg.getContent(String.class);
             System.out.println("📢 Notification: " + notification);
             System.out.println();
@@ -175,24 +175,24 @@ public class ChatAgentExample {
                     break;
                     
                 case "clear":
-                    messageService.send(Message.builder()
+                    messageService.publish("clear.conversation", Message.builder()
                         .topic("clear.conversation")
                         .content("clear")
                         .build());
                     Thread.sleep(500);
                     break;
-                    
+
                 case "summarize":
-                    messageService.send(Message.builder()
+                    messageService.publish("summarize.conversation", Message.builder()
                         .topic("summarize.conversation")
                         .header("count", "10")
                         .content("summarize")
                         .build());
                     Thread.sleep(500);
                     break;
-                    
+
                 case "status":
-                    messageService.send(Message.builder()
+                    messageService.publish("query.status", Message.builder()
                         .topic("query.status")
                         .content("status")
                         .build());
@@ -221,12 +221,12 @@ public class ChatAgentExample {
     }
     
     /**
-     * Send a user message and wait for response.
+     * Publish a user message to the "user.message" topic.
      */
-    private static void sendUserMessage(MessageService messageService, String text) {
+    private static void sendUserMessage(MessageDispatcher messageService, String text) {
         System.out.println("👤 You: " + text);
-        
-        messageService.send(Message.builder()
+
+        messageService.publish("user.message", Message.builder()
             .topic("user.message")
             .content(text)
             .build());

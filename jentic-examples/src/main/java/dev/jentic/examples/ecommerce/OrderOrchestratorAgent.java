@@ -34,10 +34,8 @@ public class OrderOrchestratorAgent extends BaseAgent {
     private String currentOrderId = null;
     private FSMBehavior orderFSM;
 
-    public OrderOrchestratorAgent(MessageService messageService,
-                                  AgentDirectory agentDirectory,
+    public OrderOrchestratorAgent(AgentDirectory agentDirectory,
                                   BehaviorScheduler behaviorScheduler) {
-        this.messageService = messageService;
         this.agentDirectory = agentDirectory;
         this.behaviorScheduler = behaviorScheduler;
         this.orderFSM = buildOrderProcessingFSM();
@@ -154,6 +152,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         };
     }
 
+    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validateCustomer(String customerId) {
         Message request = Message.builder()
                 .topic("validate-customer")
@@ -161,6 +160,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 .content(customerId)
                 .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         return getMessageService()
                 .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
@@ -173,6 +173,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 });
     }
 
+    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validateInventory(List<OrderItem> items) {
         Message request = Message.builder()
                 .topic("validate-inventory")
@@ -180,6 +181,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 .content(items)
                 .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         return getMessageService()
                 .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
@@ -192,6 +194,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 });
     }
 
+    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validatePayment(String amount) {
         Message request = Message.builder()
                 .topic("validate-payment")
@@ -199,6 +202,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 .content(amount)
                 .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         return getMessageService()
                 .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
@@ -370,7 +374,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         Message ack = message.reply("Order received")
                 .topic("order-ack")
                 .build();
-        getMessageService().send(ack);
+        getMessageDispatcher().sendTo(ack.receiverId(), ack);
     }
 
     // =========================================================================
@@ -400,7 +404,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                         "message", text
                 ))
                 .build();
-        getMessageService().send(notification);
+        getMessageDispatcher().publish(notification.topic(), notification);
     }
 
     private void simulateWork(long millis) {

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.examples.support.model.SupportResponse;
 import io.a2a.spec.AgentCard;
 import jakarta.servlet.http.HttpServlet;
@@ -38,7 +38,7 @@ import java.util.concurrent.*;
  * <pre>
  * A2AHttpServer server = A2AHttpServer.builder()
  *     .port(8080)
- *     .messageService(runtime.getMessageService())
+ *     .messageService(runtime.getMessageDispatcher())
  *     .build();
  * 
  * server.start();
@@ -51,7 +51,7 @@ public class A2AHttpServer {
     private static final Logger log = LoggerFactory.getLogger(A2AHttpServer.class);
     
     private final int port;
-    private final MessageService messageService;
+    private final MessageDispatcher messageService;
     private final AgentCard agentCard;
     private final String agentCardJson;
     private final Duration timeout;
@@ -152,7 +152,7 @@ public class A2AHttpServer {
      * Subscribe to support responses to complete pending A2A requests.
      */
     private void subscribeToResponses() {
-        messageService.subscribe("support.response", MessageHandler.sync(msg -> {
+        messageService.subscribeTopic("support.response", MessageHandler.sync(msg -> {
             String correlationId = msg.correlationId();
             if (correlationId == null) return;
             
@@ -178,7 +178,7 @@ public class A2AHttpServer {
                 .content(text)
                 .build();
             
-            messageService.send(query);
+            messageService.publish(query.topic(), query);
             
             return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             
@@ -364,7 +364,7 @@ public class A2AHttpServer {
     
     public static class Builder {
         private int port = 8080;
-        private MessageService messageService;
+        private MessageDispatcher messageService;
         private String baseUrl;
         private Duration timeout = Duration.ofMinutes(2);
         private boolean streaming = true;
@@ -374,7 +374,7 @@ public class A2AHttpServer {
             return this;
         }
         
-        public Builder messageService(MessageService messageService) {
+        public Builder messageService(MessageDispatcher messageService) {
             this.messageService = messageService;
             return this;
         }

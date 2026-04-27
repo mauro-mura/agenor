@@ -1,6 +1,6 @@
 package dev.jentic.runtime.dialogue;
 
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.Message;
 import dev.jentic.core.dialogue.Conversation;
 import dev.jentic.core.dialogue.ConversationManager;
@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 public class DefaultConversationManager implements ConversationManager {
     
     private final String localAgentId;
-    private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final ProtocolRegistry protocolRegistry;
     private final DefaultCommitmentTracker commitmentTracker;
     
@@ -38,17 +38,17 @@ public class DefaultConversationManager implements ConversationManager {
     
     public DefaultConversationManager(
             String localAgentId,
-            MessageService messageService) {
-        this(localAgentId, messageService, new ProtocolRegistry(), new DefaultCommitmentTracker());
+            MessageDispatcher messageDispatcher) {
+        this(localAgentId, messageDispatcher, new ProtocolRegistry(), new DefaultCommitmentTracker());
     }
-    
+
     public DefaultConversationManager(
             String localAgentId,
-            MessageService messageService,
+            MessageDispatcher messageDispatcher,
             ProtocolRegistry protocolRegistry,
             DefaultCommitmentTracker commitmentTracker) {
         this.localAgentId = localAgentId;
-        this.messageService = messageService;
+        this.messageDispatcher = messageDispatcher;
         this.protocolRegistry = protocolRegistry;
         this.commitmentTracker = commitmentTracker;
     }
@@ -292,6 +292,6 @@ public class DefaultConversationManager implements ConversationManager {
     
     private CompletableFuture<Void> sendMessage(DialogueMessage dialogueMessage) {
         var message = dialogueMessage.toMessage();
-        return messageService.send(message);
+        return messageDispatcher.sendTo(message.receiverId(), message);
     }
 }

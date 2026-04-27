@@ -39,6 +39,7 @@ public class CustomerSupportExample {
         runtime.stop().join();
     }
 
+    @SuppressWarnings("deprecation")
     private static void example1_TicketAnalysis(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("=== Example 1: Ticket Analysis ===");
 
@@ -55,6 +56,7 @@ public class CustomerSupportExample {
             .content(ticket)
             .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         runtime.getMessageService().sendAndWait(message, 10000)
             .thenAccept(response -> {
                 System.out.println("Analysis Result: " + response.content());
@@ -62,6 +64,7 @@ public class CustomerSupportExample {
             .join();
     }
 
+    @SuppressWarnings("deprecation")
     private static void example2_ResponseGeneration(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 2: Response Generation ===");
 
@@ -74,6 +77,7 @@ public class CustomerSupportExample {
             .content(ticketData)
             .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         runtime.getMessageService().sendAndWait(message, 10000)
             .thenAccept(response -> {
                 System.out.println("Generated Response:\n" + response.content());
@@ -81,6 +85,7 @@ public class CustomerSupportExample {
             .join();
     }
 
+    @SuppressWarnings("deprecation")
     private static void example3_Classification(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 3: Classification ===");
 
@@ -93,6 +98,7 @@ public class CustomerSupportExample {
             .content(ticket)
             .build();
 
+        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
         runtime.getMessageService().sendAndWait(message, 10000)
             .thenAccept(response -> {
                 System.out.println("Category: " + response.content());

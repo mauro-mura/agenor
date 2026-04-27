@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.knowledge.KnowledgeStore;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.examples.support.a2a.A2AHttpServer;
 import dev.jentic.examples.support.agents.CollaborativeRouterAgent;
 import dev.jentic.examples.support.context.ConversationContextManager;
@@ -147,7 +148,7 @@ public class SupportChatbotExample {
         AtomicReference<SupportResponse> lastResponse = new AtomicReference<>();
         CountDownLatch responseLatch = new CountDownLatch(1);
         
-        runtime.getMessageService().subscribe("support.response", MessageHandler.sync(msg -> {
+        runtime.getMessageDispatcher().subscribeTopic("support.response", MessageHandler.sync(msg -> {
             Object content = msg.content();
             if (content instanceof SupportResponse response) {
                 lastResponse.set(response);
@@ -187,7 +188,7 @@ public class SupportChatbotExample {
             // Start A2A HTTP server
             a2aServer = A2AHttpServer.builder()
                 .port(a2aPort)
-                .messageService(runtime.getMessageService())
+                .messageService(runtime.getMessageDispatcher())
                 .build();
             a2aServer.start().join();
         }
@@ -264,7 +265,7 @@ public class SupportChatbotExample {
                 .content(input)
                 .build();
             
-            runtime.getMessageService().send(query);
+            runtime.getMessageDispatcher().publish(query.topic(), query);
             
             // Wait for response (simple approach - in production use CompletableFuture)
             Thread.sleep(500);
@@ -312,7 +313,7 @@ public class SupportChatbotExample {
                 .content(query)
                 .build();
             
-            runtime.getMessageService().send(msg);
+            runtime.getMessageDispatcher().publish(msg.topic(), msg);
             
             // Wait for response
             Thread.sleep(1000);

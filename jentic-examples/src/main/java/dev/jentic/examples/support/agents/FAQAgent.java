@@ -73,13 +73,13 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
     @Override
     protected void onStart() {
         // Initialize dialogue capability for collaborative reasoning
-        dialogue.initialize(getMessageService());
-        
+        dialogue.initialize(getMessageDispatcher());
+
         // Subscribe to FAQ topic
-        messageService.subscribe("support.faq", MessageHandler.sync(this::handleFAQQuery));
-        
+        getMessageDispatcher().subscribeTopic("support.faq", MessageHandler.sync(this::handleFAQQuery));
+
         // Also handle unclassified queries
-        messageService.subscribe("support.unknown", MessageHandler.sync(this::handleFAQQuery));
+        getMessageDispatcher().subscribeTopic("support.unknown", MessageHandler.sync(this::handleFAQQuery));
         
         String features = buildFeatureString();
         log.info("FAQ Agent started with {} documents ({})", knowledgeStore.size(), features);
@@ -101,7 +101,7 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
     
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
         log.info("FAQ Agent stopped");
     }
     
@@ -419,7 +419,7 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
             .header("confidence", String.valueOf(response.confidence()))
             .build();
         
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
         log.debug("Sent response for session {} with confidence {}", 
             response.sessionId(), response.confidence());
     }

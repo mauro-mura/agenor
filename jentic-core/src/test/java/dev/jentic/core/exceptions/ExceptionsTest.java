@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Complete test coverage for the dev.jentic.core.exceptions package.
@@ -154,6 +155,37 @@ class ExceptionsTest {
             AgentException exception = new AgentException(null, "Test message");
             
             assertThat(exception.getAgentId()).isNull();
+        }
+    }
+
+    // =========================================================================
+    // AGENT NOT FOUND EXCEPTION TESTS (since 0.20.0)
+    // =========================================================================
+
+    @Nested
+    @DisplayName("AgentNotFoundException")
+    class AgentNotFoundExceptionTest {
+
+        @Test
+        @DisplayName("Should include agentId in message")
+        void shouldIncludeAgentIdInMessage() {
+            var ex = new AgentNotFoundException("my-agent");
+            assertThat(ex.getMessage()).contains("my-agent");
+            assertThat(ex.getAgentId()).isEqualTo("my-agent");
+        }
+
+        @Test
+        @DisplayName("Should be a subtype of AgentException")
+        void shouldExtendAgentException() {
+            var ex = new AgentNotFoundException("agent-42");
+            assertThat(ex).isInstanceOf(AgentException.class);
+        }
+
+        @Test
+        @DisplayName("Should be catchable as RuntimeException")
+        void shouldBeCatchableAsRuntimeException() {
+            assertThatThrownBy(() -> { throw new AgentNotFoundException("x"); })
+                    .isInstanceOf(RuntimeException.class);
         }
     }
 

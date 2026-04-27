@@ -1,8 +1,10 @@
 package dev.jentic.examples.eval;
 
 import dev.jentic.core.Message;
+import dev.jentic.core.messaging.FilterableSubscriber;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.filter.TopicFilter;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.tools.eval.*;
@@ -149,7 +151,7 @@ public class EvaluationFrameworkExample {
                     .header("priority", "normal")
                     .build();
                 
-                rt.getMessageService().send(orderMessage);
+                rt.getMessageDispatcher().publish(orderMessage.topic(), orderMessage);
                 
                 // Wait for processing
                 sleep(1000);
@@ -199,8 +201,8 @@ public class EvaluationFrameworkExample {
                     .content(new Order("ORD-002", "Premium Widget", 10, 49.99))
                     .build();
                 
-                runtime.getMessageService().send(orderMessage);
-                
+                runtime.getMessageDispatcher().publish(orderMessage.topic(), orderMessage);
+
                 // Wait for multi-agent processing
                 sleep(2000);
             })
@@ -252,7 +254,7 @@ public class EvaluationFrameworkExample {
                         .header("batch", "true")
                         .build();
                     
-                    runtime.getMessageService().send(order);
+                    runtime.getMessageDispatcher().publish(order.topic(), order);
                     sleep(100);
                 }
                 
@@ -332,10 +334,8 @@ public class EvaluationFrameworkExample {
             log.info("OrderProcessorAgent started");
             
             // Subscribe to order messages
-            if (messageService != null) {
-                messageService.subscribe("orders.new", this::handleNewOrder);
-                messageService.subscribe("orders.cancel", this::handleCancelOrder);
-            }
+            getMessageDispatcher().subscribeTopic("orders.new", this::handleNewOrder);
+            getMessageDispatcher().subscribeTopic("orders.cancel", this::handleCancelOrder);
         }
         
         @Override
@@ -362,21 +362,21 @@ public class EvaluationFrameworkExample {
                     processOrder(order);
                     
                     // Send confirmation
-                    if (messageService != null) {
-                        messageService.send(Message.builder()
-                            .topic("orders.processed")
-                            .senderId(getAgentId())
-                            .correlationId(message.id())
-                            .content(new OrderConfirmation(order.orderId(), "PROCESSED", Instant.now()))
-                            .build());
-                        
-                        // Request inventory check
-                        messageService.send(Message.builder()
-                            .topic("inventory.check")
-                            .senderId(getAgentId())
-                            .content(order)
-                            .build());
-                    }
+                    var confirmMsg = Message.builder()
+                        .topic("orders.processed")
+                        .senderId(getAgentId())
+                        .correlationId(message.id())
+                        .content(new OrderConfirmation(order.orderId(), "PROCESSED", Instant.now()))
+                        .build();
+                    getMessageDispatcher().publish(confirmMsg.topic(), confirmMsg);
+
+                    // Request inventory check
+                    var inventoryMsg = Message.builder()
+                        .topic("inventory.check")
+                        .senderId(getAgentId())
+                        .content(order)
+                        .build();
+                    getMessageDispatcher().publish(inventoryMsg.topic(), inventoryMsg);
                 }
             } catch (Exception e) {
                 errorCount.incrementAndGet();
@@ -436,9 +436,7 @@ public class EvaluationFrameworkExample {
         protected void onStart() {
             log.info("InventoryCheckerAgent started");
             
-            if (messageService != null) {
-                messageService.subscribe("inventory.check", this::handleInventoryCheck);
-            }
+            getMessageDispatcher().subscribeTopic("inventory.check", this::handleInventoryCheck);
         }
         
         @Override
@@ -454,22 +452,22 @@ public class EvaluationFrameworkExample {
                 boolean inStock = checkStock(order.productName(), order.quantity());
                 
                 // Send result
-                if (messageService != null) {
-                    messageService.send(Message.builder()
-                        .topic("inventory.result")
+                var resultMsg = Message.builder()
+                    .topic("inventory.result")
+                    .senderId(getAgentId())
+                    .correlationId(message.id())
+                    .content(new InventoryResult(order.orderId(), inStock, order.quantity()))
+                    .build();
+                getMessageDispatcher().publish(resultMsg.topic(), resultMsg);
+
+                // Notify if low stock
+                if (!inStock) {
+                    var stockMsg = Message.builder()
+                        .topic("notifications.lowstock")
                         .senderId(getAgentId())
-                        .correlationId(message.id())
-                        .content(new InventoryResult(order.orderId(), inStock, order.quantity()))
-                        .build());
-                    
-                    // Notify if low stock
-                    if (!inStock) {
-                        messageService.send(Message.builder()
-                            .topic("notifications.lowstock")
-                            .senderId(getAgentId())
-                            .content("Low stock alert for: " + order.productName())
-                            .build());
-                    }
+                        .content("Low stock alert for: " + order.productName())
+                        .build();
+                    getMessageDispatcher().publish(stockMsg.topic(), stockMsg);
                 }
                 
                 log.debug("Inventory check for {}: inStock={}", order.productName(), inStock);
@@ -506,9 +504,8 @@ public class EvaluationFrameworkExample {
         protected void onStart() {
             log.info("NotificationAgent started");
             
-            if (messageService != null) {
-                messageService.subscribe("notifications.#", this::handleNotification);
-            }
+            ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(
+                TopicFilter.startsWith("notifications."), this::handleNotification);
         }
         
         @Override

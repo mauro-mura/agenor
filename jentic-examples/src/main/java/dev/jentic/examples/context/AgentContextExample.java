@@ -123,13 +123,14 @@ public class AgentContextExample {
             var product = PRODUCTS[random.nextInt(PRODUCTS.length)];
             var quantity = 1 + random.nextInt(5);
 
-            messageService.send(Message.builder()
+            var orderMsg = Message.builder()
                     .topic("orders.new")
                     .senderId(getAgentId())
                     .content(orderId)
                     .header("product", product)
                     .header("quantity", String.valueOf(quantity))
-                    .build());
+                    .build();
+            getMessageDispatcher().publish(orderMsg.topic(), orderMsg);
 
             log.info("[Submitter] Submitted {} — {} x{}", orderId, product, quantity);
         }
@@ -227,13 +228,14 @@ public class AgentContextExample {
             log.info("[Processor] Processed {} — {} x{} (total: {})",
                     orderId, product, quantity, getProcessedCount());
 
-            // Publish a confirmation using the injected MessageService
-            ctx.messageService().send(Message.builder()
+            // Publish a confirmation using the injected MessageDispatcher
+            var msg = Message.builder()
                     .topic("orders.confirmed")
                     .senderId(getAgentId())
                     .content(orderId)
                     .header("status", "CONFIRMED")
-                    .build());
+                    .build();
+            ctx.messageDispatcher().publish(msg.topic(), msg);
         }
     }
 }

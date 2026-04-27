@@ -55,14 +55,15 @@ public class CustomerSupportAgent extends BaseAgent {
             log.debug("LLM analysis completed: {} tokens", response.usage().totalTokens());
             TicketAnalysis analysis = parseAnalysis(response.content());
 
-            // Send result back using MessageService
-            getMessageService().send(Message.builder()
+            // Send result back
+            var resultMsg = Message.builder()
                     .senderId(getAgentId())
                     .receiverId(message.senderId())
                     .correlationId(message.id())
                     .topic("ticket.analysis.result")
                     .content(analysis.toString())
-                    .build());
+                    .build();
+            getMessageDispatcher().sendTo(resultMsg.receiverId(), resultMsg);
         });
     }
 
@@ -99,13 +100,14 @@ public class CustomerSupportAgent extends BaseAgent {
                         .maxTokens(300)
                         .build()
         ).thenAccept(response -> {
-            getMessageService().send(Message.builder()
+            var responseMsg = Message.builder()
                     .senderId(getAgentId())
                     .receiverId(message.senderId())
                     .correlationId(message.id())
                     .topic("ticket.response.generated")
                     .content(response.content())
-                    .build());
+                    .build();
+            getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
         });
     }
 
@@ -136,13 +138,14 @@ public class CustomerSupportAgent extends BaseAgent {
                 category = call.getStringArgument("category");
             }
 
-            getMessageService().send(Message.builder()
+            var classifyMsg = Message.builder()
                     .senderId(getAgentId())
                     .receiverId(message.senderId())
                     .correlationId(message.id())
                     .topic("ticket.classification.result")
                     .content(category)
-                    .build());
+                    .build();
+            getMessageDispatcher().sendTo(classifyMsg.receiverId(), classifyMsg);
         });
     }
 

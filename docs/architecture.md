@@ -15,8 +15,8 @@ Jentic embraces an interface‑first, modular architecture. Core contracts live 
 |--------------------------|----------------------------------|--------------------------------|
 | Agent                    | BaseAgent                        | OpenAIProvider                 |
 | Message                  | LLMAgent                         | AnthropicProvider              |
-| MessageService           | InMemoryMessageService           | OllamaProvider                 |
-| AgentDirectory           | LocalAgentDirectory              | LLMProviderFactory             |
+| MessageDispatcher        | InMemoryMessageDispatcher        | OllamaProvider                 |
+| directory.AgentDirectory | InMemoryAgentDirectory           | LLMProviderFactory             |
 | Behavior                 | SimpleBehaviorScheduler          | A2A Adapter                    |
 | BehaviorScheduler        | Behaviors (Cyclic…)              | JenticA2AClient                |
 | LLMProvider              | InMemoryStore                    | JenticAgentExecutor            |
@@ -44,8 +44,9 @@ Design goals:
 - Agent: Lifecycle contract for autonomous entities; exposes id, status, and context.
 - Behavior: Unit of work associated with an Agent. Types include CYCLIC, ONE_SHOT, EVENT_DRIVEN, WAKER.
 - Message: Transport‑agnostic payload record (topic, headers, content, metadata).
-- MessageService: Send/receive API for inter‑agent messaging.
-- AgentDirectory: Register, discover, query, and list agents.
+- **MessageDispatcher** (since 0.20.0): Composite interface for topic publish/subscribe and direct agent-to-agent messaging. Composed of `TopicPublisher`, `TopicSubscriber`, `DirectMessenger`, `DirectReceiver`. `FilterableSubscriber` is a separate capability for predicate-based subscriptions.
+- **directory.AgentDirectory** (since 0.20.0): Composite directory interface. Composed of `AgentRegistry`, `AgentResolver`, `AgentDiscovery`, `AgentPresence`. Designed for distributed backends.
+- `AgentEndpoint` / `Page<T>` / `PageRequest` (since 0.20.0): Records supporting transport routing and paginated discovery.
 - BehaviorScheduler: Schedules and executes behaviors per their semantics and policy.
 - LLMProvider: Provider-agnostic contract for LLM interaction (`chat`, `chatStream`, `getAvailableModels`).
 - MemoryStore: Interface for agent memory (short-term and long-term entries).
@@ -74,11 +75,13 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Messaging
 
-- **InMemoryMessageService**: Publish/subscribe per topic within a single JVM. Supports direct messages via `subscribeToReceiver`, message filters via `subscribe(MessageFilter, handler)`.
+- **InMemoryMessageDispatcher** (since 0.20.0): Production implementation of `MessageDispatcher` and `FilterableSubscriber`. Delivers messages using virtual threads. Routes `sendTo` calls via `AgentResolver`; throws `AgentNotFoundException` for unknown agents. Emits `message.send` OTel spans. See [Messaging](messaging.md).
+- **InMemoryMessageService** (deprecated since 0.20.0): Legacy publish/subscribe implementation retained for backward compatibility. Use `InMemoryMessageDispatcher` instead.
 
 ### Agent Directory and Scheduler
 
-- **LocalAgentDirectory**: JVM‑local registry for discovery.
+- **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.jentic.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
+- **LocalAgentDirectory** (deprecated since 0.20.0): Legacy JVM-local registry retained for backward compatibility. Use `InMemoryAgentDirectory` instead.
 - **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
 - **AgentScanner + AnnotationProcessor**: Scans packages for annotated agents/handlers and wires runtime.
 - **JenticRuntime**: Entry point to bootstrap, start, and stop the agent system.

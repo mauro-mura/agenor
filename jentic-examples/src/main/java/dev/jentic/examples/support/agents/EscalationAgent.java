@@ -43,7 +43,7 @@ public class EscalationAgent extends BaseAgent {
     
     @Override
     protected void onStart() {
-        messageService.subscribe("support.escalate", MessageHandler.sync(this::handleEscalationRequest));
+        getMessageDispatcher().subscribeTopic("support.escalate", MessageHandler.sync(this::handleEscalationRequest));
         log.info("Escalation Agent started");
     }
     
@@ -282,7 +282,7 @@ public class EscalationAgent extends BaseAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        messageService.send(responseMsg);
+        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
     }
     
     private SupportQuery extractQuery(Message message) {

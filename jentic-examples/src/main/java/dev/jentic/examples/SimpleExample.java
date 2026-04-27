@@ -1,6 +1,8 @@
 package dev.jentic.examples;
 
 import dev.jentic.core.Message;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.CyclicBehavior;
@@ -68,9 +70,9 @@ public class SimpleExample {
                     .content(getAgentName() + " has started up")
                     .build();
                 
-                messageService.send(announcement);
+                getMessageDispatcher().publish(announcement.topic(), announcement);
             }));
-            
+
             // Add cyclic behavior
             addBehavior(CyclicBehavior.from("heartbeat", Duration.ofSeconds(5), () -> {
                 Message heartbeat = Message.builder()
@@ -78,20 +80,20 @@ public class SimpleExample {
                     .senderId(getAgentId())
                     .content(getAgentName() + " is alive at " + java.time.LocalTime.now())
                     .build();
-                
+
                 log.info("[{}] Sending heartbeat", getAgentName());
-                messageService.send(heartbeat);
+                getMessageDispatcher().publish(heartbeat.topic(), heartbeat);
             }));
-            
+
             // Subscribe to messages
-            messageService.subscribe("agent.announcement", message -> {
+            getMessageDispatcher().subscribeTopic("agent.announcement", message -> {
                 if (!getAgentId().equals(message.senderId())) {
                     log.info("[{}] Heard announcement: {}", getAgentName(), message.content());
                 }
                 return java.util.concurrent.CompletableFuture.completedFuture(null);
             });
-            
-            messageService.subscribe("agent.heartbeat", message -> {
+
+            getMessageDispatcher().subscribeTopic("agent.heartbeat", message -> {
                 if (!getAgentId().equals(message.senderId())) {
                     log.debug("[{}] Heard heartbeat: {}", getAgentName(), message.content());
                 }

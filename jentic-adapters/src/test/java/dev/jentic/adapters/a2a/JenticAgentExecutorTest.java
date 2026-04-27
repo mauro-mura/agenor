@@ -1,7 +1,9 @@
 package dev.jentic.adapters.a2a;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.MessageHandler;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import io.a2a.server.agentexecution.RequestContext;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 import java.time.Duration;
 import java.util.List;
@@ -24,14 +27,15 @@ import java.util.concurrent.CompletableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class JenticAgentExecutorTest {
 
     @Mock
-    private MessageService messageService;
+    private MessageDispatcher messageDispatcher;
 
     @Mock
     private RequestContext requestContext;
@@ -43,7 +47,7 @@ class JenticAgentExecutorTest {
 
     @BeforeEach
     void setUp() {
-        executor = new JenticAgentExecutor("test-agent", messageService, Duration.ofSeconds(5));
+        executor = new JenticAgentExecutor("test-agent", messageDispatcher, Duration.ofSeconds(5));
     }
 
     @Test
@@ -76,13 +80,12 @@ class JenticAgentExecutorTest {
                 .build()
                 .toMessage();
 
-        CompletableFuture<Message> responseFuture = CompletableFuture.completedFuture(responseMsg);
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(responseFuture);
+        stubDispatcherToReplyImmediately(responseMsg);
 
         executor.execute(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).sendAndWait(messageCaptor.capture(), anyLong());
+        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
 
         Message sentMessage = messageCaptor.getValue();
         DialogueMessage sentDialogue = DialogueMessage.fromMessage(sentMessage);
@@ -117,12 +120,11 @@ class JenticAgentExecutorTest {
                 .build()
                 .toMessage();
 
-        CompletableFuture<Message> responseFuture = CompletableFuture.completedFuture(failureMsg);
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(responseFuture);
+        stubDispatcherToReplyImmediately(failureMsg);
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
     }
 
     @Test
@@ -149,12 +151,11 @@ class JenticAgentExecutorTest {
                 .build()
                 .toMessage();
 
-        CompletableFuture<Message> responseFuture = CompletableFuture.completedFuture(refuseMsg);
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(responseFuture);
+        stubDispatcherToReplyImmediately(refuseMsg);
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
     }
 
     @Test
@@ -174,6 +175,9 @@ class JenticAgentExecutorTest {
 
     @Test
     void shouldHandleTimeout() throws Exception {
+        // Use a very short timeout so the test doesn't wait 5s
+        executor = new JenticAgentExecutor("test-agent", messageDispatcher, Duration.ofMillis(50));
+
         String taskId = "task-timeout";
         String contextId = "ctx-timeout";
         when(requestContext.getTaskId()).thenReturn(taskId);
@@ -187,14 +191,17 @@ class JenticAgentExecutorTest {
                 .build();
         when(requestContext.getMessage()).thenReturn(a2aMessage);
 
-        CompletableFuture<Message> timeoutFuture = new CompletableFuture<>();
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(timeoutFuture);
-
-        timeoutFuture.completeExceptionally(new java.util.concurrent.TimeoutException());
+        // subscribeRecipient returns a subscription but never delivers a reply → timeout
+        Subscription mockSub = mock(Subscription.class);
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenReturn(mockSub);
+        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).subscribeRecipient(anyString(), any(MessageHandler.class));
+        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
     }
 
     @Test
@@ -212,12 +219,12 @@ class JenticAgentExecutorTest {
                 .build();
         when(requestContext.getMessage()).thenReturn(a2aMessage);
 
-        when(messageService.sendAndWait(any(Message.class), anyLong()))
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
                 .thenThrow(new RuntimeException("Service error"));
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).subscribeRecipient(anyString(), any(MessageHandler.class));
     }
 
     @Test
@@ -228,10 +235,13 @@ class JenticAgentExecutorTest {
         when(requestContext.getContextId()).thenReturn(contextId);
         when(requestContext.getTask()).thenReturn(null);
 
+        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
         executor.cancel(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).send(messageCaptor.capture());
+        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
 
         Message cancelMessage = messageCaptor.getValue();
         DialogueMessage cancelDialogue = DialogueMessage.fromMessage(cancelMessage);
@@ -286,8 +296,8 @@ class JenticAgentExecutorTest {
         when(requestContext.getContextId()).thenReturn(contextId);
         when(requestContext.getTask()).thenReturn(null);
 
-        doThrow(new RuntimeException("Cancel failed"))
-                .when(messageService).send(any(Message.class));
+        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+                .thenThrow(new RuntimeException("Cancel failed"));
 
         assertThatThrownBy(() -> executor.cancel(requestContext, eventQueue))
                 .isInstanceOf(io.a2a.spec.TaskNotCancelableError.class);
@@ -320,13 +330,12 @@ class JenticAgentExecutorTest {
                 .build()
                 .toMessage();
 
-        CompletableFuture<Message> responseFuture = CompletableFuture.completedFuture(responseMsg);
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(responseFuture);
+        stubDispatcherToReplyImmediately(responseMsg);
 
         executor.execute(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).sendAndWait(messageCaptor.capture(), anyLong());
+        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
 
         Message sentMessage = messageCaptor.getValue();
         DialogueMessage sentDialogue = DialogueMessage.fromMessage(sentMessage);
@@ -357,19 +366,35 @@ class JenticAgentExecutorTest {
                 .build()
                 .toMessage();
 
-        CompletableFuture<Message> responseFuture = CompletableFuture.completedFuture(responseMsg);
-        when(messageService.sendAndWait(any(Message.class), anyLong())).thenReturn(responseFuture);
+        stubDispatcherToReplyImmediately(responseMsg);
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageService).sendAndWait(any(Message.class), anyLong());
+        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
     }
 
     @Test
     void shouldUseConfiguredTimeout() {
         Duration customTimeout = Duration.ofSeconds(30);
-        var customExecutor = new JenticAgentExecutor("agent-2", messageService, customTimeout);
+        var customExecutor = new JenticAgentExecutor("agent-2", messageDispatcher, customTimeout);
 
         assertThat(customExecutor.getInternalAgentId()).isEqualTo("agent-2");
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    private void stubDispatcherToReplyImmediately(Message replyMsg) throws Exception {
+        Subscription mockSub = mock(Subscription.class);
+        Answer<Subscription> triggerHandler = invocation -> {
+            MessageHandler handler = invocation.getArgument(1);
+            handler.handle(replyMsg);
+            return mockSub;
+        };
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenAnswer(triggerHandler);
+        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
     }
 }

@@ -15,13 +15,11 @@ import java.util.Map;
     capabilities = {"customer-validation"}
 )
 public class CustomerValidatorAgent extends BaseAgent {
-    
+
     private static final Logger log = LoggerFactory.getLogger(CustomerValidatorAgent.class);
 
-    public CustomerValidatorAgent(MessageService messageService,
-                                  AgentDirectory agentDirectory,
+    public CustomerValidatorAgent(AgentDirectory agentDirectory,
                                   BehaviorScheduler behaviorScheduler) {
-        this.messageService = messageService;
         this.agentDirectory = agentDirectory;
     }
 
@@ -48,7 +46,7 @@ public class CustomerValidatorAgent extends BaseAgent {
                 .topic("validation-result")
                 .build();
         
-        getMessageService().send(reply);
+        getMessageDispatcher().sendTo(reply.receiverId(), reply);
     }
     
     private void simulateWork(long millis) {

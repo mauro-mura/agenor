@@ -16,8 +16,11 @@ import java.util.stream.Collectors;
 
 /**
  * Local in-memory implementation of AgentDirectory.
- * Suitable for single-JVM deployments.
+ *
+ * @deprecated since 0.20.0. Use {@link InMemoryAgentDirectory} instead.
  */
+@Deprecated(since = "0.20.0", forRemoval = true)
+@SuppressWarnings("deprecation")
 public class LocalAgentDirectory implements AgentDirectory {
     
     private static final Logger log = LoggerFactory.getLogger(LocalAgentDirectory.class);

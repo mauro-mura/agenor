@@ -87,20 +87,20 @@ public class CollaborativeRouterAgent extends BaseAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
-        
+        dialogue.initialize(getMessageDispatcher());
+
         // Subscribe to support queries
-        getMessageService().subscribe("support.query", MessageHandler.sync(this::handleQuery));
-        
+        getMessageDispatcher().subscribeTopic("support.query", MessageHandler.sync(this::handleQuery));
+
         // Subscribe to agent contributions
-        getMessageService().subscribe("agent.contribution", MessageHandler.sync(this::handleContribution));
-        
+        getMessageDispatcher().subscribeTopic("agent.contribution", MessageHandler.sync(this::handleContribution));
+
         log.info("Collaborative Router Agent started");
     }
-    
+
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
     }
     
     /**
@@ -393,7 +393,7 @@ public class CollaborativeRouterAgent extends BaseAgent {
             .correlationId(correlationId)
             .content(response)
             .build();
-        getMessageService().send(responseMsg);
+        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
     }
     
     private void sendErrorResponse(String sessionId, String error, String correlationId) {

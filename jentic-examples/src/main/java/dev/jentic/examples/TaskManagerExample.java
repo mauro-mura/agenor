@@ -114,7 +114,7 @@ public class TaskManagerExample {
                 .build();
             
             log.info("Created task: {} - {}", task.id(), task.description());
-            messageService.send(taskMessage);
+            getMessageDispatcher().publish(taskMessage.topic(), taskMessage);
         }
         
         @Override
@@ -155,7 +155,7 @@ public class TaskManagerExample {
                 .header("processor", getAgentId())
                 .build();
             
-            messageService.send(processingMessage);
+            getMessageDispatcher().publish(processingMessage.topic(), processingMessage);
         }
         
         @JenticBehavior(type = CYCLIC, interval = "2s", autoStart = true)
@@ -195,7 +195,7 @@ public class TaskManagerExample {
                                 getAgentId(), task.id(), processedCount);
                     }
                     
-                    messageService.send(completedMessage);
+                    getMessageDispatcher().publish(completedMessage.topic(), completedMessage);
                     
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

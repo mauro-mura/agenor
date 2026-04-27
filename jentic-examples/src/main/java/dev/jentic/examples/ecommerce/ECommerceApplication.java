@@ -1,7 +1,7 @@
 package dev.jentic.examples.ecommerce;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public class ECommerceApplication {
         // Wait for agents to be ready
         Thread.sleep(2000);
 
-        MessageService messageService = runtime.getMessageService();
+        MessageDispatcher dispatcher = runtime.getMessageDispatcher();
 
         // =====================================================================
         // SCENARIO 1: Valid Order
@@ -54,8 +54,8 @@ public class ECommerceApplication {
                 .content(order1)
                 .build();
 
-        // Send via the shared messageService
-        messageService.send(newOrder1);
+        // Send via the shared dispatcher
+        dispatcher.publish(newOrder1.topic(), newOrder1);
 
         // Wait for order processing (FSM runs automatically via cyclic behavior)
         Thread.sleep(8000);
@@ -81,7 +81,7 @@ public class ECommerceApplication {
                 .content(order2)
                 .build();
 
-        messageService.send(newOrder2);
+        dispatcher.publish(newOrder2.topic(), newOrder2);
 
         // Wait for order processing
         Thread.sleep(5000);
