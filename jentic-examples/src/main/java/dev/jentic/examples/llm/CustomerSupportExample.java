@@ -4,7 +4,11 @@ import dev.jentic.adapters.llm.LLMProviderFactory;
 import dev.jentic.adapters.llm.openai.OpenAIProvider;
 import dev.jentic.core.*;
 import dev.jentic.core.llm.*;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.JenticRuntime;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Example demonstrating CustomerSupportAgent with LLMProvider integration.
@@ -39,7 +43,6 @@ public class CustomerSupportExample {
         runtime.stop().join();
     }
 
-    @SuppressWarnings("deprecation")
     private static void example1_TicketAnalysis(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("=== Example 1: Ticket Analysis ===");
 
@@ -56,15 +59,11 @@ public class CustomerSupportExample {
             .content(ticket)
             .build();
 
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        runtime.getMessageService().sendAndWait(message, 10000)
-            .thenAccept(response -> {
-                System.out.println("Analysis Result: " + response.content());
-            })
+        sendAndAwaitReply(runtime, message, "ticket.analysis.result", 10000)
+            .thenAccept(response -> System.out.println("Analysis Result: " + response.content()))
             .join();
     }
 
-    @SuppressWarnings("deprecation")
     private static void example2_ResponseGeneration(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 2: Response Generation ===");
 
@@ -77,15 +76,11 @@ public class CustomerSupportExample {
             .content(ticketData)
             .build();
 
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        runtime.getMessageService().sendAndWait(message, 10000)
-            .thenAccept(response -> {
-                System.out.println("Generated Response:\n" + response.content());
-            })
+        sendAndAwaitReply(runtime, message, "ticket.response.generated", 10000)
+            .thenAccept(response -> System.out.println("Generated Response:\n" + response.content()))
             .join();
     }
 
-    @SuppressWarnings("deprecation")
     private static void example3_Classification(JenticRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 3: Classification ===");
 
@@ -98,11 +93,26 @@ public class CustomerSupportExample {
             .content(ticket)
             .build();
 
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        runtime.getMessageService().sendAndWait(message, 10000)
-            .thenAccept(response -> {
-                System.out.println("Category: " + response.content());
-            })
+        sendAndAwaitReply(runtime, message, "ticket.classification.result", 10000)
+            .thenAccept(response -> System.out.println("Category: " + response.content()))
             .join();
+    }
+
+    /**
+     * Publishes a message and waits for a correlated reply on the given reply topic.
+     * Uses the dispatcher's topic subscription so external (non-agent) callers can receive replies.
+     */
+    private static CompletableFuture<Message> sendAndAwaitReply(
+            JenticRuntime runtime, Message request, String replyTopic, long timeoutMs) {
+        CompletableFuture<Message> future = new CompletableFuture<>();
+        Subscription sub = runtime.getMessageDispatcher().subscribeTopic(replyTopic, msg -> {
+            if (request.id().equals(msg.correlationId())) {
+                future.complete(msg);
+            }
+            return CompletableFuture.completedFuture(null);
+        });
+        runtime.getMessageDispatcher().publish(request.topic(), request);
+        return future.orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .whenComplete((r, e) -> sub.unsubscribe());
     }
 }

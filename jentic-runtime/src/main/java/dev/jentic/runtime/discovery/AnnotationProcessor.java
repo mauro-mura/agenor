@@ -12,8 +12,8 @@ import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticBehavior;
+import dev.jentic.core.messaging.TopicSubscriber;
 import dev.jentic.core.annotations.JenticMessageHandler;
 import dev.jentic.core.composite.CompletionStrategy;
 import dev.jentic.runtime.behavior.BaseBehavior;
@@ -33,10 +33,10 @@ public class AnnotationProcessor {
     
     private static final Logger log = LoggerFactory.getLogger(AnnotationProcessor.class);
     
-    private final MessageService messageService;
-    
-    public AnnotationProcessor(MessageService messageService) {
-        this.messageService = messageService;
+    private final TopicSubscriber topicSubscriber;
+
+    public AnnotationProcessor(TopicSubscriber topicSubscriber) {
+        this.topicSubscriber = topicSubscriber;
     }
     
     /**
@@ -412,9 +412,9 @@ public class AnnotationProcessor {
             }
         });
         
-        String subscriptionId = messageService.subscribe(topic, handler);
-        
-        log.info("Subscribed agent '{}' to topic '{}' (method: {}, subscription: {})", 
+        String subscriptionId = topicSubscriber.subscribeTopic(topic, handler).subscriptionId();
+
+        log.info("Subscribed agent '{}' to topic '{}' (method: {}, subscription: {})",
                 agent.getAgentName(), topic, method.getName(), subscriptionId);
     }
     

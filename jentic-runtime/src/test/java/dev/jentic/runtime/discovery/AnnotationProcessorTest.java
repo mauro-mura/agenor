@@ -3,6 +3,8 @@ package dev.jentic.runtime.discovery;
 import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.core.messaging.Subscription;
+import dev.jentic.core.messaging.TopicSubscriber;
 import dev.jentic.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,18 +23,21 @@ import static org.mockito.Mockito.*;
 class AnnotationProcessorTest {
 
     @Mock
-    private MessageService messageService;
-    
+    private TopicSubscriber topicSubscriber;
+
+    @Mock
+    private Subscription subscription;
+
     private AnnotationProcessor processor;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        processor = new AnnotationProcessor(messageService);
-        
-        // Default mock behavior
-        when(messageService.subscribe(anyString(), any(MessageHandler.class)))
-            .thenReturn("subscription-id");
+        processor = new AnnotationProcessor(topicSubscriber);
+
+        when(subscription.subscriptionId()).thenReturn("subscription-id");
+        when(topicSubscriber.subscribeTopic(anyString(), any(MessageHandler.class)))
+            .thenReturn(subscription);
     }
 
     // =========================================================================
@@ -50,7 +55,7 @@ class AnnotationProcessorTest {
         verify(agent, atLeastOnce()).addBehavior(any(Behavior.class));
         
         // Verify message handler subscription
-        verify(messageService).subscribe(eq("test.topic"), any(MessageHandler.class));
+        verify(topicSubscriber).subscribeTopic(eq("test.topic"), any(MessageHandler.class));
     }
 
     // =========================================================================
@@ -359,7 +364,7 @@ class AnnotationProcessorTest {
         
         processor.processAnnotations(agent);
         
-        verify(messageService).subscribe(eq("test.topic"), any(MessageHandler.class));
+        verify(topicSubscriber).subscribeTopic(eq("test.topic"), any(MessageHandler.class));
     }
 
     @Test
@@ -369,7 +374,7 @@ class AnnotationProcessorTest {
         
         processor.processAnnotations(agent);
         
-        verify(messageService, never()).subscribe(anyString(), any(MessageHandler.class));
+        verify(topicSubscriber, never()).subscribeTopic(anyString(), any(MessageHandler.class));
     }
 
     @Test
@@ -379,7 +384,7 @@ class AnnotationProcessorTest {
         
         processor.processAnnotations(agent);
         
-        verify(messageService, never()).subscribe(anyString(), any(MessageHandler.class));
+        verify(topicSubscriber, never()).subscribeTopic(anyString(), any(MessageHandler.class));
     }
 
     // =========================================================================

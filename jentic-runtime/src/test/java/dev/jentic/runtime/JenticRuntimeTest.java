@@ -3,8 +3,10 @@ package dev.jentic.runtime;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.JenticConfiguration;
+import dev.jentic.core.Message;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.annotations.JenticMessageHandler;
 import dev.jentic.core.config.ConfigurationException;
 import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
@@ -19,6 +21,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -494,6 +499,130 @@ class JenticRuntimeTest {
         assertThat(agent.getReceivedManager()).isNull();
     }
 
+    // ========== REQUEST-REPLY INTEGRATION ==========
+
+    /**
+     * Bug documentation: sendAndWait() on getMessageService() sends on the legacy InMemoryMessageService bus,
+     * while @JenticMessageHandler subscriptions live on getMessageDispatcher() (InMemoryMessageDispatcher).
+     * The two buses are separate — request never reaches the handler and the future always times out.
+     */
+    @Test
+    @SuppressWarnings("deprecation")
+    void requestReply_viaGetMessageService_sendAndWait_shouldTimeoutWhenHandlerIsOnDispatcher() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        EchoResponderAgent responder = new EchoResponderAgent("rr-responder-legacy");
+        runtimeUnderTest.registerAgent(responder);
+        runtimeUnderTest.start().join();
+
+        // sendAndWait sends on InMemoryMessageService bus; @JenticMessageHandler subscribes on
+        // InMemoryMessageDispatcher bus — two separate instances → request never reaches the handler
+        Message request = Message.builder()
+                .senderId("rr-caller")
+                .topic("rr.request")
+                .content("ping")
+                .build();
+
+        CompletableFuture<Message> reply = runtimeUnderTest.getMessageService()
+                .sendAndWait(request, 400);
+
+        assertThatThrownBy(reply::join)
+                .isInstanceOf(java.util.concurrent.CompletionException.class)
+                .hasCauseInstanceOf(java.util.concurrent.TimeoutException.class)
+                .as("sendAndWait via getMessageService() must time out because it uses a separate bus from the dispatcher");
+    }
+
+    /**
+     * Correct agent-to-agent request-reply: the requester (a registered agent) subscribes for direct
+     * replies via subscribeRecipient(getAgentId()), publishes the request, then awaits the reply.
+     * The responder can sendTo(requester agentId) because it is registered in the AgentDirectory.
+     * This is the pattern that OrderOrchestratorAgent must use after the Item 2 (0.20.0) refactor.
+     */
+    @Test
+    void requestReply_agentToAgent_viaDispatcher_shouldDeliverAndReceiveReply() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        CountDownLatch replyLatch = new CountDownLatch(1);
+        AtomicReference<Message> received = new AtomicReference<>();
+
+        RequesterAgent requester = new RequesterAgent("rr-requester", replyLatch, received);
+        EchoResponderAgent responder = new EchoResponderAgent("rr-responder-new");
+        runtimeUnderTest.registerAgent(requester);
+        runtimeUnderTest.registerAgent(responder);
+        runtimeUnderTest.start().join();
+
+        requester.doRequestReply();
+
+        assertThat(replyLatch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isNotNull();
+        assertThat(received.get().correlationId()).isEqualTo(requester.lastRequestId());
+        assertThat(received.get().getContent(String.class)).isEqualTo("pong");
+    }
+
+    // ========== DIRECT MESSAGE DISPATCH INTEGRATION ==========
+
+    @Test
+    void directMessage_shouldBeReceivedByAgentWhenSentViaGetMessageDispatcher() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> received = new AtomicReference<>();
+
+        DirectMessageAgent agent = new DirectMessageAgent("direct-agent", latch, received);
+        runtimeUnderTest.registerAgent(agent);
+        runtimeUnderTest.start().join();
+
+        runtimeUnderTest.getMessageDispatcher().sendTo("direct-agent",
+                Message.builder().receiverId("direct-agent").content("direct-hello").build());
+
+        assertThat(latch.await(2, TimeUnit.SECONDS))
+                .as("agent should receive direct message sent via getMessageDispatcher().sendTo()")
+                .isTrue();
+        assertThat(received.get()).isEqualTo("direct-hello");
+    }
+
+    // ========== MESSAGE DISPATCH INTEGRATION ==========
+
+    @Test
+    void messageHandler_shouldReceiveMessagePublishedViaGetMessageDispatcher() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> received = new AtomicReference<>();
+
+        MessageCapturingAgent agent = new MessageCapturingAgent("capture-agent", latch, received);
+        runtimeUnderTest.registerAgent(agent);
+        runtimeUnderTest.start().join();
+
+        runtimeUnderTest.getMessageDispatcher().publish("capture.topic",
+                Message.builder().topic("capture.topic").content("hello").build());
+
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isEqualTo("hello");
+    }
+
+    @Test
+    void getMessageDispatcher_shouldBeTheSameInstanceUsedByAgentHandlers() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> received = new AtomicReference<>();
+
+        MessageCapturingAgent agent = new MessageCapturingAgent("capture-agent-2", latch, received);
+        runtimeUnderTest.registerAgent(agent);
+        runtimeUnderTest.start().join();
+
+        // Agent publishes back on "capture.reply" — subscribe via the same dispatcher
+        AtomicReference<String> reply = new AtomicReference<>();
+        CountDownLatch replyLatch = new CountDownLatch(1);
+        runtimeUnderTest.getMessageDispatcher().subscribeTopic("capture.reply", msg -> {
+            reply.set(msg.getContent(String.class));
+            replyLatch.countDown();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        runtimeUnderTest.getMessageDispatcher().publish("capture.topic",
+                Message.builder().topic("capture.topic").content("ping").build());
+
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isEqualTo("ping");
+    }
+
     // ========== HELPERS ==========
 
     static class TestAgent extends BaseAgent {
@@ -564,6 +693,92 @@ class JenticRuntimeTest {
 
         public LLMMemoryManager getReceivedManager() {
             return receivedManager;
+        }
+    }
+
+    @JenticAgent("direct-message-agent")
+    static class DirectMessageAgent extends BaseAgent {
+        private final CountDownLatch latch;
+        private final AtomicReference<String> captured;
+
+        DirectMessageAgent(String agentId, CountDownLatch latch, AtomicReference<String> captured) {
+            super(agentId, agentId);
+            this.latch = latch;
+            this.captured = captured;
+        }
+
+        @Override
+        protected void handleDirectMessage(Message message) {
+            captured.set(message.getContent(String.class));
+            latch.countDown();
+        }
+    }
+
+    /** Sends a request via the dispatcher request-reply pattern (subscribeRecipient + publish). */
+    static class RequesterAgent extends BaseAgent {
+        private final CountDownLatch latch;
+        private final AtomicReference<Message> received;
+        private volatile String lastRequestId;
+
+        RequesterAgent(String agentId, CountDownLatch latch, AtomicReference<Message> received) {
+            super(agentId, agentId);
+            this.latch = latch;
+            this.received = received;
+        }
+
+        void doRequestReply() {
+            Message request = Message.builder()
+                    .senderId(getAgentId())
+                    .topic("rr.request")
+                    .content("ping")
+                    .build();
+            lastRequestId = request.id();
+
+            dev.jentic.core.messaging.Subscription sub = getMessageDispatcher()
+                    .subscribeRecipient(getAgentId(), msg -> {
+                        if (request.id().equals(msg.correlationId())) {
+                            received.set(msg);
+                            latch.countDown();
+                        }
+                        return CompletableFuture.completedFuture(null);
+                    });
+            getMessageDispatcher().publish("rr.request", request);
+        }
+
+        String lastRequestId() { return lastRequestId; }
+    }
+
+    /** Handles "rr.request" topic and replies via getMessageDispatcher().sendTo(). */
+    @JenticAgent("echo-responder-agent")
+    static class EchoResponderAgent extends BaseAgent {
+        EchoResponderAgent(String agentId) {
+            super(agentId, agentId);
+        }
+
+        @JenticMessageHandler("rr.request")
+        public void onRequest(Message message) {
+            Message reply = message.reply("pong")
+                    .topic("rr.reply")
+                    .build();
+            getMessageDispatcher().sendTo(reply.receiverId(), reply);
+        }
+    }
+
+    @JenticAgent("message-capturing-agent")
+    static class MessageCapturingAgent extends BaseAgent {
+        private final CountDownLatch latch;
+        private final AtomicReference<String> captured;
+
+        MessageCapturingAgent(String agentId, CountDownLatch latch, AtomicReference<String> captured) {
+            super(agentId, agentId);
+            this.latch = latch;
+            this.captured = captured;
+        }
+
+        @JenticMessageHandler("capture.topic")
+        public void onMessage(Message message) {
+            captured.set(message.getContent(String.class));
+            latch.countDown();
         }
     }
 }

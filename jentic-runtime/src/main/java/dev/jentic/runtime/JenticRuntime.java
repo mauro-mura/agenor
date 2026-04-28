@@ -139,7 +139,7 @@ public class JenticRuntime {
         // Initialize discovery components
         this.agentScanner = new AgentScanner();
         this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler, memoryStore);
-        this.annotationProcessor = new AnnotationProcessor(messageService);
+        this.annotationProcessor = new AnnotationProcessor(messageDispatcher);
         this.lifecycleManager = new LifecycleManager();
 
         // Add default lifecycle listener
@@ -290,6 +290,7 @@ public class JenticRuntime {
         // Configure agent services
         if (agent instanceof BaseAgent baseAgent) {
             baseAgent.setMessageService(messageService);
+            baseAgent.setMessageDispatcher(messageDispatcher);
             baseAgent.setAgentDirectory(agentDirectory);
             baseAgent.setBehaviorScheduler(behaviorScheduler);
             if (memoryStore != null) {

@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  *
  * @since 0.6.0
  */
-@JenticAgent(value = "chat-agent", autoStart = false)
+@JenticAgent(value = "chat-agent")
 public class ChatAgent extends LLMAgent {
 
     /**
@@ -118,8 +118,8 @@ public class ChatAgent extends LLMAgent {
                     return extractAndStoreFacts(userInput);
                 })
                 .thenCompose(v -> {
-                    // Build prompt with conversation and ALL facts
-                    return buildChatPrompt(userInput, 2500);
+                    // Build prompt with conversation and relevant facts via LLMAgent API
+                    return buildLLMPrompt(userInput, 2500, extractSearchKeyword(userInput));
                 })
                 .thenApply(prompt -> {
                     // Simulate LLM response (in real app, call actual LLM)

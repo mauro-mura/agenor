@@ -55,7 +55,6 @@ public class CustomerSupportAgent extends BaseAgent {
             log.debug("LLM analysis completed: {} tokens", response.usage().totalTokens());
             TicketAnalysis analysis = parseAnalysis(response.content());
 
-            // Send result back
             var resultMsg = Message.builder()
                     .senderId(getAgentId())
                     .receiverId(message.senderId())
@@ -63,7 +62,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.analysis.result")
                     .content(analysis.toString())
                     .build();
-            getMessageDispatcher().sendTo(resultMsg.receiverId(), resultMsg);
+            getMessageDispatcher().publish(resultMsg.topic(), resultMsg);
         });
     }
 
@@ -107,7 +106,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.response.generated")
                     .content(response.content())
                     .build();
-            getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
+            getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
         });
     }
 
@@ -145,7 +144,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.classification.result")
                     .content(category)
                     .build();
-            getMessageDispatcher().sendTo(classifyMsg.receiverId(), classifyMsg);
+            getMessageDispatcher().publish(classifyMsg.topic(), classifyMsg);
         });
     }
 

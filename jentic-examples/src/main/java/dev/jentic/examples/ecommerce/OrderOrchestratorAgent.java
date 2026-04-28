@@ -4,6 +4,7 @@ import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.OneShotBehavior;
 import dev.jentic.runtime.behavior.composite.*;
@@ -152,38 +153,30 @@ public class OrderOrchestratorAgent extends BaseAgent {
         };
     }
 
-    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validateCustomer(String customerId) {
         Message request = Message.builder()
                 .topic("validate-customer")
                 .senderId(getAgentId())
                 .content(customerId)
                 .build();
-
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        return getMessageService()
-                .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
+        return requestReply("validate-customer", request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
                     Map<String, Object> result = response.getContent(Map.class);
                     return (Boolean) result.getOrDefault("valid", false);
                 })
                 .exceptionally(throwable -> {
                     log.error("Customer validation timeout/error", throwable);
-                    return false;  // Fail-safe
+                    return false;
                 });
     }
 
-    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validateInventory(List<OrderItem> items) {
         Message request = Message.builder()
                 .topic("validate-inventory")
                 .senderId(getAgentId())
                 .content(items)
                 .build();
-
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        return getMessageService()
-                .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
+        return requestReply("validate-inventory", request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
                     Map<String, Object> result = response.getContent(Map.class);
                     return (Boolean) result.getOrDefault("valid", false);
@@ -194,17 +187,13 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 });
     }
 
-    @SuppressWarnings("deprecation")
     private CompletableFuture<Boolean> validatePayment(String amount) {
         Message request = Message.builder()
                 .topic("validate-payment")
                 .senderId(getAgentId())
                 .content(amount)
                 .build();
-
-        // sendAndWait has no equivalent in MessageDispatcher — kept on deprecated API
-        return getMessageService()
-                .sendAndWait(request, VALIDATION_TIMEOUT.toMillis())
+        return requestReply("validate-payment", request, VALIDATION_TIMEOUT.toMillis())
                 .thenApply(response -> {
                     Map<String, Object> result = response.getContent(Map.class);
                     return (Boolean) result.getOrDefault("valid", false);
@@ -213,6 +202,19 @@ public class OrderOrchestratorAgent extends BaseAgent {
                     log.error("Payment validation timeout/error", throwable);
                     return false;
                 });
+    }
+
+    private CompletableFuture<Message> requestReply(String topic, Message request, long timeoutMs) {
+        CompletableFuture<Message> future = new CompletableFuture<>();
+        Subscription sub = getMessageDispatcher().subscribeRecipient(getAgentId(), msg -> {
+            if (request.id().equals(msg.correlationId())) {
+                future.complete(msg);
+            }
+            return CompletableFuture.completedFuture(null);
+        });
+        getMessageDispatcher().publish(topic, request);
+        return future.orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .whenComplete((r, e) -> sub.unsubscribe());
     }
 
     private Behavior createPaymentProcessingBehavior() {

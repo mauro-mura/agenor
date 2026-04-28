@@ -86,7 +86,7 @@ public abstract class BaseAgent implements Agent {
     private final Map<String, Behavior> behaviors = new ConcurrentHashMap<>();
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
 
-    private String directMessageSubscriptionId;
+    private dev.jentic.core.messaging.Subscription directMessageSubscription;
 
     // Lifecycle hooks - thread-safe collections
     private final List<Runnable> startHooks = new CopyOnWriteArrayList<>();
@@ -314,8 +314,14 @@ public abstract class BaseAgent implements Agent {
      *
      * @since 0.20.0
      */
+    private MessageDispatcher messageDispatcher;
+
+    public void setMessageDispatcher(MessageDispatcher dispatcher) {
+        this.messageDispatcher = dispatcher;
+    }
+
     public MessageDispatcher getMessageDispatcher() {
-        return messageService;
+        return messageDispatcher != null ? messageDispatcher : messageService;
     }
 
     /**
@@ -507,17 +513,26 @@ public abstract class BaseAgent implements Agent {
      * Called during agent start.
      */
     private void autoSubscribeDirectMessages() {
-        if (messageService == null) {
-            log.warn("Agent '{}': Cannot auto-subscribe - no message service", agentId);
+        if (messageDispatcher == null && messageService == null) {
+            log.warn("Agent '{}': Cannot auto-subscribe - no message dispatcher", agentId);
             return;
         }
 
         try {
-            // Subscribe to messages with receiverId = this agent's ID
-            directMessageSubscriptionId = messageService.subscribeToReceiver(
-                    agentId,
-                    MessageHandler.sync(this::handleDirectMessage)
-            );
+            if (messageDispatcher != null) {
+                directMessageSubscription = messageDispatcher.subscribeRecipient(
+                        agentId,
+                        MessageHandler.sync(this::handleDirectMessage)
+                );
+            } else {
+                // Legacy fallback — messageDispatcher not injected
+                String legacyId = messageService.subscribeToReceiver(
+                        agentId,
+                        MessageHandler.sync(this::handleDirectMessage)
+                );
+                directMessageSubscription = dev.jentic.core.messaging.Subscription.of(
+                        legacyId, () -> messageService.unsubscribe(legacyId));
+            }
 
             log.debug("Agent '{}' auto-subscribed for direct messages", agentId);
 
@@ -531,10 +546,10 @@ public abstract class BaseAgent implements Agent {
      * Unsubscribe from direct messages during agent shutdown.
      */
     private void unsubscribeDirectMessages() {
-        if (directMessageSubscriptionId != null && messageService != null) {
+        if (directMessageSubscription != null) {
             try {
-                messageService.unsubscribe(directMessageSubscriptionId);
-                directMessageSubscriptionId = null;
+                directMessageSubscription.unsubscribe();
+                directMessageSubscription = null;
                 log.debug("Agent '{}' unsubscribed from direct messages", agentId);
             } catch (Exception e) {
                 log.error("Error unsubscribing direct messages for agent '{}': {}",
