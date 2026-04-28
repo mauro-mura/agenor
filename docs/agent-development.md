@@ -249,7 +249,7 @@ MessageFilter notTest = CompositeFilter.not(HeaderFilter.equals("env", "test"));
 
 ### Registering a filter on a subscription
 
-Filters are applied at subscription time via `MessageService.subscribe(filter, handler)`:
+Filters are applied at subscription time via `FilterableSubscriber.subscribeFiltered(filter, handler)`. The in-memory dispatcher implements this capability; cast when needed:
 
 ```java
 @Override
@@ -258,7 +258,7 @@ protected void onStart() {
         TopicFilter.startsWith("orders."),
         HeaderFilter.equals("priority", "HIGH")
     );
-    messageService.subscribe(filter, msg -> handleHighPriorityOrder(msg));
+    ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(filter, msg -> handleHighPriorityOrder(msg));
 }
 ```
 
@@ -368,12 +368,12 @@ public class CoordinatorAgent extends BaseAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
+        dialogue.initialize(getMessageDispatcher());
     }
 
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
     }
 
     // Respond to incoming REQUEST performatives

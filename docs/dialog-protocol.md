@@ -84,12 +84,12 @@ public class MyAgent extends BaseAgent {
     
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageService());
+        dialogue.initialize(getMessageDispatcher());
     }
     
     @Override
     protected void onStop() {
-        dialogue.shutdown(getMessageService());
+        dialogue.shutdown();
     }
     
     // Handle incoming requests

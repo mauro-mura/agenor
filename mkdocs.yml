@@ -75,7 +75,10 @@ nav:
     - Throttled: behaviors/ThrottledBehavior.md
     - CircuitBreaker: behaviors/CircuitBreakerBehavior.md
     - Reflection: behaviors/ReflectionBehavior.md
-  - Messaging:
+    - Human-In-The-Loop: behaviors/hitl.md
+  - Messaging & Directory:
+    - Messaging Guide: messaging.md
+    - Agent Directory: directory.md
     - Message Filtering: message-filtering.md
     - Dialog Protocol: dialog-protocol.md
   - LLM Integration:
@@ -89,4 +92,3 @@ nav:
     - OpenTelemetry: observability.md
   - Integrations:
     - Spring Boot Starter: spring-boot-starter.md
-  - API Reference: api/index.html

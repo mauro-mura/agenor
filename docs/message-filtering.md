@@ -207,7 +207,7 @@ MessageFilter.builder()
 
 ### Programmatic subscription
 
-Pass a `MessageFilter` (or any `Predicate<Message>`) to `MessageService.subscribe()`:
+Pass a `MessageFilter` (or any `Predicate<Message>`) to `FilterableSubscriber.subscribeFiltered()`. The in-memory dispatcher implements this capability:
 
 ```java
 // Using a concrete filter class
@@ -216,7 +216,8 @@ MessageFilter filter = CompositeFilter.and(
     HeaderFilter.equals("priority", "HIGH")
 );
 
-messageService.subscribe(filter, message -> {
+FilterableSubscriber filterable = (FilterableSubscriber) dispatcher;
+filterable.subscribeFiltered(filter, message -> {
     OrderData order = message.getContent(OrderData.class);
     processUrgentOrder(order);
 });
@@ -235,7 +236,7 @@ public class OrderProcessorAgent extends BaseAgent {
             .headerIn("status", "pending", "confirmed")
             .build();
 
-        messageService.subscribe(filter, this::handleOrder);
+        ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(filter, this::handleOrder);
     }
 
     private void handleOrder(Message msg) {

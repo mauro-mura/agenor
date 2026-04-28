@@ -97,7 +97,7 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Message Filters
 
-All filters implement `MessageFilter` (package `dev.jentic.runtime.filter`):
+All filters implement `MessageFilter` (package `dev.jentic.runtime.filter`). Used with `FilterableSubscriber.subscribeFiltered`:
 
 - **TopicFilter**: `exact`, `startsWith`, `endsWith`, `wildcard`, `regex`
 - **HeaderFilter**: `exists`, `equals`, `matches`, `in`, `startsWith`
@@ -175,8 +175,8 @@ For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 All core contracts are interfaces. Custom implementations can be plugged in
 without changing agent code:
 
-- `MessageService` → JMS, Kafka, Redis, or any custom transport
-- `AgentDirectory` → database, Consul, etcd, or any registry
+- `MessageDispatcher` → Redis Streams, Kafka, JMS, or any custom transport
+- `dev.jentic.core.directory.AgentDirectory` → JDBC, Consul, etcd, or any registry
 - `BehaviorScheduler` → Quartz, cron, or any scheduler
 - `MemoryStore` → any SQL or NoSQL backend
 
@@ -191,12 +191,14 @@ Community adapters are welcome. See `CONTRIBUTING.md`.
 
 ## 7. Messaging Flow
 
-1) An Agent publishes a Message via MessageService.send.
-2) The MessageService routes the message by topic to interested handlers.
-3) Agents subscribe implicitly via `@JenticMessageHandler(topic)` annotated methods.
-4) Filters registered at subscription time further restrict delivery.
-5) In-memory implementation delivers messages synchronously/asynchronously within the JVM.
-6) Custom adapters can switch transport without changing user code
+1. An Agent publishes a `Message` via `MessageDispatcher.publish(topic, msg)` (topic broadcast) or `sendTo(agentId, msg)` (point-to-point).
+2. For point-to-point, the dispatcher calls `AgentResolver.resolveEndpoint(agentId)` to obtain the target `AgentEndpoint`.
+3. Agents subscribe via `subscribeTopic(topic, handler)` or `subscribeRecipient(agentId, handler)`, both returning a `Subscription`.
+4. `@JenticMessageHandler(topic)` annotations are also supported; the runtime registers the handler automatically.
+5. Optional predicate filtering is available via `FilterableSubscriber.subscribeFiltered(filter, handler)` (in-memory only).
+6. The in-memory implementation delivers messages on virtual threads within the JVM; custom backends (Redis, Kafka) plug in without changing agent code.
+
+See [Messaging Guide](messaging.md) for the complete API reference.
 
 ## 8. Discovery & Lifecycle
 
@@ -207,7 +209,7 @@ Community adapters are welcome. See `CONTRIBUTING.md`.
   - constructing agents via AgentFactory
   - registering agents in the directory
   - scheduling declared behaviors
-  - wiring message handlers to the MessageService
+  - wiring message handlers to the MessageDispatcher
 
 ## 9. Configuration
 
@@ -223,10 +225,10 @@ Implementations are selected by configuration while code depends only on core in
 ## 10. Extensibility Points
 
 To integrate enterprise technologies, implement core contracts:
-- MessageService: swap transport (JMS, Kafka, Redis Streams)
-- AgentDirectory: swap discovery (DB, Consul, etcd)
-- BehaviorScheduler: advanced scheduling (Quartz, cron, priority queues)
-- LLMProvider: add new model providers (implement the interface, register with factory)
+- `MessageDispatcher` (or individual `TopicPublisher` / `DirectMessenger` capabilities): swap transport (Redis Streams, Kafka, JMS)
+- `dev.jentic.core.directory.AgentDirectory` (or individual `AgentRegistry` / `AgentDiscovery` / `AgentResolver` / `AgentPresence` capabilities): swap discovery (JDBC, Consul, etcd)
+- `BehaviorScheduler`: advanced scheduling (Quartz, cron, priority queues)
+- `LLMProvider`: add new model providers (implement the interface, register with factory)
 
 Guidelines:
 - Keep adapters dependency‑isolated within jentic-adapters submodules.
@@ -310,14 +312,14 @@ InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
 LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
 
 Access via: runtime.getApprovalService()
-See docs/hitl.md for the full developer guide.
+See [Human-In-The-Loop guide](behaviors/hitl.md) for the full developer guide.
 
 ## 14. Evolution Path
 
 - MVP: in‑memory runtime for simple single‑JVM systems.
 - See `CONTRIBUTING.md` for how to build and share custom adapters.
 
-See [ADRs](adr/README.md) for rationale and decisions.
+See the ADRs in `docs/adr/` (repository only) for rationale and decisions.
 
 ## 15. Example Bootstrapping
 
