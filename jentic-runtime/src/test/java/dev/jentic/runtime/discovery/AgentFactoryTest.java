@@ -245,8 +245,25 @@ class AgentFactoryTest {
     void shouldUseClassNameWhenTypeEmpty() throws AgentException {
         AgentWithEmptyType agent = factory.createAgent(AgentWithEmptyType.class);
         AgentDescriptor descriptor = factory.createDescriptor(AgentWithEmptyType.class, agent);
-        
+
         assertThat(descriptor.agentType()).isEqualTo("AgentWithEmptyType");
+    }
+
+    @Test
+    @DisplayName("createDescriptor uses getAgentId() over annotation value for multi-instance agents")
+    void createDescriptor_prefersRuntimeIdOverAnnotationValueForMultiInstanceAgent() {
+        // @JenticAgent("worker") declares a class-level type label, but each Worker instance
+        // overrides getAgentId() to return its own logical ID ("worker-1", "worker-2", …).
+        // The descriptor's agentId must match getAgentId(), not the annotation's value,
+        // so that AgentResolver.resolveEndpoint("worker-1") can find the agent.
+        MultiInstanceWorker worker = new MultiInstanceWorker("worker-1");
+        AgentDescriptor descriptor = factory.createDescriptor(MultiInstanceWorker.class, worker);
+
+        assertThat(descriptor.agentId())
+                .as("descriptor agentId must equal getAgentId(), not the annotation value 'worker'")
+                .isEqualTo("worker-1");
+        // agentType falls back to class simple name when @JenticAgent has no 'type' attribute
+        assertThat(descriptor.agentType()).isEqualTo("MultiInstanceWorker");
     }
 
     // =========================================================================
@@ -425,6 +442,20 @@ class AgentFactoryTest {
         public int getUsedConstructorParams() {
             return usedConstructorParams;
         }
+    }
+
+    /** Multi-instance agent: annotation value is a class-level type label, not an instance ID. */
+    @JenticAgent("worker")
+    static class MultiInstanceWorker extends BaseAgent {
+        private final String instanceId;
+
+        MultiInstanceWorker(String instanceId) {
+            super(); // BaseAgent.agentId = UUID; getAgentId() overridden below
+            this.instanceId = instanceId;
+        }
+
+        @Override public String getAgentId() { return instanceId; }
+        @Override public String getAgentName() { return "Worker " + instanceId; }
     }
 
     // =========================================================================

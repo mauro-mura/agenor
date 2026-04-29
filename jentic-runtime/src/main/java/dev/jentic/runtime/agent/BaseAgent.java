@@ -521,13 +521,13 @@ public abstract class BaseAgent implements Agent {
         try {
             if (messageDispatcher != null) {
                 directMessageSubscription = messageDispatcher.subscribeRecipient(
-                        agentId,
+                        getAgentId(),
                         MessageHandler.sync(this::handleDirectMessage)
                 );
             } else {
                 // Legacy fallback — messageDispatcher not injected
                 String legacyId = messageService.subscribeToReceiver(
-                        agentId,
+                        getAgentId(),
                         MessageHandler.sync(this::handleDirectMessage)
                 );
                 directMessageSubscription = dev.jentic.core.messaging.Subscription.of(

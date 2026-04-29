@@ -578,6 +578,43 @@ class JenticRuntimeTest {
         assertThat(received.get()).isEqualTo("direct-hello");
     }
 
+    // ========== MULTI-INSTANCE AGENT ROUTING ==========
+
+    /**
+     * Regression: @JenticAgent("worker") annotation value was used as the descriptor agentId for
+     * ALL instances of the class, so resolveEndpoint("worker-1") returned empty and sendTo never
+     * delivered. The descriptor agentId must come from getAgentId(), not the annotation.
+     * Same root cause: autoSubscribeDirectMessages() used the internal UUID field instead of
+     * getAgentId(), so even if resolution worked the subscription key was wrong.
+     */
+    @Test
+    void multiInstanceAgent_withOverriddenGetAgentId_receivesDirectMessageByLogicalId() throws Exception {
+        runtimeUnderTest = JenticRuntime.builder().build();
+        CountDownLatch w1Latch = new CountDownLatch(1);
+        CountDownLatch w2Latch = new CountDownLatch(1);
+        AtomicReference<String> w1Content = new AtomicReference<>();
+        AtomicReference<String> w2Content = new AtomicReference<>();
+
+        MultiInstanceWorker worker1 = new MultiInstanceWorker("worker-1", w1Latch, w1Content);
+        MultiInstanceWorker worker2 = new MultiInstanceWorker("worker-2", w2Latch, w2Content);
+        runtimeUnderTest.registerAgent(worker1);
+        runtimeUnderTest.registerAgent(worker2);
+        runtimeUnderTest.start().join();
+
+        runtimeUnderTest.getMessageDispatcher()
+                .sendTo("worker-1",
+                        Message.builder().receiverId("worker-1").content("task-for-1").build())
+                .join();
+
+        assertThat(w1Latch.await(2, TimeUnit.SECONDS))
+                .as("worker-1 must receive the message addressed to it")
+                .isTrue();
+        assertThat(w1Content.get()).isEqualTo("task-for-1");
+        assertThat(w2Latch.getCount())
+                .as("worker-2 must NOT receive the message addressed to worker-1")
+                .isEqualTo(1);
+    }
+
     // ========== MESSAGE DISPATCH INTEGRATION ==========
 
     @Test
@@ -761,6 +798,32 @@ class JenticRuntimeTest {
                     .topic("rr.reply")
                     .build();
             getMessageDispatcher().sendTo(reply.receiverId(), reply);
+        }
+    }
+
+    /** Multi-instance worker: @JenticAgent annotation holds the class-level type label ("worker"),
+     *  while getAgentId() returns the instance-specific logical ID. Uses the no-arg super()
+     *  constructor so that BaseAgent.agentId = UUID (simulating the ContractNetExample pattern). */
+    @JenticAgent("worker")
+    static class MultiInstanceWorker extends BaseAgent {
+        private final String instanceId;
+        private final CountDownLatch latch;
+        private final AtomicReference<String> captured;
+
+        MultiInstanceWorker(String instanceId, CountDownLatch latch, AtomicReference<String> captured) {
+            super(); // BaseAgent.agentId = UUID; getAgentId() overridden below
+            this.instanceId = instanceId;
+            this.latch = latch;
+            this.captured = captured;
+        }
+
+        @Override public String getAgentId() { return instanceId; }
+        @Override public String getAgentName() { return "Worker " + instanceId; }
+
+        @Override
+        protected void handleDirectMessage(Message message) {
+            captured.set(message.getContent(String.class));
+            latch.countDown();
         }
     }
 

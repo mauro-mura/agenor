@@ -147,7 +147,7 @@ public class ContractNetExample {
     // WORKER AGENT (Participant)
     // =========================================================================
 
-    @JenticAgent("worker")
+    @JenticAgent(type = "worker")
     static class Worker extends BaseAgent {
         
         private final String id;

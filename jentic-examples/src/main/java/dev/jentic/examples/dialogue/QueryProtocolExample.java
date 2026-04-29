@@ -1,6 +1,8 @@
 package dev.jentic.examples.dialogue;
 
 import dev.jentic.core.Agent;
+import dev.jentic.core.AgentDescriptor;
+import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueHandler;
@@ -32,12 +34,13 @@ public class QueryProtocolExample {
         System.out.println("║      QUERY PROTOCOL EXAMPLE - Knowledge Retrieval        ║");
         System.out.println("╚══════════════════════════════════════════════════════════╝\n");
 
-        // Shared message dispatcher
-        InMemoryMessageDispatcher dispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory());
+        // Shared infrastructure — agents must be registered so sendTo can resolve endpoints
+        InMemoryAgentDirectory directory = new InMemoryAgentDirectory();
+        InMemoryMessageDispatcher dispatcher = new InMemoryMessageDispatcher(directory);
 
         // Create agents
-        KnowledgeBase kb = new KnowledgeBase(dispatcher);
-        QueryClient client = new QueryClient(dispatcher);
+        KnowledgeBase kb = new KnowledgeBase(dispatcher, directory);
+        QueryClient client = new QueryClient(dispatcher, directory);
 
         // Start agents
         kb.start().join();
@@ -79,6 +82,7 @@ public class QueryProtocolExample {
     static class KnowledgeBase implements Agent {
 
         private final MessageDispatcher dispatcher;
+        private final InMemoryAgentDirectory directory;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private boolean running;
 
@@ -92,7 +96,10 @@ public class QueryProtocolExample {
             "population:Germany", "83 million"
         );
 
-        KnowledgeBase(MessageDispatcher ms) { this.dispatcher = ms; }
+        KnowledgeBase(MessageDispatcher ms, InMemoryAgentDirectory dir) {
+            this.dispatcher = ms;
+            this.directory = dir;
+        }
 
         @Override public String getAgentId() { return "kb"; }
         @Override public String getAgentName() { return "Knowledge Base"; }
@@ -104,6 +111,9 @@ public class QueryProtocolExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
+                directory.register(AgentDescriptor.builder("kb")
+                        .agentName("Knowledge Base").agentType("KnowledgeBase")
+                        .status(AgentStatus.RUNNING).build()).join();
                 dialogue.initialize(dispatcher);
                 running = true;
                 System.out.println("[KB] Started with " + facts.size() + " facts");
@@ -114,6 +124,7 @@ public class QueryProtocolExample {
         public CompletableFuture<Void> stop() {
             return CompletableFuture.runAsync(() -> {
                 dialogue.shutdown();
+                directory.unregister("kb").join();
                 running = false;
             });
         }
@@ -146,10 +157,14 @@ public class QueryProtocolExample {
     static class QueryClient implements Agent {
 
         private final MessageDispatcher dispatcher;
+        private final InMemoryAgentDirectory directory;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private boolean running;
 
-        QueryClient(MessageDispatcher ms) { this.dispatcher = ms; }
+        QueryClient(MessageDispatcher ms, InMemoryAgentDirectory dir) {
+            this.dispatcher = ms;
+            this.directory = dir;
+        }
 
         @Override public String getAgentId() { return "client"; }
         @Override public String getAgentName() { return "Client"; }
@@ -161,6 +176,9 @@ public class QueryProtocolExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
+                directory.register(AgentDescriptor.builder("client")
+                        .agentName("Client").agentType("QueryClient")
+                        .status(AgentStatus.RUNNING).build()).join();
                 dialogue.initialize(dispatcher);
                 running = true;
                 System.out.println("[Client] Started\n");
@@ -171,6 +189,7 @@ public class QueryProtocolExample {
         public CompletableFuture<Void> stop() {
             return CompletableFuture.runAsync(() -> {
                 dialogue.shutdown();
+                directory.unregister("client").join();
                 running = false;
             });
         }

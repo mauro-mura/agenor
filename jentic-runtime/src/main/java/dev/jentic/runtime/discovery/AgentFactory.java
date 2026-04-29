@@ -215,7 +215,10 @@ public class AgentFactory {
                     .build();
         }
 
-        String agentId = annotation.value().trim().isEmpty() ? agent.getAgentId() : annotation.value().trim();
+        // getAgentId() is the authoritative instance identity. Using it instead of the
+        // annotation value ensures multi-instance agents (where getAgentId() returns
+        // instance-specific IDs) are registered under the correct key in the directory.
+        String agentId = agent.getAgentId();
         String agentType = annotation.type().trim().isEmpty() ? agentClass.getSimpleName() : annotation.type().trim();
 
         Set<String> capabilities = java.util.Arrays.stream(annotation.capabilities())

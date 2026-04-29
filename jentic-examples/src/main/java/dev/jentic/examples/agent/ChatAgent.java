@@ -61,7 +61,7 @@ public class ChatAgent extends LLMAgent {
      * Create a chat agent with auto-generated ID.
      */
     public ChatAgent() {
-        super();
+        super("chat-agent", "ChatAgent");
     }
 
     /**
