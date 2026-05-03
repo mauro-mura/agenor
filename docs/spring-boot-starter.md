@@ -1,7 +1,7 @@
 # Spring Boot Starter
 
 `jentic-spring-boot-starter` provides zero-configuration auto-wiring of `JenticRuntime`
-into any Spring Boot 3.5.x application. Add one dependency, configure `application.yml`,
+into any Spring Boot 4.0.x application. Add one dependency, configure `application.yml`,
 and Jentic starts with the Spring context.
 
 ## Dependency
@@ -10,7 +10,7 @@ and Jentic starts with the Spring context.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
@@ -216,11 +216,9 @@ public JenticRuntime jenticRuntime() {
 
 ## Spring Boot 4.x
 
-The starter targets Spring Boot **3.5.x**. Spring Boot 4.x is out of scope for v1.0.0.
+The starter targets Spring Boot **4.0.x** (adopted in 0.18.0, see `ADR-016`).
 The auto-configuration API (`AutoConfiguration.imports`, `@ConditionalOnMissingBean`, etc.)
-is identical between the two major versions — migration effort is expected to be low
-(mainly BOM coordinate and `javax.*` → `jakarta.*` namespace changes).
-See `ADR-016` for the rationale.
+is stable across Spring Boot 4.x versions.
 
 ## See Also
 

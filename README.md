@@ -47,7 +47,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>0.20.0-SNAPSHOT</version>
+            <version>0.20.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -84,7 +84,7 @@ If you prefer explicit version management:
     <dependency>
         <groupId>dev.jentic</groupId>
         <artifactId>jentic-runtime</artifactId>
-        <version>0.20.0-SNAPSHOT</version>
+        <version>0.20.0</version>
     </dependency>
 </dependencies>
 ```
@@ -136,9 +136,9 @@ For details, read the Architecture Guide at docs/architecture.md.
 │   (interfaces)   │ (basic impls)   │  (integrations)      │
 ├──────────────────┼─────────────────┼──────────────────────┤
 │ Agent            │ BaseAgent       │ OpenAIProvider       │
-│ MessageService   │ LLMAgent        │ AnthropicProvider    │
-│ AgentDirectory   │ InMemoryMessage │ OllamaProvider       │
-│ BehaviorScheduler│ LocalDirectory  │ A2A Adapter          │
+│ MessageDispatcher│ LLMAgent        │ AnthropicProvider    │
+│ AgentDirectory   │ InMemoryDispatch│ OllamaProvider       │
+│ BehaviorScheduler│ InMemoryDir     │ A2A Adapter          │
 │ LLMProvider      │ SimpleScheduler │ extensible           │
 │ MemoryStore      │ InMemoryStore   │                      │
 └──────────────────┴─────────────────┴──────────────────────┘
@@ -147,8 +147,8 @@ For details, read the Architecture Guide at docs/architecture.md.
 ### Core Components
 
 - **Agent**: Autonomous entity with behaviors and message handling
-- **MessageService**: Asynchronous communication between agents
-- **AgentDirectory**: Service discovery and registration
+- **MessageDispatcher**: Asynchronous communication between agents (topic pub/sub + direct messaging)
+- **AgentDirectory**: Service discovery, registration, and endpoint resolution
 - **BehaviorScheduler**: Execution management for agent behaviors
 
 ### Evolution Path
@@ -186,7 +186,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
@@ -197,7 +197,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
@@ -208,7 +208,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-adapters</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
@@ -219,20 +219,20 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-tools</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
 ### jentic-spring-boot-starter
  
-Zero-configuration Spring Boot 3.5.x integration. Auto-wires `JenticRuntime` and
+Zero-configuration Spring Boot 4.0.x integration. Auto-wires `JenticRuntime` and
 optionally an `LLMProvider` from `application.yml`. Includes Actuator health indicator.
  
 ```xml
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.0</version>
 </dependency>
 ```
  
