@@ -113,12 +113,11 @@ import java.util.concurrent.CompletableFuture;
  *             
  *             SystemHealth health = checkSystemHealth();
  *             if (health.isCritical()) {
- *                 agent.getMessageService().send(
- *                     Message.builder()
+ *                 Message alert = Message.builder()
  *                         .topic("alerts.health")
  *                         .content(health)
- *                         .build()
- *                 );
+ *                         .build();
+ *                 agent.getMessageDispatcher().publish("alerts.health", alert);
  *             }
  *             
  *             log.info("Health check: {}", health);
@@ -144,7 +143,7 @@ import java.util.concurrent.CompletableFuture;
  * };
  * 
  * // Subscribe to order messages
- * agent.getMessageService().subscribe("orders.new", message -> {
+ * agent.getMessageDispatcher().subscribeTopic("orders.new", message -> {
  *     if (orderProcessor.isActive()) {
  *         Order order = message.getContent(Order.class);
  *         processOrder(order);
@@ -222,7 +221,7 @@ public interface Behavior {
      * established when the behavior is added to the agent via
      * {@link Agent#addBehavior(Behavior)} and provides the behavior with:
      * <ul>
-     *   <li>Access to the agent's {@link MessageService}</li>
+     *   <li>Access to the agent's {@link dev.jentic.core.messaging.MessageDispatcher}</li>
      *   <li>Agent identity for logging and monitoring</li>
      *   <li>Context for behavior execution</li>
      * </ul>
@@ -300,12 +299,11 @@ public interface Behavior {
      *             processData(data);
      *             
      *             // Send results
-     *             agent.getMessageService().send(
-     *                 Message.builder()
+     *             Message result = Message.builder()
      *                     .topic("data.processed")
      *                     .content(data)
-     *                     .build()
-     *             );
+     *                     .build();
+     *             agent.getMessageDispatcher().publish("data.processed", result);
      *             
      *             return null;
      *             

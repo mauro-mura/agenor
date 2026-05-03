@@ -174,7 +174,7 @@ class DialogueCapabilityTest {
         @Override public CompletableFuture<Void> stop() { return CompletableFuture.completedFuture(null); }
         @Override public void addBehavior(dev.jentic.core.Behavior behavior) { }
         @Override public void removeBehavior(String behaviorId) { }
-        @Override public dev.jentic.core.MessageService getMessageService() { return null; }
+        @Override public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return null; }
         
         @DialogueHandler(performatives = Performative.REQUEST)
         public void handleRequest(DialogueMessage msg) {

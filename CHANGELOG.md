@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.20.0] - 2026-04-26
+## [0.20.0] - 2026-05-03
 
 ### Added
 
@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   **Spring Boot starter** — new capability beans: `jenticMessageDispatcher`, `jenticAgentDirectory`, `jenticAgentRegistry`, `jenticAgentResolver`, `jenticAgentDiscovery`, `jenticAgentPresence`. Each is `@ConditionalOnMissingBean`, so user-provided implementations always win.
 
+  **`Agent` interface** — `getMessageDispatcher()` is now an abstract method on the core `Agent` interface. Implementations that extend `BaseAgent` are unaffected (inherited automatically). Direct `Agent` implementors must add `@Override public MessageDispatcher getMessageDispatcher()` returning their dispatcher instance.
+
   **Docs**: `docs/messaging.md` and `docs/directory.md` — full API reference with migration tables, Spring Boot wiring, and custom backend extension points.
 
 - **ADR-020 — Core API Refactor for Distributed Backends**: documents the decomposition rationale, backward-compat strategy, removal timeline (0.22.0), and the decision not to evaluate `customFilter` in the paginated `findAgents` path.
@@ -64,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `JenticRuntime.Builder.messageService()` — use `Builder.messageDispatcher()`.
 - `JenticRuntime.Builder.agentDirectory()` — use `Builder.agentRegistry()` / `agentResolver()` / `agentDiscovery()` / `agentPresence()`.
 - `AgentDirectory.listAll()` — use `AgentDiscovery.findAgents(AgentQuery.all(), PageRequest.first(n))`.
+- `Agent.getMessageService()` — use `Agent.getMessageDispatcher()`. The method is now a default bridge that delegates to `getMessageDispatcher()`; it throws `UnsupportedOperationException` if the returned dispatcher does not implement `MessageService`.
 - `AgentDiscovery.findAgents(AgentQuery)` (non-paginated) — use `findAgents(AgentQuery, PageRequest)`.
 - `AgentQuery.customFilter` field and builder method — not evaluated by the paginated path; use `AgentQuery` structured fields instead.
 - `AgentDescriptor(8-arg constructor)` — use `AgentDescriptor.builder(agentId)...build()`.

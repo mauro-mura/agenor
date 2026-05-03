@@ -1,5 +1,7 @@
 package dev.jentic.core;
 
+import dev.jentic.core.messaging.MessageDispatcher;
+
 import java.util.concurrent.CompletableFuture;
 
 // ============================================================================
@@ -38,8 +40,8 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  *
  * <p><strong>Communication:</strong> Agents communicate through a
- * {@link MessageService}, which provides publish-subscribe messaging with
- * topic-based routing and point-to-point communication.
+ * {@link dev.jentic.core.messaging.MessageDispatcher}, which provides publish-subscribe
+ * messaging with topic-based routing and point-to-point communication.
  *
  * <p><strong>Thread Safety:</strong> Implementations must be thread-safe.
  * Multiple behaviors may execute concurrently, and lifecycle methods may be
@@ -80,7 +82,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 0.1.0
  * @see Behavior
- * @see MessageService
+ * @see dev.jentic.core.messaging.MessageDispatcher
  * @see AgentDescriptor
  * @see AgentStatus
  */
@@ -305,51 +307,53 @@ public interface Agent {
     void removeBehavior(String behaviorId);
 
     /**
-     * Returns the message service associated with this agent.
+     * Returns the message dispatcher for this agent.
      *
-     * <p>The {@link MessageService} is the communication backbone that enables
+     * <p>The {@link MessageDispatcher} is the communication backbone that enables
      * this agent to:
      * <ul>
-     *   <li>Send messages to other agents (via topics)</li>
+     *   <li>Publish messages to named topics (one-to-many)</li>
      *   <li>Subscribe to topics and receive messages</li>
-     *   <li>Broadcast information to multiple agents</li>
-     *   <li>Implement request-response patterns</li>
+     *   <li>Send messages directly to another agent by ID (one-to-one)</li>
+     *   <li>Subscribe to direct messages addressed to this agent</li>
      * </ul>
      *
-     * <p><strong>Lifecycle:</strong> The message service remains available
-     * throughout the agent's lifetime, even when stopped. This allows the agent
-     * to send final messages during shutdown or receive messages that trigger
-     * restart.
-     *
-     * <p><strong>Scope:</strong> In most implementations, the message service
-     * is shared across all agents in the runtime, providing a global communication
-     * channel. Some implementations may provide agent-local or isolated message
-     * services.
-     *
-     * <p><strong>Thread Safety:</strong> The returned {@code MessageService}
+     * <p><strong>Thread Safety:</strong> The returned {@code MessageDispatcher}
      * must be thread-safe, as it may be accessed from multiple behaviors
      * concurrently.
      *
      * <p>Example:
      * <pre>{@code
-     * // Send a message
-     * agent.getMessageService().send(
-     *     Message.builder()
-     *         .topic("orders.new")
-     *         .content(orderData)
-     *         .build()
-     * );
+     * // Publish to a topic
+     * agent.getMessageDispatcher().publish("orders.new", message);
      *
-     * // Subscribe to messages
-     * agent.getMessageService().subscribe(
-     *     TopicFilter.matching("orders.*"),
-     *     message -> handleOrder(message)
-     * );
+     * // Subscribe to a topic
+     * agent.getMessageDispatcher().subscribeTopic("orders.new", msg -> handleOrder(msg));
+     *
+     * // Send directly to another agent
+     * agent.getMessageDispatcher().sendTo("inventory-agent", message);
      * }</pre>
      *
-     * @return the message service for this agent, never null
-     * @see MessageService
+     * @return the message dispatcher for this agent, never null
+     * @since 0.20.0
+     * @see MessageDispatcher
      * @see Message
      */
-    MessageService getMessageService();
+    MessageDispatcher getMessageDispatcher();
+
+    /**
+     * Returns the message service for this agent.
+     *
+     * @return the message service, or throws if the dispatcher is not a {@link MessageService}
+     * @deprecated since 0.20.0, for removal at 0.22.0. Use {@link #getMessageDispatcher()}.
+     * @see MessageDispatcher
+     */
+    @Deprecated(since = "0.20.0", forRemoval = true)
+    default MessageService getMessageService() {
+        var d = getMessageDispatcher();
+        if (d instanceof MessageService ms) return ms;
+        throw new UnsupportedOperationException(
+                "This dispatcher does not implement MessageService. " +
+                "Migrate to getMessageDispatcher(). See ADR-020.");
+    }
 }

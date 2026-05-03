@@ -58,7 +58,7 @@ class DialogueRoundTripTest {
         @Override public boolean isRunning() { return true; }
         @Override public void addBehavior(Behavior b) {}
         @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return dispatcher; }
 
         @Override
         public CompletableFuture<Void> start() {
@@ -99,7 +99,7 @@ class DialogueRoundTripTest {
         @Override public boolean isRunning() { return true; }
         @Override public void addBehavior(Behavior b) {}
         @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return dispatcher; }
 
         @Override
         public CompletableFuture<Void> start() {

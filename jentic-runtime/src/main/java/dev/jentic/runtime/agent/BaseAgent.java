@@ -305,21 +305,20 @@ public abstract class BaseAgent implements Agent {
         return messageService;
     }
 
-    /**
-     * Returns the message dispatcher for this agent.
-     *
-     * <p>Prefer this over {@link #getMessageService()} for new code. Use
-     * {@code publish(topic, msg)} for topic messages and {@code sendTo(agentId, msg)}
-     * for point-to-point messages.
-     *
-     * @since 0.20.0
-     */
     private MessageDispatcher messageDispatcher;
 
     public void setMessageDispatcher(MessageDispatcher dispatcher) {
         this.messageDispatcher = dispatcher;
     }
 
+    /**
+     * Returns the message dispatcher for this agent.
+     *
+     * <p>Prefer this over {@link #getMessageService()} for new code.
+     *
+     * @since 0.20.0
+     */
+    @Override
     public MessageDispatcher getMessageDispatcher() {
         return messageDispatcher != null ? messageDispatcher : messageService;
     }

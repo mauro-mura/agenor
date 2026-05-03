@@ -190,7 +190,7 @@ class JenticRuntimeTest {
 
         assertThat(agent).isNotNull();
         assertThat(runtime.getAgents()).contains(agent);
-        assertThat(agent.getMessageService()).isNotNull();
+        assertThat(agent.getMessageDispatcher()).isNotNull();
     }
 
     @Test
@@ -721,7 +721,7 @@ class JenticRuntimeTest {
         @Override public CompletableFuture<Void> stop() { return CompletableFuture.completedFuture(null); }
         @Override public void addBehavior(Behavior behavior) {}
         @Override public void removeBehavior(String behaviorId) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return null; }
 
         @Override
         public void setLLMMemoryManager(LLMMemoryManager manager) {

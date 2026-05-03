@@ -4,7 +4,6 @@ import dev.jentic.core.Agent;
 import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
@@ -100,7 +99,7 @@ public class RequestProtocolExample {
         @Override public boolean isRunning() { return running; }
         @Override public void addBehavior(Behavior b) {}
         @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public MessageDispatcher getMessageDispatcher() { return dispatcher; }
 
         @Override
         public CompletableFuture<Void> start() {
@@ -173,7 +172,7 @@ public class RequestProtocolExample {
         @Override public boolean isRunning() { return running; }
         @Override public void addBehavior(Behavior b) {}
         @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public MessageDispatcher getMessageDispatcher() { return dispatcher; }
 
         @Override
         public CompletableFuture<Void> start() {

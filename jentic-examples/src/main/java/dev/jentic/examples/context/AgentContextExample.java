@@ -3,7 +3,6 @@ package dev.jentic.examples.context;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
@@ -210,7 +209,9 @@ public class AgentContextExample {
         public void removeBehavior(String behaviorId) { /* no-op */ }
 
         @Override
-        public MessageService getMessageService() { return null; }
+        public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() {
+            return ctx.messageDispatcher();
+        }
 
         // ----- Message handler — AnnotationProcessor subscribes this automatically -----
 

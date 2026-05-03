@@ -95,9 +95,9 @@ class AgentFactoryTest {
     @DisplayName("Should create agent with service injection")
     void shouldCreateAgentWithServiceInjection() throws AgentException {
         TestAgentWithMessageService agent = factory.createAgent(TestAgentWithMessageService.class);
-        
+
         assertThat(agent).isNotNull();
-        assertThat(agent.getMessageService()).isSameAs(messageService);
+        assertThat(agent.getMessageDispatcher()).isSameAs(messageService);
     }
 
     @Test
@@ -373,12 +373,18 @@ class AgentFactoryTest {
     @JenticAgent("service-agent")
     static class TestAgentWithMessageService extends BaseAgent {
         private final MessageService msgService;
-        
+
         public TestAgentWithMessageService(MessageService messageService) {
             super("service-agent", "Service Agent");
             this.msgService = messageService;
         }
-        
+
+        @Override
+        public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() {
+            return msgService;
+        }
+
+        @Override
         public MessageService getMessageService() {
             return msgService;
         }
@@ -483,7 +489,7 @@ class AgentFactoryTest {
 
         assertThat(agent).isNotNull();
         assertThat(agent.getAgentId()).isEqualTo("plain-services-agent");
-        assertThat(agent.getMessageService()).isSameAs(messageService);
+        assertThat(agent.getMessageDispatcher()).isSameAs(messageService);
     }
 
     @Test
@@ -522,7 +528,7 @@ class AgentFactoryTest {
         }
         @Override public void addBehavior(dev.jentic.core.Behavior behavior) {}
         @Override public void removeBehavior(String behaviorId) {}
-        @Override public MessageService getMessageService() { return null; }
+        @Override public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return null; }
     }
 
     @JenticAgent("plain-context-agent")
@@ -549,6 +555,6 @@ class AgentFactoryTest {
         }
 
         @Override
-        public MessageService getMessageService() { return msgService; }
+        public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return msgService; }
     }
 }

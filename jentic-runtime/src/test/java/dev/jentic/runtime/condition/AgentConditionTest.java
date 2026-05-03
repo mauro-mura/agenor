@@ -121,7 +121,7 @@ class AgentConditionTest {
             }
 
             @Override
-            public MessageService getMessageService() {
+            public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() {
                 return null;
             }
         };
