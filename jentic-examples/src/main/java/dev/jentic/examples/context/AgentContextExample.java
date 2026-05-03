@@ -210,9 +210,7 @@ public class AgentContextExample {
         public void removeBehavior(String behaviorId) { /* no-op */ }
 
         @Override
-        public MessageService getMessageService() {
-            return ctx.messageService();
-        }
+        public MessageService getMessageService() { return null; }
 
         // ----- Message handler — AnnotationProcessor subscribes this automatically -----
 

@@ -25,7 +25,7 @@ import dev.jentic.core.messaging.MessageDispatcher;
  *
  *     @JenticMessageHandler("order.created")
  *     public void handle(Message msg) {
- *         ctx.messageService().send(...);
+ *         ctx.messageDispatcher().publish("orders.confirmed", msg);
  *     }
  * }
  * }</pre>

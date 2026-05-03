@@ -1,6 +1,8 @@
 package dev.jentic.examples.dialogue;
 
 import dev.jentic.core.Agent;
+import dev.jentic.core.AgentDescriptor;
+import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueHandler;
@@ -31,12 +33,13 @@ public class RequestProtocolExample {
         System.out.println("║       REQUEST PROTOCOL EXAMPLE - Order Processing        ║");
         System.out.println("╚══════════════════════════════════════════════════════════╝\n");
 
-        // Shared message dispatcher
-        InMemoryMessageDispatcher dispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory());
+        // Shared infrastructure — agents must be registered so sendTo can resolve endpoints
+        InMemoryAgentDirectory directory = new InMemoryAgentDirectory();
+        InMemoryMessageDispatcher dispatcher = new InMemoryMessageDispatcher(directory);
 
         // Create agents
-        ServerAgent server = new ServerAgent(dispatcher);
-        ClientAgent client = new ClientAgent(dispatcher);
+        ServerAgent server = new ServerAgent(dispatcher, directory);
+        ClientAgent client = new ClientAgent(dispatcher, directory);
 
         // Start agents
         server.start().join();
@@ -83,10 +86,14 @@ public class RequestProtocolExample {
     static class ServerAgent implements Agent {
 
         private final MessageDispatcher dispatcher;
+        private final InMemoryAgentDirectory directory;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private boolean running;
 
-        ServerAgent(MessageDispatcher ms) { this.dispatcher = ms; }
+        ServerAgent(MessageDispatcher ms, InMemoryAgentDirectory dir) {
+            this.dispatcher = ms;
+            this.directory = dir;
+        }
 
         @Override public String getAgentId() { return "server"; }
         @Override public String getAgentName() { return "Server"; }
@@ -98,6 +105,9 @@ public class RequestProtocolExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
+                directory.register(AgentDescriptor.builder("server")
+                        .agentName("Server").agentType("ServerAgent")
+                        .status(AgentStatus.RUNNING).build()).join();
                 dialogue.initialize(dispatcher);
                 running = true;
                 System.out.println("[Server] Started");
@@ -108,6 +118,7 @@ public class RequestProtocolExample {
         public CompletableFuture<Void> stop() {
             return CompletableFuture.runAsync(() -> {
                 dialogue.shutdown();
+                directory.unregister("server").join();
                 running = false;
             });
         }
@@ -148,10 +159,14 @@ public class RequestProtocolExample {
     static class ClientAgent implements Agent {
 
         private final MessageDispatcher dispatcher;
+        private final InMemoryAgentDirectory directory;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private boolean running;
 
-        ClientAgent(MessageDispatcher ms) { this.dispatcher = ms; }
+        ClientAgent(MessageDispatcher ms, InMemoryAgentDirectory dir) {
+            this.dispatcher = ms;
+            this.directory = dir;
+        }
 
         @Override public String getAgentId() { return "client"; }
         @Override public String getAgentName() { return "Client"; }
@@ -163,6 +178,9 @@ public class RequestProtocolExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
+                directory.register(AgentDescriptor.builder("client")
+                        .agentName("Client").agentType("ClientAgent")
+                        .status(AgentStatus.RUNNING).build()).join();
                 dialogue.initialize(dispatcher);
                 running = true;
                 System.out.println("[Client] Started");
@@ -173,6 +191,7 @@ public class RequestProtocolExample {
         public CompletableFuture<Void> stop() {
             return CompletableFuture.runAsync(() -> {
                 dialogue.shutdown();
+                directory.unregister("client").join();
                 running = false;
             });
         }
