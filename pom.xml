@@ -7,7 +7,7 @@
 
     <groupId>dev.jentic</groupId>
     <artifactId>jentic</artifactId>
-    <version>0.20.0</version>
+    <version>0.21.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Jentic Multi-Agent Framework</name>
