@@ -419,8 +419,8 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
             .header("confidence", String.valueOf(response.confidence()))
             .build();
         
-        getMessageDispatcher().sendTo(responseMsg.receiverId(), responseMsg);
-        log.debug("Sent response for session {} with confidence {}", 
+        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
+        log.debug("Sent response for session {} with confidence {}",
             response.sessionId(), response.confidence());
     }
     
