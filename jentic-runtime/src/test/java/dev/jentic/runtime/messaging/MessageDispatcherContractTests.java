@@ -53,7 +53,7 @@ public interface MessageDispatcherContractTests {
         });
 
         var msg = Message.builder().topic("test.topic").content("payload").build();
-        dispatcher.publish("test.topic", msg).join();
+        dispatcher.publish(msg).join();
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
         assertThat(received.get().content()).isEqualTo("payload");
@@ -64,7 +64,7 @@ public interface MessageDispatcherContractTests {
     default void publish_noSubscriber_noOp() {
         var dispatcher = createDispatcher();
         var msg = Message.builder().topic("empty").content("x").build();
-        assertThat(dispatcher.publish("empty", msg)).succeedsWithin(2, TimeUnit.SECONDS);
+        assertThat(dispatcher.publish(msg)).succeedsWithin(2, TimeUnit.SECONDS);
     }
 
     @Test
@@ -78,10 +78,10 @@ public interface MessageDispatcherContractTests {
             return CompletableFuture.completedFuture(null);
         });
 
-        dispatcher.publish("news", Message.builder().topic("news").content("1").build()).join();
+        dispatcher.publish(Message.builder().topic("news").content("1").build()).join();
         Thread.sleep(200);
         sub.unsubscribe();
-        dispatcher.publish("news", Message.builder().topic("news").content("2").build()).join();
+        dispatcher.publish(Message.builder().topic("news").content("2").build()).join();
         Thread.sleep(200);
 
         assertThat(counter.get()).isEqualTo(1);
@@ -106,8 +106,8 @@ public interface MessageDispatcherContractTests {
             return CompletableFuture.completedFuture(null);
         });
 
-        dispatcher.sendTo("contract-agent",
-                Message.builder().topic("direct").content("hello").build()).join();
+        dispatcher.sendTo(
+                Message.builder().receiverId("contract-agent").topic("direct").content("hello").build()).join();
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
         assertThat(received.get().content()).isEqualTo("hello");
@@ -117,8 +117,8 @@ public interface MessageDispatcherContractTests {
     @DisplayName("[Dispatcher] sendTo unknown agent completes exceptionally with AgentNotFoundException")
     default void sendTo_unknownAgent_agentNotFoundException() {
         var dispatcher = createDispatcher();
-        var future = dispatcher.sendTo("unknown-contract-agent",
-                Message.builder().topic("direct").content("x").build());
+        var future = dispatcher.sendTo(
+                Message.builder().receiverId("unknown-contract-agent").topic("direct").content("x").build());
 
         assertThatThrownBy(future::join).hasCauseInstanceOf(AgentNotFoundException.class);
     }

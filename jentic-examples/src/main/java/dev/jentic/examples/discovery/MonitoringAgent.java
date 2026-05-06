@@ -48,7 +48,7 @@ public class MonitoringAgent extends BaseAgent {
             .build();
         
         log.info("💓 {}", status);
-        getMessageDispatcher().publish(heartbeat.topic(), heartbeat);
+        getMessageDispatcher().publish(heartbeat);
     }
     
     @JenticBehavior(type = CYCLIC, interval = "15s", autoStart = true)
@@ -64,7 +64,7 @@ public class MonitoringAgent extends BaseAgent {
         
         log.info("📊 Statistics: Heartbeats sent: {}, Messages received: {}", 
                 heartbeatCount, messagesReceived);
-        getMessageDispatcher().publish(report.topic(), report);
+        getMessageDispatcher().publish(report);
     }
     
     @JenticMessageHandler("system.alert")
@@ -84,7 +84,7 @@ public class MonitoringAgent extends BaseAgent {
             .header("handled-by", getAgentId())
             .build();
         
-        getMessageDispatcher().publish(ack.topic(), ack);
+        getMessageDispatcher().publish(ack);
     }
     
     @Override

@@ -221,7 +221,7 @@ public class RouterAgent extends BaseAgent {
             .header("language", detectedLanguage.getCode())
             .build();
         
-        getMessageDispatcher().publish(routedMessage.topic(), routedMessage);
+        getMessageDispatcher().publish(routedMessage);
         log.debug("Routed to topic: {}", targetTopic);
     }
     
@@ -289,7 +289,7 @@ public class RouterAgent extends BaseAgent {
             .content(response)
             .build();
         
-        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
+        getMessageDispatcher().publish(responseMsg);
     }
 
     /**
@@ -329,7 +329,7 @@ public class RouterAgent extends BaseAgent {
             .header("type", "escalation-suggestion")
             .build();
         
-        getMessageDispatcher().publish(suggestionMsg.topic(), suggestionMsg);
+        getMessageDispatcher().publish(suggestionMsg);
     }
 
     /**

@@ -247,7 +247,7 @@ public class MessageFilterExample {
             .header("customer-tier", "VIP")
             .header("region", "us-east-1")
             .build();
-        dispatcher.publish(order1.topic(), order1);
+        dispatcher.publish(order1);
 
         // Order 2: Low value, regular customer, EU region (matches no handlers)
         Message order2 = Message.builder()
@@ -257,7 +257,7 @@ public class MessageFilterExample {
             .header("customer-tier", "REGULAR")
             .header("region", "eu-west-1")
             .build();
-        dispatcher.publish(order2.topic(), order2);
+        dispatcher.publish(order2);
 
         // Order 3: High value, US region (matches 2 handlers)
         Message order3 = Message.builder()
@@ -267,7 +267,7 @@ public class MessageFilterExample {
             .header("customer-tier", "REGULAR")
             .header("region", "us-west-2")
             .build();
-        dispatcher.publish(order3.topic(), order3);
+        dispatcher.publish(order3);
     }
     
     // Helper methods
@@ -277,7 +277,7 @@ public class MessageFilterExample {
             .topic(topic)
             .content(content)
             .build();
-        dispatcher.publish(topic, msg);
+        dispatcher.publish(msg);
     }
 
     private static void publishMessageWithHeader(InMemoryMessageDispatcher dispatcher,
@@ -288,7 +288,7 @@ public class MessageFilterExample {
             .content(content)
             .header(headerKey, headerValue)
             .build();
-        dispatcher.publish(topic, msg);
+        dispatcher.publish(msg);
     }
     
     // Sample domain object

@@ -39,6 +39,6 @@ public class AlertHandlerAgent extends BaseAgent {
                 .content("Processed: " + message.topic())
                 .correlationId(message.id())
                 .build();
-        getMessageDispatcher().publish(ackMsg.topic(), ackMsg);
+        getMessageDispatcher().publish(ackMsg);
     }
 }

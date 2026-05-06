@@ -129,7 +129,7 @@ public class AgentContextExample {
                     .header("product", product)
                     .header("quantity", String.valueOf(quantity))
                     .build();
-            getMessageDispatcher().publish(orderMsg.topic(), orderMsg);
+            getMessageDispatcher().publish(orderMsg);
 
             log.info("[Submitter] Submitted {} — {} x{}", orderId, product, quantity);
         }
@@ -234,7 +234,7 @@ public class AgentContextExample {
                     .content(orderId)
                     .header("status", "CONFIRMED")
                     .build();
-            ctx.messageDispatcher().publish(msg.topic(), msg);
+            ctx.messageDispatcher().publish(msg);
         }
     }
 }

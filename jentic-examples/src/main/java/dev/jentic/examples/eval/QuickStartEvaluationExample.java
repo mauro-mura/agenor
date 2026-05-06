@@ -51,7 +51,7 @@ public class QuickStartEvaluationExample {
                             .topic("counter.increment")
                             .content(1)
                             .build();
-                        rt.getMessageDispatcher().publish(incMsg.topic(), incMsg);
+                        rt.getMessageDispatcher().publish(incMsg);
                     }
                     
                     // Wait for processing

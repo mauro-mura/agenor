@@ -212,7 +212,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
             }
             return CompletableFuture.completedFuture(null);
         });
-        getMessageDispatcher().publish(topic, request);
+        getMessageDispatcher().publish(request);
         return future.orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                 .whenComplete((r, e) -> sub.unsubscribe());
     }
@@ -376,7 +376,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         Message ack = message.reply("Order received")
                 .topic("order-ack")
                 .build();
-        getMessageDispatcher().sendTo(ack.receiverId(), ack);
+        getMessageDispatcher().sendTo(ack);
     }
 
     // =========================================================================
@@ -406,7 +406,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                         "message", text
                 ))
                 .build();
-        getMessageDispatcher().publish(notification.topic(), notification);
+        getMessageDispatcher().publish(notification);
     }
 
     private void simulateWork(long millis) {

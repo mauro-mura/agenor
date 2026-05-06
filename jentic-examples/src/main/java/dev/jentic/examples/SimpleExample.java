@@ -16,61 +16,61 @@ import java.time.Duration;
  * Simple example without annotations, showing programmatic agent creation.
  */
 public class SimpleExample {
-    
+
     private static final Logger log = LoggerFactory.getLogger(SimpleExample.class);
-    
+
     public static void main(String[] args) throws InterruptedException {
         log.info("=== Jentic Simple Example (Programmatic) ===");
-        
+
         JenticRuntime runtime = JenticRuntime.builder().build();
-        
+
         // Create agents programmatically
         SimpleAgent agent1 = new SimpleAgent("agent-1", "First Agent");
         SimpleAgent agent2 = new SimpleAgent("agent-2", "Second Agent");
-        
+
         // Register agents
         runtime.registerAgent(agent1);
         runtime.registerAgent(agent2);
-        
+
         // Start runtime
         runtime.start().join();
-        
+
         log.info("Simple example started");
-        
+
         // Run for 15 seconds
         Thread.sleep(15_000);
-        
+
         // Stop runtime
         log.info("Stopping simple example...");
         runtime.stop().join();
-        
+
         log.info("=== Simple Example completed ===");
     }
-    
+
     /**
      * Simple agent that demonstrates programmatic behavior creation
      */
     public static class SimpleAgent extends BaseAgent {
-        
+
         public SimpleAgent(String agentId, String agentName) {
             super(agentId, agentName);
         }
-        
+
         @Override
         protected void onStart() {
             log.info("[{}] Starting up", getAgentName());
-            
+
             // Add one-shot behavior
             addBehavior(OneShotBehavior.from("startup", () -> {
                 log.info("[{}] Startup behavior executed", getAgentName());
-                
+
                 Message announcement = Message.builder()
                     .topic("agent.announcement")
                     .senderId(getAgentId())
                     .content(getAgentName() + " has started up")
                     .build();
-                
-                getMessageDispatcher().publish(announcement.topic(), announcement);
+
+                getMessageDispatcher().publish(announcement);
             }));
 
             // Add cyclic behavior
@@ -82,7 +82,7 @@ public class SimpleExample {
                     .build();
 
                 log.info("[{}] Sending heartbeat", getAgentName());
-                getMessageDispatcher().publish(heartbeat.topic(), heartbeat);
+                getMessageDispatcher().publish(heartbeat);
             }));
 
             // Subscribe to messages
@@ -100,7 +100,7 @@ public class SimpleExample {
                 return java.util.concurrent.CompletableFuture.completedFuture(null);
             });
         }
-        
+
         @Override
         protected void onStop() {
             log.info("[{}] Shutting down", getAgentName());

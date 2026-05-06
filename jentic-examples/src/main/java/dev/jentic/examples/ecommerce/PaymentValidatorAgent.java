@@ -47,7 +47,7 @@ public class PaymentValidatorAgent extends BaseAgent {
                 .topic("validation-result")
                 .build();
 
-        getMessageDispatcher().sendTo(reply.receiverId(), reply);
+        getMessageDispatcher().sendTo(reply);
     }
 
     private void simulateWork(long millis) {

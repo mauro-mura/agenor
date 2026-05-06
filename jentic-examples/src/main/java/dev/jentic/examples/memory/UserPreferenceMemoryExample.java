@@ -110,7 +110,7 @@ public class UserPreferenceMemoryExample {
             .content("dark-mode")
             .header("userId", "user123")
             .build();
-        dispatcher.publish(prefUpdate.topic(), prefUpdate);
+        dispatcher.publish(prefUpdate);
         sleep(300);
 
         // 2. Track interactions
@@ -122,7 +122,7 @@ public class UserPreferenceMemoryExample {
                 .content("Clicked button " + i)
                 .header("userId", "user123")
                 .build();
-            dispatcher.publish(interaction.topic(), interaction);
+            dispatcher.publish(interaction);
             sleep(200);
         }
 
@@ -133,7 +133,7 @@ public class UserPreferenceMemoryExample {
             .senderId("example-client")
             .header("userId", "user123")
             .build();
-        dispatcher.publish(prefGet.topic(), prefGet);
+        dispatcher.publish(prefGet);
         sleep(300);
 
         // 4. Search history
@@ -143,7 +143,7 @@ public class UserPreferenceMemoryExample {
             .senderId("example-client")
             .content("dark")
             .build();
-        dispatcher.publish(historySearch.topic(), historySearch);
+        dispatcher.publish(historySearch);
         sleep(300);
     }
     

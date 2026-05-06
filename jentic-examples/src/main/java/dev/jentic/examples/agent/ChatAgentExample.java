@@ -175,7 +175,7 @@ public class ChatAgentExample {
                     break;
                     
                 case "clear":
-                    messageService.publish("clear.conversation", Message.builder()
+                    messageService.publish(Message.builder()
                         .topic("clear.conversation")
                         .content("clear")
                         .build());
@@ -183,7 +183,7 @@ public class ChatAgentExample {
                     break;
 
                 case "summarize":
-                    messageService.publish("summarize.conversation", Message.builder()
+                    messageService.publish(Message.builder()
                         .topic("summarize.conversation")
                         .header("count", "10")
                         .content("summarize")
@@ -192,7 +192,7 @@ public class ChatAgentExample {
                     break;
 
                 case "status":
-                    messageService.publish("query.status", Message.builder()
+                    messageService.publish(Message.builder()
                         .topic("query.status")
                         .content("status")
                         .build());
@@ -226,7 +226,7 @@ public class ChatAgentExample {
     private static void sendUserMessage(MessageDispatcher messageService, String text) {
         System.out.println("👤 You: " + text);
 
-        messageService.publish("user.message", Message.builder()
+        messageService.publish(Message.builder()
             .topic("user.message")
             .content(text)
             .build());

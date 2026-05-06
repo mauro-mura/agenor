@@ -111,7 +111,7 @@ public class CustomerSupportExample {
             }
             return CompletableFuture.completedFuture(null);
         });
-        runtime.getMessageDispatcher().publish(request.topic(), request);
+        runtime.getMessageDispatcher().publish(request);
         return future.orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                 .whenComplete((r, e) -> sub.unsubscribe());
     }

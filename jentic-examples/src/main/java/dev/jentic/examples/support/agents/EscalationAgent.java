@@ -282,7 +282,7 @@ public class EscalationAgent extends BaseAgent {
             .correlationId(response.sessionId())
             .content(response)
             .build();
-        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
+        getMessageDispatcher().publish(responseMsg);
     }
 
     private SupportQuery extractQuery(Message message) {

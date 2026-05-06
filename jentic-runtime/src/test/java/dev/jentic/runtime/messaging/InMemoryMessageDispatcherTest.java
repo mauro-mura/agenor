@@ -54,7 +54,7 @@ class InMemoryMessageDispatcherTest {
             });
 
             var msg = Message.builder().topic("order.created").content("test").build();
-            dispatcher.publish("order.created", msg).join();
+            dispatcher.publish(msg).join();
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(received.get().topic()).isEqualTo("order.created");
@@ -77,7 +77,7 @@ class InMemoryMessageDispatcherTest {
             dispatcher.subscribeTopic("events", handler);
 
             var msg = Message.builder().topic("events").content("payload").build();
-            dispatcher.publish("events", msg).join();
+            dispatcher.publish(msg).join();
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(counter.get()).isEqualTo(3);
@@ -87,7 +87,7 @@ class InMemoryMessageDispatcherTest {
         @DisplayName("No exception when no subscribers exist for a topic")
         void noSubscribersIsNoOp() {
             var msg = Message.builder().topic("unknown.topic").content("x").build();
-            assertThat(dispatcher.publish("unknown.topic", msg))
+            assertThat(dispatcher.publish(msg))
                     .succeedsWithin(2, TimeUnit.SECONDS);
         }
 
@@ -101,7 +101,7 @@ class InMemoryMessageDispatcherTest {
             });
 
             var msg = Message.builder().topic("order.updated").content("x").build();
-            dispatcher.publish("order.updated", msg).join();
+            dispatcher.publish(msg).join();
             Thread.sleep(200);
 
             assertThat(counter.get()).isZero();
@@ -136,13 +136,13 @@ class InMemoryMessageDispatcherTest {
             });
 
             // Receive one message
-            dispatcher.publish("news", Message.builder().topic("news").content("1").build()).join();
+            dispatcher.publish(Message.builder().topic("news").content("1").build()).join();
             Thread.sleep(200);
 
             sub.unsubscribe();
 
             // Should not receive this one
-            dispatcher.publish("news", Message.builder().topic("news").content("2").build()).join();
+            dispatcher.publish(Message.builder().topic("news").content("2").build()).join();
             Thread.sleep(200);
 
             assertThat(counter.get()).isEqualTo(1);
@@ -194,8 +194,8 @@ class InMemoryMessageDispatcherTest {
                 return CompletableFuture.completedFuture(null);
             });
 
-            var msg = Message.builder().topic("direct").content("hello").build();
-            dispatcher.sendTo("agent-x", msg).join();
+            var msg = Message.builder().receiverId("agent-x").topic("direct").content("hello").build();
+            dispatcher.sendTo(msg).join();
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(received.get().content()).isEqualTo("hello");
@@ -204,8 +204,8 @@ class InMemoryMessageDispatcherTest {
         @Test
         @DisplayName("sendTo unknown agent completes exceptionally with AgentNotFoundException")
         void sendToUnknownAgentThrows() {
-            var msg = Message.builder().topic("direct").content("hello").build();
-            var future = dispatcher.sendTo("no-such-agent", msg);
+            var msg = Message.builder().receiverId("no-such-agent").topic("direct").content("hello").build();
+            var future = dispatcher.sendTo(msg);
 
             assertThatThrownBy(future::join)
                     .hasCauseInstanceOf(AgentNotFoundException.class);
@@ -225,13 +225,13 @@ class InMemoryMessageDispatcherTest {
                 return CompletableFuture.completedFuture(null);
             });
 
-            var msg = Message.builder().topic("direct").content("1").build();
-            dispatcher.sendTo("agent-y", msg).join();
+            var msg = Message.builder().receiverId("agent-y").topic("direct").content("1").build();
+            dispatcher.sendTo(msg).join();
             Thread.sleep(200);
 
             sub.unsubscribe();
 
-            dispatcher.sendTo("agent-y", msg).join();
+            dispatcher.sendTo(msg).join();
             Thread.sleep(200);
 
             assertThat(counter.get()).isEqualTo(1);
@@ -260,11 +260,11 @@ class InMemoryMessageDispatcherTest {
                         return CompletableFuture.completedFuture(null);
                     });
 
-            dispatcher.publish("order.created",
+            dispatcher.publish(
                     Message.builder().topic("order.created").content("A").build()).join();
-            dispatcher.publish("order.shipped",
+            dispatcher.publish(
                     Message.builder().topic("order.shipped").content("B").build()).join();
-            dispatcher.publish("product.created",
+            dispatcher.publish(
                     Message.builder().topic("product.created").content("C").build()).join(); // no match
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -284,12 +284,12 @@ class InMemoryMessageDispatcherTest {
                         return CompletableFuture.completedFuture(null);
                     });
 
-            dispatcher.publish("x", Message.builder().topic("x").content("1").build()).join();
+            dispatcher.publish(Message.builder().topic("x").content("1").build()).join();
             Thread.sleep(200);
 
             sub.unsubscribe();
 
-            dispatcher.publish("x", Message.builder().topic("x").content("2").build()).join();
+            dispatcher.publish(Message.builder().topic("x").content("2").build()).join();
             Thread.sleep(200);
 
             assertThat(counter.get()).isEqualTo(1);
@@ -328,17 +328,17 @@ class InMemoryMessageDispatcherTest {
     class NullSafety {
 
         @Test
-        @DisplayName("publish with null topic throws NullPointerException")
+        @DisplayName("publish with null topic in message throws IllegalArgumentException")
         void publishNullTopicThrows() {
-            var msg = Message.builder().topic("t").content("c").build();
-            assertThatThrownBy(() -> dispatcher.publish(null, msg))
-                    .isInstanceOf(NullPointerException.class);
+            var msg = Message.builder().content("c").build();
+            assertThatThrownBy(() -> dispatcher.publish(msg))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("publish with null message throws NullPointerException")
         void publishNullMsgThrows() {
-            assertThatThrownBy(() -> dispatcher.publish("topic", null))
+            assertThatThrownBy(() -> dispatcher.publish(null))
                     .isInstanceOf(NullPointerException.class);
         }
 
@@ -351,11 +351,11 @@ class InMemoryMessageDispatcherTest {
         }
 
         @Test
-        @DisplayName("sendTo with null agentId throws NullPointerException")
+        @DisplayName("sendTo with null receiverId in message throws IllegalArgumentException")
         void sendToNullAgentThrows() {
             var msg = Message.builder().topic("t").content("c").build();
-            assertThatThrownBy(() -> dispatcher.sendTo(null, msg))
-                    .isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> dispatcher.sendTo(msg))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 }

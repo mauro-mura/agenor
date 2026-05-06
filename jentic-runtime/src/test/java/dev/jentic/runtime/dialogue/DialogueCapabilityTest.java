@@ -39,7 +39,7 @@ class DialogueCapabilityTest {
                 return stubSub;
             });
 
-        when(messageService.sendTo(any(), any(Message.class)))
+        when(messageService.sendTo(any(Message.class)))
             .thenReturn(CompletableFuture.completedFuture(null));
 
         capability = new DialogueCapability(agent);
@@ -81,7 +81,7 @@ class DialogueCapabilityTest {
         capability.request("remote-agent", "do something");
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).sendTo(any(), captor.capture());
+        verify(messageService).sendTo(captor.capture());
         
         Message sent = captor.getValue();
         assertThat(sent.receiverId()).isEqualTo("remote-agent");
@@ -95,7 +95,7 @@ class DialogueCapabilityTest {
         capability.query("remote-agent", "what time?");
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).sendTo(any(), captor.capture());
+        verify(messageService).sendTo(captor.capture());
         
         Message sent = captor.getValue();
         assertThat(sent.headers().get("performative")).isEqualTo("QUERY");
@@ -117,7 +117,7 @@ class DialogueCapabilityTest {
         capability.agree(original);
         
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-        verify(messageService).sendTo(any(), captor.capture());
+        verify(messageService).sendTo(captor.capture());
         
         Message reply = captor.getValue();
         assertThat(reply.receiverId()).isEqualTo("remote-agent");
@@ -137,7 +137,7 @@ class DialogueCapabilityTest {
         capability.inform(original, "result");
         capability.failure(original, "error");
         
-        verify(messageService, times(3)).sendTo(any(), any(Message.class));
+        verify(messageService, times(3)).sendTo(any(Message.class));
     }
 
     @Test

@@ -569,7 +569,7 @@ class JenticRuntimeTest {
         runtimeUnderTest.registerAgent(agent);
         runtimeUnderTest.start().join();
 
-        runtimeUnderTest.getMessageDispatcher().sendTo("direct-agent",
+        runtimeUnderTest.getMessageDispatcher().sendTo(
                 Message.builder().receiverId("direct-agent").content("direct-hello").build());
 
         assertThat(latch.await(2, TimeUnit.SECONDS))
@@ -602,8 +602,7 @@ class JenticRuntimeTest {
         runtimeUnderTest.start().join();
 
         runtimeUnderTest.getMessageDispatcher()
-                .sendTo("worker-1",
-                        Message.builder().receiverId("worker-1").content("task-for-1").build())
+                .sendTo(Message.builder().receiverId("worker-1").content("task-for-1").build())
                 .join();
 
         assertThat(w1Latch.await(2, TimeUnit.SECONDS))
@@ -627,7 +626,7 @@ class JenticRuntimeTest {
         runtimeUnderTest.registerAgent(agent);
         runtimeUnderTest.start().join();
 
-        runtimeUnderTest.getMessageDispatcher().publish("capture.topic",
+        runtimeUnderTest.getMessageDispatcher().publish(
                 Message.builder().topic("capture.topic").content("hello").build());
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -653,7 +652,7 @@ class JenticRuntimeTest {
             return CompletableFuture.completedFuture(null);
         });
 
-        runtimeUnderTest.getMessageDispatcher().publish("capture.topic",
+        runtimeUnderTest.getMessageDispatcher().publish(
                 Message.builder().topic("capture.topic").content("ping").build());
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -779,7 +778,7 @@ class JenticRuntimeTest {
                         }
                         return CompletableFuture.completedFuture(null);
                     });
-            getMessageDispatcher().publish("rr.request", request);
+            getMessageDispatcher().publish(request);
         }
 
         String lastRequestId() { return lastRequestId; }
@@ -797,7 +796,7 @@ class JenticRuntimeTest {
             Message reply = message.reply("pong")
                     .topic("rr.reply")
                     .build();
-            getMessageDispatcher().sendTo(reply.receiverId(), reply);
+            getMessageDispatcher().sendTo(reply);
         }
     }
 

@@ -178,7 +178,7 @@ public class A2AHttpServer {
                 .content(text)
                 .build();
             
-            messageService.publish(query.topic(), query);
+            messageService.publish(query);
             
             return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             

@@ -292,6 +292,6 @@ public class DefaultConversationManager implements ConversationManager {
     
     private CompletableFuture<Void> sendMessage(DialogueMessage dialogueMessage) {
         var message = dialogueMessage.toMessage();
-        return messageDispatcher.sendTo(message.receiverId(), message);
+        return messageDispatcher.sendTo(message);
     }
 }

@@ -62,7 +62,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.analysis.result")
                     .content(analysis.toString())
                     .build();
-            getMessageDispatcher().publish(resultMsg.topic(), resultMsg);
+            getMessageDispatcher().publish(resultMsg);
         });
     }
 
@@ -106,7 +106,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.response.generated")
                     .content(response.content())
                     .build();
-            getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
+            getMessageDispatcher().publish(responseMsg);
         });
     }
 
@@ -144,7 +144,7 @@ public class CustomerSupportAgent extends BaseAgent {
                     .topic("ticket.classification.result")
                     .content(category)
                     .build();
-            getMessageDispatcher().publish(classifyMsg.topic(), classifyMsg);
+            getMessageDispatcher().publish(classifyMsg);
         });
     }
 

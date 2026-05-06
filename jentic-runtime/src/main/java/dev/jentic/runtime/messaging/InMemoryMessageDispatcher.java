@@ -92,9 +92,10 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
     // -------------------------------------------------------------------------
 
     @Override
-    public CompletableFuture<Void> publish(String topic, Message msg) {
-        Objects.requireNonNull(topic, "topic");
+    public CompletableFuture<Void> publish(Message msg) {
         Objects.requireNonNull(msg, "msg");
+        var topic = msg.topic();
+        if (topic == null || topic.isBlank()) throw new IllegalArgumentException("msg.topic must not be null or empty");
         return CompletableFuture.runAsync(() -> {
             Span span = telemetry.spanBuilder("message.send")
                     .setAttribute("message.topic", topic)
@@ -138,9 +139,11 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
     // -------------------------------------------------------------------------
 
     @Override
-    public CompletableFuture<Void> sendTo(String recipientAgentId, Message msg) {
-        Objects.requireNonNull(recipientAgentId, "recipientAgentId");
+    public CompletableFuture<Void> sendTo(Message msg) {
         Objects.requireNonNull(msg, "msg");
+        var recipientAgentId = msg.receiverId();
+        if (recipientAgentId == null || recipientAgentId.isBlank())
+            throw new IllegalArgumentException("msg.receiverId must not be null or blank");
 
         Span span = telemetry.spanBuilder("message.send")
                 .setAttribute("message.recipient", recipientAgentId)

@@ -25,7 +25,7 @@ class DefaultConversationManagerTest {
     @BeforeEach
     void setUp() {
         messageDispatcher = mock(MessageDispatcher.class);
-        when(messageDispatcher.sendTo(any(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
             .thenReturn(CompletableFuture.completedFuture(null));
 
         manager = new DefaultConversationManager("local-agent", messageDispatcher);

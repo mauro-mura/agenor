@@ -8,7 +8,8 @@ import java.util.concurrent.CompletableFuture;
  * Capability for publishing messages to named topics (one-to-many).
  *
  * <p>All subscribers registered via {@link TopicSubscriber#subscribeTopic} for the same
- * topic will receive each published message.
+ * topic will receive each published message. The routing topic is taken from
+ * {@link dev.jentic.core.Message#topic()}.
  *
  * @since 0.20.0
  * @see TopicSubscriber
@@ -17,13 +18,12 @@ import java.util.concurrent.CompletableFuture;
 public interface TopicPublisher {
 
     /**
-     * Publishes a message to all subscribers of the given topic.
+     * Publishes a message to all subscribers of {@link Message#topic()}.
      *
-     * @param topic the topic name, must not be null or empty
-     * @param msg   the message to publish, must not be null
+     * @param msg the message to publish; {@link Message#topic()} must not be null or empty
      * @return a future that completes when the message has been dispatched
-     * @throws NullPointerException     if topic or msg is null
-     * @throws IllegalArgumentException if topic is empty
+     * @throws NullPointerException     if msg is null
+     * @throws IllegalArgumentException if {@link Message#topic()} is null or empty
      */
-    CompletableFuture<Void> publish(String topic, Message msg);
+    CompletableFuture<Void> publish(Message msg);
 }

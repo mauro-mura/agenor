@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`TopicPublisher.publish` — redundant `topic` parameter removed** (**breaking**): signature changes from `publish(String topic, Message msg)` to `publish(Message msg)`. Routing now reads `msg.topic()` directly. `IllegalArgumentException` is thrown if `msg.topic()` is `null` or blank. All callers must set `.topic(...)` on the `Message` before publishing.
+
+- **`DirectMessenger.sendTo` — redundant `recipientAgentId` parameter removed** (**breaking**): signature changes from `sendTo(String recipientAgentId, Message msg)` to `sendTo(Message msg)`. Routing now reads `msg.receiverId()` directly. `IllegalArgumentException` is thrown if `msg.receiverId()` is `null` or blank. All callers must set `.receiverId(...)` on the `Message` before sending.
+
+- **`MessageFilter` — dependency on deprecated `MessageService` replaced with `FilterableSubscriber`**: `MessageFilter` now accepts the focused `FilterableSubscriber` capability interface. Source-compatible for callers that pass a `MessageDispatcher` (which extends `FilterableSubscriber`).
+
+- **Built-in agent response messaging — `sendTo` replaced with `publish`**: several built-in agents were using `sendTo` for topic-based responses. Corrected to use `publish`, aligning with pub-sub semantics.
+
+### Migration Guide (publish / sendTo signature change)
+
+```java
+// Before (0.20.x)
+dispatcher.publish("orders.created", msg);
+dispatcher.sendTo("inventory-agent", msg);
+
+// After — set topic / receiverId on the message, then drop the first argument
+dispatcher.publish(Message.builder().topic("orders.created").content(data).build());
+dispatcher.sendTo(Message.builder().receiverId("inventory-agent").content(data).build());
+
+// If the message already carries topic / receiverId, simply drop the first argument:
+dispatcher.publish(msg);   // routes on msg.topic()
+dispatcher.sendTo(msg);    // routes on msg.receiverId()
+```
+
 ## [0.20.0] - 2026-05-03
 
 ### Added

@@ -393,7 +393,7 @@ public class CollaborativeRouterAgent extends BaseAgent {
             .correlationId(correlationId)
             .content(response)
             .build();
-        getMessageDispatcher().publish(responseMsg.topic(), responseMsg);
+        getMessageDispatcher().publish(responseMsg);
     }
     
     private void sendErrorResponse(String sessionId, String error, String correlationId) {

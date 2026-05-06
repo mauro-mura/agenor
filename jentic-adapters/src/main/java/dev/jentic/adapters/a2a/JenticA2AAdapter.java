@@ -112,7 +112,7 @@ public class JenticA2AAdapter {
         String replyTo = message.senderId() != null ? message.senderId() : localAgentId;
         var subscription = messageDispatcher.subscribeRecipient(replyTo,
                 msg -> { replyFuture.complete(msg); return CompletableFuture.completedFuture(null); });
-        messageDispatcher.sendTo(message.receiverId(), message.toMessage());
+        messageDispatcher.sendTo(message.toMessage());
         return replyFuture
                 .orTimeout(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
                 .whenComplete((r, ex) -> subscription.unsubscribe())

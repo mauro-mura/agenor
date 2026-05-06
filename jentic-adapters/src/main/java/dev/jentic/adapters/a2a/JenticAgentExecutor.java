@@ -104,7 +104,7 @@ public class JenticAgentExecutor implements AgentExecutor {
                     msg -> { replyFuture.complete(msg); return java.util.concurrent.CompletableFuture.completedFuture(null); });
             Message responseMsg;
             try {
-                messageDispatcher.sendTo(internalAgentId, incomingMsg.toMessage());
+                messageDispatcher.sendTo(incomingMsg.toMessage());
                 responseMsg = replyFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } finally {
                 subscription.unsubscribe();
@@ -167,7 +167,7 @@ public class JenticAgentExecutor implements AgentExecutor {
                 .content("Cancelled by A2A client")
                 .build();
             
-            messageDispatcher.sendTo(internalAgentId, cancelMsg.toMessage());
+            messageDispatcher.sendTo(cancelMsg.toMessage());
             
             // Update A2A task status
             updater.cancel();

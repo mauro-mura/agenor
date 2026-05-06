@@ -40,7 +40,7 @@ public class TemperatureSensorAgent extends BaseAgent {
                 .content(new TemperatureReading(temp, timestamp))
                 .header("unit", "celsius")
                 .build();
-        getMessageDispatcher().publish(tempMsg.topic(), tempMsg);
+        getMessageDispatcher().publish(tempMsg);
 
         // Trigger alert if too high
         if (temp > 30.0) {
@@ -50,7 +50,7 @@ public class TemperatureSensorAgent extends BaseAgent {
                     .content("High temperature alert: " + tempFormatted + "°C")
                     .header("severity", "WARNING")
                     .build();
-            getMessageDispatcher().publish(alertMsg.topic(), alertMsg);
+            getMessageDispatcher().publish(alertMsg);
         }
     }
 

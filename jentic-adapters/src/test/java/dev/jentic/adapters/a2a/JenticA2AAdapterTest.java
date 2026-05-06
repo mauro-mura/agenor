@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -111,7 +112,7 @@ class JenticA2AAdapterTest {
         assertThat(response.performative()).isEqualTo(Performative.INFORM);
         assertThat(response.content()).isEqualTo("Done");
         verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
-        verify(messageDispatcher).sendTo(eq("internal-agent"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "internal-agent".equals(msg.receiverId())));
     }
 
     @Test
@@ -166,7 +167,7 @@ class JenticA2AAdapterTest {
         adapter.send(request).get(5, TimeUnit.SECONDS);
 
         // Then - should route internally, not externally
-        verify(messageDispatcher).sendTo(eq("https://local-agent.com"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "https://local-agent.com".equals(msg.receiverId())));
     }
 
     @Test
@@ -336,7 +337,7 @@ class JenticA2AAdapterTest {
         // Then
         assertThat(response.performative()).isEqualTo(Performative.AGREE);
         verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
-        verify(messageDispatcher).sendTo(eq("agent-a"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "agent-a".equals(msg.receiverId())));
     }
 
     // -----------------------------------------------------------------------
@@ -356,7 +357,7 @@ class JenticA2AAdapterTest {
         };
         when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
                 .thenAnswer(triggerHandler);
-        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
     }
 }

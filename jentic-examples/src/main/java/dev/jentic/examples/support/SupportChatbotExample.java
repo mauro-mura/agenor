@@ -265,7 +265,7 @@ public class SupportChatbotExample {
                 .content(input)
                 .build();
             
-            runtime.getMessageDispatcher().publish(query.topic(), query);
+            runtime.getMessageDispatcher().publish(query);
             
             // Wait for response (simple approach - in production use CompletableFuture)
             Thread.sleep(500);
@@ -313,7 +313,7 @@ public class SupportChatbotExample {
                 .content(query)
                 .build();
             
-            runtime.getMessageDispatcher().publish(msg.topic(), msg);
+            runtime.getMessageDispatcher().publish(msg);
             
             // Wait for response
             Thread.sleep(1000);

@@ -85,7 +85,7 @@ class JenticAgentExecutorTest {
         executor.execute(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
+        verify(messageDispatcher).sendTo(messageCaptor.capture());
 
         Message sentMessage = messageCaptor.getValue();
         DialogueMessage sentDialogue = DialogueMessage.fromMessage(sentMessage);
@@ -124,7 +124,7 @@ class JenticAgentExecutorTest {
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "test-agent".equals(msg.receiverId())));
     }
 
     @Test
@@ -155,7 +155,7 @@ class JenticAgentExecutorTest {
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "test-agent".equals(msg.receiverId())));
     }
 
     @Test
@@ -195,13 +195,13 @@ class JenticAgentExecutorTest {
         Subscription mockSub = mock(Subscription.class);
         when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
                 .thenReturn(mockSub);
-        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         executor.execute(requestContext, eventQueue);
 
         verify(messageDispatcher).subscribeRecipient(anyString(), any(MessageHandler.class));
-        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "test-agent".equals(msg.receiverId())));
     }
 
     @Test
@@ -235,13 +235,13 @@ class JenticAgentExecutorTest {
         when(requestContext.getContextId()).thenReturn(contextId);
         when(requestContext.getTask()).thenReturn(null);
 
-        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         executor.cancel(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
+        verify(messageDispatcher).sendTo(messageCaptor.capture());
 
         Message cancelMessage = messageCaptor.getValue();
         DialogueMessage cancelDialogue = DialogueMessage.fromMessage(cancelMessage);
@@ -296,7 +296,7 @@ class JenticAgentExecutorTest {
         when(requestContext.getContextId()).thenReturn(contextId);
         when(requestContext.getTask()).thenReturn(null);
 
-        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
                 .thenThrow(new RuntimeException("Cancel failed"));
 
         assertThatThrownBy(() -> executor.cancel(requestContext, eventQueue))
@@ -335,7 +335,7 @@ class JenticAgentExecutorTest {
         executor.execute(requestContext, eventQueue);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageDispatcher).sendTo(eq("test-agent"), messageCaptor.capture());
+        verify(messageDispatcher).sendTo(messageCaptor.capture());
 
         Message sentMessage = messageCaptor.getValue();
         DialogueMessage sentDialogue = DialogueMessage.fromMessage(sentMessage);
@@ -370,7 +370,7 @@ class JenticAgentExecutorTest {
 
         executor.execute(requestContext, eventQueue);
 
-        verify(messageDispatcher).sendTo(eq("test-agent"), any(Message.class));
+        verify(messageDispatcher).sendTo(argThat(msg -> "test-agent".equals(msg.receiverId())));
     }
 
     @Test
@@ -394,7 +394,7 @@ class JenticAgentExecutorTest {
         };
         when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
                 .thenAnswer(triggerHandler);
-        when(messageDispatcher.sendTo(anyString(), any(Message.class)))
+        when(messageDispatcher.sendTo(any(Message.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
     }
 }

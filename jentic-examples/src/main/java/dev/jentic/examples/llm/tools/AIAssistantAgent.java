@@ -76,7 +76,7 @@ public class AIAssistantAgent extends BaseAgent {
             .senderId(getAgentId())
             .content("AI Assistant is ready to help!")
             .build();
-        getMessageDispatcher().publish(startMsg.topic(), startMsg);
+        getMessageDispatcher().publish(startMsg);
     }
     
     @Override
@@ -89,7 +89,7 @@ public class AIAssistantAgent extends BaseAgent {
             .senderId(getAgentId())
             .content("AI Assistant is shutting down")
             .build();
-        getMessageDispatcher().publish(stopMsg.topic(), stopMsg);
+        getMessageDispatcher().publish(stopMsg);
     }
     
     /**
@@ -115,7 +115,7 @@ public class AIAssistantAgent extends BaseAgent {
                         .content(response)
                         .build();
                     
-                    getMessageDispatcher().publish(responseMessage.topic(), responseMessage);
+                    getMessageDispatcher().publish(responseMessage);
 
                     log.info("Chat response sent for request: {}", correlationId);
                 })
@@ -131,7 +131,7 @@ public class AIAssistantAgent extends BaseAgent {
                                 throwable.getMessage())
                         .build();
 
-                    getMessageDispatcher().publish(errorMessage.topic(), errorMessage);
+                    getMessageDispatcher().publish(errorMessage);
                     return null;
                 });
                 
@@ -169,7 +169,7 @@ public class AIAssistantAgent extends BaseAgent {
                         .content(response)
                         .build();
                     
-                    getMessageDispatcher().publish(responseMessage.topic(), responseMessage);
+                    getMessageDispatcher().publish(responseMessage);
                 })
                 .exceptionally(throwable -> {
                     ToolExecutionResponse response = new ToolExecutionResponse(
@@ -186,7 +186,7 @@ public class AIAssistantAgent extends BaseAgent {
                         .content(response)
                         .build();
 
-                    getMessageDispatcher().publish(errorMessage.topic(), errorMessage);
+                    getMessageDispatcher().publish(errorMessage);
                     return null;
                 });
                 

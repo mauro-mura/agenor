@@ -151,7 +151,7 @@ public class EvaluationFrameworkExample {
                     .header("priority", "normal")
                     .build();
                 
-                rt.getMessageDispatcher().publish(orderMessage.topic(), orderMessage);
+                rt.getMessageDispatcher().publish(orderMessage);
                 
                 // Wait for processing
                 sleep(1000);
@@ -201,7 +201,7 @@ public class EvaluationFrameworkExample {
                     .content(new Order("ORD-002", "Premium Widget", 10, 49.99))
                     .build();
                 
-                runtime.getMessageDispatcher().publish(orderMessage.topic(), orderMessage);
+                runtime.getMessageDispatcher().publish(orderMessage);
 
                 // Wait for multi-agent processing
                 sleep(2000);
@@ -254,7 +254,7 @@ public class EvaluationFrameworkExample {
                         .header("batch", "true")
                         .build();
                     
-                    runtime.getMessageDispatcher().publish(order.topic(), order);
+                    runtime.getMessageDispatcher().publish(order);
                     sleep(100);
                 }
                 
@@ -368,7 +368,7 @@ public class EvaluationFrameworkExample {
                         .correlationId(message.id())
                         .content(new OrderConfirmation(order.orderId(), "PROCESSED", Instant.now()))
                         .build();
-                    getMessageDispatcher().publish(confirmMsg.topic(), confirmMsg);
+                    getMessageDispatcher().publish(confirmMsg);
 
                     // Request inventory check
                     var inventoryMsg = Message.builder()
@@ -376,7 +376,7 @@ public class EvaluationFrameworkExample {
                         .senderId(getAgentId())
                         .content(order)
                         .build();
-                    getMessageDispatcher().publish(inventoryMsg.topic(), inventoryMsg);
+                    getMessageDispatcher().publish(inventoryMsg);
                 }
             } catch (Exception e) {
                 errorCount.incrementAndGet();
@@ -458,7 +458,7 @@ public class EvaluationFrameworkExample {
                     .correlationId(message.id())
                     .content(new InventoryResult(order.orderId(), inStock, order.quantity()))
                     .build();
-                getMessageDispatcher().publish(resultMsg.topic(), resultMsg);
+                getMessageDispatcher().publish(resultMsg);
 
                 // Notify if low stock
                 if (!inStock) {
@@ -467,7 +467,7 @@ public class EvaluationFrameworkExample {
                         .senderId(getAgentId())
                         .content("Low stock alert for: " + order.productName())
                         .build();
-                    getMessageDispatcher().publish(stockMsg.topic(), stockMsg);
+                    getMessageDispatcher().publish(stockMsg);
                 }
                 
                 log.debug("Inventory check for {}: inStock={}", order.productName(), inStock);

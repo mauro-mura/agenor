@@ -53,7 +53,7 @@ class DeprecatedMessageServiceBridgeTest {
     class PublishBridge {
 
         @Test
-        @DisplayName("publish(topic, msg) delivers to a topic subscriber")
+        @DisplayName("publish(msg) delivers to a topic subscriber")
         void publishBridge_deliversToTopicSubscriber() throws Exception {
             var latch = new CountDownLatch(1);
             var received = new AtomicReference<Message>();
@@ -65,7 +65,7 @@ class DeprecatedMessageServiceBridgeTest {
             });
 
             var msg = Message.builder().topic("order.created").content("event").build();
-            service.publish("order.created", msg).join();
+            service.publish(msg).join();
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(received.get().content()).isEqualTo("event");
@@ -75,7 +75,7 @@ class DeprecatedMessageServiceBridgeTest {
         @DisplayName("publish bridge result is the same CompletableFuture as send(msg)")
         void publishBridge_returnsCompletedFuture() {
             var msg = Message.builder().topic("t").content("c").build();
-            assertThat(service.publish("t", msg)).succeedsWithin(2, TimeUnit.SECONDS);
+            assertThat(service.publish(msg)).succeedsWithin(2, TimeUnit.SECONDS);
         }
     }
 
@@ -88,7 +88,7 @@ class DeprecatedMessageServiceBridgeTest {
     class SendToBridge {
 
         @Test
-        @DisplayName("sendTo(agentId, msg) delivers to a receiver subscriber when msg.receiverId matches")
+        @DisplayName("sendTo(msg) delivers to a receiver subscriber when msg.receiverId matches")
         void sendToBridge_deliversToReceiverSubscriber() throws Exception {
             var latch = new CountDownLatch(1);
             var received = new AtomicReference<Message>();
@@ -99,9 +99,8 @@ class DeprecatedMessageServiceBridgeTest {
                 return CompletableFuture.completedFuture(null);
             });
 
-            // Bridge delegates to send(msg); routing uses msg.receiverId(), not the parameter.
             var msg = Message.builder().topic("direct").receiverId("agent-a").content("hi").build();
-            service.sendTo("agent-a", msg).join();
+            service.sendTo(msg).join();
 
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(received.get().content()).isEqualTo("hi");

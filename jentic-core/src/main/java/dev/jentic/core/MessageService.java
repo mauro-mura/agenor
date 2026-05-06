@@ -97,27 +97,15 @@ public interface MessageService extends MessageDispatcher, FilterableSubscriber 
     // MessageDispatcher default bridges → delegate to legacy abstract methods
     // -------------------------------------------------------------------------
 
-    /**
-     * Delegates to {@link #send(Message)}.
-     *
-     * <p><em>Note:</em> the provided {@code topic} is ignored if the message already carries
-     * a different topic. Set the topic on the message at construction time.
-     */
+    /** Delegates to {@link #send(Message)}. */
     @Override
-    default CompletableFuture<Void> publish(String topic, Message msg) {
+    default CompletableFuture<Void> publish(Message msg) {
         return send(msg);
     }
 
-    /**
-     * Delegates to {@link #send(Message)}.
-     *
-     * <p><em>Note:</em> the provided {@code recipientAgentId} is ignored if the message
-     * already carries a different {@code receiverId}. Set the receiver on the message at
-     * construction time. Unlike {@link dev.jentic.core.messaging.DirectMessenger}, this
-     * bridge does <em>not</em> resolve the agent endpoint via the directory.
-     */
+    /** Delegates to {@link #send(Message)}. */
     @Override
-    default CompletableFuture<Void> sendTo(String recipientAgentId, Message msg) {
+    default CompletableFuture<Void> sendTo(Message msg) {
         return send(msg);
     }
 

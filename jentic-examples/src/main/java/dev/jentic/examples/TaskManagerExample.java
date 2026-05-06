@@ -22,35 +22,35 @@ import dev.jentic.runtime.agent.BaseAgent;
  * Task management example with task creator, task processor, and task monitor agents.
  */
 public class TaskManagerExample {
-    
+
     private static final Logger log = LoggerFactory.getLogger(TaskManagerExample.class);
-    
+
     public static void main(String[] args) throws InterruptedException {
         log.info("=== Jentic Task Manager Example ===");
-        
+
         JenticRuntime runtime = JenticRuntime.builder().build();
-        
+
         // Register agents
         runtime.registerAgent(new TaskCreatorAgent());
         runtime.registerAgent(new TaskProcessorAgent("processor-1"));
         runtime.registerAgent(new TaskProcessorAgent("processor-2"));
         runtime.registerAgent(new TaskMonitorAgent());
-        
+
         // Start runtime
         runtime.start().join();
-        
+
         log.info("Task manager started with {} agents", runtime.getAgents().size());
-        
+
         // Run for 25 seconds
         Thread.sleep(25_000);
-        
+
         // Stop runtime
         log.info("Stopping task manager...");
         runtime.stop().join();
-        
+
         log.info("=== Task Manager Example completed ===");
     }
-    
+
     // Task record
     public record Task(
         String id,
@@ -64,37 +64,37 @@ public class TaskManagerExample {
         public Task withStatus(TaskStatus newStatus) {
             return new Task(id, type, description, newStatus, createdAt, processedAt, processedBy);
         }
-        
+
         public Task withProcessed(String processedBy) {
             return new Task(id, type, description, status, createdAt, LocalDateTime.now(), processedBy);
         }
     }
-    
+
     public enum TaskStatus {
         CREATED, PROCESSING, COMPLETED, FAILED
     }
-    
+
     /**
      * Agent that creates tasks periodically
      */
-    @JenticAgent(value = "task-creator", 
-                 type = "creator", 
+    @JenticAgent(value = "task-creator",
+                 type = "creator",
                  capabilities = {"task-creation"},
                  autoStart = true)
     public static class TaskCreatorAgent extends BaseAgent {
-        
+
         private final String[] taskTypes = {"DATA_PROCESSING", "EMAIL_SEND", "FILE_BACKUP", "REPORT_GENERATION", "DATABASE_CLEANUP"};
         private int taskCounter = 0;
-        
+
         public TaskCreatorAgent() {
             super("task-creator", "Task Creator");
         }
-        
+
         @JenticBehavior(type = CYCLIC, interval = "4s", autoStart = true)
         public void createTask() {
             taskCounter++;
             String taskType = taskTypes[ThreadLocalRandom.current().nextInt(taskTypes.length)];
-            
+
             Task task = new Task(
                 "task-" + taskCounter,
                 taskType,
@@ -104,7 +104,7 @@ public class TaskManagerExample {
                 null,
                 null
             );
-            
+
             Message taskMessage = Message.builder()
                 .topic("tasks.new")
                 .senderId(getAgentId())
@@ -112,40 +112,40 @@ public class TaskManagerExample {
                 .header("task-id", task.id())
                 .header("task-type", task.type())
                 .build();
-            
+
             log.info("Created task: {} - {}", task.id(), task.description());
-            getMessageDispatcher().publish(taskMessage.topic(), taskMessage);
+            getMessageDispatcher().publish(taskMessage);
         }
-        
+
         @Override
         protected void onStart() {
             log.info("Task Creator started, will create tasks every 4 seconds");
         }
     }
-    
+
     /**
      * Agent that processes tasks
      */
-    @JenticAgent(type = "processor", 
+    @JenticAgent(type = "processor",
                  capabilities = {"task-processing"},
                  autoStart = true)
     public static class TaskProcessorAgent extends BaseAgent {
-        
+
         private final Queue<Task> processingQueue = new ConcurrentLinkedQueue<>();
         private int processedCount = 0;
-        
+
         public TaskProcessorAgent(String processorId) {
             super(processorId, "Task Processor " + processorId);
         }
-        
+
         @JenticMessageHandler("tasks.new")
         public void receiveNewTask(Message message) {
             Task task = message.getContent(Task.class);
             processingQueue.offer(task);
-            
-            log.info("[{}] Queued task: {} (queue size: {})", 
+
+            log.info("[{}] Queued task: {} (queue size: {})",
                     getAgentId(), task.id(), processingQueue.size());
-            
+
             // Notify that task is being processed
             Message processingMessage = Message.builder()
                 .topic("tasks.status")
@@ -154,30 +154,30 @@ public class TaskManagerExample {
                 .header("status", "PROCESSING")
                 .header("processor", getAgentId())
                 .build();
-            
-            getMessageDispatcher().publish(processingMessage.topic(), processingMessage);
+
+            getMessageDispatcher().publish(processingMessage);
         }
-        
+
         @JenticBehavior(type = CYCLIC, interval = "2s", autoStart = true)
         public void processTasks() {
             Task task = processingQueue.poll();
             if (task == null) {
                 return; // No tasks to process
             }
-            
+
             // Simulate processing time
             CompletableFuture.runAsync(() -> {
                 try {
                     // Random processing time between 1-3 seconds
                     Thread.sleep(1000 + ThreadLocalRandom.current().nextInt(2000));
-                    
+
                     processedCount++;
                     boolean success = ThreadLocalRandom.current().nextDouble() < 0.9; // 90% success rate
-                    
+
                     Task completedTask = task
                         .withStatus(success ? TaskStatus.COMPLETED : TaskStatus.FAILED)
                         .withProcessed(getAgentId());
-                    
+
                     Message completedMessage = Message.builder()
                         .topic("tasks.completed")
                         .senderId(getAgentId())
@@ -186,88 +186,88 @@ public class TaskManagerExample {
                         .header("processor", getAgentId())
                         .header("success", String.valueOf(success))
                         .build();
-                    
+
                     if (success) {
-                        log.info("[{}] ✅ Completed task: {} (total processed: {})", 
+                        log.info("[{}] ✅ Completed task: {} (total processed: {})",
                                 getAgentId(), task.id(), processedCount);
                     } else {
-                        log.warn("[{}] ❌ Failed task: {} (total processed: {})", 
+                        log.warn("[{}] ❌ Failed task: {} (total processed: {})",
                                 getAgentId(), task.id(), processedCount);
                     }
-                    
-                    getMessageDispatcher().publish(completedMessage.topic(), completedMessage);
-                    
+
+                    getMessageDispatcher().publish(completedMessage);
+
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     log.warn("Task processing interrupted: {}", task.id());
                 }
             });
         }
-        
+
         @Override
         protected void onStart() {
             log.info("[{}] Task Processor ready to handle tasks", getAgentId());
         }
     }
-    
+
     /**
      * Agent that monitors task completion and maintains statistics
      */
-    @JenticAgent(value = "task-monitor", 
-                 type = "monitor", 
+    @JenticAgent(value = "task-monitor",
+                 type = "monitor",
                  capabilities = {"monitoring", "statistics"},
                  autoStart = true)
     public static class TaskMonitorAgent extends BaseAgent {
-        
+
         private int totalTasks = 0;
         private int completedTasks = 0;
         private int failedTasks = 0;
-        
+
         public TaskMonitorAgent() {
             super("task-monitor", "Task Monitor");
         }
-        
+
         @JenticMessageHandler("tasks.new")
         public void trackNewTask(Message message) {
             totalTasks++;
             Task task = message.getContent(Task.class);
             log.debug("Tracking new task: {} (total: {})", task.id(), totalTasks);
         }
-        
+
         @JenticMessageHandler("tasks.completed")
         public void trackCompletedTask(Message message) {
             Task task = message.getContent(Task.class);
             String processor = message.headers().get("processor");
-            
+
             if (task.status() == TaskStatus.COMPLETED) {
                 completedTasks++;
-                log.info("📊 Task {} completed by {} (Success: {}/{})", 
+                log.info("📊 Task {} completed by {} (Success: {}/{})",
                         task.id(), processor, completedTasks, totalTasks);
             } else {
                 failedTasks++;
-                log.warn("📊 Task {} failed by {} (Failed: {}/{})", 
+                log.warn("📊 Task {} failed by {} (Failed: {}/{})",
                         task.id(), processor, failedTasks, totalTasks);
             }
         }
-        
+
         @JenticBehavior(type = CYCLIC, interval = "10s", autoStart = true)
         public void reportStatistics() {
             int pendingTasks = totalTasks - completedTasks - failedTasks;
             double successRate = totalTasks > 0 ? (double) completedTasks / totalTasks * 100 : 0;
-            
+
             log.info("📈 STATISTICS - Total: {}, Completed: {}, Failed: {}, Pending: {}, Success Rate: {:.1f}%",
                     totalTasks, completedTasks, failedTasks, pendingTasks, successRate);
         }
-        
+
         @Override
         protected void onStart() {
             log.info("Task Monitor started, tracking task completion statistics");
         }
-        
+
         @Override
         protected void onStop() {
             log.info("📋 FINAL STATISTICS - Total: {}, Completed: {}, Failed: {}, Success Rate: {:.1f}%",
-                    totalTasks, completedTasks, failedTasks, 
+                    totalTasks, completedTasks, failedTasks,
                     totalTasks > 0 ? (double) completedTasks / totalTasks * 100 : 0);
         }
     }

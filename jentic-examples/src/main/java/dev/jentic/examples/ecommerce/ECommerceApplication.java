@@ -55,7 +55,7 @@ public class ECommerceApplication {
                 .build();
 
         // Send via the shared dispatcher
-        dispatcher.publish(newOrder1.topic(), newOrder1);
+        dispatcher.publish(newOrder1);
 
         // Wait for order processing (FSM runs automatically via cyclic behavior)
         Thread.sleep(8000);
@@ -81,7 +81,7 @@ public class ECommerceApplication {
                 .content(order2)
                 .build();
 
-        dispatcher.publish(newOrder2.topic(), newOrder2);
+        dispatcher.publish(newOrder2);
 
         // Wait for order processing
         Thread.sleep(5000);

@@ -162,7 +162,7 @@ public class AIAssistantExample {
             .content(userInput)
             .build();
 
-        runtime.getMessageDispatcher().publish(chatRequest.topic(), chatRequest);
+        runtime.getMessageDispatcher().publish(chatRequest);
 
         // Wait for response (timeout after 30 seconds)
         boolean received = latch.await(30, TimeUnit.SECONDS);
@@ -259,7 +259,7 @@ public class AIAssistantExample {
             .content(request)
             .build();
 
-        runtime.getMessageDispatcher().publish(toolMessage.topic(), toolMessage);
+        runtime.getMessageDispatcher().publish(toolMessage);
 
         // Wait for result
         boolean received = latch.await(10, TimeUnit.SECONDS);

@@ -46,7 +46,7 @@ public class SystemLoggerAgent extends BaseAgent {
                 .senderId(getAgentId())
                 .content(new Stats(messageCount))
                 .build();
-        getMessageDispatcher().publish(statsMsg.topic(), statsMsg);
+        getMessageDispatcher().publish(statsMsg);
     }
 
     private String summarize(Object content) {

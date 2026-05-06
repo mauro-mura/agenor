@@ -56,7 +56,7 @@ public class DataCollectorAgent extends BaseAgent {
         log.info("📈 Collected data point #{}: {} - {:.1f}°C, {:.1f}% humidity, {:.1f} hPa", 
                 dataPoints, data.sensorId(), temperature, humidity, pressure);
         
-        getMessageDispatcher().publish(dataMessage.topic(), dataMessage);
+        getMessageDispatcher().publish(dataMessage);
 
         // Occasionally send alerts for extreme values
         if (temperature > 35 || temperature < 5 || humidity > 90) {
@@ -89,7 +89,7 @@ public class DataCollectorAgent extends BaseAgent {
             .header("requested-sensor", requestedSensor)
             .build();
         
-        getMessageDispatcher().publish(response.topic(), response);
+        getMessageDispatcher().publish(response);
         log.info("📤 Sent on-demand data for sensor: {}", data.sensorId());
     }
     
@@ -106,7 +106,7 @@ public class DataCollectorAgent extends BaseAgent {
             .build();
         
         log.warn("⚠️  Sending {} alert for sensor {}", alertLevel, data.sensorId());
-        getMessageDispatcher().publish(alert.topic(), alert);
+        getMessageDispatcher().publish(alert);
     }
     
     private String determineAlertLevel(double temperature, double humidity) {

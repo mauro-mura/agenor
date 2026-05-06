@@ -101,7 +101,7 @@ public class LLMFaultToleranceExample {
             ))
             .build();
 
-        runtime.getMessageDispatcher().sendTo(request.receiverId(), request);
+        runtime.getMessageDispatcher().sendTo(request);
     }
 }
 
@@ -229,7 +229,7 @@ class DynamicCoordinator extends BaseAgent {
             ))
             .build();
 
-        getMessageDispatcher().sendTo(taskMsg.receiverId(), taskMsg);
+        getMessageDispatcher().sendTo(taskMsg);
     }
 
     @JenticMessageHandler(value = "research.findings.technical", autoSubscribe = true)
@@ -423,7 +423,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            getMessageDispatcher().sendTo(reply.receiverId(), reply);
+            getMessageDispatcher().sendTo(reply);
         }).exceptionally(ex -> {
             log.error("❌ Technical analysis failed", ex);
             return null;
@@ -512,7 +512,7 @@ class DynamicMarketResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            getMessageDispatcher().sendTo(reply.receiverId(), reply);
+            getMessageDispatcher().sendTo(reply);
         }).exceptionally(ex -> {
             log.error("❌ Market analysis failed", ex);
             return null;
@@ -601,7 +601,7 @@ class DynamicCompetitorResearcher extends BaseAgent {
                 .correlationId(message.id())
                 .build();
 
-            getMessageDispatcher().sendTo(reply.receiverId(), reply);
+            getMessageDispatcher().sendTo(reply);
         }).exceptionally(ex -> {
             log.error("❌ Competitive analysis failed", ex);
             return null;
