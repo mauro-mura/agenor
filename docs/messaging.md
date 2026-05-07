@@ -8,9 +8,9 @@ The messaging API is split into five focused interfaces, each representing a sin
 
 | Interface | Capability | Method |
 |-----------|-----------|--------|
-| `TopicPublisher` | Publish to a topic | `publish(topic, msg)` |
+| `TopicPublisher` | Publish to a topic | `publish(msg)` |
 | `TopicSubscriber` | Subscribe to a topic | `subscribeTopic(topic, handler)` |
-| `DirectMessenger` | Send to a named agent | `sendTo(agentId, msg)` |
+| `DirectMessenger` | Send to a named agent | `sendTo(msg)` |
 | `DirectReceiver` | Receive messages addressed to self | `subscribeRecipient(agentId, handler)` |
 | `FilterableSubscriber` | Subscribe with a predicate | `subscribeFiltered(filter, handler)` |
 
@@ -66,7 +66,7 @@ Message msg = Message.builder()
     .header("region", "us-east-1")
     .build();
 
-dispatcher.publish("order.created", msg);
+dispatcher.publish(msg);  // routing reads msg.topic()
 ```
 
 ## Topic Subscriptions
@@ -89,7 +89,12 @@ Direct messages are routed to a specific agent by ID. The agent must be register
 **Send side:**
 
 ```java
-dispatcher.sendTo("inventory-agent", msg)
+Message msg = Message.builder()
+    .receiverId("inventory-agent")
+    .content(payload)
+    .build();
+
+dispatcher.sendTo(msg)  // routing reads msg.receiverId()
     .exceptionally(ex -> {
         if (ex.getCause() instanceof AgentNotFoundException) {
             log.warn("Agent not found");
@@ -156,8 +161,8 @@ Every `publish` and `sendTo` call creates an OpenTelemetry span named `message.s
 
 | Attribute | Source |
 |-----------|--------|
-| `message.topic` | topic argument (publish) |
-| `message.recipient` | recipient agent ID (sendTo) |
+| `message.topic` | `msg.topic()` (publish) |
+| `message.recipient` | `msg.receiverId()` (sendTo) |
 | `message.id` | `msg.id()` |
 | `agent.sender` | `msg.senderId()` |
 | `endpoint.type` | resolved transport type (sendTo only) |
@@ -168,7 +173,7 @@ Every `publish` and `sendTo` call creates an OpenTelemetry span named `message.s
 
 | Old API | New API |
 |---------|---------|
-| `messageService.send(msg)` | `dispatcher.publish(msg.topic(), msg)` |
+| `messageService.send(msg)` | `dispatcher.publish(msg)` or `dispatcher.sendTo(msg)` |
 | `messageService.subscribe(topic, handler)` | `dispatcher.subscribeTopic(topic, handler)` |
 | `messageService.subscribe(filter, handler)` | `dispatcher.subscribeFiltered(filter, handler)` |
 | `messageService.unsubscribe(id)` | `subscription.unsubscribe()` |

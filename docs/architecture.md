@@ -191,7 +191,7 @@ Community adapters are welcome. See `CONTRIBUTING.md`.
 
 ## 7. Messaging Flow
 
-1. An Agent publishes a `Message` via `MessageDispatcher.publish(topic, msg)` (topic broadcast) or `sendTo(agentId, msg)` (point-to-point).
+1. An Agent publishes a `Message` via `MessageDispatcher.publish(msg)` (topic broadcast, routing on `msg.topic()`) or `sendTo(msg)` (point-to-point, routing on `msg.receiverId()`).
 2. For point-to-point, the dispatcher calls `AgentResolver.resolveEndpoint(agentId)` to obtain the target `AgentEndpoint`.
 3. Agents subscribe via `subscribeTopic(topic, handler)` or `subscribeRecipient(agentId, handler)`, both returning a `Subscription`.
 4. `@JenticMessageHandler(topic)` annotations are also supported; the runtime registers the handler automatically.
