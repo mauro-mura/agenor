@@ -25,6 +25,8 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-017](ADR-017-llmrequest-model-optional.md)                     | LLMRequest model field — optional        | Accepted | 2026-04-12 |
 | [ADR-018](ADR-018-optional-adapter-dependencies-pattern.md)         | Optional Adapter Dependencies Pattern    | Accepted | 2026-04-23 |
 | [ADR-019](ADR-019-opentelemetry-instrumentation.md)                 | OpenTelemetry Instrumentation            | Accepted | 2026-04-23 |
+| [ADR-020](ADR-020-core-api-refactor.md)                             | Core API Refactor for Distributed Backends | Accepted | 2026-04-26 |
+| [ADR-021](ADR-021-redis-message-transport.md)                       | Redis MessageTransport — Pub/Sub vs Streams | Accepted | 2026-05-10 |
 
 ---
 
@@ -168,6 +170,8 @@ graph TD
 - **ADR-017** (LLMRequest optional model) refines ADR-007 (LLMProvider as Core Interface)
 - **ADR-018** (Optional Adapter Deps) governs ADR-019 and future adapter ADRs
 - **ADR-019** (OTel Instrumentation) builds on ADR-002, ADR-003, ADR-018
+- **ADR-020** (Core API Refactor) builds on ADR-002, ADR-004; prerequisite for ADR-021, ADR-022, ADR-023
+- **ADR-021** (Redis MessageTransport) builds on ADR-001, ADR-018, ADR-020
 
 ---
 
