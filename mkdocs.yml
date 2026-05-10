@@ -88,6 +88,7 @@ nav:
     - Guardrails: guardrails.md
   - Adapters:
     - MCP: adapters/mcp.md
+    - Redis Messaging: adapters/redis.md
   - Observability:
     - OpenTelemetry: observability.md
   - Integrations:

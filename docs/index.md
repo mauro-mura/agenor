@@ -50,9 +50,10 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 
 ## Adapters
 
-| Document | Description                                                  |
-|----------|--------------------------------------------------------------|
-| [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Jentic agentss |
+| Document | Description |
+|----------|-------------|
+| [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Jentic agents |
+| [Redis Messaging Adapter](adapters/redis.md) | At-least-once distributed messaging via Redis Streams (since 0.21.0) |
 
 ## Integrations
 

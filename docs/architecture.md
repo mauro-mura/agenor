@@ -170,6 +170,22 @@ Implements the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A):
 
 For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 
+### Redis Messaging Adapter (since 0.21.0)
+
+Implements `TopicPublisher`, `TopicSubscriber`, and `MessageTransport` on top of Redis Streams,
+providing at-least-once delivery and fan-out pub/sub across JVM nodes. Requires `lettuce-core`
+on the classpath per ADR-018 (opt-in). Activated via `jentic.messaging.provider=redis` in Spring Boot,
+or directly via `RedisMessagingFactory`.
+
+Key classes in `dev.jentic.adapters.messaging.redis`:
+
+- **RedisMessagingFactory**: builder; manages the shared Lettuce connection and lifecycle.
+- **RedisTopicPublisher**: implements `TopicPublisher` + `TopicSubscriber`; fan-out via per-subscription consumer groups.
+- **RedisMessageTransport**: implements `MessageTransport`; point-to-point via node-scoped streams.
+- **ConsumerLoop**: virtual-thread blocking `XREADGROUP` loop with DLQ after `maxDeliveryAttempts`.
+
+For the full guide see [`docs/adapters/redis.md`](adapters/redis.md).
+
 ### Extension Points
 
 All core contracts are interfaces. Custom implementations can be plugged in
