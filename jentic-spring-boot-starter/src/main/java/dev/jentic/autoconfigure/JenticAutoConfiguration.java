@@ -7,6 +7,9 @@ import dev.jentic.core.directory.AgentRegistry;
 import dev.jentic.core.directory.AgentResolver;
 import dev.jentic.core.llm.LLMProvider;
 import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.messaging.MessageTransport;
+import dev.jentic.core.messaging.TopicPublisher;
+import dev.jentic.core.messaging.TopicSubscriber;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
@@ -337,6 +340,67 @@ public class JenticAutoConfiguration {
         org.springframework.boot.health.contributor.HealthIndicator jenticHealthIndicator(
                 JenticRuntime jenticRuntime) {
             return new JenticHealthIndicator(jenticRuntime);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Redis messaging beans — active only when Lettuce is on the classpath
+    // -------------------------------------------------------------------------
+
+    /**
+     * Creates {@link dev.jentic.adapters.messaging.redis.RedisMessagingFactory} and exposes
+     * the Redis-backed {@link TopicPublisher}, {@link TopicSubscriber}, and
+     * {@link MessageTransport} capability beans when all of the following hold:
+     * <ul>
+     *   <li>{@code io.lettuce.core.RedisClient} is on the classpath</li>
+     *   <li>{@code jentic.messaging.provider=redis} is configured</li>
+     * </ul>
+     *
+     * <p>The factory is closed automatically on context shutdown via {@code destroyMethod}.
+     *
+     * @since 0.21.0
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "io.lettuce.core.RedisClient")
+    @ConditionalOnProperty(prefix = "jentic.messaging", name = "provider", havingValue = "redis")
+    static class RedisMessagingConfiguration {
+
+        @Bean(destroyMethod = "close")
+        @ConditionalOnMissingBean
+        public dev.jentic.adapters.messaging.redis.RedisMessagingFactory redisMessagingFactory(
+                JenticProperties props,
+                ObjectProvider<JenticTelemetry> telemetry) {
+            var r = props.messaging().redis();
+            return dev.jentic.adapters.messaging.redis.RedisMessagingFactory.builder()
+                    .uri(r.uri())
+                    .consumerGroupPrefix(r.consumerGroupPrefix())
+                    .readBlockTimeoutMs(r.readBlockTimeoutMs())
+                    .maxStreamLength(r.maxStreamLength())
+                    .pendingEntriesTimeoutMs(r.pendingEntriesTimeoutMs())
+                    .maxDeliveryAttempts(r.maxDeliveryAttempts())
+                    .telemetry(telemetry.getIfAvailable(JenticTelemetry::noop))
+                    .build();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(TopicPublisher.class)
+        public TopicPublisher redisTopicPublisher(
+                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
+            return factory.topicPublisher();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(TopicSubscriber.class)
+        public TopicSubscriber redisTopicSubscriber(
+                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
+            return factory.topicPublisher();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(MessageTransport.class)
+        public MessageTransport redisMessageTransport(
+                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
+            return factory.messageTransport();
         }
     }
 

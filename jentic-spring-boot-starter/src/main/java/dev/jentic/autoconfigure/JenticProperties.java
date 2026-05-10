@@ -109,14 +109,41 @@ public record JenticProperties(
 
     /**
      * Messaging
-     * 
+     *
      * @param provider   messaging provider implementation; default {@code inmemory}
      * @param properties provider-specific configuration key/value pairs
+     * @param redis      Redis-specific configuration; only used when {@code provider=redis}
      */
     public record Messaging(
             @DefaultValue("inmemory") String provider,
-            @DefaultValue Map<String, String> properties
-    ) {}
+            @DefaultValue Map<String, String> properties,
+            @DefaultValue Redis redis
+    ) {
+
+        /**
+         * Redis messaging configuration.
+         *
+         * <p>Only used when {@code jentic.messaging.provider=redis} and
+         * {@code lettuce-core} is on the classpath.
+         *
+         * @param uri                     Redis connection URI; default {@code redis://localhost:6379}
+         * @param consumerGroupPrefix     prefix for stream keys and consumer group names;
+         *                                default {@code jentic}
+         * @param readBlockTimeoutMs      {@code XREADGROUP BLOCK} wait time in ms; default {@code 2000}
+         * @param maxStreamLength         max entries per stream before trimming; default {@code 100000}
+         * @param pendingEntriesTimeoutMs idle time before unacked entry is redelivered; default {@code 30000}
+         * @param maxDeliveryAttempts     max failures before a message is moved to the DLQ; default {@code 3}
+         * @since 0.21.0
+         */
+        public record Redis(
+                @DefaultValue("redis://localhost:6379") String uri,
+                @DefaultValue("jentic")  String consumerGroupPrefix,
+                @DefaultValue("2000")    long readBlockTimeoutMs,
+                @DefaultValue("100000")  int  maxStreamLength,
+                @DefaultValue("30000")   long pendingEntriesTimeoutMs,
+                @DefaultValue("3")       int  maxDeliveryAttempts
+        ) {}
+    }
 
     /**
      * Directory

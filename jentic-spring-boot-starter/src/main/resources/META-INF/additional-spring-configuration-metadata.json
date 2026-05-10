@@ -62,6 +62,42 @@
       "description": "Provider-specific messaging properties."
     },
     {
+      "name": "jentic.messaging.redis.uri",
+      "type": "java.lang.String",
+      "description": "Redis connection URI. Supports redis://, rediss:// (TLS), and redis-sentinel:// schemes.",
+      "defaultValue": "redis://localhost:6379"
+    },
+    {
+      "name": "jentic.messaging.redis.consumer-group-prefix",
+      "type": "java.lang.String",
+      "description": "Prefix for Redis stream keys and consumer group names.",
+      "defaultValue": "jentic"
+    },
+    {
+      "name": "jentic.messaging.redis.read-block-timeout-ms",
+      "type": "java.lang.Long",
+      "description": "How long XREADGROUP BLOCK waits before returning an empty result (milliseconds).",
+      "defaultValue": 2000
+    },
+    {
+      "name": "jentic.messaging.redis.max-stream-length",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of entries per Redis stream before approximate trimming is applied.",
+      "defaultValue": 100000
+    },
+    {
+      "name": "jentic.messaging.redis.pending-entries-timeout-ms",
+      "type": "java.lang.Long",
+      "description": "Idle time (milliseconds) before an unacknowledged pending entry is eligible for redelivery.",
+      "defaultValue": 30000
+    },
+    {
+      "name": "jentic.messaging.redis.max-delivery-attempts",
+      "type": "java.lang.Integer",
+      "description": "Number of failed delivery attempts before a message is moved to the dead-letter queue.",
+      "defaultValue": 3
+    },
+    {
       "name": "jentic.directory.provider",
       "type": "java.lang.String",
       "description": "Agent directory implementation to use.",
@@ -129,7 +165,8 @@
     {
       "name": "jentic.messaging.provider",
       "values": [
-        { "value": "inmemory", "description": "In-memory message bus (default, suitable for single-node)." }
+        { "value": "inmemory", "description": "In-memory message bus (default, suitable for single-node)." },
+        { "value": "redis", "description": "Redis Streams adapter (distributed, at-least-once). Requires lettuce-core on the classpath and jentic.messaging.redis.uri to be set." }
       ]
     },
     {
