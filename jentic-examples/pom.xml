@@ -19,10 +19,23 @@
 	    <maven.javadoc.skip>true</maven.javadoc.skip>
 	    <!-- Align with the version used in jentic-adapters (ADR-018: consumer manages own OTel dep) -->
 	    <opentelemetry.version>1.51.0</opentelemetry.version>
+	    <!-- Align with jentic-adapters (ADR-018: consumer opts in explicitly) -->
+	    <lettuce.version>7.5.1.RELEASE</lettuce.version>
 	</properties>
 
     <dependencyManagement>
         <dependencies>
+            <!--
+              Force reactor-core to the upper bound required by mcp-core.
+              Lettuce 7.5.1 pulls 3.6.6; mcp-core 1.0.0 (via jentic-adapters) pulls 3.7.0.
+              3.7.0 is binary-compatible with 3.6.x for the Lettuce usage surface.
+            -->
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-core</artifactId>
+                <version>3.7.0</version>
+            </dependency>
+
             <!--
               Force a consistent Kotlin stdlib version to resolve the conflict
               between opentelemetry-exporter-otlp (via okhttp → 1.8.x) and
@@ -78,6 +91,17 @@
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-otlp</artifactId>
             <version>${opentelemetry.version}</version>
+        </dependency>
+
+        <!--
+          Lettuce — explicit (non-optional) consumer for the Redis messaging example.
+          Demonstrates the opt-in path described in ADR-018 and ADR-021:
+          consumers that want Redis-backed messaging declare lettuce-core directly.
+        -->
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>${lettuce.version}</version>
         </dependency>
     </dependencies>
 </project>
