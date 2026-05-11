@@ -1,8 +1,10 @@
 package dev.jentic.adapters.messaging.redis;
 
+import dev.jentic.core.directory.AgentResolver;
 import dev.jentic.core.telemetry.JenticTelemetry;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Factory for creating Redis messaging adapter instances.
@@ -44,6 +46,37 @@ public final class RedisMessagingFactory implements AutoCloseable {
         this.topicPublisher  = topicPublisher;
         this.messageTransport = messageTransport;
         this.config           = config;
+    }
+
+    /**
+     * Returns a {@link RedisMessageDispatcher} for single-JVM deployments.
+     *
+     * <p>The dispatcher handles same-node {@code sendTo} calls via a local handler
+     * map (no Redis hop). Cross-node delivery requires an {@link AgentResolver} —
+     * use {@link #messageDispatcher(Supplier)} for multi-node setups.
+     *
+     * @return a new dispatcher backed by this factory's streams; never {@code null}
+     * @since 0.21.0
+     */
+    public RedisMessageDispatcher messageDispatcher() {
+        return new RedisMessageDispatcher(topicPublisher, messageTransport, null, config);
+    }
+
+    /**
+     * Returns a {@link RedisMessageDispatcher} that uses the supplied
+     * {@link AgentResolver} for cross-node {@code sendTo} routing.
+     *
+     * <p>The resolver is fetched lazily on each {@code sendTo} call, so it is safe
+     * to pass a {@code Supplier} that resolves to a bean created after this factory
+     * (e.g. an {@code ObjectProvider} in a Spring context).
+     *
+     * @param resolverSupplier supplier for the {@link AgentResolver}; may return
+     *                         {@code null} if cross-node delivery is not needed
+     * @return a new dispatcher; never {@code null}
+     * @since 0.21.0
+     */
+    public RedisMessageDispatcher messageDispatcher(Supplier<AgentResolver> resolverSupplier) {
+        return new RedisMessageDispatcher(topicPublisher, messageTransport, resolverSupplier, config);
     }
 
     /**

@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Redis Streams messaging adapter (ADR-021)**: distributed messaging over Redis Streams, backed by [Lettuce 7.5.1](https://lettuce.io/) (RESP-compatible with Valkey 8.x). Delivers at-least-once guarantees via consumer groups, virtual-thread consumer loops, and a dead-letter queue after configurable retry exhaustion.
+
+  New classes in `dev.jentic.adapters.messaging.redis`:
+  - `RedisMessageDispatcher` — implements the full `MessageDispatcher` interface; **primary entry point** for `JenticRuntime` integration. Routes `sendTo` via a local fast-path (same-JVM handler map) or a remote path (`AgentResolver` → `RedisMessageTransport`). Starts a shared node-stream consumer loop on first `subscribeRecipient` call.
+  - `RedisTopicPublisher` — implements `TopicPublisher` + `TopicSubscriber` for fan-out via per-subscription consumer groups (`jentic:topic:<topic>` streams).
+  - `RedisMessageTransport` — implements `MessageTransport` for point-to-point delivery via a shared node-scoped consumer group (`jentic:node:<nodeId>` streams).
+  - `RedisMessagingFactory` — fluent builder that wires all components from a shared Lettuce `RedisClient`. Exposes `messageDispatcher()` and `messageDispatcher(Supplier<AgentResolver>)` as the recommended entry points. Implements `AutoCloseable`.
+  - `RedisMessagingConfig` — immutable configuration record.
+  - `RedisStreamClient` — thin Lettuce wrapper isolating sync/async API calls.
+  - `ConsumerLoop` — virtual-thread consumer loop; creates the consumer group synchronously before starting, eliminating the subscribe/publish race condition.
+  - `MessageCodec` — JSON serialization/deserialization of `Message` records to/from Redis stream entries.
+
+  The Lettuce dependency is declared `optional=true` in `jentic-adapters/pom.xml` per ADR-018 — the adapter is only activated when the caller explicitly declares `io.lettuce:lettuce-core` on the classpath.
+
+  Test coverage: 47 unit tests (Mockito + AssertJ) covering codec, config, transport, publisher, and dispatcher; Testcontainers integration tests gated by `-Dintegration.tests.enabled=true`.
+
+- **Spring Boot starter — Redis messaging auto-configuration**: `JenticAutoConfiguration` gains a new `RedisMessagingConfiguration` inner class, activated when `io.lettuce.core.RedisClient` is on the classpath and `jentic.messaging.provider=redis`.
+  - `RedisMessagingFactory` bean is lifecycle-managed (`destroyMethod="close"`).
+  - `MessageDispatcher` bean (`redisMessageDispatcher`) backed by `RedisMessageDispatcher`; uses a lazy `ObjectProvider<AgentResolver>` to avoid circular dependency with `JenticRuntime`.
+  - `JenticRuntime` bean (`jenticRuntime`) built with the Redis dispatcher as its messaging backend.
+  - When `provider=redis` but Lettuce is absent, the starter falls back to the in-memory runtime — no startup failure.
+  - New `JenticProperties.Messaging.Redis` nested record with URI-based connection configuration and sensible defaults.
+
+  Minimal Spring Boot wiring:
+  ```yaml
+  jentic:
+    messaging:
+      provider: redis
+      redis:
+        uri: redis://localhost:6379
+  ```
+
+- **`jentic-examples` — `RedisMessagingExample`**: runnable demo illustrating `RedisMessageDispatcher` integrated with `JenticRuntime` — two agents (`OrderAgent` CYCLIC pub/sub producer, `FulfillmentAgent` `@JenticMessageHandler` consumer with direct reply) communicating over Redis Streams. Requires a local Redis/Valkey instance on `localhost:6379`.
+
+- **`docs/adapters/redis.md`**: MkDocs-compatible adapter guide covering setup, `RedisMessagingFactory` builder API, Spring Boot wiring, at-least-once delivery semantics, dead-letter queue, and Testcontainers integration test recipe.
+
+- **ADR-021 — Redis-based `MessageTransport`**: documents the choice of Redis Streams over Redis Pub/Sub and Kafka for the first distributed `MessageTransport` implementation, covering the at-least-once delivery model, consumer group strategy, dead-letter queue design, and Lettuce dependency placement.
+
 ### Changed
 
 - **`TopicPublisher.publish` — redundant `topic` parameter removed** (**breaking**): signature changes from `publish(String topic, Message msg)` to `publish(Message msg)`. Routing now reads `msg.topic()` directly. `IllegalArgumentException` is thrown if `msg.topic()` is `null` or blank. All callers must set `.topic(...)` on the `Message` before publishing.

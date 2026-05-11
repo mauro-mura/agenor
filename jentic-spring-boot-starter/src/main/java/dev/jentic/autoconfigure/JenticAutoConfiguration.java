@@ -7,9 +7,6 @@ import dev.jentic.core.directory.AgentRegistry;
 import dev.jentic.core.directory.AgentResolver;
 import dev.jentic.core.llm.LLMProvider;
 import dev.jentic.core.messaging.MessageDispatcher;
-import dev.jentic.core.messaging.MessageTransport;
-import dev.jentic.core.messaging.TopicPublisher;
-import dev.jentic.core.messaging.TopicSubscriber;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
@@ -80,7 +77,7 @@ public class JenticAutoConfiguration {
         });
         builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
 
-        log.debug("Building JenticRuntime: runtime.name={}", props.runtime().name());
+        log.debug("Building JenticRuntime (in-memory messaging): runtime.name={}", props.runtime().name());
         return builder.build();
     }
 
@@ -348,13 +345,16 @@ public class JenticAutoConfiguration {
     // -------------------------------------------------------------------------
 
     /**
-     * Creates {@link dev.jentic.adapters.messaging.redis.RedisMessagingFactory} and exposes
-     * the Redis-backed {@link TopicPublisher}, {@link TopicSubscriber}, and
-     * {@link MessageTransport} capability beans when all of the following hold:
+     * Creates a {@link dev.jentic.adapters.messaging.redis.RedisMessagingFactory} and
+     * exposes a Redis-backed {@link MessageDispatcher} bean when:
      * <ul>
      *   <li>{@code io.lettuce.core.RedisClient} is on the classpath</li>
      *   <li>{@code jentic.messaging.provider=redis} is configured</li>
      * </ul>
+     *
+     * <p>The {@link MessageDispatcher} bean is picked up by the {@link #jenticRuntime}
+     * bean via {@code ObjectProvider}, so the runtime uses Redis Streams for all agent
+     * messaging without any changes to its internals.
      *
      * <p>The factory is closed automatically on context shutdown via {@code destroyMethod}.
      *
@@ -382,25 +382,44 @@ public class JenticAutoConfiguration {
                     .build();
         }
 
+        /**
+         * Exposes the Redis-backed {@link MessageDispatcher} bean.
+         *
+         * <p>The {@link AgentResolver} is supplied lazily so that this bean can be
+         * created before {@link JenticRuntime} (which provides the resolver) without
+         * causing a circular dependency. The resolver is only fetched at the moment
+         * {@code sendTo()} is called, by which time the runtime has started.
+         */
         @Bean
-        @ConditionalOnMissingBean(TopicPublisher.class)
-        public TopicPublisher redisTopicPublisher(
-                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
-            return factory.topicPublisher();
+        @ConditionalOnMissingBean(MessageDispatcher.class)
+        public MessageDispatcher redisMessageDispatcher(
+                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory,
+                ObjectProvider<AgentResolver> agentResolver) {
+            return factory.messageDispatcher(agentResolver::getIfAvailable);
         }
 
-        @Bean
-        @ConditionalOnMissingBean(TopicSubscriber.class)
-        public TopicSubscriber redisTopicSubscriber(
-                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
-            return factory.topicPublisher();
-        }
-
-        @Bean
-        @ConditionalOnMissingBean(MessageTransport.class)
-        public MessageTransport redisMessageTransport(
-                dev.jentic.adapters.messaging.redis.RedisMessagingFactory factory) {
-            return factory.messageTransport();
+        /**
+         * Creates the {@link JenticRuntime} wired with the Redis {@link MessageDispatcher}.
+         *
+         * <p>No cycle: {@code redisMessageDispatcher} depends only on
+         * {@code RedisMessagingFactory} and a lazy {@code ObjectProvider<AgentResolver>}
+         * (resolved at {@code sendTo()} call time, never at construction time).
+         */
+        @SuppressWarnings("deprecation")
+        @Bean("jenticRuntime")
+        @ConditionalOnMissingBean(JenticRuntime.class)
+        public JenticRuntime jenticRuntimeWithRedis(
+                JenticProperties props,
+                MessageDispatcher redisMessageDispatcher,
+                ObjectProvider<LLMProvider> llmProvider,
+                ObjectProvider<JenticTelemetry> telemetry) {
+            var builder = JenticRuntime.builder()
+                    .withConfiguration(props.toJenticConfiguration())
+                    .messageDispatcher(redisMessageDispatcher);
+            llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
+            builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
+            log.debug("Building JenticRuntime (Redis messaging): runtime.name={}", props.runtime().name());
+            return builder.build();
         }
     }
 

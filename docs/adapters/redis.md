@@ -1,9 +1,14 @@
 # Redis Messaging Adapter
 
-Implements `TopicPublisher`, `TopicSubscriber`, and `MessageTransport` on top of
-**Redis Streams** (`XADD` / `XREADGROUP` / `XACK`). Provides at-least-once delivery,
-message durability, and fan-out pub/sub across multiple JVM nodes without requiring
-additional infrastructure beyond a RESP-compatible server.
+Implements the full `MessageDispatcher` interface on top of **Redis Streams**
+(`XADD` / `XREADGROUP` / `XACK`). Provides at-least-once delivery, message durability,
+and fan-out pub/sub across multiple JVM nodes without requiring additional infrastructure
+beyond a RESP-compatible server.
+
+`RedisMessageDispatcher` is the primary entry point — it composes `RedisTopicPublisher`
+(topic pub/sub) and `RedisMessageTransport` (inter-node point-to-point) into the single
+`MessageDispatcher` interface that `JenticRuntime` expects. Lower-level components are
+available via `RedisMessagingFactory` for cases where fine-grained control is needed.
 
 Architectural rationale: ADR-021 — Redis MessageTransport (repository: `docs/adr/`)
 
@@ -63,44 +68,56 @@ Lettuce 7.5.1 pulls `reactor-core:3.6.x`. If your project also depends on MCP (w
 
 ---
 
-## Quick start — standalone
+## Quick start — with JenticRuntime (recommended)
 
 ```java
-// 1 — build the factory (connects to Redis immediately)
 try (var factory = RedisMessagingFactory.builder()
         .uri("redis://localhost:6379")
         .consumerGroupPrefix("my-app")
         .build()) {
 
-    var publisher  = factory.topicPublisher();   // TopicPublisher + TopicSubscriber
-    var transport  = factory.messageTransport();  // MessageTransport
-    var nodeId     = factory.config().nodeId();   // UUID assigned at build time
+    // messageDispatcher() returns a RedisMessageDispatcher — the full MessageDispatcher
+    // implementation that JenticRuntime.Builder.messageDispatcher() accepts.
+    JenticRuntime runtime = JenticRuntime.builder()
+            .messageDispatcher(factory.messageDispatcher())
+            .build();
 
-    // 2 — subscribe to a topic (fan-out: each subscription gets its own consumer group)
+    runtime.registerAgent(new MyAgent());
+    runtime.start().join();
+
+    // ... run for a while ...
+
+    runtime.stop().join();
+} // factory.close() stops all consumer loops and closes the Lettuce connection
+```
+
+Agent code is identical to the in-memory case — swap the dispatcher, keep the agents.
+
+### Direct API (advanced)
+
+Use `factory.topicPublisher()` and `factory.messageTransport()` directly only when you
+need fine-grained control outside of a `JenticRuntime` context:
+
+```java
+try (var factory = RedisMessagingFactory.builder()
+        .uri("redis://localhost:6379")
+        .build()) {
+
+    var publisher = factory.topicPublisher();  // TopicPublisher + TopicSubscriber
+
+    // Fan-out subscribe
     publisher.subscribeTopic("orders.created", msg -> {
         System.out.println("Received: " + msg.content());
         return CompletableFuture.completedFuture(null);
     });
 
-    // 3 — publish
+    // Publish
     publisher.publish(Message.builder()
             .topic("orders.created")
             .senderId("checkout-service")
             .content("{\"orderId\":\"ORD-001\"}")
             .build()).join();
-
-    // 4 — point-to-point (send directly to a node)
-    var endpoint = new TransportEndpoint("redis", nodeId, Map.of());
-    transport.subscribe(endpoint, msg -> {
-        System.out.println("Direct: " + msg.content());
-        return CompletableFuture.completedFuture(null);
-    });
-    transport.send(endpoint, Message.builder()
-            .senderId("orchestrator")
-            .content("task-payload")
-            .build()).join();
-
-} // factory.close() stops all consumer loops and closes the Lettuce connection
+}
 ```
 
 ---
@@ -127,11 +144,18 @@ topic each receive a copy even within the same JVM.
 
 ### Point-to-point mechanics
 
-`transport.send(endpoint, msg)` writes to `jentic:node:<endpoint.address()>`. The receiving
-node's consumer loop reads from its own node stream and invokes the registered handler. In a
-multi-node scenario the `AgentResolver` resolves an `agentId` to an `AgentEndpoint` that
-carries the target `nodeId`; `MessageDispatcher.sendTo()` then calls `MessageTransport.send()`
-with that endpoint.
+`RedisMessageDispatcher.sendTo(msg)` routes on `msg.receiverId()`:
+
+1. **Local fast-path** — if the recipient called `subscribeRecipient(agentId, handler)` on
+   the same dispatcher instance (same JVM), the message is delivered directly to the handler
+   with no Redis hop.
+2. **Remote path** — if an `AgentResolver` is configured, the dispatcher resolves
+   `receiverId → AgentEndpoint → nodeId` and calls `RedisMessageTransport.send()`, which
+   writes to `jentic:node:<nodeId>`. The target node's consumer loop picks up the message
+   and routes it to the matching local handler via `receiverId`.
+
+`subscribeRecipient` also starts a node-stream consumer loop on the first call (lazy,
+thread-safe double-checked locking). Subsequent registrations share the same loop.
 
 ---
 
@@ -268,15 +292,18 @@ If either condition is false the in-memory dispatcher remains active — no erro
 
 ### Beans registered
 
-| Bean type | Description |
-|-----------|-------------|
-| `RedisMessagingFactory` | Lifecycle-managed factory; `close()` called on context shutdown |
-| `TopicPublisher` | Delegates to `RedisTopicPublisher` |
-| `TopicSubscriber` | Same instance as `TopicPublisher` |
-| `MessageTransport` | Delegates to `RedisMessageTransport` |
+| Bean type | Bean name | Description |
+|-----------|-----------|-------------|
+| `RedisMessagingFactory` | `redisMessagingFactory` | Lifecycle-managed factory; `close()` called on context shutdown |
+| `MessageDispatcher` | `redisMessageDispatcher` | `RedisMessageDispatcher` — full `MessageDispatcher` wired with lazy `AgentResolver` |
+| `JenticRuntime` | `jenticRuntime` | Runtime built with the Redis dispatcher as its messaging backend |
 
 All beans are conditional on `@ConditionalOnMissingBean`, so you can override any of them
 by declaring your own bean of the same type.
+
+The `AgentResolver` is injected lazily via `ObjectProvider` to avoid a circular dependency:
+the resolver (backed by `AgentDirectory`) is fetched only at `sendTo()` call time, after
+the runtime has fully started.
 
 ---
 
@@ -292,10 +319,17 @@ single-node deployments that need `subscribeFiltered`.
 
 ## Running the example
 
+`RedisMessagingExample` in `jentic-examples` demonstrates both messaging patterns with two
+real `JenticRuntime` agents:
+
+- **`OrderAgent`** (CYCLIC, 4 s) — publishes orders to `orders.created` and logs fulfillment ACKs received via `onDirectMessage`.
+- **`FulfillmentAgent`** (`@JenticMessageHandler("orders.created")`) — processes each order and replies directly to the sender via `sendTo(msg.reply(...))`.
+
 Requires a running Valkey or Redis server on `localhost:6379` (or set `REDIS_URI`):
 
 ```bash
-# topic pub/sub + point-to-point demo
+docker run -d -p 6379:6379 valkey/valkey:8
+
 mvn exec:java -pl jentic-examples \
     -Dexec.mainClass="dev.jentic.examples.redis.RedisMessagingExample"
 
@@ -304,22 +338,21 @@ REDIS_URI=redis://my-host:6379 mvn exec:java -pl jentic-examples \
     -Dexec.mainClass="dev.jentic.examples.redis.RedisMessagingExample"
 ```
 
-Expected output:
+Expected output (abridged):
 
 ```
-=== Redis Messaging Example ===
+=== Redis Agent Messaging Example ===
 Connecting to redis://localhost:6379
-Node ID: <uuid>
---- Topic pub/sub demo ---
-Publishing to topic 'orders.created'...
-[Subscriber A] received message #1: ...
-[Subscriber B] received message #2: ...
-Both subscribers received the message — fan-out confirmed.
---- Point-to-point transport demo ---
-Sending point-to-point message to node '<uuid>'...
-[Transport] received direct message: ...
-Direct message delivered — point-to-point confirmed.
-=== Redis Messaging Example completed ===
+Runtime started — 2 agent(s) running
+[OrderAgent] Publishing order #1
+[FulfillmentAgent] Processing order: {"orderId":"ORD-1","amount":99.95} (seq=1)
+[OrderAgent] Fulfillment ACK — correlationId=... content=fulfillment queued by Fulfillment Agent
+[OrderAgent] Publishing order #2
+...
+Stopping runtime...
+[OrderAgent] Stopped after 5 orders published
+[FulfillmentAgent] Stopped after 5 orders processed
+=== Example completed ===
 ```
 
 ---
@@ -328,7 +361,8 @@ Direct message delivered — point-to-point confirmed.
 
 | Class | Interfaces | Responsibility |
 |-------|-----------|---------------|
-| `RedisMessagingFactory` | `AutoCloseable` | Builder; creates and wires all components; manages shared Lettuce connection |
+| `RedisMessagingFactory` | `AutoCloseable` | Builder; creates and wires all components; manages shared Lettuce connection. Entry point via `messageDispatcher()` or `messageDispatcher(Supplier<AgentResolver>)` |
+| `RedisMessageDispatcher` | `MessageDispatcher` | **Primary entry point.** Composes topic pub/sub and point-to-point into the single interface `JenticRuntime` expects. Local fast-path for same-JVM agents; remote path via `AgentResolver` + `RedisMessageTransport` |
 | `RedisTopicPublisher` | `TopicPublisher`, `TopicSubscriber` | Publishes to topic streams; creates per-subscription consumer groups |
 | `RedisMessageTransport` | `MessageTransport` | Sends to node streams; subscribes with a node-scoped consumer group |
 | `RedisStreamClient` | — (internal) | `XADD`, `ensureConsumerGroup`, creates consumer connections |

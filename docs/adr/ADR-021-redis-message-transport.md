@@ -108,12 +108,20 @@ producer
 
 ```
 sender
+  → RedisMessageDispatcher.sendTo(msg)
   → AgentResolver.resolveEndpoint(recipientId)  →  AgentEndpoint{nodeId, "redis", props}
+  → RedisMessageTransport.send(TransportEndpoint(nodeId), msg)
   → XADD jentic:node:<nodeId> * [fields]
-  → recipient node reads via XREADGROUP GROUP jentic:cg:node ...
-  → InMemoryMessageDispatcher dispatches locally to the correct agent subscriber
+  → recipient node: consumer loop reads via XREADGROUP GROUP jentic:cg:node ...
+  → RedisMessageDispatcher routes locally: agentId → handler (internal map)
   → XACK on handler success
 ```
+
+`subscribeRecipient(agentId, handler)` registers the handler in an internal
+`agentId → MessageHandler` map and ensures the node-stream consumer loop is running.
+When a message arrives on `jentic:node:<nodeId>`, the dispatcher reads `receiverId`
+from the envelope and invokes the matching handler. No `InMemoryMessageDispatcher`
+is involved in the point-to-point path.
 
 ### Message encoding
 
@@ -149,12 +157,20 @@ either use the in-memory dispatcher or apply filtering in the message handler.
 ### Classes
 
 | Class | Interface(s) | Location |
-|-------|-------------|----------|
+|-------|--------------|----------|
+| `RedisMessageDispatcher` | `MessageDispatcher` | `jentic-adapters` |
 | `RedisTopicPublisher` | `TopicPublisher`, `TopicSubscriber` | `jentic-adapters` |
 | `RedisMessageTransport` | `MessageTransport` | `jentic-adapters` |
 | `RedisMessagingConfig` | — (record) | `jentic-adapters` |
-| `RedisMessagingFactory` | — (builder) | `jentic-adapters` |
+| `RedisMessagingFactory` | — (builder, exposes `messageDispatcher()`) | `jentic-adapters` |
 | `RedisStreamClient` | — (internal helper) | `jentic-adapters` |
+
+`RedisMessageDispatcher` is the primary entry point for application code and the Spring Boot
+starter. It composes `RedisTopicPublisher` (topic pub/sub), `RedisMessageTransport`
+(inter-node delivery), and `AgentResolver` (agentId → endpoint translation) into the single
+`MessageDispatcher` interface expected by `JenticRuntime.Builder.messageDispatcher(...)`.
+`RedisMessagingFactory.messageDispatcher()` constructs and returns it; the individual
+`topicPublisher()` and `messageTransport()` accessors remain available for advanced use.
 
 Package root: `dev.jentic.adapters.messaging.redis`
 
@@ -176,16 +192,22 @@ Consumers that do not declare it see only the in-memory dispatcher at runtime.
 
 ```java
 @ConditionalOnClass(io.lettuce.core.RedisClient.class)
-@ConditionalOnProperty(name = "jentic.messaging.transport", havingValue = "redis")
-public class RedisMessagingAutoConfiguration { ... }
+@ConditionalOnProperty(prefix = "jentic.messaging", name = "provider", havingValue = "redis")
+class RedisMessagingConfiguration { ... }
 ```
+
+The auto-configuration creates a `RedisMessagingFactory` bean, calls
+`factory.messageDispatcher()` to obtain a `RedisMessageDispatcher`, and exposes it as the
+`MessageDispatcher` bean. The `jenticRuntime` bean accepts this via `ObjectProvider<MessageDispatcher>`
+and injects it into `JenticRuntime.Builder.messageDispatcher(...)`. No changes to
+`InMemoryMessageDispatcher` or the runtime internals are required.
 
 YAML keys:
 
 ```yaml
 jentic:
   messaging:
-    transport: redis          # "in-memory" (default) | "redis"
+    provider: inmemory        # "inmemory" (default) | "redis"
     redis:
       uri: redis://localhost:6379
       consumer-group-prefix: jentic
