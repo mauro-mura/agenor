@@ -128,7 +128,7 @@ try (var factory = RedisMessagingFactory.builder()
 |--------|------------------|----------------|-------|
 | Topic stream | `<prefix>:topic:<topicName>` | `<prefix>:cg:<subscriptionId>` | Fan-out pub/sub (one group per subscription) |
 | Node stream | `<prefix>:node:<nodeId>` | `<prefix>:cg:node` | Point-to-point delivery |
-| Dead-letter | `<prefix>:dlq:<sourceStreamKey>` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
+| Dead-letter | `<sourceStreamKey>:dlq` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
 
 `<prefix>` defaults to `jentic`, configurable via `consumerGroupPrefix`.
 
@@ -183,7 +183,7 @@ on the next claim pass.
 ### Maximum delivery attempts
 
 After `maxDeliveryAttempts` consecutive failures (default 3) the message is moved to the
-dead-letter stream (`jentic:dlq:<sourceStreamKey>`) and acknowledged from the source stream.
+dead-letter stream (`<sourceStreamKey>:dlq`, e.g. `jentic:topic:orders.created:dlq`) and acknowledged from the source stream.
 No further delivery is attempted.
 
 ### Dead-letter stream
@@ -191,8 +191,8 @@ No further delivery is attempted.
 The DLQ is a plain Redis stream. Monitor it with:
 
 ```bash
-xlen jentic:dlq:jentic:topic:orders.created   # entry count
-xrange jentic:dlq:jentic:topic:orders.created - +  # inspect entries
+xlen jentic:topic:orders.created:dlq   # entry count
+xrange jentic:topic:orders.created:dlq - +  # inspect entries
 ```
 
 To replay, copy entries back to the source stream or re-publish them via `publisher.publish()`.

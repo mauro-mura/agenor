@@ -89,7 +89,7 @@ best-effort, loss-tolerant channel that does not need replay. It is not used for
 |--------|------------|----------------|-------|
 | Topic stream | `jentic:topic:<topicName>` | `jentic:cg:<agentId>` (one per subscriber) | Fan-out pub/sub |
 | Node stream | `jentic:node:<nodeId>` | `jentic:cg:node` (single group per node) | Point-to-point delivery |
-| Reply stream | `jentic:reply:<correlationId>` | — (read with `XREAD`, no group) | Request/response; TTL = request timeout |
+| Dead-letter | `<sourceStreamKey>:dlq` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
 
 `nodeId` is a UUID generated once at `JenticRuntime` startup and stored in each
 `AgentEndpoint` as `transportProps.get("nodeId")`. The resolver translates `agentId →
@@ -136,7 +136,7 @@ All `XREADGROUP` / `XREAD` blocking loops run on **virtual threads** (ADR-001). 
 subscriber spawns one virtual thread; the thread blocks on `XREADGROUP BLOCK <timeout>`.
 On handler failure the message is not `XACK`'d and will be redelivered after the
 `pending-entries-timeout` (configurable, default 30 s). Three consecutive delivery failures
-park the message in the dead-letter stream `jentic:dlq:<streamKey>`.
+park the message in the dead-letter stream `<sourceStreamKey>:dlq` (e.g. `jentic:topic:orders.created:dlq`).
 
 ### Stream trimming
 
@@ -214,6 +214,7 @@ jentic:
       read-block-timeout-ms: 2000
       max-stream-length: 100000
       pending-entries-timeout-ms: 30000
+      max-delivery-attempts: 3
 ```
 
 ### Observability
@@ -255,8 +256,6 @@ OTel spans emitted via `JenticTelemetry` (ADR-019) for every:
   conservative.
 - Dead-letter stream adds operational surface (monitoring, replay tooling) that did not
   exist with in-memory messaging; addressed in `docs/adapters/redis.md`.
-- Reply streams with TTL introduce a time dependency for request/response scenarios; callers
-  must set realistic timeouts.
 
 ---
 
