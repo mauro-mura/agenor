@@ -4,6 +4,7 @@ import dev.jentic.core.Message;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -50,6 +51,11 @@ class RedisTopicPublisherTest {
         lenient().when(streamClient.newConsumerConnection()).thenReturn(mockConn);
         lenient().when(mockConn.sync()).thenReturn(mockCmds);
         lenient().when(mockCmds.xreadgroup(any(), any(), any())).thenReturn(List.of());
+    }
+
+    @AfterEach
+    void tearDown() {
+        publisher.close();
     }
 
     // -------------------------------------------------------------------------
