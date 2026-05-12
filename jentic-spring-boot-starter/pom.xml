@@ -18,6 +18,8 @@
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->
         <spring-boot.version>4.0.5</spring-boot.version>
+        <!-- Must match jentic-adapters/pom.xml to avoid classpath split -->
+        <lettuce.version>7.5.1.RELEASE</lettuce.version>
     </properties>
 
     <dependencyManagement>
@@ -72,6 +74,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Lettuce in test scope: lets us verify Redis auto-wiring without the
+             optional transitive dep being on the main classpath. Version must
+             match jentic-adapters to avoid a classpath split. -->
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>${lettuce.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

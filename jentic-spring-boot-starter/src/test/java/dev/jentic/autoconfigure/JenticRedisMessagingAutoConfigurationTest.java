@@ -1,11 +1,18 @@
 package dev.jentic.autoconfigure;
 
+import dev.jentic.adapters.messaging.redis.RedisMessageDispatcher;
+import dev.jentic.adapters.messaging.redis.RedisMessagingFactory;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.runtime.JenticRuntime;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for the Redis messaging conditional beans in {@link JenticAutoConfiguration}.
@@ -16,9 +23,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code jentic.messaging.provider=redis} is set.</li>
  * </ul>
  *
- * <p>Lettuce is an {@code optional} transitive dependency and is NOT present in the
- * starter's test classpath, so these tests verify the condition-guard behaviour.
- * End-to-end Redis wiring is covered by the integration tests in {@code jentic-adapters}.
+ * <p>Tests that verify Redis wiring with Lettuce present use a mock
+ * {@link RedisMessagingFactory} supplied via {@code withBean} so that no actual
+ * Redis connection is made. The {@code @ConditionalOnMissingBean} guard on the
+ * auto-configuration's own factory skips its creation in favour of the mock.
+ * End-to-end delivery semantics are covered by integration tests in
+ * {@code jentic-adapters} (Testcontainers Valkey).
  */
 class JenticRedisMessagingAutoConfigurationTest {
 
@@ -33,7 +43,7 @@ class JenticRedisMessagingAutoConfigurationTest {
     void redisFactoryAbsentWhenProviderIsDefault() {
         runner.run(ctx ->
             assertThat(ctx).doesNotHaveBean(
-                    dev.jentic.adapters.messaging.redis.RedisMessagingFactory.class));
+                    RedisMessagingFactory.class));
     }
 
     @Test
@@ -42,7 +52,7 @@ class JenticRedisMessagingAutoConfigurationTest {
             .withPropertyValues("jentic.messaging.provider=inmemory")
             .run(ctx ->
                 assertThat(ctx).doesNotHaveBean(
-                        dev.jentic.adapters.messaging.redis.RedisMessagingFactory.class));
+                        RedisMessagingFactory.class));
     }
 
     // -------------------------------------------------------------------------
@@ -56,7 +66,7 @@ class JenticRedisMessagingAutoConfigurationTest {
             .withPropertyValues("jentic.messaging.provider=redis")
             .run(ctx ->
                 assertThat(ctx).doesNotHaveBean(
-                        dev.jentic.adapters.messaging.redis.RedisMessagingFactory.class));
+                        RedisMessagingFactory.class));
     }
 
     // -------------------------------------------------------------------------
@@ -81,7 +91,6 @@ class JenticRedisMessagingAutoConfigurationTest {
     void redisPropertiesBindFromApplicationYaml() {
         runner
             .withPropertyValues(
-                "jentic.messaging.provider=redis",
                 "jentic.messaging.redis.uri=redis://my-redis:6380",
                 "jentic.messaging.redis.consumer-group-prefix=acme",
                 "jentic.messaging.redis.read-block-timeout-ms=5000",
@@ -99,5 +108,55 @@ class JenticRedisMessagingAutoConfigurationTest {
                 assertThat(redis.pendingEntriesTimeoutMs()).isEqualTo(60_000L);
                 assertThat(redis.maxDeliveryAttempts()).isEqualTo(5);
             });
+    }
+
+    // -------------------------------------------------------------------------
+    // Redis beans wired correctly when Lettuce IS on the classpath
+    //
+    // A mock RedisMessagingFactory is pre-registered via withBean() to bypass
+    // the actual Redis connection. The @ConditionalOnMissingBean on the
+    // auto-configuration's own factory defers to our mock, so the remaining
+    // auto-wiring (redisMessageDispatcher → jenticRuntime) runs as normal.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void redisMessageDispatcherRegisteredWhenLettucePresent() {
+        RedisMessageDispatcher mockDispatcher = mock(RedisMessageDispatcher.class);
+        RedisMessagingFactory  mockFactory    = mockFactory(mockDispatcher);
+
+        runner
+            .withPropertyValues("jentic.messaging.provider=redis")
+            .withBean(RedisMessagingFactory.class, () -> mockFactory)
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(MessageDispatcher.class);
+                assertThat(ctx.getBean(MessageDispatcher.class))
+                        .isInstanceOf(RedisMessageDispatcher.class);
+            });
+    }
+
+    @Test
+    void jenticRuntimeIsWiredWithRedisDispatcherWhenLettucePresent() {
+        RedisMessageDispatcher mockDispatcher = mock(RedisMessageDispatcher.class);
+        RedisMessagingFactory  mockFactory    = mockFactory(mockDispatcher);
+
+        runner
+            .withPropertyValues("jentic.messaging.provider=redis")
+            .withBean(RedisMessagingFactory.class, () -> mockFactory)
+            .run(ctx -> {
+                JenticRuntime runtime = ctx.getBean(JenticRuntime.class);
+                assertThat(runtime.getMessageDispatcher())
+                        .as("JenticRuntime must use the Redis dispatcher, not the in-memory default")
+                        .isSameAs(mockDispatcher);
+            });
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private static RedisMessagingFactory mockFactory(RedisMessageDispatcher dispatcher) {
+        RedisMessagingFactory factory = mock(RedisMessagingFactory.class);
+        when(factory.messageDispatcher(any())).thenReturn(dispatcher);
+        return factory;
     }
 }
