@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **ADR-021 — Redis-based `MessageTransport`**: documents the choice of Redis Streams over Redis Pub/Sub and Kafka for the first distributed `MessageTransport` implementation, covering the at-least-once delivery model, consumer group strategy, dead-letter queue design, and Lettuce dependency placement.
 
+### Tests
+
+- **Spring Boot starter — Redis dispatcher wiring verified**: added `lettuce-core` as a `test`-scope dependency to `jentic-spring-boot-starter` (version aligned with `jentic-adapters`) and introduced two new tests in `JenticRedisMessagingAutoConfigurationTest`:
+  - `redisMessageDispatcherRegisteredWhenLettucePresent` — asserts that the `MessageDispatcher` bean is an instance of `RedisMessageDispatcher` when `provider=redis` and Lettuce is on the classpath.
+  - `jenticRuntimeIsWiredWithRedisDispatcherWhenLettucePresent` — asserts that `JenticRuntime.getMessageDispatcher()` returns the Redis dispatcher (not the in-memory default), proving that Spring's `@ConditionalOnMissingBean` ordering resolves `jenticRuntimeWithRedis` before `jenticRuntime`.
+
+  Both tests use a mock `RedisMessagingFactory` supplied via `ApplicationContextRunner.withBean()` — no Redis connection required.
+
 ### Changed
 
 - **`TopicPublisher.publish` — redundant `topic` parameter removed** (**breaking**): signature changes from `publish(String topic, Message msg)` to `publish(Message msg)`. Routing now reads `msg.topic()` directly. `IllegalArgumentException` is thrown if `msg.topic()` is `null` or blank. All callers must set `.topic(...)` on the `Message` before publishing.
