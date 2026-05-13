@@ -71,9 +71,9 @@ JenticRuntime runtime = JenticRuntime.builder()
 
 ## Span taxonomy
 
-The table below lists every span emitted by Jentic components in `0.19.0`. Spans
-deferred to later releases (messaging, directory — see ADR-019) are annotated with
-the target release.
+The table below lists every span emitted by Jentic components. Spans marked
+**Redis adapter** are only emitted when the Redis messaging backend is active
+(`jentic.messaging.provider: redis`).
 
 | Span name | Component | Key attributes |
 |-----------|-----------|----------------|
@@ -84,11 +84,18 @@ the target release.
 | `behavior.execute` | `SimpleBehaviorScheduler` | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
 | `mcp.tool.call` | `JenticMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
 | `reflection.iteration` | `ReflectionBehavior` | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
-| `message.send` _(0.20.0)_ | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
-| `directory.resolve` _(0.20.0)_ | `AgentResolver` | `agent.id`, `endpoint.type` |
+| `message.send` | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
+| `directory.resolve` | `InMemoryAgentDirectory` | `agent.id`, `endpoint.type` |
+| `message.publish` | `RedisTopicPublisher` (**Redis adapter**) | `message.topic`, `message.id`, `agent.sender`, `transport.type` |
+| `transport.send` | `RedisMessageTransport` (**Redis adapter**) | `transport.type`, `transport.endpoint`, `message.id`, `agent.sender` |
+| `message.receive` | `ConsumerLoop` (**Redis adapter**) | `message.id`, `message.topic`, `agent.sender`, `message.correlation_id`, `transport.type` |
 
 All spans use **`SpanStatus.OK`** on success and **`SpanStatus.ERROR`** on exception.
 Exceptions are recorded via `Span.recordException(Throwable)`.
+
+The `message.correlation_id` attribute on `message.receive` spans carries the same value
+set by the publisher, enabling correlation between `message.publish` and
+`message.receive` spans in your APM tool even without native OTel span links.
 
 ---
 
@@ -105,7 +112,7 @@ prefixed with `jentic.`.
 | `jentic.guardrail.violations` | Counter | `guardrail_name` | Blocked guardrail evaluations |
 | `jentic.hitl.pending` | UpDownCounter | — | Inflight human approval requests |
 | `jentic.behavior.executions` | Counter | `behavior_type`, `outcome` (`success`\|`error`) | Behavior execution count |
-| `jentic.directory.resolve.latency` _(0.20.0)_ | Histogram | — | Endpoint resolution time (ms) |
+| `jentic.directory.resolve.latency` | Histogram | — | Endpoint resolution time (ms) |
 
 ---
 
@@ -128,6 +135,8 @@ This starts:
 
 Point your application at `http://localhost:4318` (OTLP/HTTP) or `http://localhost:4317`
 (OTLP/gRPC).
+
+---
 
 ### Running the observability example
 
@@ -163,9 +172,8 @@ use `NoopJenticTelemetry`:
 - `startSpan()` returns the same singleton noop span (no allocation).
 - All methods are no-ops that return `this` immediately.
 
-This is verified by the `TelemetryClasspathIsolationTest` in `jentic-core` (which asserts
-that `io.opentelemetry.api.OpenTelemetry` is **not** on the core classpath) and by the JMH
-microbenchmark in `jentic-adapters/src/test/jmh/NopTelemetryBenchmark.java`.
+This is verified by `TelemetryClasspathIsolationTest` in `jentic-core`, which asserts
+that `io.opentelemetry.api.OpenTelemetry` is **not** on the core classpath.
 
 ---
 
