@@ -46,8 +46,8 @@ public interface MessageService extends MessageDispatcher, FilterableSubscriber 
     /**
      * Sends a message by routing on its {@code topic} or {@code receiverId}.
      *
-     * @deprecated Use {@link #publish(String, Message)} for topic messages or
-     *     {@link #sendTo(String, Message)} for direct messages.
+     * @deprecated Use {@link #publish(Message)} for topic messages or
+     *     {@link #sendTo(Message)} for direct messages.
      */
     @Deprecated(since = "0.20.0", forRemoval = true)
     CompletableFuture<Void> send(Message message);

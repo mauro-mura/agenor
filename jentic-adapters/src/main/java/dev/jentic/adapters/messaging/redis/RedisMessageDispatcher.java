@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * <p>Obtain instances via {@link RedisMessagingFactory#messageDispatcher()} or
  * {@link RedisMessagingFactory#messageDispatcher(Supplier)}.
  *
- * <h3>sendTo routing</h3>
+ * <h2>sendTo routing</h2>
  * <ol>
  *   <li><b>Local fast-path</b>: if the target agent called {@link #subscribeRecipient}
  *       on this dispatcher instance (same JVM), the message is delivered directly to
