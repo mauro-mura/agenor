@@ -96,7 +96,8 @@ public final class RedisTopicPublisher implements TopicPublisher, TopicSubscribe
         var consumerGroup   = config.topicConsumerGroup(subscriptionId);
         var consumerName    = config.consumerName();
 
-        var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName, handler, streamClient, config);
+        var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName, 
+        		handler, streamClient, config, telemetry);
         loop.start();
         activeLoops.put(subscriptionId, loop);
 

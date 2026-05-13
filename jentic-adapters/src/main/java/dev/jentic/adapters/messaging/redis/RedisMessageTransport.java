@@ -109,7 +109,8 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
         var consumerGroup  = config.nodeConsumerGroup();
         var consumerName   = config.consumerName();
 
-        var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName, handler, streamClient, config);
+        var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName, 
+        		handler, streamClient, config, telemetry);
         loop.start();
         activeLoops.put(subscriptionId, loop);
 
