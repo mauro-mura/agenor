@@ -52,7 +52,7 @@ The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>0.21.0</version>
+            <version>0.22.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
