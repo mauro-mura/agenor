@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-05-13
+
 ### Added
 
 - **Redis Streams messaging adapter (ADR-021)**: distributed messaging over Redis Streams, backed by [Lettuce 7.5.1](https://lettuce.io/) (RESP-compatible with Valkey 8.x). Delivers at-least-once guarantees via consumer groups, virtual-thread consumer loops, and a dead-letter queue after configurable retry exhaustion.
@@ -519,7 +521,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/mauro-mura/jentic/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/mauro-mura/jentic/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/mauro-mura/jentic/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/mauro-mura/jentic/compare/v0.17.0...v0.18.0
