@@ -100,7 +100,7 @@ public class ReflectionBehavior extends OneShotBehavior {
                     .setAttribute("reflection.accepted", accepted)
                     .startSpan();
 
-            try {
+            try (var scope = span.makeCurrent()) {
                 if (critique.score() > bestScore) {
                     bestScore = critique.score();
                     bestOutput = currentOutput;

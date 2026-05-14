@@ -3,10 +3,7 @@ package dev.jentic.runtime.telemetry;
 import dev.jentic.core.reflection.CritiqueResult;
 import dev.jentic.core.reflection.ReflectionConfig;
 import dev.jentic.core.reflection.ReflectionStrategy;
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import dev.jentic.runtime.behavior.ReflectionBehavior;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -202,6 +199,7 @@ class ReflectionBehaviorTelemetryTest {
         @Override public Span setAttribute(String k, double v)  { return this; }
         @Override public Span recordException(Throwable t)      { recordedException = t; return this; }
         @Override public Span setStatus(SpanStatus s)           { this.status = s; return this; }
+        @Override public SpanScope makeCurrent() { return () -> {}; }
         @Override public void end()                              { this.ended = true; }
     }
 }

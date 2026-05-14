@@ -80,6 +80,19 @@ public interface Span {
     Span setStatus(SpanStatus status);
 
     /**
+     * Makes this span the current span in the active context, enabling child spans
+     * created during the scope to be automatically linked to this span as their parent.
+     *
+     * <p>Must be used in a {@code try-with-resources} block. The scope must be closed
+     * on the same thread that called this method. Closing the scope does not end the
+     * span; {@link #end()} must still be called in a {@code finally} block.
+     *
+     * @return a {@link SpanScope} that, when closed, restores the previous context
+     * @since 0.22.0
+     */
+    SpanScope makeCurrent();
+
+    /**
      * Ends this span. Must be called exactly once, in a {@code finally} block.
      * Calling {@code end()} more than once has no effect on the noop implementation
      * and is safe (though discouraged) on OTel implementations.

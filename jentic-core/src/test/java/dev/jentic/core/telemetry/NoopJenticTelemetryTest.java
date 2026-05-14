@@ -155,6 +155,28 @@ class NoopJenticTelemetryTest {
             var s2 = noop.spanBuilder("y").startSpan();
             assertThat(s1).isSameAs(s2);
         }
+
+        @Test
+        @DisplayName("makeCurrent() returns a non-null scope")
+        void makeCurrent_returnsNonNull() {
+            assertThat(span.makeCurrent()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("makeCurrent() scope can be used in try-with-resources without throwing")
+        void makeCurrent_scopeDoesNotThrow() {
+            assertThatCode(() -> {
+                try (var scope = span.makeCurrent()) {
+                    // no-op body
+                }
+            }).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("successive makeCurrent() calls return the same singleton scope")
+        void makeCurrent_returnsSameSingletonScope() {
+            assertThat(span.makeCurrent()).isSameAs(span.makeCurrent());
+        }
     }
 
     // -------------------------------------------------------------------------

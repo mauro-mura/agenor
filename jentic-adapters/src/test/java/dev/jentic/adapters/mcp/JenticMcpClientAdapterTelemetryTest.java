@@ -1,10 +1,7 @@
 package dev.jentic.adapters.mcp;
 
 import dev.jentic.core.mcp.McpToolResult;
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
@@ -191,6 +188,7 @@ class JenticMcpClientAdapterTelemetryTest {
         @Override public Span setAttribute(String k, double v)  { return this; }
         @Override public Span recordException(Throwable t)      { return this; }
         @Override public Span setStatus(SpanStatus s)           { this.status = s; return this; }
+        @Override public SpanScope makeCurrent() { return () -> {}; }
         @Override public void end()                              { this.ended = true; }
     }
 }

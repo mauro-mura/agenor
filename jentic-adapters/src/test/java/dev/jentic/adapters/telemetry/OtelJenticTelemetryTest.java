@@ -246,4 +246,43 @@ class OtelJenticTelemetryTest {
 
         assertThat(child.getParentSpanId()).isEqualTo(parent.getSpanId());
     }
+
+    @Test
+    @DisplayName("Span.makeCurrent() links child spans created via Jentic API to the parent")
+    void makeCurrent_jenticApi_linksChildToParent() {
+        var parent = telemetry.spanBuilder("parent.op").startSpan();
+        try (var scope = parent.makeCurrent()) {
+            telemetry.spanBuilder("child.op").startSpan().end();
+            parent.setStatus(SpanStatus.OK);
+        } finally {
+            parent.end();
+        }
+
+        List<SpanData> spans = exporter.getFinishedSpanItems();
+        SpanData parentData = spans.stream().filter(s -> s.getName().equals("parent.op")).findFirst().orElseThrow();
+        SpanData childData  = spans.stream().filter(s -> s.getName().equals("child.op")).findFirst().orElseThrow();
+
+        assertThat(childData.getParentSpanId()).isEqualTo(parentData.getSpanId());
+        assertThat(childData.getTraceId()).isEqualTo(parentData.getTraceId());
+    }
+
+    @Test
+    @DisplayName("spans created after Span.makeCurrent() scope closes are NOT children of the parent")
+    void makeCurrent_afterScopeClose_noParentLink() {
+        var parent = telemetry.spanBuilder("parent.op").startSpan();
+        try (var scope = parent.makeCurrent()) {
+            // scope closes here
+        } finally {
+            parent.end();
+        }
+
+        // this span is created after scope is closed — must be a root span
+        telemetry.spanBuilder("sibling.op").startSpan().end();
+
+        List<SpanData> spans = exporter.getFinishedSpanItems();
+        SpanData sibling = spans.stream().filter(s -> s.getName().equals("sibling.op")).findFirst().orElseThrow();
+
+        assertThat(sibling.getParentSpanId())
+                .isEqualTo(io.opentelemetry.api.trace.SpanId.getInvalid());
+    }
 }

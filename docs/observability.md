@@ -156,10 +156,37 @@ see the complete trace.
 
 ## Context propagation
 
-OTel context propagation uses the standard `io.opentelemetry.context.Context`. Spans
-created inside `CompletableFuture` chains on virtual threads inherit the parent context
-correctly because `OtelJenticTelemetry` calls `Context.current()` at span-start time,
-not at `spanBuilder()` time.
+OTel context propagation uses the standard `io.opentelemetry.context.Context`.
+Parent-child relationships work in two steps:
+
+1. **Parent makes itself current** — instrumented components call `span.makeCurrent()`
+   inside a `try-with-resources` block. This writes the span into `Context.current()` for
+   the duration of the block.
+2. **Child captures the parent** — `OtelJenticTelemetry.spanBuilder()` reads
+   `Context.current()` at call time and stores it as the parent context. Any span started
+   from that builder is automatically linked to the active parent.
+
+```java
+Span parent = telemetry.spanBuilder("behavior.execute").startSpan();
+try (var scope = parent.makeCurrent()) {
+    // spans created here (e.g. llm.chat, mcp.tool.call) are children of parent
+    doWork();
+    parent.setStatus(SpanStatus.OK);
+} catch (Exception e) {
+    parent.recordException(e).setStatus(SpanStatus.ERROR);
+    throw e;
+} finally {
+    parent.end(); // end after scope closes — scope only removes from context
+}
+```
+
+`SpanScope.close()` never throws and only pops the span from the context stack; it does
+**not** end the span. `span.end()` must still be called in the `finally` block.
+
+Spans emitted for async operations (`llm.chat`, `llm.chat.stream`) use `CompletableFuture`
+and cannot call `makeCurrent()` because the async work completes on a different thread.
+Their parent is captured at `spanBuilder()` call time (step 2 above) — correct as long as
+the caller already has the right parent in `Context.current()`.
 
 ---
 
@@ -170,7 +197,8 @@ use `NoopJenticTelemetry`:
 
 - `spanBuilder(name)` returns the same singleton builder (no allocation).
 - `startSpan()` returns the same singleton noop span (no allocation).
-- All methods are no-ops that return `this` immediately.
+- `makeCurrent()` returns the same singleton noop scope (no allocation).
+- All methods are no-ops that return `this` or the singleton immediately.
 
 This is verified by `TelemetryClasspathIsolationTest` in `jentic-core`, which asserts
 that `io.opentelemetry.api.OpenTelemetry` is **not** on the core classpath.

@@ -100,7 +100,7 @@ public final class GuardrailChain {
         Span span = telemetry.spanBuilder("guardrail.evaluate")
                 .setAttribute("guardrail.direction", "input")
                 .startSpan();
-        try {
+        try (var scope = span.makeCurrent()) {
             String result = executeChain(input, ctx, inputGuardrails, "input");
             span.setAttribute("guardrail.decision", "passed").setStatus(SpanStatus.OK);
             return result;
@@ -128,7 +128,7 @@ public final class GuardrailChain {
         Span span = telemetry.spanBuilder("guardrail.evaluate")
                 .setAttribute("guardrail.direction", "output")
                 .startSpan();
-        try {
+        try (var scope = span.makeCurrent()) {
             String result = executeChain(output, ctx, outputGuardrails, "output");
             span.setAttribute("guardrail.decision", "passed").setStatus(SpanStatus.OK);
             return result;

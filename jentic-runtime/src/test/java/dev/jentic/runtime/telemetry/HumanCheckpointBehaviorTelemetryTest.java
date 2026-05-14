@@ -4,10 +4,7 @@ import dev.jentic.core.hitl.ApprovalDecision;
 import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.core.hitl.ApprovalNotifier;
 import dev.jentic.core.hitl.ApprovalTimeoutException;
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -243,6 +240,7 @@ class HumanCheckpointBehaviorTelemetryTest {
         @Override public Span setAttribute(String k, double v)  { return this; }
         @Override public Span recordException(Throwable t)      { return this; }
         @Override public Span setStatus(SpanStatus s)           { this.status = s; return this; }
+        @Override public SpanScope makeCurrent() { return () -> {}; }
         @Override public void end()                              { this.ended = true; }
     }
 }

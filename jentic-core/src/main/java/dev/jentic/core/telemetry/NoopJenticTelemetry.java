@@ -23,6 +23,9 @@ public final class NoopJenticTelemetry implements JenticTelemetry {
     /** Shared no-op span returned by every {@link SpanBuilder#startSpan()} call. */
     static final Span NOOP_SPAN = new NoopSpan();
 
+    /** Shared no-op scope returned by every {@link Span#makeCurrent()} call. */
+    static final SpanScope NOOP_SCOPE = () -> {};
+
     /** Shared no-op builder returned by every {@link #spanBuilder(String)} call. */
     static final SpanBuilder NOOP_BUILDER = new NoopSpanBuilder();
 
@@ -90,6 +93,11 @@ public final class NoopJenticTelemetry implements JenticTelemetry {
         @Override
         public Span setStatus(SpanStatus status) {
             return this;
+        }
+
+        @Override
+        public SpanScope makeCurrent() {
+            return NOOP_SCOPE;
         }
 
         @Override

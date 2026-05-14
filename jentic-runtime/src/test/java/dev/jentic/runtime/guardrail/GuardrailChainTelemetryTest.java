@@ -3,10 +3,7 @@ package dev.jentic.runtime.guardrail;
 import dev.jentic.core.guardrail.GuardrailContext;
 import dev.jentic.core.guardrail.GuardrailResult;
 import dev.jentic.core.guardrail.GuardrailViolationException;
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -216,6 +213,9 @@ class GuardrailChainTelemetryTest {
 
         @Override
         public Span setStatus(SpanStatus s) { this.status = s; return this; }
+
+        @Override
+        public SpanScope makeCurrent() { return () -> {}; }
 
         @Override
         public void end() { this.ended = true; }

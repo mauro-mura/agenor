@@ -1,9 +1,6 @@
 package dev.jentic.runtime.scheduler;
 
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import dev.jentic.runtime.behavior.OneShotBehavior;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -172,6 +169,7 @@ class SimpleBehaviorSchedulerTelemetryTest {
         @Override public Span setAttribute(String k, double v)  { return this; }
         @Override public Span recordException(Throwable t)      { return this; }
         @Override public Span setStatus(SpanStatus s)           { this.status = s; return this; }
+        @Override public SpanScope makeCurrent() { return () -> {}; }
         @Override public void end()                              { this.ended = true; }
     }
 }

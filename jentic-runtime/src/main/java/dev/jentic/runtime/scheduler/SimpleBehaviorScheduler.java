@@ -254,7 +254,7 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
         boolean success = true;
         String error = null;
 
-        try {
+        try (var scope = span.makeCurrent()) {
             behavior.execute().join();
             span.setStatus(SpanStatus.OK);
         } catch (Exception e) {

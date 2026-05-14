@@ -149,7 +149,7 @@ final class ConsumerLoop {
                     .setAttribute("message.correlation_id", orEmpty(msg.correlationId()))
                     .setAttribute("transport.type",         "redis")
                     .startSpan();
-            try {
+            try (var scope = span.makeCurrent()) {
                 handler.handle(msg).join();
                 span.setStatus(SpanStatus.OK);
             } catch (Exception e) {

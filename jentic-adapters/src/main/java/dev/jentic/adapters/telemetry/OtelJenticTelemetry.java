@@ -3,6 +3,7 @@ package dev.jentic.adapters.telemetry;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.core.telemetry.Span;
 import dev.jentic.core.telemetry.SpanBuilder;
+import dev.jentic.core.telemetry.SpanScope;
 import dev.jentic.core.telemetry.SpanStatus;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.StatusCode;
@@ -162,6 +163,12 @@ public final class OtelJenticTelemetry implements JenticTelemetry, AutoCloseable
                 delegate.setStatus(toOtelStatus(status));
             }
             return this;
+        }
+
+        @Override
+        public SpanScope makeCurrent() {
+            var otelScope = delegate.makeCurrent();
+            return otelScope::close;
         }
 
         @Override

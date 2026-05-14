@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Span.makeCurrent()` — OTel context propagation for non-async spans**: without this
+  method, every Jentic span was silently emitted as a root span. `Context.current()` at
+  `spanBuilder()` time never carried a parent because no span was ever made "current",
+  so `behavior.execute`, `reflection.iteration`, `guardrail.evaluate`, and
+  `message.receive` spans had no children even when they triggered LLM, MCP, or guardrail
+  calls during execution.
+
+  New public type `SpanScope` in `dev.jentic.core.telemetry` — an `AutoCloseable` whose
+  `close()` never throws, returned by `Span.makeCurrent()`. The noop implementation
+  returns a singleton (zero allocation). The OTel implementation delegates to
+  `io.opentelemetry.api.trace.Span.makeCurrent()`.
+
+  Call sites updated to `try (var scope = span.makeCurrent()) { ... }`:
+  - `SimpleBehaviorScheduler.executeBehavior()`
+  - `ConsumerLoop.processMessage()`
+  - `ReflectionBehavior.action()` loop
+  - `GuardrailChain.applyInput()` / `applyOutput()`
+
+  Async spans (`llm.chat`, `llm.chat.stream`) use `CompletableFuture.whenComplete` and
+  are unaffected — their parent is captured at `spanBuilder()` call time, which is
+  correct as long as the caller already holds the right context.
+
 ## [0.21.0] - 2026-05-13
 
 ### Added

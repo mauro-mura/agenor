@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-04-23  
-**Last Modified**: 2026-04-23  
+**Last Modified**: 2026-05-14  
 **Authors**: Jentic Team  
 **References**: ADR-018 (Optional Adapter Dependencies Pattern)
 
@@ -79,6 +79,7 @@ The Spring Boot starter auto-configures a `JenticTelemetry` bean when
 jentic-core
   dev.jentic.core.telemetry
     Span              ← interface
+    SpanScope         ← interface (AutoCloseable, returned by Span.makeCurrent())
     SpanBuilder       ← interface
     SpanStatus        ← enum (OK, ERROR, UNSET)
     JenticTelemetry   ← interface + noop() factory method
@@ -104,9 +105,21 @@ jentic-adapters
 
 ### OTel context propagation
 
-`OtelJenticTelemetry.spanBuilder()` captures `io.opentelemetry.context.Context.current()` at
-call time and uses it as the parent when `startSpan()` is called. This ensures correct
-parent-child relationships when `CompletableFuture` chains execute on virtual threads.
+Parent-child relationships require two cooperating steps:
+
+1. **`Span.makeCurrent()`** — the parent span must be made current before executing code
+   that creates child spans. This writes the span into `io.opentelemetry.context.Context`
+   for the duration of the `try-with-resources` block. The returned `SpanScope` is
+   `AutoCloseable`; `close()` pops the span from the context without ending it.
+
+2. **`OtelJenticTelemetry.spanBuilder()`** — captures `Context.current()` at call time and
+   sets it as the parent. Any span started from that builder is automatically a child of
+   whatever is currently in the context.
+
+All non-async instrumentation points (`behavior.execute`, `reflection.iteration`,
+`guardrail.evaluate`, `message.receive`) call `makeCurrent()`. Async spans (`llm.chat`,
+`llm.chat.stream`) use `CompletableFuture.whenComplete` and cannot call `makeCurrent()`
+across thread boundaries; their parent is captured at `spanBuilder()` call time instead.
 
 ### Wiring in JenticRuntime
 

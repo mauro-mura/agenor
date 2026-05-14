@@ -1,10 +1,7 @@
 package dev.jentic.adapters.messaging.redis;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.core.telemetry.Span;
-import dev.jentic.core.telemetry.SpanBuilder;
-import dev.jentic.core.telemetry.SpanStatus;
+import dev.jentic.core.telemetry.*;
 import io.lettuce.core.StreamMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -159,10 +156,10 @@ class ConsumerLoopTelemetryTest {
         var body = MessageCodec.encode(
                 Message.builder().content("bare").build());
         var streamMsg = new StreamMessage<String, String>("stream", "1-0", body);
- 
+
         var loop = loop(msg -> CompletableFuture.completedFuture(null));
         loop.processMessage(streamMsg);
- 
+
         var span = telemetry.spans.get(0);
         assertThat(span.stringAttrs.get("message.id")).isNotEmpty();       // auto-generated UUID
         assertThat(span.stringAttrs.get("message.topic")).isEmpty();
@@ -198,6 +195,7 @@ class ConsumerLoopTelemetryTest {
         @Override public Span setAttribute(String k, double v) { return this; }
         @Override public Span setStatus(SpanStatus s)           { this.status = s; return this; }
         @Override public Span recordException(Throwable t)      { return this; }
+        @Override public SpanScope makeCurrent() { return () -> {}; }
         @Override public void end()                             { this.ended = true; }
     }
 
