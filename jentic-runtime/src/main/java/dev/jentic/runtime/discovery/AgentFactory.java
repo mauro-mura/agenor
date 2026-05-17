@@ -22,11 +22,11 @@ import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.BehaviorScheduler;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.context.AgentContext;
 import dev.jentic.core.exceptions.AgentException;
 import dev.jentic.core.memory.MemoryStore;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.runtime.agent.BaseAgent;
 
 /**
@@ -40,31 +40,31 @@ import dev.jentic.runtime.agent.BaseAgent;
  *       injected by the runtime after creation.</li>
  *   <li><b>Plain Agent implementor</b>: core services available for constructor injection.
  *       Declare an {@link AgentContext} parameter to receive all core services at once,
- *       or individual service parameters ({@link MessageService}, {@link AgentDirectory}, etc.).</li>
+ *       or individual service parameters ({@link MessageDispatcher}, {@link AgentDirectory}, etc.).</li>
  * </ul>
  */
 public class AgentFactory {
 
     private static final Logger log = LoggerFactory.getLogger(AgentFactory.class);
 
-    private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
     private final MemoryStore memoryStore;
     private final Map<Class<?>, Object> availableServices;
 
-    public AgentFactory(MessageService messageService,
+    public AgentFactory(MessageDispatcher messageDispatcher,
                         AgentDirectory agentDirectory,
                         BehaviorScheduler behaviorScheduler,
                         MemoryStore memoryStore) {
-        this.messageService = messageService;
+        this.messageDispatcher = messageDispatcher;
         this.agentDirectory = agentDirectory;
         this.behaviorScheduler = behaviorScheduler;
         this.memoryStore = memoryStore;
         this.availableServices = new HashMap<>();
 
         // Register individual core services
-        this.availableServices.put(MessageService.class, messageService);
+        this.availableServices.put(MessageDispatcher.class, messageDispatcher);
         this.availableServices.put(AgentDirectory.class, agentDirectory);
         this.availableServices.put(BehaviorScheduler.class, behaviorScheduler);
         if (memoryStore != null) {
@@ -72,9 +72,9 @@ public class AgentFactory {
         }
 
         // Register AgentContext so non-BaseAgent agents can receive all services at once
-        if (messageService != null && agentDirectory != null && behaviorScheduler != null) {
+        if (messageDispatcher != null && agentDirectory != null && behaviorScheduler != null) {
             this.availableServices.put(AgentContext.class,
-                    new AgentContext(messageService, agentDirectory, behaviorScheduler, memoryStore));
+                    new AgentContext(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore));
         }
     }
 

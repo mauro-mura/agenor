@@ -2,6 +2,7 @@ package dev.jentic.core;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.jentic.core.messaging.MessageDispatcher;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -217,7 +218,7 @@ import java.util.UUID;
  * @param timestamp when the message was created, auto-generated if null
  *
  * @since 0.1.0
- * @see MessageService
+ * @see MessageDispatcher
  * @see MessageHandler
  */
 public record Message(
@@ -443,31 +444,20 @@ public record Message(
      *   <li>{@code content} set to the provided reply content</li>
      * </ul>
      *
-     * <p><strong>Integration with sendAndWait:</strong>
-     * This method pairs naturally with {@link MessageService#sendAndWait}:
+     * <p><strong>Example:</strong>
      * <pre>{@code
-     * // Requester
-     * Message request = Message.builder()
-     *     .senderId("client")
-     *     .receiverId("server")
-     *     .content("query")
-     *     .build();
-     *
-     * CompletableFuture<Message> response =
-     *     messageService.sendAndWait(request, 5000);
-     *
-     * // Responder
-     * messageService.subscribeToReceiver("server", req -> {
+     * // Responder — inside a subscribeRecipient handler
+     * dispatcher.subscribeRecipient("server", req -> {
      *     Message reply = req.reply(processQuery(req.content()))
      *         .senderId("server")
      *         .build();
-     *     return messageService.send(reply);
+     *     return dispatcher.sendTo(reply);
      * });
      * }</pre>
      *
      * @param content the reply content (payload)
      * @return a MessageBuilder with correlationId and receiverId pre-set
-     * @see MessageService#sendAndWait(Message, long)
+     * @see MessageDispatcher
      */
     public MessageBuilder reply(Object content) {
         return builder()

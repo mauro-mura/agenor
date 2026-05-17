@@ -89,6 +89,7 @@ nav:
   - Adapters:
     - MCP: adapters/mcp.md
     - Redis Messaging: adapters/redis.md
+    - JDBC Directory: adapters/jdbc-directory.md
   - Observability:
     - OpenTelemetry: observability.md
   - Integrations:

@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
  * {@link dev.jentic.core.AgentDirectory} facade so this class can be used anywhere
  * either interface is expected.
  */
-@SuppressWarnings("deprecation")
 public class InMemoryAgentDirectory implements AgentDirectory, dev.jentic.core.AgentDirectory {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryAgentDirectory.class);
@@ -216,25 +215,6 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.jentic.core.A
             return new Page<>(matched.subList(from, to), matched.size(),
                     request.page(), request.size());
         });
-    }
-
-    // -------------------------------------------------------------------------
-    // dev.jentic.core.AgentDirectory backward-compat bridge
-    // -------------------------------------------------------------------------
-
-    /**
-     * Finds agents matching the query without pagination.
-     *
-     * @deprecated since 0.20.0. Use {@link #findAgents(AgentQuery, PageRequest)}.
-     */
-    @Override
-    @Deprecated(since = "0.20.0", forRemoval = true)
-    public java.util.concurrent.CompletableFuture<java.util.List<AgentDescriptor>> findAgents(AgentQuery query) {
-        Objects.requireNonNull(query, "query");
-        return CompletableFuture.supplyAsync(() ->
-                agents.values().stream()
-                        .filter(buildPredicate(query))
-                        .collect(java.util.stream.Collectors.toList()));
     }
 
     // -------------------------------------------------------------------------

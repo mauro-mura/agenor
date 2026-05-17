@@ -22,10 +22,6 @@ import java.util.concurrent.CompletableFuture;
  * {@link AgentDiscovery}, {@link AgentPresence}) via {@code JenticRuntime.Builder}
  * rather than using this composite.
  *
- * <p><strong>Deprecated methods</strong>: {@link #listAll()} and
- * {@link #findAgents(AgentQuery)} are deprecated since 0.20.0; use
- * {@link AgentDiscovery#findAgents(AgentQuery, PageRequest)} instead.
- *
  * @since 0.1.0
  * @see dev.jentic.core.directory.AgentDirectory
  * @see AgentRegistry
@@ -34,33 +30,6 @@ import java.util.concurrent.CompletableFuture;
  * @see AgentPresence
  */
 public interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, AgentPresence {
-
-    // -------------------------------------------------------------------------
-    // Deprecated legacy abstract methods (kept for LocalAgentDirectory compat)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Finds agents matching the given query (no pagination).
-     *
-     * @param query search criteria, must not be null
-     * @return a future containing a list of matching descriptors
-     * @deprecated since 0.20.0, for removal at 0.22.0.
-     *     Use {@link #findAgents(AgentQuery, PageRequest)}.
-     */
-    @Deprecated(since = "0.20.0", forRemoval = true)
-    CompletableFuture<List<AgentDescriptor>> findAgents(AgentQuery query);
-
-    /**
-     * Lists all registered agents.
-     *
-     * @return a future containing all registered agent descriptors
-     * @deprecated since 0.20.0, for removal at 0.22.0.
-     *     Use {@code findAgents(AgentQuery.all(), PageRequest.first(Integer.MAX_VALUE))}.
-     */
-    @Deprecated(since = "0.20.0", forRemoval = true)
-    default CompletableFuture<List<AgentDescriptor>> listAll() {
-        return findAgents(AgentQuery.all());
-    }
 
     // -------------------------------------------------------------------------
     // AgentResolver — default bridge using findById + AgentDescriptor.endpoint
@@ -79,45 +48,30 @@ public interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDisco
     }
 
     // -------------------------------------------------------------------------
-    // AgentDiscovery — default bridges using deprecated findAgents(AgentQuery)
+    // AgentDiscovery — default bridges delegating to findAgents(AgentQuery, PageRequest)
     // -------------------------------------------------------------------------
 
     /**
      * {@inheritDoc}
      *
-     * <p>Default: delegates to {@link #findAgents(AgentQuery)} with a capability filter.
+     * <p>Default: delegates to {@link #findAgents(AgentQuery, PageRequest)} with a capability filter.
      */
     @Override
     default CompletableFuture<List<AgentDescriptor>> findByCapability(String capability) {
-        return findAgents(AgentQuery.withCapabilities(Set.of(capability)));
+        return findAgents(AgentQuery.withCapabilities(Set.of(capability)),
+                PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content);
     }
 
     /**
      * {@inheritDoc}
      *
-     * <p>Default: delegates to {@link #findAgents(AgentQuery)} with a type filter.
+     * <p>Default: delegates to {@link #findAgents(AgentQuery, PageRequest)} with a type filter.
      */
     @Override
     default CompletableFuture<List<AgentDescriptor>> findByType(String agentType) {
-        return findAgents(AgentQuery.byType(agentType));
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Default: delegates to the deprecated {@link #findAgents(AgentQuery)}, then
-     * applies in-memory pagination. This is acceptable for the in-memory backend;
-     * remote backends should provide their own efficient implementation.
-     */
-    @Override
-    default CompletableFuture<Page<AgentDescriptor>> findAgents(AgentQuery query,
-                                                                 PageRequest request) {
-        return findAgents(query).thenApply(list -> {
-            int from = (int) Math.min(request.offset(), list.size());
-            int to = (int) Math.min(from + request.size(), list.size());
-            return new Page<>(list.subList(from, to), list.size(),
-                    request.page(), request.size());
-        });
+        return findAgents(AgentQuery.byType(agentType), PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content);
     }
 
     // -------------------------------------------------------------------------

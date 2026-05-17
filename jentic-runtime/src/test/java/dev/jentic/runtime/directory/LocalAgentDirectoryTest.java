@@ -3,6 +3,8 @@ package dev.jentic.runtime.directory;
 import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentQuery;
 import dev.jentic.core.AgentStatus;
+import dev.jentic.core.Page;
+import dev.jentic.core.PageRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
@@ -72,7 +74,7 @@ class LocalAgentDirectoryTest {
         directory.register(agent2).join();
         
         // When
-        List<AgentDescriptor> all = directory.listAll().join();
+        List<AgentDescriptor> all = directory.findAgents(AgentQuery.builder().build(), PageRequest.first(Integer.MAX_VALUE)).join().content();
         
         // Then
         assertThat(all).hasSize(2)
@@ -98,7 +100,7 @@ class LocalAgentDirectoryTest {
         
         // When
         AgentQuery query = AgentQuery.byType("monitor");
-        List<AgentDescriptor> monitors = directory.findAgents(query).join();
+        List<AgentDescriptor> monitors = directory.findAgents(query, PageRequest.first(Integer.MAX_VALUE)).join().content();
         
         // Then
         assertThat(monitors).hasSize(2)
@@ -120,7 +122,7 @@ class LocalAgentDirectoryTest {
         
         // When
         AgentQuery query = AgentQuery.byStatus(AgentStatus.RUNNING);
-        List<AgentDescriptor> runningAgents = directory.findAgents(query).join();
+        List<AgentDescriptor> runningAgents = directory.findAgents(query, PageRequest.first(Integer.MAX_VALUE)).join().content();
         
         // Then
         assertThat(runningAgents).hasSize(1)
@@ -146,7 +148,7 @@ class LocalAgentDirectoryTest {
         
         // When
         AgentQuery query = AgentQuery.withCapabilities(Set.of("monitoring", "alerts"));
-        List<AgentDescriptor> result = directory.findAgents(query).join();
+        List<AgentDescriptor> result = directory.findAgents(query, PageRequest.first(Integer.MAX_VALUE)).join().content();
         
         // Then
         assertThat(result).hasSize(1)
@@ -187,7 +189,7 @@ class LocalAgentDirectoryTest {
             .customFilter(desc -> desc.agentName().contains("Target"))
             .build();
         
-        List<AgentDescriptor> result = directory.findAgents(query).join();
+        List<AgentDescriptor> result = directory.findAgents(query, PageRequest.first(Integer.MAX_VALUE)).join().content();
         
         // Then
         assertThat(result).hasSize(1)

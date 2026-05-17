@@ -7,6 +7,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`jentic-adapters-persistence` — JDBC agent directory (ADR-022, ADR-023)**: new dedicated Maven module providing durable, relational-database-backed implementations of `AgentRegistry`, `AgentDiscovery`, and `AgentResolver` via plain JDBC (PostgreSQL, MySQL, H2).
+
+  New classes in `dev.jentic.adapters.persistence.directory`:
+  - `JdbcAgentDirectory` — factory and lifecycle holder. Owns the HikariCP connection pool, runs Flyway schema migrations on startup, and exposes the three JDBC capability implementations via `registry()`, `discovery()`, and `resolver()`. Implements `Closeable`.
+  - `JdbcAgentRegistry` — implements `AgentRegistry`; upsert semantics on register (idempotent re-registration updates the endpoint and metadata).
+  - `JdbcAgentDiscovery` — implements `AgentDiscovery`; supports `findById`, `findByCapability`, `findByType`, and paginated `findAgents(AgentQuery, PageRequest)`.
+  - `JdbcAgentResolver` — implements `AgentResolver`; resolves `AgentEndpoint` by agent ID.
+  - `JdbcDirectoryConfig` — immutable configuration record (`jdbcUrl`, `username`, `password`, `maximumPoolSize`, `migrationLocation`).
+  - `DirectorySchemaManager` — thin Flyway wrapper; runs migrations from `classpath:db/migration/jentic-directory`.
+  - `JdbcHelper` — centralised JDBC utility (connection acquisition, parameter binding, result-set mapping).
+
+  Flyway migration `V1__create_agent_directory.sql` creates two tables:
+  - `jentic_agents` — agent registration, status, endpoint, and metadata.
+  - `jentic_agent_capabilities` — normalised capability set; FK cascade-deletes on agent removal.
+
+  `AgentPresence` is intentionally **not** implemented by JDBC — heartbeat/liveness writes belong to purpose-built backends (Redis TTL keys, Consul session leases). The in-memory `AgentPresence` from `InMemoryAgentDirectory` is used as the default fourth capability when combining a JDBC directory with `JenticRuntime.Builder`.
+
+  HikariCP and Flyway are declared as regular (`compile`) dependencies inside `jentic-adapters-persistence`. The persistence stack does not reach the default classpath of applications that only declare `jentic-runtime` — see ADR-022.
+
+  ```java
+  try (var dir = JdbcAgentDirectory.create(
+          JdbcDirectoryConfig.of("jdbc:postgresql://localhost:5432/jentic", user, pass))) {
+      var runtime = JenticRuntime.builder()
+              .agentRegistry(dir.registry())
+              .agentDiscovery(dir.discovery())
+              .agentResolver(dir.resolver())
+              .build();
+      runtime.start().join();
+  }
+  ```
+
+- **Spring Boot starter — JDBC directory auto-configuration**: `JenticAutoConfiguration` gains a new `JdbcDirectoryConfiguration` inner class, activated when `JdbcAgentDirectory` is on the classpath and `jentic.directory.provider=jdbc`.
+  - `JdbcAgentDirectory` bean is lifecycle-managed (`destroyMethod="close"`).
+  - `AgentRegistry`, `AgentDiscovery`, and `AgentResolver` beans backed by the JDBC implementations.
+  - `JenticRuntime` bean built with the three JDBC capabilities plus the in-memory presence fallback.
+  - `jentic-adapters-persistence` declared as `optional=true` in the starter POM — no impact on applications that use `provider=local` or `provider=inmemory`.
+  - Provider-specific properties go in the `jentic.directory.properties` map, consistent with the messaging provider pattern:
+    ```yaml
+    jentic:
+      directory:
+        provider: jdbc
+        properties:
+          url: jdbc:postgresql://localhost:5432/jentic
+          username: jentic
+          password: ${DB_PASSWORD}
+          pool-size: "10"
+    ```
+
+- **ADR-022 — `jentic-adapters-persistence` module split**: documents the decision to use a dedicated Maven sub-module rather than `optional=true` inside `jentic-adapters` for the persistence stack (HikariCP, Flyway, JDBC drivers).
+
+- **ADR-023 — Persistent agent directory with JDBC**: documents the schema design, upsert semantics, capability-split rationale, and the deliberate exclusion of `AgentPresence` from the JDBC backend.
+
+- **`jentic-examples` — `JdbcDirectoryExample`**: runnable demo using H2 in-process (no external infrastructure). Demonstrates `JdbcAgentDirectory.create()`, `JenticRuntime.Builder` per-capability wiring, and capability-based discovery across two agents (`OrchestratorAgent`, `DataWorkerAgent`).
+
+- **Docs — `docs/adapters/jdbc-directory.md`**: full adapter guide covering prerequisites, Maven dependency, schema, programmatic quick start, Spring Boot auto-configuration, configuration reference, mixed JDBC+in-memory backend design, multi-node scenario, and integration test commands.
+
+### Changed
+
+- **Spring Boot starter — Redis messaging YAML format** (**breaking** for 0.21.x users): the `jentic.messaging.redis.*` sub-section is replaced by the flat `jentic.messaging.properties.*` map, matching the pattern used by the new JDBC directory provider. The `JenticProperties.Messaging.Redis` sub-record is removed.
+
+  ```yaml
+  # Before (0.21.x)
+  jentic:
+    messaging:
+      provider: redis
+      redis:
+        uri: redis://localhost:6379
+        consumer-group-prefix: my-app
+
+  # After
+  jentic:
+    messaging:
+      provider: redis
+      properties:
+        uri: redis://localhost:6379
+        consumer-group-prefix: my-app
+  ```
+
+  All other `redis.*` keys (`read-block-timeout-ms`, `max-stream-length`, `pending-entries-timeout-ms`, `max-delivery-attempts`) move to the same `properties` map as string values. Default values are unchanged.
+
+### Removed
+
+> These APIs were deprecated in **0.20.0** and are now removed.
+
+- **`dev.jentic.core.MessageService`** — use `dev.jentic.core.messaging.MessageDispatcher`.
+- **`dev.jentic.runtime.messaging.InMemoryMessageService`** — use `dev.jentic.runtime.messaging.InMemoryMessageDispatcher`.
+- **`dev.jentic.runtime.directory.LocalAgentDirectory`** — use `dev.jentic.runtime.directory.InMemoryAgentDirectory`.
+- **`JenticRuntime.getMessageService()`** — use `JenticRuntime.getMessageDispatcher()`.
+- **`JenticRuntime.Builder.messageService()`** — use `Builder.messageDispatcher()`.
+- **`JenticRuntime.Builder.agentDirectory()`** — use `Builder.agentRegistry()` / `agentResolver()` / `agentDiscovery()` / `agentPresence()`.
+
+### Tests
+
+- **`JdbcAgentDirectoryTest`** (unit): full `AgentRegistry`, `AgentDiscovery`, and `AgentResolver` coverage against H2 in-process — runs as part of `mvn test` with no flags.
+- **`JdbcAgentDirectoryIT`** (integration): Testcontainers PostgreSQL 16; gated by `-Dintegration.tests.enabled=true` to avoid Docker dependency in CI by default.
+
 ### Fixed
 
 - **`Span.makeCurrent()` — OTel context propagation for non-async spans**: without this

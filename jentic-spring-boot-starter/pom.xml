@@ -49,6 +49,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Jentic adapters-persistence — optional; required only when jentic.directory.provider=jdbc -->
+        <dependency>
+            <groupId>dev.jentic</groupId>
+            <artifactId>jentic-adapters-persistence</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring Boot auto-configure — compile-time only, not on transitive classpath -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

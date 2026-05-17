@@ -370,14 +370,26 @@ public class JenticAutoConfiguration {
         public dev.jentic.adapters.messaging.redis.RedisMessagingFactory redisMessagingFactory(
                 JenticProperties props,
                 ObjectProvider<JenticTelemetry> telemetry) {
-            var r = props.messaging().redis();
+            var p = props.messaging().properties();
+            long readBlockTimeoutMs = 2000L;
+            int  maxStreamLength = 100_000;
+            long pendingEntriesTimeoutMs = 30_000L;
+            int  maxDeliveryAttempts = 3;
+            try { readBlockTimeoutMs = Long.parseLong(p.getOrDefault("read-block-timeout-ms", "2000")); }
+            catch (NumberFormatException ignored) {}
+            try { maxStreamLength = Integer.parseInt(p.getOrDefault("max-stream-length", "100000")); }
+            catch (NumberFormatException ignored) {}
+            try { pendingEntriesTimeoutMs = Long.parseLong(p.getOrDefault("pending-entries-timeout-ms", "30000")); }
+            catch (NumberFormatException ignored) {}
+            try { maxDeliveryAttempts = Integer.parseInt(p.getOrDefault("max-delivery-attempts", "3")); }
+            catch (NumberFormatException ignored) {}
             return dev.jentic.adapters.messaging.redis.RedisMessagingFactory.builder()
-                    .uri(r.uri())
-                    .consumerGroupPrefix(r.consumerGroupPrefix())
-                    .readBlockTimeoutMs(r.readBlockTimeoutMs())
-                    .maxStreamLength(r.maxStreamLength())
-                    .pendingEntriesTimeoutMs(r.pendingEntriesTimeoutMs())
-                    .maxDeliveryAttempts(r.maxDeliveryAttempts())
+                    .uri(p.getOrDefault("uri", "redis://localhost:6379"))
+                    .consumerGroupPrefix(p.getOrDefault("consumer-group-prefix", "jentic"))
+                    .readBlockTimeoutMs(readBlockTimeoutMs)
+                    .maxStreamLength(maxStreamLength)
+                    .pendingEntriesTimeoutMs(pendingEntriesTimeoutMs)
+                    .maxDeliveryAttempts(maxDeliveryAttempts)
                     .telemetry(telemetry.getIfAvailable(JenticTelemetry::noop))
                     .build();
         }
@@ -419,6 +431,101 @@ public class JenticAutoConfiguration {
             llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
             builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
             log.debug("Building JenticRuntime (Redis messaging): runtime.name={}", props.runtime().name());
+            return builder.build();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // JDBC agent directory — active only when jentic-adapters-persistence is on the classpath
+    // -------------------------------------------------------------------------
+
+    /**
+     * Creates a JDBC-backed {@link dev.jentic.core.directory.AgentDirectory} when:
+     * <ul>
+     *   <li>{@code dev.jentic.adapters.persistence.directory.JdbcAgentDirectory} is on the classpath</li>
+     *   <li>{@code jentic.directory.provider=jdbc} is configured</li>
+     * </ul>
+     *
+     * <p>The factory bean holds the HikariCP pool and is closed automatically on context
+     * shutdown via {@code destroyMethod}. The three JDBC capability beans ({@code AgentRegistry},
+     * {@code AgentDiscovery}, {@code AgentResolver}) are wired into the runtime using the
+     * per-capability builder setters; presence falls back to the default in-memory implementation.
+     *
+     * @since 0.22.0
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "dev.jentic.adapters.persistence.directory.JdbcAgentDirectory")
+    @ConditionalOnProperty(prefix = "jentic.directory", name = "provider", havingValue = "jdbc")
+    static class JdbcDirectoryConfiguration {
+
+        @Bean(destroyMethod = "close")
+        @ConditionalOnMissingBean
+        public dev.jentic.adapters.persistence.directory.JdbcAgentDirectory jdbcAgentDirectory(
+                JenticProperties props) {
+            var p = props.directory().properties();
+            var url = p.get("url");
+            if (url == null || url.isBlank()) {
+                throw new IllegalStateException(
+                        "jentic.directory.provider=jdbc requires "
+                        + "jentic.directory.properties.url to be set");
+            }
+            var username = p.getOrDefault("username", "");
+            var password = p.getOrDefault("password", "");
+            int poolSize = 10;
+            try { poolSize = Integer.parseInt(p.getOrDefault("pool-size", "10")); }
+            catch (NumberFormatException ignored) {}
+            var config = new dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig(
+                    url, username, password, poolSize,
+                    "classpath:db/migration/jentic-directory");
+            log.debug("Creating JdbcAgentDirectory (url={})", url);
+            return dev.jentic.adapters.persistence.directory.JdbcAgentDirectory.create(config);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public dev.jentic.core.directory.AgentRegistry jdbcAgentRegistry(
+                dev.jentic.adapters.persistence.directory.JdbcAgentDirectory dir) {
+            return dir.registry();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public dev.jentic.core.directory.AgentDiscovery jdbcAgentDiscovery(
+                dev.jentic.adapters.persistence.directory.JdbcAgentDirectory dir) {
+            return dir.discovery();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public dev.jentic.core.directory.AgentResolver jdbcAgentResolver(
+                dev.jentic.adapters.persistence.directory.JdbcAgentDirectory dir) {
+            return dir.resolver();
+        }
+
+        /**
+         * Creates the {@link JenticRuntime} wired with JDBC directory capabilities.
+         *
+         * <p>Registry, discovery, and resolver are backed by the JDBC store.
+         * Presence uses the default in-memory implementation (see
+         * {@link dev.jentic.core.directory.AgentPresence} Javadoc for rationale).
+         */
+        @Bean("jenticRuntime")
+        @ConditionalOnMissingBean(JenticRuntime.class)
+        public JenticRuntime jenticRuntimeWithJdbcDirectory(
+                JenticProperties props,
+                dev.jentic.core.directory.AgentRegistry agentRegistry,
+                dev.jentic.core.directory.AgentDiscovery agentDiscovery,
+                dev.jentic.core.directory.AgentResolver agentResolver,
+                ObjectProvider<LLMProvider> llmProvider,
+                ObjectProvider<JenticTelemetry> telemetry) {
+            var builder = JenticRuntime.builder()
+                    .withConfiguration(props.toJenticConfiguration())
+                    .agentRegistry(agentRegistry)
+                    .agentDiscovery(agentDiscovery)
+                    .agentResolver(agentResolver);
+            llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
+            builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
+            log.debug("Building JenticRuntime (JDBC directory): runtime.name={}", props.runtime().name());
             return builder.build();
         }
     }

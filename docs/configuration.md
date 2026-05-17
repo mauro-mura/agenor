@@ -107,6 +107,64 @@ Notes:
 
 ---
 
+## Provider Reference
+
+### Messaging providers
+
+| Value | Module required | Notes |
+|---|---|---|
+| `inmemory` | `jentic-runtime` (built-in) | Default; single JVM only |
+| `redis` | `jentic-adapters` | Durable, multi-node; requires Lettuce on classpath |
+
+#### Redis messaging (`provider: redis`)
+
+Provider-specific keys go inside `messaging.properties`:
+
+```yaml
+jentic:
+  messaging:
+    provider: redis
+    properties:
+      uri: redis://localhost:6379          # default: redis://localhost:6379
+      consumer-group-prefix: jentic        # default: jentic
+      read-block-timeout-ms: "2000"        # default: 2000
+      max-stream-length: "100000"          # default: 100000
+      pending-entries-timeout-ms: "30000"  # default: 30000
+      max-delivery-attempts: "3"           # default: 3
+```
+
+---
+
+### Directory providers
+
+| Value | Module required | Notes |
+|---|---|---|
+| `local` | `jentic-runtime` (built-in) | Default; single JVM, survives restarts via in-memory state |
+| `inmemory` | `jentic-runtime` (built-in) | Alias for `local` |
+| `jdbc` | `jentic-adapters-persistence` | Durable, multi-node; requires a JDBC driver on classpath |
+
+#### JDBC directory (`provider: jdbc`)
+
+Provider-specific keys go inside `directory.properties`. All values are strings.
+
+```yaml
+jentic:
+  directory:
+    provider: jdbc
+    properties:
+      url: jdbc:postgresql://localhost:5432/jentic   # required
+      username: jentic                               # optional
+      password: ${DB_PASSWORD}                       # optional
+      pool-size: "10"                               # default: 10 (must be a string)
+```
+
+Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` (H2 for dev/test).
+
+Flyway runs the schema migration automatically on startup — no manual DDL required.
+See [JDBC Agent Directory](adapters/jdbc-directory.md) for the full adapter guide.
+
+---
+
 ## Programmatic Configuration
 
 You can configure the runtime entirely in code without a YAML file:

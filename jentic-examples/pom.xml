@@ -103,5 +103,22 @@
             <artifactId>lettuce-core</artifactId>
             <version>${lettuce.version}</version>
         </dependency>
+
+        <!--
+          jentic-adapters-persistence — explicit (non-optional) consumer for the JDBC
+          directory example. Demonstrates the opt-in path described in ADR-018 and ADR-022:
+          consumers that want a persistent agent directory declare this module directly.
+        -->
+        <dependency>
+            <groupId>dev.jentic</groupId>
+            <artifactId>jentic-adapters-persistence</artifactId>
+        </dependency>
+
+        <!-- H2 in-process DB for the JDBC directory example (no Docker required) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+        </dependency>
     </dependencies>
 </project>

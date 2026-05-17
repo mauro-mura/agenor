@@ -4,7 +4,6 @@ import dev.jentic.core.Agent;
 import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;

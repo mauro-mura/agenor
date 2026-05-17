@@ -17,10 +17,6 @@ import static dev.jentic.core.BehaviorType.CYCLIC;
  * Example demonstrating two agents communicating via messages.
  * PingAgent sends periodic ping messages, PongAgent responds with pong messages.
  *
- * <p><strong>Migration note (0.20.0):</strong> this example intentionally uses the deprecated
- * {@link dev.jentic.core.MessageService} API to serve as a migration reference.
- * See {@link dev.jentic.examples.agent.ChatAgentExample} for the updated
- * {@link dev.jentic.core.messaging.MessageDispatcher} API.
  */
 public class PingPongExample {
 
@@ -84,7 +80,7 @@ public class PingPongExample {
                 .header("ping-number", String.valueOf(pingCount))
                 .build();
             log.info("Sending: {}", pingMessage.content());
-            messageService.send(pingMessage);
+            getMessageDispatcher().publish(pingMessage);
         }
 
         @JenticMessageHandler("pong")
@@ -143,7 +139,7 @@ public class PingPongExample {
                 .header("original-ping", pingNumber)
                 .build();
             log.info("Sending: {}", pongMessage.content());
-            messageService.send(pongMessage);
+            getMessageDispatcher().publish(pongMessage);
         }
 
         @Override

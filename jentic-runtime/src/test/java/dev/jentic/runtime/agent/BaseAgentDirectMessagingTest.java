@@ -1,9 +1,10 @@
 package dev.jentic.runtime.agent;
 
 import dev.jentic.core.*;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -23,14 +24,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class BaseAgentDirectMessagingTest {
     
-    private InMemoryMessageService messageService;
-    private LocalAgentDirectory agentDirectory;
+    private InMemoryMessageDispatcher messageDispatcher;
+    private InMemoryAgentDirectory agentDirectory;
     private SimpleBehaviorScheduler behaviorScheduler;
-    
+
     @BeforeEach
     void setUp() {
-        messageService = new InMemoryMessageService();
-        agentDirectory = new LocalAgentDirectory();
+        agentDirectory = new InMemoryAgentDirectory();
+        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, JenticTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
     }
@@ -56,7 +57,7 @@ class BaseAgentDirectMessagingTest {
             .content("Test message")
             .build();
         
-        messageService.send(testMsg).join();
+        messageDispatcher.sendTo(testMsg).join();
         
         // Verify message was received
         Message received = receivedMessage.get(2, TimeUnit.SECONDS);
@@ -90,11 +91,12 @@ class BaseAgentDirectMessagingTest {
             .content("Should not receive")
             .build();
         
-        messageService.send(testMsg).join();
-        
+        // sendTo throws AgentNotFoundException for unregistered agent — that's expected
+        messageDispatcher.sendTo(testMsg).exceptionally(e -> null).join();
+
         // Wait a bit to ensure message would have been delivered if subscribed
         Thread.sleep(200);
-        
+
         // Verify message was NOT received
         assertFalse(receivedMessage.get(), "Agent should not receive messages after stop");
     }
@@ -220,7 +222,7 @@ class BaseAgentDirectMessagingTest {
             .content("Original message")
             .build();
         
-        messageService.send(originalMessage).join();
+        messageDispatcher.sendTo(originalMessage).join();
         
         // Wait for Bob to receive and reply
         Message bobGot = bobReceived.get(2, TimeUnit.SECONDS);
@@ -265,7 +267,7 @@ class BaseAgentDirectMessagingTest {
             .content("Test content")
             .build();
         
-        messageService.send(testMsg).join();
+        messageDispatcher.sendTo(testMsg).join();
         
         // Wait for message to be processed
         Thread.sleep(200);
@@ -323,7 +325,7 @@ class BaseAgentDirectMessagingTest {
     // =========================================================================
     
     private void setupAgent(TestAgent agent) {
-        agent.setMessageService(messageService);
+        agent.setMessageDispatcher(messageDispatcher);
         agent.setAgentDirectory(agentDirectory);
         agent.setBehaviorScheduler(behaviorScheduler);
     }

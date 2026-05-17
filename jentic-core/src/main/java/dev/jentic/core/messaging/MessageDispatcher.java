@@ -19,7 +19,6 @@ package dev.jentic.core.messaging;
  * {@code jentic-runtime}.
  *
  * @since 0.20.0
- * @see dev.jentic.core.MessageService
  * @see FilterableSubscriber
  */
 public interface MessageDispatcher

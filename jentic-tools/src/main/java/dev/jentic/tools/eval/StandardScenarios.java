@@ -114,7 +114,7 @@ public final class StandardScenarios {
                     .topic(topic)
                     .content(content)
                     .build();
-                runtime.getMessageService().send(message);
+                runtime.getMessageDispatcher().publish(message);
             })
             .verify(ctx -> {
                 List<AssertionResult> results = new ArrayList<>();
@@ -143,7 +143,7 @@ public final class StandardScenarios {
                         .topic("throughput.test")
                         .content("message-" + i)
                         .build();
-                    runtime.getMessageService().send(message);
+                    runtime.getMessageDispatcher().publish(message);
                     
                     // Pace messages across window
                     if (intervalNanos > 0 && i < messageCount - 1) {
@@ -231,7 +231,7 @@ public final class StandardScenarios {
                     .receiverId(responder.getAgentId())
                     .content("test-request")
                     .build();
-                runtime.getMessageService().send(request);
+                runtime.getMessageDispatcher().sendTo(request);
                 
                 // Wait for response processing
                 try {

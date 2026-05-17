@@ -2,7 +2,6 @@ package dev.jentic.core.context;
 
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.BehaviorScheduler;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.core.messaging.MessageDispatcher;
 
@@ -33,7 +32,7 @@ import dev.jentic.core.messaging.MessageDispatcher;
  * <p>{@code memoryStore} may be {@code null} when the runtime is configured
  * without a {@code MemoryStore}.
  *
- * @param messageService    the messaging service, never null
+ * @param messageDispatcher the message dispatcher, never null
  * @param agentDirectory    the agent discovery service, never null
  * @param behaviorScheduler the behavior scheduler, never null
  * @param memoryStore       the memory store, may be null
@@ -41,17 +40,14 @@ import dev.jentic.core.messaging.MessageDispatcher;
  * @since 0.10.0
  */
 public record AgentContext(
-        MessageService messageService,
+        MessageDispatcher messageDispatcher,
         AgentDirectory agentDirectory,
         BehaviorScheduler behaviorScheduler,
         MemoryStore memoryStore
 ) {
 
-    /**
-     * Compact canonical constructor — validates required services.
-     */
     public AgentContext {
-        if (messageService == null) throw new IllegalArgumentException("messageService must not be null");
+        if (messageDispatcher == null) throw new IllegalArgumentException("messageDispatcher must not be null");
         if (agentDirectory == null) throw new IllegalArgumentException("agentDirectory must not be null");
         if (behaviorScheduler == null) throw new IllegalArgumentException("behaviorScheduler must not be null");
     }
@@ -59,21 +55,12 @@ public record AgentContext(
     /**
      * Convenience constructor for runtimes without a {@link MemoryStore}.
      *
-     * @param messageService    the messaging service, never null
+     * @param messageDispatcher the message dispatcher, never null
      * @param agentDirectory    the agent discovery service, never null
      * @param behaviorScheduler the behavior scheduler, never null
      */
-    public AgentContext(MessageService messageService, AgentDirectory agentDirectory,
+    public AgentContext(MessageDispatcher messageDispatcher, AgentDirectory agentDirectory,
                         BehaviorScheduler behaviorScheduler) {
-        this(messageService, agentDirectory, behaviorScheduler, null);
-    }
-
-    /**
-     * Returns the {@link MessageDispatcher} view of the message service.
-     *
-     * @since 0.20.0
-     */
-    public MessageDispatcher messageDispatcher() {
-        return messageService;
+        this(messageDispatcher, agentDirectory, behaviorScheduler, null);
     }
 }

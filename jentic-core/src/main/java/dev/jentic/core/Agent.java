@@ -341,19 +341,4 @@ public interface Agent {
      */
     MessageDispatcher getMessageDispatcher();
 
-    /**
-     * Returns the message service for this agent.
-     *
-     * @return the message service, or throws if the dispatcher is not a {@link MessageService}
-     * @deprecated since 0.20.0, for removal at 0.22.0. Use {@link #getMessageDispatcher()}.
-     * @see MessageDispatcher
-     */
-    @Deprecated(since = "0.20.0", forRemoval = true)
-    default MessageService getMessageService() {
-        var d = getMessageDispatcher();
-        if (d instanceof MessageService ms) return ms;
-        throw new UnsupportedOperationException(
-                "This dispatcher does not implement MessageService. " +
-                "Migrate to getMessageDispatcher(). See ADR-020.");
-    }
 }

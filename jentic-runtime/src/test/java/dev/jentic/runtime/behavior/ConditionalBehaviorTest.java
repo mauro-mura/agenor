@@ -4,7 +4,8 @@ import dev.jentic.core.condition.Condition;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.advanced.ConditionalBehavior;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class ConditionalBehaviorTest {
     @BeforeEach
     void setUp() {
         agent = new TestAgent();
-        agent.setMessageService(new InMemoryMessageService());
+        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop()));
         agent.setAgentDirectory(new LocalAgentDirectory());
         
         scheduler = new SimpleBehaviorScheduler();

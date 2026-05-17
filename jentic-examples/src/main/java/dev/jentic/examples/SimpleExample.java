@@ -1,8 +1,6 @@
 package dev.jentic.examples;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.messaging.MessageDispatcher;
-import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.CyclicBehavior;

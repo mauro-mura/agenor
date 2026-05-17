@@ -4,7 +4,6 @@ import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.JenticConfiguration;
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticMessageHandler;
 import dev.jentic.core.config.ConfigurationException;
@@ -12,7 +11,6 @@ import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -212,7 +210,7 @@ class JenticRuntimeTest {
         JenticRuntime runtime = JenticRuntime.builder().build();
 
         assertThat(runtime.getAgentDirectory()).isNotNull();
-        assertThat(runtime.getMessageService()).isNotNull();
+        assertThat(runtime.getMessageDispatcher()).isNotNull();
         assertThat(runtime.getBehaviorScheduler()).isNotNull();
         assertThat(runtime.getLifecycleManager()).isNotNull();
         assertThat(runtime.getConfiguration()).isNotNull();
@@ -277,13 +275,6 @@ class JenticRuntimeTest {
     }
 
     // ========== BUILDER OPTIONS ==========
-
-    @Test
-    void builder_shouldAcceptCustomMessageService() {
-        InMemoryMessageService customMs = new InMemoryMessageService();
-        JenticRuntime r = JenticRuntime.builder().messageService(customMs).build();
-        assertThat(r.getMessageService()).isSameAs(customMs);
-    }
 
     @Test
     void builder_shouldAcceptCustomAgentDirectory() {
@@ -500,36 +491,6 @@ class JenticRuntimeTest {
     }
 
     // ========== REQUEST-REPLY INTEGRATION ==========
-
-    /**
-     * Bug documentation: sendAndWait() on getMessageService() sends on the legacy InMemoryMessageService bus,
-     * while @JenticMessageHandler subscriptions live on getMessageDispatcher() (InMemoryMessageDispatcher).
-     * The two buses are separate — request never reaches the handler and the future always times out.
-     */
-    @Test
-    @SuppressWarnings("deprecation")
-    void requestReply_viaGetMessageService_sendAndWait_shouldTimeoutWhenHandlerIsOnDispatcher() throws Exception {
-        runtimeUnderTest = JenticRuntime.builder().build();
-        EchoResponderAgent responder = new EchoResponderAgent("rr-responder-legacy");
-        runtimeUnderTest.registerAgent(responder);
-        runtimeUnderTest.start().join();
-
-        // sendAndWait sends on InMemoryMessageService bus; @JenticMessageHandler subscribes on
-        // InMemoryMessageDispatcher bus — two separate instances → request never reaches the handler
-        Message request = Message.builder()
-                .senderId("rr-caller")
-                .topic("rr.request")
-                .content("ping")
-                .build();
-
-        CompletableFuture<Message> reply = runtimeUnderTest.getMessageService()
-                .sendAndWait(request, 400);
-
-        assertThatThrownBy(reply::join)
-                .isInstanceOf(java.util.concurrent.CompletionException.class)
-                .hasCauseInstanceOf(java.util.concurrent.TimeoutException.class)
-                .as("sendAndWait via getMessageService() must time out because it uses a separate bus from the dispatcher");
-    }
 
     /**
      * Correct agent-to-agent request-reply: the requester (a registered agent) subscribes for direct

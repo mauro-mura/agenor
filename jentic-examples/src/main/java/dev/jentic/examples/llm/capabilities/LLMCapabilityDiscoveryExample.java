@@ -198,7 +198,9 @@ class CapabilityCoordinator extends BaseAgent {
                 .status(AgentStatus.RUNNING)
                 .build();
 
-            CompletableFuture<Void> queryFuture = agentDirectory.findAgents(query)
+            CompletableFuture<Void> queryFuture = agentDirectory
+                .findAgents(query, PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content)
                 .thenAccept(agents -> {
                     if (!agents.isEmpty()) {
                         agentsByCapability.put(capability, agents);
@@ -346,7 +348,9 @@ class CapabilityCoordinator extends BaseAgent {
             .status(AgentStatus.RUNNING)
             .build();
 
-        agentDirectory.findAgents(query).thenAccept(agents -> {
+        agentDirectory.findAgents(query, PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content)
+                .thenAccept(agents -> {
             if (!agents.isEmpty()) {
                 Set<String> allCapabilities = new HashSet<>();
                 agents.forEach(agent -> allCapabilities.addAll(agent.capabilities()));

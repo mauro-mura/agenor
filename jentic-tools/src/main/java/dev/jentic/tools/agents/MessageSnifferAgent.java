@@ -4,6 +4,8 @@ import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.console.ConsoleEventListener;
 import dev.jentic.core.filter.MessageFilter;
+import dev.jentic.core.messaging.FilterableSubscriber;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.tools.history.MessageHistoryService;
 import dev.jentic.tools.history.MessageHistoryService.StoredMessage;
@@ -55,7 +57,7 @@ public class MessageSnifferAgent extends BaseAgent {
 
     private final MessageHistoryService history;
     private final MessageFilter filter;
-    private volatile String subscriptionId;
+    private volatile Subscription subscription;
     private volatile ConsoleEventListener eventListener;
 
     /**
@@ -111,18 +113,23 @@ public class MessageSnifferAgent extends BaseAgent {
 
     @Override
     protected void onStart() {
-        subscriptionId = messageService.subscribe(filter, this::captureMessage);
-        log.info("🔎 Sniffer started - filter: {}, capacity: {}", 
+        if (getMessageDispatcher() instanceof FilterableSubscriber fs) {
+            subscription = fs.subscribeFiltered(filter, this::captureMessage);
+        } else {
+            log.warn("MessageDispatcher does not support predicate filtering — sniffer disabled");
+        }
+        log.info("Sniffer started - filter: {}, capacity: {}",
                 filter.getClass().getSimpleName(), history.getMaxSize());
     }
 
     @Override
     protected void onStop() {
-        if (subscriptionId != null) {
-            messageService.unsubscribe(subscriptionId);
-            subscriptionId = null;
+        Subscription sub = this.subscription;
+        if (sub != null) {
+            sub.unsubscribe();
+            this.subscription = null;
         }
-        log.info("🔎 Sniffer stopped - captured {} messages", history.size());
+        log.info("Sniffer stopped - captured {} messages", history.size());
     }
 
     private CompletableFuture<Void> captureMessage(Message message) {
@@ -233,6 +240,6 @@ public class MessageSnifferAgent extends BaseAgent {
      * Checks if sniffer is actively capturing.
      */
     public boolean isCapturing() {
-        return subscriptionId != null && isRunning();
+        return subscription != null && isRunning();
     }
 }

@@ -2,7 +2,6 @@ package dev.jentic.core.condition;
 
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 

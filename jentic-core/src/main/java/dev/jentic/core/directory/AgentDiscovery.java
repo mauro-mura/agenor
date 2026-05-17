@@ -50,9 +50,7 @@ public interface AgentDiscovery {
     /**
      * Finds agents matching the given query, returning a bounded page of results.
      *
-     * <p>Use {@link AgentQuery#all()} to retrieve all agents (with pagination).
-     * Prefer this method over {@link dev.jentic.core.AgentDirectory#listAll()} for
-     * any directory that may contain more than a few hundred agents.
+     * <p>Use {@link AgentQuery#all()} to retrieve all agents with pagination.
      *
      * @param query   the search criteria, must not be null
      * @param request pagination parameters, must not be null

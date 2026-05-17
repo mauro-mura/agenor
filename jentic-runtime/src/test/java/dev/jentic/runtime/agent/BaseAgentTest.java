@@ -18,13 +18,14 @@ import org.junit.jupiter.api.Test;
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.BehaviorScheduler;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.memory.MemoryScope;
 import dev.jentic.core.memory.MemoryStats;
+import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.behavior.OneShotBehavior;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.memory.InMemoryStore;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 
 /**
@@ -32,20 +33,20 @@ import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
  */
 class BaseAgentTest {
     
-    private MessageService messageService;
+    private MessageDispatcher messageDispatcher;
     private AgentDirectory agentDirectory;
     private BehaviorScheduler behaviorScheduler;
     private TestAgent agent;
-    
+
     @BeforeEach
     void setUp() {
-        messageService = new InMemoryMessageService();
         agentDirectory = new LocalAgentDirectory();
+        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, JenticTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
-        
+
         agent = new TestAgent("test-agent", "Test Agent");
-        agent.setMessageService(messageService);
+        agent.setMessageDispatcher(messageDispatcher);
         agent.setAgentDirectory(agentDirectory);
         agent.setBehaviorScheduler(behaviorScheduler);
     }
@@ -156,24 +157,10 @@ class BaseAgentTest {
     }
     
     @Test
-    void shouldGetMessageService() {
-        assertThat(agent.getMessageService()).isEqualTo(messageService);
+    void shouldGetMessageDispatcher() {
+        assertThat(agent.getMessageDispatcher()).isEqualTo(messageDispatcher);
     }
-    
-    @Test
-    void shouldInitializeServicesWhenNoneSet() {
-        // Given
-        TestAgent agentWithoutServices = new TestAgent("test-2", "Test Agent 2");
-        // Note: no services set
-        
-        // When
-        agentWithoutServices.start().join();
-        
-        // Then
-        assertThat(agentWithoutServices.getMessageService()).isNotNull();
-        assertThat(agentWithoutServices.getMessageService()).isInstanceOf(InMemoryMessageService.class);
-    }
-    
+
 // ========== MEMORY FUNCTIONALITY TESTS ==========
     
     @Test

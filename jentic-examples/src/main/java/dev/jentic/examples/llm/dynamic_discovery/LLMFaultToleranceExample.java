@@ -172,7 +172,9 @@ class DynamicCoordinator extends BaseAgent {
             .status(AgentStatus.RUNNING)
             .build();
 
-        agentDirectory.findAgents(specialistQuery).thenAccept(specialists -> {
+        agentDirectory.findAgents(specialistQuery, PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content)
+                .thenAccept(specialists -> {
             log.info("🔍 Found {} available specialists", specialists.size());
 
             if (specialists.isEmpty()) {
@@ -312,7 +314,9 @@ class DynamicCoordinator extends BaseAgent {
             .status(AgentStatus.RUNNING)
             .build();
 
-        agentDirectory.findAgents(query).thenAccept(specialists -> {
+        agentDirectory.findAgents(query, PageRequest.first(Integer.MAX_VALUE))
+                .thenApply(Page::content)
+                .thenAccept(specialists -> {
             if (!specialists.isEmpty()) {
                 String caps = specialists.stream()
                     .flatMap(s -> s.capabilities().stream())

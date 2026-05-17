@@ -22,7 +22,7 @@ import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.FilterableSubscriber;
 import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.MemoryQuery;
@@ -30,7 +30,6 @@ import dev.jentic.core.memory.MemoryScope;
 import dev.jentic.core.memory.MemoryStats;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.behavior.BaseBehavior;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
 
 /**
  * Base implementation for all agents in the Jentic framework.
@@ -93,7 +92,6 @@ public abstract class BaseAgent implements Agent {
     private final List<Runnable> stopHooks = new CopyOnWriteArrayList<>();
 
     // Core services (injected by runtime)
-    protected MessageService messageService;
     protected BehaviorScheduler behaviorScheduler;
     protected AgentDirectory agentDirectory;
     
@@ -168,7 +166,7 @@ public abstract class BaseAgent implements Agent {
 
         // Pre-wire services from context; AgentFactory setter-injection is still
         // called for BaseAgent subclasses and will be a no-op (overwrite with same refs).
-        this.messageService = ctx.messageService();
+        this.messageDispatcher = ctx.messageDispatcher();
         this.agentDirectory = ctx.agentDirectory();
         this.behaviorScheduler = ctx.behaviorScheduler();
         this.memoryStore = ctx.memoryStore();
@@ -300,11 +298,6 @@ public abstract class BaseAgent implements Agent {
     }
 
 
-    @Override
-    public MessageService getMessageService() {
-        return messageService;
-    }
-
     private MessageDispatcher messageDispatcher;
 
     public void setMessageDispatcher(MessageDispatcher dispatcher) {
@@ -314,20 +307,11 @@ public abstract class BaseAgent implements Agent {
     /**
      * Returns the message dispatcher for this agent.
      *
-     * <p>Prefer this over {@link #getMessageService()} for new code.
-     *
      * @since 0.20.0
      */
     @Override
     public MessageDispatcher getMessageDispatcher() {
-        return messageDispatcher != null ? messageDispatcher : messageService;
-    }
-
-    /**
-     * Set the message service for this agent
-     */
-    public void setMessageService(MessageService messageService) {
-        this.messageService = messageService;
+        return messageDispatcher;
     }
     
     /**
@@ -484,13 +468,7 @@ public abstract class BaseAgent implements Agent {
         }
     }
 
-    /**
-     * Initialize services with defaults if not set
-     */
     protected void initializeServices() {
-        if (messageService == null) {
-            messageService = new InMemoryMessageService();
-        }
     }
     
     /**
@@ -512,26 +490,16 @@ public abstract class BaseAgent implements Agent {
      * Called during agent start.
      */
     private void autoSubscribeDirectMessages() {
-        if (messageDispatcher == null && messageService == null) {
+        if (messageDispatcher == null) {
             log.warn("Agent '{}': Cannot auto-subscribe - no message dispatcher", agentId);
             return;
         }
 
         try {
-            if (messageDispatcher != null) {
-                directMessageSubscription = messageDispatcher.subscribeRecipient(
-                        getAgentId(),
-                        MessageHandler.sync(this::handleDirectMessage)
-                );
-            } else {
-                // Legacy fallback — messageDispatcher not injected
-                String legacyId = messageService.subscribeToReceiver(
-                        getAgentId(),
-                        MessageHandler.sync(this::handleDirectMessage)
-                );
-                directMessageSubscription = dev.jentic.core.messaging.Subscription.of(
-                        legacyId, () -> messageService.unsubscribe(legacyId));
-            }
+            directMessageSubscription = messageDispatcher.subscribeRecipient(
+                    getAgentId(),
+                    MessageHandler.sync(this::handleDirectMessage)
+            );
 
             log.debug("Agent '{}' auto-subscribed for direct messages", agentId);
 
@@ -599,7 +567,7 @@ public abstract class BaseAgent implements Agent {
 
         log.trace("Agent '{}' sending to '{}': {}", agentId, receiverAgentId, content);
 
-        return messageService.send(message);
+        return messageDispatcher.sendTo(message);
     }
 
     /**
@@ -634,16 +602,40 @@ public abstract class BaseAgent implements Agent {
         log.debug("Agent '{}' requesting from '{}' (timeout: {}ms)",
                 agentId, receiverAgentId, timeoutMillis);
 
-        return messageService.sendAndWait(request, timeoutMillis)
-                .whenComplete((response, error) -> {
-                    if (error != null) {
-                        log.warn("Request from '{}' to '{}' failed: {}",
-                                agentId, receiverAgentId, error.getMessage());
-                    } else {
-                        log.debug("Agent '{}' received response from '{}'",
-                                agentId, receiverAgentId);
-                    }
-                });
+        var future = new java.util.concurrent.CompletableFuture<Message>();
+        String correlationId = request.id();
+
+        // Subscribe for the correlated reply
+        if (messageDispatcher instanceof FilterableSubscriber fs) {
+            var sub = fs.subscribeFiltered(
+                    msg -> correlationId.equals(msg.correlationId()),
+                    msg -> {
+                        future.complete(msg);
+                        return java.util.concurrent.CompletableFuture.completedFuture(null);
+                    });
+            future.orTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                  .whenComplete((r, e) -> sub.unsubscribe());
+        } else {
+            future.completeExceptionally(
+                    new UnsupportedOperationException("requestFrom requires FilterableSubscriber"));
+            return future.whenComplete((r, e) ->
+                    log.warn("Request from '{}' to '{}' failed: {}",
+                            agentId, receiverAgentId, e != null ? e.getMessage() : "ok"));
+        }
+
+        messageDispatcher.sendTo(request).exceptionally(e -> {
+            future.completeExceptionally(e);
+            return null;
+        });
+
+        return future.whenComplete((response, error) -> {
+            if (error != null) {
+                log.warn("Request from '{}' to '{}' failed: {}",
+                        agentId, receiverAgentId, error.getMessage());
+            } else {
+                log.debug("Agent '{}' received response from '{}'", agentId, receiverAgentId);
+            }
+        });
     }
 
     /**
@@ -662,7 +654,7 @@ public abstract class BaseAgent implements Agent {
         log.trace("Agent '{}' replying to message {} from '{}'",
                 agentId, originalMessage.id(), originalMessage.senderId());
 
-        return messageService.send(reply);
+        return messageDispatcher.sendTo(reply);
     }
 
     private void startBehaviors() {

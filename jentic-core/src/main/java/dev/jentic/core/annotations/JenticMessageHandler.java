@@ -1,5 +1,6 @@
 package dev.jentic.core.annotations;
 
+import dev.jentic.core.messaging.MessageDispatcher;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -11,7 +12,7 @@ import java.lang.annotation.Target;
  *
  * <p>The annotated method must be {@code public} and accept a single
  * {@link dev.jentic.core.Message} parameter. The runtime registers the method as a
- * subscriber on the agent's {@link dev.jentic.core.MessageService} using the provided
+ * subscriber on the agent's {@link MessageDispatcher} using the provided
  * topic pattern.
  *
  * <p>Topic patterns support wildcard matching: {@code "orders.*"} matches
@@ -36,7 +37,7 @@ import java.lang.annotation.Target;
  * }</pre>
  *
  * @since 0.1.0
- * @see dev.jentic.core.MessageService
+ * @see MessageDispatcher
  * @see dev.jentic.core.Message
  * @see JenticAgent
  */

@@ -4,7 +4,9 @@ import dev.jentic.core.Message;
 import dev.jentic.core.console.ConsoleEventListener;
 import dev.jentic.core.filter.MessageFilter;
 import dev.jentic.runtime.filter.TopicFilter;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.jentic.tools.history.MessageHistoryService;
 import org.junit.jupiter.api.*;
@@ -22,12 +24,12 @@ class MessageSnifferAgentTest {
     // Lifecycle infrastructure (shared by Lifecycle nested class)
     // =========================================================================
 
-    private InMemoryMessageService messageService;
+    private InMemoryMessageDispatcher messageDispatcher;
     private SimpleBehaviorScheduler scheduler;
 
     @BeforeEach
     void setUpInfrastructure() {
-        messageService = new InMemoryMessageService();
+        messageDispatcher = new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop());
         scheduler = new SimpleBehaviorScheduler();
         scheduler.start().join();
     }
@@ -41,7 +43,7 @@ class MessageSnifferAgentTest {
     }
 
     private void startSniffer(MessageSnifferAgent agent) {
-        agent.setMessageService(messageService);
+        agent.setMessageDispatcher(messageDispatcher);
         agent.setBehaviorScheduler(scheduler);
         agent.start().join();
     }
@@ -360,7 +362,7 @@ class MessageSnifferAgentTest {
             sniffer = new MessageSnifferAgent();
             startSniffer(sniffer);
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("test.event")
                     .senderId("publisher")
                     .content("payload")
@@ -379,9 +381,9 @@ class MessageSnifferAgentTest {
             sniffer = new MessageSnifferAgent(orderFilter);
             startSniffer(sniffer);
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("order.created").senderId("s").content("x").build()).join();
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("payment.done").senderId("s").content("x").build()).join();
 
             Thread.sleep(200);
@@ -396,14 +398,14 @@ class MessageSnifferAgentTest {
             sniffer = new MessageSnifferAgent();
             startSniffer(sniffer);
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("before.stop").senderId("s").content("c").build()).join();
             Thread.sleep(200);
             int countBeforeStop = sniffer.getMessageCount();
 
             sniffer.stop().join();
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("after.stop").senderId("s").content("c").build()).join();
             Thread.sleep(200);
 
@@ -418,7 +420,7 @@ class MessageSnifferAgentTest {
             sniffer.setEventListener(countingListener(notified));
             startSniffer(sniffer);
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("notify.test").senderId("s").content("c").build()).join();
             Thread.sleep(200);
 
@@ -433,7 +435,7 @@ class MessageSnifferAgentTest {
             startSniffer(sniffer);
 
             assertThatCode(() -> {
-                messageService.send(Message.builder()
+                messageDispatcher.publish(Message.builder()
                         .topic("error.test").senderId("s").content("c").build()).join();
                 Thread.sleep(200);
             }).doesNotThrowAnyException();
@@ -448,7 +450,7 @@ class MessageSnifferAgentTest {
             sniffer.setEventListener(null);
             startSniffer(sniffer);
 
-            messageService.send(Message.builder()
+            messageDispatcher.publish(Message.builder()
                     .topic("silent.test").senderId("s").content("c").build()).join();
             Thread.sleep(200);
 

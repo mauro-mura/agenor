@@ -35,8 +35,6 @@ import java.util.function.Predicate;
  * with {@link AgentNotFoundException}.
  *
  * <p>This is the primary messaging implementation for single-JVM deployments.
- * The deprecated {@link InMemoryMessageService} remains available for code that
- * has not yet migrated to the split API.
  *
  * @since 0.20.0
  */

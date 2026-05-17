@@ -1,12 +1,13 @@
 package dev.jentic.core;
 
+import dev.jentic.core.messaging.MessageDispatcher;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Functional interface for handling received messages in the Jentic framework.
  *
  * <p>A {@code MessageHandler} is a callback that processes incoming messages.
- * Handlers are registered with the {@link MessageService} to receive messages
+ * Handlers are registered with the {@link MessageDispatcher} to receive messages
  * matching specific criteria (topics, receivers, or predicates).
  *
  * <p><strong>Functional Interface:</strong>
@@ -124,7 +125,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 0.1.0
  * @see Message
- * @see MessageService
+ * @see MessageDispatcher
  */
 @FunctionalInterface
 public interface MessageHandler {

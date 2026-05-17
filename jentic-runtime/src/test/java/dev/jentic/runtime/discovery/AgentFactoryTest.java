@@ -5,6 +5,7 @@ import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.context.AgentContext;
 import dev.jentic.core.exceptions.AgentException;
 import dev.jentic.core.memory.MemoryStore;
+import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,8 @@ import static org.mockito.Mockito.*;
 class AgentFactoryTest {
 
     @Mock
-    private MessageService messageService;
-    
+    private MessageDispatcher messageDispatcher;
+
     @Mock
     private AgentDirectory agentDirectory;
     
@@ -41,7 +42,7 @@ class AgentFactoryTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        factory = new AgentFactory(messageService, agentDirectory, behaviorScheduler, memoryStore);
+        factory = new AgentFactory(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore);
     }
 
     // =========================================================================
@@ -57,7 +58,7 @@ class AgentFactoryTest {
     @Test
     @DisplayName("Should create factory without memory store")
     void shouldCreateFactoryWithoutMemoryStore() {
-        AgentFactory factoryNoMem = new AgentFactory(messageService, agentDirectory, behaviorScheduler, null);
+        AgentFactory factoryNoMem = new AgentFactory(messageDispatcher, agentDirectory, behaviorScheduler, null);
         assertThat(factoryNoMem).isNotNull();
     }
 
@@ -97,7 +98,7 @@ class AgentFactoryTest {
         TestAgentWithMessageService agent = factory.createAgent(TestAgentWithMessageService.class);
 
         assertThat(agent).isNotNull();
-        assertThat(agent.getMessageDispatcher()).isSameAs(messageService);
+        assertThat(agent.getMessageDispatcher()).isSameAs(messageDispatcher);
     }
 
     @Test
@@ -283,7 +284,7 @@ class AgentFactoryTest {
     @DisplayName("Should try fallback constructors")
     void shouldTryFallbackConstructors() throws AgentException {
         // Create factory without some services
-        AgentFactory limitedFactory = new AgentFactory(messageService, null, null, null);
+        AgentFactory limitedFactory = new AgentFactory(messageDispatcher, null, null, null);
         
         AgentWithMultipleConstructors agent = limitedFactory.createAgent(AgentWithMultipleConstructors.class);
         
@@ -372,21 +373,16 @@ class AgentFactoryTest {
 
     @JenticAgent("service-agent")
     static class TestAgentWithMessageService extends BaseAgent {
-        private final MessageService msgService;
+        private final MessageDispatcher msgDispatcher;
 
-        public TestAgentWithMessageService(MessageService messageService) {
+        public TestAgentWithMessageService(MessageDispatcher messageDispatcher) {
             super("service-agent", "Service Agent");
-            this.msgService = messageService;
+            this.msgDispatcher = messageDispatcher;
         }
 
         @Override
-        public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() {
-            return msgService;
-        }
-
-        @Override
-        public MessageService getMessageService() {
-            return msgService;
+        public MessageDispatcher getMessageDispatcher() {
+            return msgDispatcher;
         }
     }
 
@@ -429,22 +425,22 @@ class AgentFactoryTest {
     @JenticAgent("multi-constructor")
     static class AgentWithMultipleConstructors extends BaseAgent {
         private int usedConstructorParams;
-        
-        public AgentWithMultipleConstructors(MessageService ms, AgentDirectory ad, BehaviorScheduler bs) {
+
+        public AgentWithMultipleConstructors(MessageDispatcher md, AgentDirectory ad, BehaviorScheduler bs) {
             super("multi-constructor", "Multi Constructor");
             this.usedConstructorParams = 3;
         }
-        
-        public AgentWithMultipleConstructors(MessageService ms) {
+
+        public AgentWithMultipleConstructors(MessageDispatcher md) {
             super("multi-constructor", "Multi Constructor");
             this.usedConstructorParams = 1;
         }
-        
+
         public AgentWithMultipleConstructors() {
             super("multi-constructor", "Multi Constructor");
             this.usedConstructorParams = 0;
         }
-        
+
         public int getUsedConstructorParams() {
             return usedConstructorParams;
         }
@@ -476,7 +472,7 @@ class AgentFactoryTest {
         assertThat(agent).isNotNull();
         assertThat(agent.getAgentId()).isEqualTo("plain-context-agent");
         assertThat(agent.getContext()).isNotNull();
-        assertThat(agent.getContext().messageService()).isSameAs(messageService);
+        assertThat(agent.getContext().messageDispatcher()).isSameAs(messageDispatcher);
         assertThat(agent.getContext().agentDirectory()).isSameAs(agentDirectory);
         assertThat(agent.getContext().behaviorScheduler()).isSameAs(behaviorScheduler);
         assertThat(agent.getContext().memoryStore()).isSameAs(memoryStore);
@@ -489,14 +485,14 @@ class AgentFactoryTest {
 
         assertThat(agent).isNotNull();
         assertThat(agent.getAgentId()).isEqualTo("plain-services-agent");
-        assertThat(agent.getMessageDispatcher()).isSameAs(messageService);
+        assertThat(agent.getMessageDispatcher()).isSameAs(messageDispatcher);
     }
 
     @Test
     @DisplayName("AgentContext should not be registered when required services are null")
     void shouldNotRegisterAgentContextWhenServicesAreNull() throws AgentException {
         // Factory without agentDirectory — AgentContext cannot be built
-        AgentFactory partialFactory = new AgentFactory(messageService, null, null, null);
+        AgentFactory partialFactory = new AgentFactory(messageDispatcher, null, null, null);
 
         // Plain agent that needs AgentContext: no suitable constructor should be found
         assertThatThrownBy(() -> partialFactory.createAgent(PlainAgentWithContext.class))
@@ -547,14 +543,14 @@ class AgentFactoryTest {
     @JenticAgent("plain-services-agent")
     static class PlainAgentWithServices extends AbstractPlainAgent {
 
-        private final MessageService msgService;
+        private final MessageDispatcher msgDispatcher;
 
-        public PlainAgentWithServices(MessageService messageService) {
+        public PlainAgentWithServices(MessageDispatcher messageDispatcher) {
             super("plain-services-agent");
-            this.msgService = messageService;
+            this.msgDispatcher = messageDispatcher;
         }
 
         @Override
-        public dev.jentic.core.messaging.MessageDispatcher getMessageDispatcher() { return msgService; }
+        public MessageDispatcher getMessageDispatcher() { return msgDispatcher; }
     }
 }

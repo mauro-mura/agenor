@@ -3,8 +3,10 @@ package dev.jentic.runtime.agent;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorScheduler;
-import dev.jentic.core.MessageService;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.core.messaging.MessageDispatcher;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,18 +25,18 @@ import static org.assertj.core.api.Assertions.*;
  */
 class BaseAgentLifecycleHooksTest {
     
-    private MessageService messageService;
+    private MessageDispatcher messageDispatcher;
     private BehaviorScheduler behaviorScheduler;
     private TestAgent agent;
-    
+
     @BeforeEach
     void setUp() {
-        messageService = new InMemoryMessageService();
+        messageDispatcher = new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
-        
+
         agent = new TestAgent("test-agent");
-        agent.setMessageService(messageService);
+        agent.setMessageDispatcher(messageDispatcher);
         agent.setBehaviorScheduler(behaviorScheduler);
     }
     
@@ -86,7 +88,7 @@ class BaseAgentLifecycleHooksTest {
         AtomicBoolean hasMessageService = new AtomicBoolean(false);
         
         agent.onStartHook(() -> {
-            hasMessageService.set(agent.getMessageService() != null);
+            hasMessageService.set(agent.getMessageDispatcher() != null);
         });
         
         // When

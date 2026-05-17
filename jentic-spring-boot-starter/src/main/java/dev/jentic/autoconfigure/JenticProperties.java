@@ -110,46 +110,50 @@ public record JenticProperties(
     /**
      * Messaging
      *
-     * @param provider   messaging provider implementation; default {@code inmemory}
-     * @param properties provider-specific configuration key/value pairs
-     * @param redis      Redis-specific configuration; only used when {@code provider=redis}
+     * <p>Redis provider example:
+     * <pre>{@code
+     * jentic:
+     *   messaging:
+     *     provider: redis
+     *     properties:
+     *       uri: redis://localhost:6379
+     *       consumer-group-prefix: jentic
+     *       read-block-timeout-ms: "2000"
+     *       max-stream-length: "100000"
+     *       pending-entries-timeout-ms: "30000"
+     *       max-delivery-attempts: "3"
+     * }</pre>
+     *
+     * @param provider   messaging provider implementation: {@code inmemory} (default) or {@code redis}
+     * @param properties provider-specific configuration key/value pairs; for Redis: {@code uri},
+     *                   {@code consumer-group-prefix}, {@code read-block-timeout-ms},
+     *                   {@code max-stream-length}, {@code pending-entries-timeout-ms},
+     *                   {@code max-delivery-attempts}
      */
     public record Messaging(
             @DefaultValue("inmemory") String provider,
-            @DefaultValue Map<String, String> properties,
-            @DefaultValue Redis redis
-    ) {
-
-        /**
-         * Redis messaging configuration.
-         *
-         * <p>Only used when {@code jentic.messaging.provider=redis} and
-         * {@code lettuce-core} is on the classpath.
-         *
-         * @param uri                     Redis connection URI; default {@code redis://localhost:6379}
-         * @param consumerGroupPrefix     prefix for stream keys and consumer group names;
-         *                                default {@code jentic}
-         * @param readBlockTimeoutMs      {@code XREADGROUP BLOCK} wait time in ms; default {@code 2000}
-         * @param maxStreamLength         max entries per stream before trimming; default {@code 100000}
-         * @param pendingEntriesTimeoutMs idle time before unacked entry is redelivered; default {@code 30000}
-         * @param maxDeliveryAttempts     max failures before a message is moved to the DLQ; default {@code 3}
-         * @since 0.21.0
-         */
-        public record Redis(
-                @DefaultValue("redis://localhost:6379") String uri,
-                @DefaultValue("jentic")  String consumerGroupPrefix,
-                @DefaultValue("2000")    long readBlockTimeoutMs,
-                @DefaultValue("100000")  int  maxStreamLength,
-                @DefaultValue("30000")   long pendingEntriesTimeoutMs,
-                @DefaultValue("3")       int  maxDeliveryAttempts
-        ) {}
-    }
+            @DefaultValue Map<String, String> properties
+    ) {}
 
     /**
      * Directory
-     * 
-     * @param provider   agent directory implementation; default {@code local}
-     * @param properties provider-specific configuration key/value pairs
+     *
+     * <p>JDBC provider example:
+     * <pre>{@code
+     * jentic:
+     *   directory:
+     *     provider: jdbc
+     *     properties:
+     *       url: jdbc:postgresql://localhost:5432/mydb
+     *       username: jentic
+     *       password: ${DB_PASSWORD}
+     *       pool-size: "10"
+     * }</pre>
+     *
+     * @param provider   agent directory implementation: {@code local} (default), {@code inmemory},
+     *                   or {@code jdbc}
+     * @param properties provider-specific configuration key/value pairs; for JDBC: {@code url},
+     *                   {@code username}, {@code password}, {@code pool-size}
      */
     public record Directory(
             @DefaultValue("local") String provider,

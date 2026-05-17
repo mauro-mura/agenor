@@ -4,6 +4,8 @@ import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.AgentQuery;
 import dev.jentic.core.AgentStatus;
+import dev.jentic.core.Page;
+import dev.jentic.core.PageRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,18 +55,15 @@ public class LocalAgentDirectory implements AgentDirectory {
     }
     
     @Override
-    public CompletableFuture<List<AgentDescriptor>> findAgents(AgentQuery query) {
+    public CompletableFuture<Page<AgentDescriptor>> findAgents(AgentQuery query, PageRequest request) {
         return CompletableFuture.supplyAsync(() -> {
-            return agents.values().stream()
+            var matched = agents.values().stream()
                 .filter(descriptor -> matchesQuery(descriptor, query))
                 .collect(Collectors.toList());
-        });
-    }
-    
-    @Override
-    public CompletableFuture<List<AgentDescriptor>> listAll() {
-        return CompletableFuture.supplyAsync(() -> {
-            return List.copyOf(agents.values());
+            int from = (int) Math.min(request.offset(), matched.size());
+            int to   = (int) Math.min(from + request.size(), matched.size());
+            return new Page<>(matched.subList(from, to), matched.size(),
+                    request.page(), request.size());
         });
     }
     

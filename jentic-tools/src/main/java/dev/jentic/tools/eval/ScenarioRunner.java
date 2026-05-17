@@ -1,7 +1,8 @@
 package dev.jentic.tools.eval;
 
 import dev.jentic.core.Message;
-import dev.jentic.core.MessageService;
+import dev.jentic.core.messaging.FilterableSubscriber;
+import dev.jentic.core.messaging.Subscription;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.tools.health.HealthCheckService;
 import dev.jentic.tools.health.HealthCheckService.HealthReport;
@@ -120,14 +121,14 @@ public class ScenarioRunner {
             scenario.getId(), scenario.getTimeout().toMillis());
 
         Instant startTime = Instant.now();
-        String subscriptionId = null;
+        Subscription subscription = null;
 
         try {
             // Clear history for fresh capture
             history.clear();
 
             // Setup message capture BEFORE running scenario
-            subscriptionId = setupMessageCapture();
+            subscription = setupMessageCapture();
             
             // Small delay to ensure subscription is active
             Thread.sleep(50);
@@ -164,8 +165,8 @@ public class ScenarioRunner {
 
         } finally {
             // Cleanup message capture
-            if (subscriptionId != null) {
-                cleanupMessageCapture(subscriptionId);
+            if (subscription != null) {
+                cleanupMessageCapture(subscription);
             }
 
             // Always run teardown
@@ -309,18 +310,16 @@ public class ScenarioRunner {
             .build();
     }
 
-    private String setupMessageCapture() {
-        MessageService messageService = runtime.getMessageService();
-        if (messageService == null) {
-            log.warn("No MessageService available for message capture");
+    private Subscription setupMessageCapture() {
+        var dispatcher = runtime.getMessageDispatcher();
+        if (!(dispatcher instanceof FilterableSubscriber fs)) {
+            log.warn("MessageDispatcher does not support predicate filtering — message capture disabled");
             return null;
         }
 
-        // Use predicate subscription to capture ALL messages
-        // This works with InMemoryMessageService which doesn't support wildcards
         try {
-            String subId = messageService.subscribe(
-                message -> true,  // Match all messages
+            Subscription sub = fs.subscribeFiltered(
+                message -> true,
                 message -> {
                     history.store(message);
                     metrics.increment("messages.captured");
@@ -328,23 +327,19 @@ public class ScenarioRunner {
                     return CompletableFuture.completedFuture(null);
                 }
             );
-            log.debug("Message capture subscription established: {}", subId);
-            return subId;
+            log.debug("Message capture subscription established: {}", sub.subscriptionId());
+            return sub;
         } catch (Exception e) {
             log.warn("Failed to setup message capture: {}", e.getMessage());
             return null;
         }
     }
 
-    private void cleanupMessageCapture(String subscriptionId) {
-        MessageService messageService = runtime.getMessageService();
-        if (messageService != null && subscriptionId != null) {
-            try {
-                messageService.unsubscribe(subscriptionId);
-            } catch (Exception e) {
-                // Ignore cleanup errors
-                log.trace("Cleanup subscription failed: {}", e.getMessage());
-            }
+    private void cleanupMessageCapture(Subscription subscription) {
+        try {
+            subscription.unsubscribe();
+        } catch (Exception e) {
+            log.trace("Cleanup subscription failed: {}", e.getMessage());
         }
     }
 

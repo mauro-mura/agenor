@@ -2,7 +2,8 @@ package dev.jentic.runtime.agent;
 
 import dev.jentic.core.AgentStatus;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ class BaseAgentLifecycleTest {
     @BeforeEach
     void setUp() {
         agent = new TestAgent("test-agent", "Test Agent");
-        agent.setMessageService(new InMemoryMessageService());
+        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop()));
         agent.setAgentDirectory(new LocalAgentDirectory());
         agent.setBehaviorScheduler(new SimpleBehaviorScheduler());
     }
@@ -46,7 +47,7 @@ class BaseAgentLifecycleTest {
     void shouldHandleStartupFailure() {
         // Given
         FailingStartAgent failingAgent = new FailingStartAgent("failing-agent");
-        failingAgent.setMessageService(new InMemoryMessageService());
+        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop()));
         
         // When
         assertThatThrownBy(() -> failingAgent.start().join())
@@ -62,7 +63,7 @@ class BaseAgentLifecycleTest {
     void shouldHandleShutdownError() {
         // Given
         FailingStopAgent failingAgent = new FailingStopAgent("failing-stop-agent");
-        failingAgent.setMessageService(new InMemoryMessageService());
+        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop()));
         
         // Start successfully
         failingAgent.start().join();

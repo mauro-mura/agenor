@@ -63,7 +63,7 @@ public final class OtelJenticTelemetry implements JenticTelemetry, AutoCloseable
      *
      * <p>Forces the {@link io.opentelemetry.sdk.trace.export.BatchSpanProcessor} to export
      * any buffered spans before the process exits. Called automatically by
-     * {@link dev.jentic.runtime.JenticRuntime#stop()} when telemetry is {@link AutoCloseable}.
+     * {@code JenticRuntime.stop()} when telemetry is {@link AutoCloseable}.
      */
     @Override
     public void close() {

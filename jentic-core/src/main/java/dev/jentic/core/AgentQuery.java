@@ -30,8 +30,7 @@ public record AgentQuery(
     /**
      * Creates a query that matches every agent (no filters applied).
      *
-     * <p>Use with {@link dev.jentic.core.directory.AgentDiscovery#findAgents} and pagination
-     * instead of the deprecated {@link AgentDirectory#listAll()}.
+     * <p>Use with {@link dev.jentic.core.directory.AgentDiscovery#findAgents} and pagination.
      *
      * @return an unconstrained query
      * @since 0.20.0

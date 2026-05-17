@@ -70,20 +70,14 @@ class JenticRedisMessagingAutoConfigurationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Redis property defaults
+    // Redis property binding
     // -------------------------------------------------------------------------
 
     @Test
-    void redisPropertiesHaveCorrectDefaults() {
+    void redisPropertiesMapEmptyByDefault() {
         runner.run(ctx -> {
             JenticProperties props = ctx.getBean(JenticProperties.class);
-            JenticProperties.Messaging.Redis redis = props.messaging().redis();
-            assertThat(redis.uri()).isEqualTo("redis://localhost:6379");
-            assertThat(redis.consumerGroupPrefix()).isEqualTo("jentic");
-            assertThat(redis.readBlockTimeoutMs()).isEqualTo(2000L);
-            assertThat(redis.maxStreamLength()).isEqualTo(100_000);
-            assertThat(redis.pendingEntriesTimeoutMs()).isEqualTo(30_000L);
-            assertThat(redis.maxDeliveryAttempts()).isEqualTo(3);
+            assertThat(props.messaging().properties()).isEmpty();
         });
     }
 
@@ -91,22 +85,21 @@ class JenticRedisMessagingAutoConfigurationTest {
     void redisPropertiesBindFromApplicationYaml() {
         runner
             .withPropertyValues(
-                "jentic.messaging.redis.uri=redis://my-redis:6380",
-                "jentic.messaging.redis.consumer-group-prefix=acme",
-                "jentic.messaging.redis.read-block-timeout-ms=5000",
-                "jentic.messaging.redis.max-stream-length=50000",
-                "jentic.messaging.redis.pending-entries-timeout-ms=60000",
-                "jentic.messaging.redis.max-delivery-attempts=5"
+                "jentic.messaging.properties.uri=redis://my-redis:6380",
+                "jentic.messaging.properties.consumer-group-prefix=acme",
+                "jentic.messaging.properties.read-block-timeout-ms=5000",
+                "jentic.messaging.properties.max-stream-length=50000",
+                "jentic.messaging.properties.pending-entries-timeout-ms=60000",
+                "jentic.messaging.properties.max-delivery-attempts=5"
             )
             .run(ctx -> {
-                JenticProperties.Messaging.Redis redis = ctx.getBean(JenticProperties.class)
-                        .messaging().redis();
-                assertThat(redis.uri()).isEqualTo("redis://my-redis:6380");
-                assertThat(redis.consumerGroupPrefix()).isEqualTo("acme");
-                assertThat(redis.readBlockTimeoutMs()).isEqualTo(5_000L);
-                assertThat(redis.maxStreamLength()).isEqualTo(50_000);
-                assertThat(redis.pendingEntriesTimeoutMs()).isEqualTo(60_000L);
-                assertThat(redis.maxDeliveryAttempts()).isEqualTo(5);
+                var p = ctx.getBean(JenticProperties.class).messaging().properties();
+                assertThat(p).containsEntry("uri", "redis://my-redis:6380");
+                assertThat(p).containsEntry("consumer-group-prefix", "acme");
+                assertThat(p).containsEntry("read-block-timeout-ms", "5000");
+                assertThat(p).containsEntry("max-stream-length", "50000");
+                assertThat(p).containsEntry("pending-entries-timeout-ms", "60000");
+                assertThat(p).containsEntry("max-delivery-attempts", "5");
             });
     }
 

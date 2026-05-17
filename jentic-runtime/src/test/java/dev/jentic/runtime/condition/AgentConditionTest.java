@@ -3,7 +3,6 @@ package dev.jentic.runtime.condition;
 import dev.jentic.core.Agent;
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.condition.Condition;
 import dev.jentic.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
