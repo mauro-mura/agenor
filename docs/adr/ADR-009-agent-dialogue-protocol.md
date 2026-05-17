@@ -1,14 +1,20 @@
 # ADR-009: Agent Dialogue Protocol
 
-**Status**: Accepted
+**Status**: Accepted  
 **Date**: 2025-12-13  
+**Last Modified**: 2026-05-17  
 **Authors**: Project Team
+
+> **Amendment — 2026-05-17**: Following ADR-020 (Core API Refactor), the internal transport is
+> `MessageDispatcher` (and its capability interfaces `TopicPublisher`, `TopicSubscriber`,
+> `DirectMessenger`, `DirectReceiver`) rather than the now-removed `MessageService`. All
+> references to `MessageService` in this document have been updated accordingly.
 
 ## Context
 
 The Jentic framework requires standardized agent communication. Analysis reveals two distinct domains:
 
-1. **Intra-Runtime**: Agents within the same JVM communicating via `MessageService`
+1. **Intra-Runtime**: Agents within the same JVM communicating via `MessageDispatcher`
 2. **Extra-Runtime**: Agents communicating with external systems (other runtimes, LLM agents, third-party services)
 
 ### Current Capabilities
@@ -16,7 +22,7 @@ The Jentic framework requires standardized agent communication. Analysis reveals
 | Feature | Status | Notes |
 |---------|--------|-------|
 | `Message` record | ✅ | Basic message structure |
-| `MessageService` | ✅ | Pub-sub and point-to-point |
+| `MessageDispatcher` | ✅ | Topic pub-sub and direct messaging |
 | `AgentDirectory` | ✅ | Agent registration/discovery |
 | Correlation ID | ✅ | Request-response pattern |
 | Headers/metadata | ✅ | Extensible via map |
@@ -43,14 +49,14 @@ Since 2024, protocols have emerged for LLM-based agent systems:
 
 Implement a **dual-domain architecture**:
 
-1. **Dialogue Layer** (internal): Lightweight semantic layer over existing `MessageService`
+1. **Dialogue Layer** (internal): Lightweight semantic layer over existing `MessageDispatcher`
 2. **A2A Bridge** (external): Adapter for interoperability with external agents
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     JENTIC RUNTIME (JVM)                    │
 │                                                             │
-│   ┌─────────┐      MessageService     ┌─────────┐           │
+│   ┌─────────┐     MessageDispatcher    ┌─────────┐           │
 │   │ Agent A │◄───────────────────────►│ Agent B │           │
 │   └─────────┘   + Dialogue semantics  └─────────┘           │
 │        │                                  │                 │
@@ -103,7 +109,7 @@ public record DialogueMessage(
 **Rationale**: 
 - Zero new infrastructure for intra-runtime
 - Microsecond latency (in-memory)
-- Leverages battle-tested `MessageService`
+- Leverages battle-tested `MessageDispatcher`
 
 #### 2. Reduced Performatives (10 Core)
 
@@ -171,7 +177,7 @@ public interface CommitmentTracker {
 // Implements io.a2a.server.agentexecution.AgentExecutor
 public class JenticAgentExecutor implements AgentExecutor {
     
-    private final MessageService messageService;
+    private final MessageDispatcher messageDispatcher;
     private final DialogueA2AConverter converter;
     
     @Override
@@ -182,10 +188,18 @@ public class JenticAgentExecutor implements AgentExecutor {
         
         // Convert A2A -> DialogueMessage -> route internally
         DialogueMessage msg = converter.fromA2A(context.getMessage());
-        Message response = messageService.request(msg.toMessage(), timeout).join();
-        
-        // Convert response -> A2A
-        updater.addArtifact(converter.toA2AParts(response), null, null, null);
+        // Subscribe for reply before sending to avoid races
+        CompletableFuture<Message> replyFuture = new CompletableFuture<>();
+        var subscription = messageDispatcher.subscribeRecipient(externalSenderId,
+                m -> { replyFuture.complete(m); return CompletableFuture.completedFuture(null); });
+        try {
+            messageDispatcher.sendTo(msg.toMessage());
+            Message response = replyFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            // Convert response -> A2A
+            updater.addArtifact(converter.toA2AParts(response), null, null, null);
+        } finally {
+            subscription.unsubscribe();
+        }
         updater.complete();
     }
 }
@@ -253,7 +267,7 @@ jentic-adapters/
 
 ### Positive
 
-1. **Zero overhead for internal communication**: Uses existing `MessageService`
+1. **Zero overhead for internal communication**: Uses existing `MessageDispatcher`
 2. **Industry-standard interoperability**: A2A bridge for external agents
 3. **No protocol maintenance**: A2A SDK handles protocol complexity
 4. **Simplified implementation**: SDK provides Client, Server, models
@@ -281,7 +295,7 @@ jentic-adapters/
 | Conversation tracking | ✅ | - |
 | Commitment semantics | ✅ | - |
 | Protocol FSM | ✅ | - |
-| Internal transport | - | ✅ MessageService |
+| Internal transport | - | ✅ MessageDispatcher (`DirectMessenger` / `TopicPublisher`) |
 | External protocol | - | ✅ A2A (via SDK) |
 | Wire format | - | ✅ A2A JSON |
 | Agent discovery (external) | - | ✅ A2A Agent Cards |

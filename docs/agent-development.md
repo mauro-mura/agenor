@@ -24,7 +24,7 @@ public class HelloAgent extends BaseAgent {
 
     @JenticBehavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
-        messageService.send(Message.builder()
+        getMessageDispatcher().publish(Message.builder()
             .topic("greetings")
             .content("Hello from " + getAgentId())
             .build());
@@ -63,7 +63,7 @@ public class MyAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Called after services are injected and behaviors are registered.
-        // Safe to use messageService, agentDirectory, memoryStore here.
+        // Safe to use getMessageDispatcher(), agentDirectory, memoryStore here.
         log.info("Agent {} is starting", getAgentId());
     }
 
@@ -153,7 +153,7 @@ public class ChatBot extends LLMAgent {
         // Record the assistant turn
         addConversationMessage(LLMMessage.assistant(reply)).join();
 
-        messageService.send(Message.builder().topic("bot.response").content(reply).build());
+        getMessageDispatcher().publish(Message.builder().topic("bot.response").content(reply).build());
     }
 }
 ```

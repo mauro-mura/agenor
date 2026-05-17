@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
+**Last Modified**: 2026-05-17  
 **Authors**: Project Team  
 
 ### Context
@@ -27,19 +28,26 @@ We will use an **Interface-First Architecture** where all core components are de
 ### Implementation
 
 ```java
-// Core interfaces in jentic-core
-public interface MessageService {
-    CompletableFuture<Void> send(Message message);
-    String subscribe(String topic, MessageHandler handler);
+// Core interfaces in jentic-core — each capability is its own interface
+public interface TopicPublisher {
+    CompletableFuture<Void> publish(Message message);
 }
 
+public interface DirectMessenger {
+    CompletableFuture<Void> sendTo(Message message);
+}
+
+// Composite facade composes all capabilities
+public interface MessageDispatcher
+        extends TopicPublisher, TopicSubscriber, DirectMessenger, DirectReceiver { }
+
 // Simple implementation in jentic-runtime
-public class InMemoryMessageService implements MessageService {
+public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableSubscriber {
     // In-memory implementation using ConcurrentHashMap
 }
 
-// Custom implementations follow the same interface
-public class CustomMessageService implements MessageService { ... }
+// Custom implementations need only implement the relevant capability interfaces
+public class CustomTopicPublisher implements TopicPublisher { ... }
 ```
 
 ### Implementation Strategy
