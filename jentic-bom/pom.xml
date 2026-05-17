@@ -37,6 +37,12 @@
 
             <dependency>
                 <groupId>dev.jentic</groupId>
+                <artifactId>jentic-adapters-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>dev.jentic</groupId>
                 <artifactId>jentic-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>

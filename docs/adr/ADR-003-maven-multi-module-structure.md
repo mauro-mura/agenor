@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
-**Last Modified**: 2026-04-23  
+**Last Modified**: 2026-05-17  
 **Authors**: Project Team  
 
 ### Context
@@ -21,7 +21,7 @@ jentic/
 ├── jentic-core/                         # Core interfaces only
 ├── jentic-runtime/                      # In-memory implementations
 ├── jentic-adapters/                     # LLM + A2A + MCP + OTel* + Redis*
-├── jentic-adapters-persistence/         # JDBC directory + JDBC HITL (planned — see ADR-018)
+├── jentic-adapters-persistence/         # JDBC directory + JDBC HITL (see ADR-022)
 ├── jentic-spring-boot-starter/          # Spring Boot 4.0.x auto-configuration
 ├── jentic-examples/                     # Runnable examples (6-level learning path)
 └── jentic-tools/                        # Web console + CLI
@@ -37,7 +37,7 @@ jentic/
    Heavy optional backends (OTel, Lettuce/Redis) are declared `optional=true` per ADR-018.
 4. **jentic-adapters-persistence**: Depends on `jentic-core`; contains HikariCP, Flyway,
    and JDBC drivers. Placed in a dedicated sub-module per ADR-018 because the persistence
-   stack is heavyweight and operationally distinct from the agentic toolkit.
+   stack is heavyweight and operationally distinct from the agentic toolkit. See ADR-022.
 5. **jentic-examples**: Can depend on any module.
 6. **jentic-tools**: Depends on `jentic-runtime`.
 7. **jentic-spring-boot-starter**: Depends on `jentic-runtime` (mandatory) and
@@ -73,7 +73,7 @@ exclusive alternatives gets its own `jentic-adapters-<concern>` sub-module.
     <module>jentic-core</module>
     <module>jentic-runtime</module>
     <module>jentic-adapters</module>
-    <module>jentic-adapters-persistence</module>  <!-- planned — see ADR-018 -->
+    <module>jentic-adapters-persistence</module>  <!-- see ADR-022 -->
     <module>jentic-spring-boot-starter</module>
     <module>jentic-examples</module>
     <module>jentic-tools</module>
