@@ -85,7 +85,11 @@ The table below lists every span emitted by Jentic components. Spans marked
 | `mcp.tool.call` | `JenticMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
 | `reflection.iteration` | `ReflectionBehavior` | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
 | `message.send` | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
-| `directory.resolve` | `InMemoryAgentDirectory` | `agent.id`, `endpoint.type` |
+| `directory.resolve` | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**) | `agent.id`, `endpoint.type` (`not-found` if missing) |
+| `directory.register` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
+| `directory.unregister` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
+| `directory.update_status` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id`, `agent.status` |
+| `directory.find` | `JdbcAgentDiscovery` (**JDBC adapter**) | `directory.find.type` (`by_id`\|`by_capability`\|`by_type`\|`query`), `directory.find.result_count` |
 | `message.publish` | `RedisTopicPublisher` (**Redis adapter**) | `message.topic`, `message.id`, `agent.sender`, `transport.type` |
 | `transport.send` | `RedisMessageTransport` (**Redis adapter**) | `transport.type`, `transport.endpoint`, `message.id`, `agent.sender` |
 | `message.receive` | `ConsumerLoop` (**Redis adapter**) | `message.id`, `message.topic`, `agent.sender`, `message.correlation_id`, `transport.type` |

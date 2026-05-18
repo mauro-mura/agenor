@@ -102,6 +102,12 @@ jentic-adapters
 | `behavior.execute`     | `SimpleBehaviorScheduler`       | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
 | `mcp.tool.call`        | `JenticMcpClientAdapter`        | `mcp.tool.name`, `mcp.transport` (sse/stdio) |
 | `reflection.iteration` | `ReflectionBehavior`            | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
+| `message.send`         | `InMemoryMessageDispatcher`     | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
+| `directory.resolve`    | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**, @since 0.22.0) | `agent.id`, `endpoint.type` (`not-found` if missing) |
+| `directory.register`   | `JdbcAgentRegistry` (**JDBC adapter**, @since 0.22.0) | `agent.id` |
+| `directory.unregister` | `JdbcAgentRegistry` (**JDBC adapter**, @since 0.22.0) | `agent.id` |
+| `directory.update_status` | `JdbcAgentRegistry` (**JDBC adapter**, @since 0.22.0) | `agent.id`, `agent.status` |
+| `directory.find`       | `JdbcAgentDiscovery` (**JDBC adapter**, @since 0.22.0) | `directory.find.type` (`by_id`\|`by_capability`\|`by_type`\|`query`), `directory.find.result_count` |
 
 ### OTel context propagation
 

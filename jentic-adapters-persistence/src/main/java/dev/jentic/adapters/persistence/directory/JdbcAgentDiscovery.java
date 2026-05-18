@@ -6,6 +6,8 @@ import dev.jentic.core.AgentQuery;
 import dev.jentic.core.Page;
 import dev.jentic.core.PageRequest;
 import dev.jentic.core.directory.AgentDiscovery;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.SpanStatus;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -41,38 +43,81 @@ public class JdbcAgentDiscovery implements AgentDiscovery {
             "WHERE a.agent_type = ?";
 
     private final JdbcHelper helper;
+    private final JenticTelemetry telemetry;
 
     public JdbcAgentDiscovery(JdbcHelper helper) {
+        this(helper, JenticTelemetry.noop());
+    }
+
+    /**
+     * @param helper    JDBC helper; must not be null
+     * @param telemetry telemetry for {@code directory.find} spans; null treated as noop
+     */
+    public JdbcAgentDiscovery(JdbcHelper helper, JenticTelemetry telemetry) {
         this.helper = Objects.requireNonNull(helper, "helper must not be null");
+        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
     }
 
     @Override
     public CompletableFuture<Optional<AgentDescriptor>> findById(String agentId) {
         Objects.requireNonNull(agentId, "agentId must not be null");
+        var span = telemetry.spanBuilder("directory.find")
+                .setAttribute("directory.find.type", "by_id")
+                .startSpan();
         return helper.<Optional<AgentDescriptor>>query(conn -> {
             var rows = helper.queryList(conn, SELECT_BY_ID, List.of(agentId),
                     rs -> new Row(helper.mapDescriptor(rs), rs.getString("capability")));
             return mergeRows(rows).stream().findFirst();
+        }).whenComplete((result, ex) -> {
+            if (ex != null) {
+                span.recordException(ex).setStatus(SpanStatus.ERROR);
+            } else {
+                span.setAttribute("directory.find.result_count", result.isPresent() ? 1L : 0L)
+                        .setStatus(SpanStatus.OK);
+            }
+            span.end();
         });
     }
 
     @Override
     public CompletableFuture<List<AgentDescriptor>> findByCapability(String capability) {
         Objects.requireNonNull(capability, "capability must not be null");
+        var span = telemetry.spanBuilder("directory.find")
+                .setAttribute("directory.find.type", "by_capability")
+                .startSpan();
         return helper.<List<AgentDescriptor>>query(conn -> {
             var rows = helper.queryList(conn, SELECT_BY_CAPABILITY, List.of(capability),
                     rs -> new Row(helper.mapDescriptor(rs), rs.getString("capability")));
             return mergeRows(rows);
+        }).whenComplete((result, ex) -> {
+            if (ex != null) {
+                span.recordException(ex).setStatus(SpanStatus.ERROR);
+            } else {
+                span.setAttribute("directory.find.result_count", (long) result.size())
+                        .setStatus(SpanStatus.OK);
+            }
+            span.end();
         });
     }
 
     @Override
     public CompletableFuture<List<AgentDescriptor>> findByType(String agentType) {
         Objects.requireNonNull(agentType, "agentType must not be null");
+        var span = telemetry.spanBuilder("directory.find")
+                .setAttribute("directory.find.type", "by_type")
+                .startSpan();
         return helper.<List<AgentDescriptor>>query(conn -> {
             var rows = helper.queryList(conn, SELECT_BY_TYPE, List.of(agentType),
                     rs -> new Row(helper.mapDescriptor(rs), rs.getString("capability")));
             return mergeRows(rows);
+        }).whenComplete((result, ex) -> {
+            if (ex != null) {
+                span.recordException(ex).setStatus(SpanStatus.ERROR);
+            } else {
+                span.setAttribute("directory.find.result_count", (long) result.size())
+                        .setStatus(SpanStatus.OK);
+            }
+            span.end();
         });
     }
 
@@ -80,7 +125,19 @@ public class JdbcAgentDiscovery implements AgentDiscovery {
     public CompletableFuture<Page<AgentDescriptor>> findAgents(AgentQuery query, PageRequest request) {
         Objects.requireNonNull(query, "query must not be null");
         Objects.requireNonNull(request, "request must not be null");
-        return helper.<Page<AgentDescriptor>>query(conn -> executePagedQuery(conn, query, request));
+        var span = telemetry.spanBuilder("directory.find")
+                .setAttribute("directory.find.type", "query")
+                .startSpan();
+        return helper.<Page<AgentDescriptor>>query(conn -> executePagedQuery(conn, query, request))
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        span.recordException(ex).setStatus(SpanStatus.ERROR);
+                    } else {
+                        span.setAttribute("directory.find.result_count", (long) result.content().size())
+                                .setStatus(SpanStatus.OK);
+                    }
+                    span.end();
+                });
     }
 
     // -------------------------------------------------------------------------

@@ -65,6 +65,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Docs — `docs/adapters/jdbc-directory.md`**: full adapter guide covering prerequisites, Maven dependency, schema, programmatic quick start, Spring Boot auto-configuration, configuration reference, mixed JDBC+in-memory backend design, multi-node scenario, and integration test commands.
 
+- **`jentic-adapters-persistence` — OTel instrumentation for JDBC directory adapters**: all three JDBC capability implementations now emit `JenticTelemetry` spans, consistent with the rest of the Jentic adapter layer. Spans are emitted only when a non-noop `JenticTelemetry` is wired; the default remains zero-overhead noop.
+
+  New spans and emitting classes:
+
+  | Span name | Emitted by | Key attributes |
+  |-----------|------------|----------------|
+  | `directory.resolve` | `JdbcAgentResolver` | `agent.id`, `endpoint.type` (`not-found` if absent) |
+  | `directory.register` | `JdbcAgentRegistry` | `agent.id` |
+  | `directory.unregister` | `JdbcAgentRegistry` | `agent.id` |
+  | `directory.update_status` | `JdbcAgentRegistry` | `agent.id`, `agent.status` |
+  | `directory.find` | `JdbcAgentDiscovery` | `directory.find.type` (`by_id`\|`by_capability`\|`by_type`\|`query`), `directory.find.result_count` |
+
+  All spans follow the async pattern (`spanBuilder()` before the `JdbcHelper` virtual-thread call, `whenComplete()` to set attributes and end the span) so the OTel parent context is captured on the calling thread before the JDBC I/O boundary.
+
+  **`JdbcAgentDirectory.create(JdbcDirectoryConfig, JenticTelemetry)`** — new overload that forwards the telemetry instance to all three adapter constructors. The existing single-argument `create(JdbcDirectoryConfig)` is retained and delegates to the new overload with `JenticTelemetry.noop()`.
+
+  **Spring Boot starter** — `JdbcDirectoryConfiguration.jdbcAgentDirectory()` now injects `ObjectProvider<JenticTelemetry>` and passes `telemetry.getIfAvailable(JenticTelemetry::noop)` to the factory, consistent with the `RedisMessagingConfiguration` wiring pattern.
+
+  **ADR-019** and **`docs/observability.md`** span inventory tables extended with the five new JDBC spans (`@since 0.22.0`).
+
+- **`jentic-adapters-persistence` — span emission tests**: `JdbcAgentDirectoryTest` gains a `RecordingTelemetry` inline test helper (zero new test dependencies) and 9 new test methods verifying span name, attributes, and `SpanStatus` for every instrumented operation (`directory.resolve`, `directory.register`, `directory.unregister`, `directory.update_status`, `directory.find` for all four find types).
+
 ### Changed
 
 - **Spring Boot starter — Redis messaging YAML format** (**breaking** for 0.21.x users): the `jentic.messaging.redis.*` sub-section is replaced by the flat `jentic.messaging.properties.*` map, matching the pattern used by the new JDBC directory provider. The `JenticProperties.Messaging.Redis` sub-record is removed.

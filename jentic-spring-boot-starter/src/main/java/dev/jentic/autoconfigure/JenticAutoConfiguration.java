@@ -461,7 +461,8 @@ public class JenticAutoConfiguration {
         @Bean(destroyMethod = "close")
         @ConditionalOnMissingBean
         public dev.jentic.adapters.persistence.directory.JdbcAgentDirectory jdbcAgentDirectory(
-                JenticProperties props) {
+                JenticProperties props,
+                ObjectProvider<JenticTelemetry> telemetry) {
             var p = props.directory().properties();
             var url = p.get("url");
             if (url == null || url.isBlank()) {
@@ -478,7 +479,8 @@ public class JenticAutoConfiguration {
                     url, username, password, poolSize,
                     "classpath:db/migration/jentic-directory");
             log.debug("Creating JdbcAgentDirectory (url={})", url);
-            return dev.jentic.adapters.persistence.directory.JdbcAgentDirectory.create(config);
+            return dev.jentic.adapters.persistence.directory.JdbcAgentDirectory.create(
+                    config, telemetry.getIfAvailable(JenticTelemetry::noop));
         }
 
         @Bean

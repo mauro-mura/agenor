@@ -6,10 +6,18 @@ import dev.jentic.adapters.persistence.JdbcHelper;
 import dev.jentic.core.AgentDescriptor;
 import dev.jentic.core.AgentEndpoint;
 import dev.jentic.core.AgentStatus;
+import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.telemetry.Span;
+import dev.jentic.core.telemetry.SpanBuilder;
+import dev.jentic.core.telemetry.SpanScope;
+import dev.jentic.core.telemetry.SpanStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +34,7 @@ class JdbcAgentDirectoryTest {
     private JdbcAgentRegistry registry;
     private JdbcAgentDiscovery discovery;
     private JdbcAgentResolver resolver;
+    private RecordingTelemetry telemetry;
 
     @BeforeEach
     void setUp() {
@@ -39,9 +48,10 @@ class JdbcAgentDirectoryTest {
         new DirectorySchemaManager(dataSource, "classpath:db/migration/jentic-directory").migrate();
 
         helper = new JdbcHelper(dataSource);
-        registry = new JdbcAgentRegistry(helper);
-        discovery = new JdbcAgentDiscovery(helper);
-        resolver = new JdbcAgentResolver(helper);
+        telemetry = new RecordingTelemetry();
+        registry = new JdbcAgentRegistry(helper, telemetry);
+        discovery = new JdbcAgentDiscovery(helper, telemetry);
+        resolver = new JdbcAgentResolver(helper, telemetry);
     }
 
     @AfterEach
@@ -193,6 +203,138 @@ class JdbcAgentDirectoryTest {
     }
 
     // -------------------------------------------------------------------------
+    // Telemetry — span emission
+    // -------------------------------------------------------------------------
+
+    @Test
+    void resolveEndpoint_emitsDirectoryResolveSpan_forExistingAgent() {
+        registry.register(descriptor("span-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        resolver.resolveEndpoint("span-agent").join();
+
+        assertThat(telemetry.spans()).hasSize(1);
+        var span = telemetry.spans().get(0);
+        assertThat(span.name()).isEqualTo("directory.resolve");
+        assertThat(span.attributes()).containsEntry("agent.id", "span-agent");
+        assertThat(span.attributes()).containsEntry("endpoint.type", "local");
+        assertThat(span.status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void resolveEndpoint_emitsDirectoryResolveSpan_withNotFoundType_forMissingAgent() {
+        resolver.resolveEndpoint("ghost-agent").join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.resolve")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("endpoint.type", "not-found");
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void register_emitsDirectoryRegisterSpan() {
+        registry.register(descriptor("reg-span-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.register")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("agent.id", "reg-span-agent");
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void updateStatus_emitsDirectoryUpdateStatusSpan() {
+        registry.register(descriptor("status-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        registry.updateStatus("status-agent", AgentStatus.STOPPED).join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.update_status")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("agent.id", "status-agent");
+        assertThat(spans.get(0).attributes()).containsEntry("agent.status", "STOPPED");
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void findByCapability_emitsDirectoryFindSpan() {
+        registry.register(descriptor("cap-agent", "T", AgentStatus.RUNNING, Set.of("cap-x"), Map.of())).join();
+        telemetry.clear();
+
+        discovery.findByCapability("cap-x").join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.find")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.type", "by_capability");
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.result_count", 1L);
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void unregister_emitsDirectoryUnregisterSpan() {
+        registry.register(descriptor("del-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        registry.unregister("del-agent").join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.unregister")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("agent.id", "del-agent");
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void findById_emitsDirectoryFindSpan() {
+        registry.register(descriptor("fbi-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        discovery.findById("fbi-agent").join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.find")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.type", "by_id");
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.result_count", 1L);
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void findByType_emitsDirectoryFindSpan() {
+        registry.register(descriptor("fbt-agent", "FindByTypeAgent", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        discovery.findByType("FindByTypeAgent").join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.find")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.type", "by_type");
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.result_count", 1L);
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    @Test
+    void findAgents_emitsDirectoryFindSpan_withQueryType() {
+        registry.register(descriptor("paged-agent", "T", AgentStatus.RUNNING, Set.of(), Map.of())).join();
+        telemetry.clear();
+
+        discovery.findAgents(
+                dev.jentic.core.AgentQuery.byStatus(AgentStatus.RUNNING),
+                dev.jentic.core.PageRequest.first(10)).join();
+
+        var spans = telemetry.spans().stream()
+                .filter(s -> s.name().equals("directory.find")).toList();
+        assertThat(spans).hasSize(1);
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.type", "query");
+        assertThat(spans.get(0).attributes()).containsEntry("directory.find.result_count", 1L);
+        assertThat(spans.get(0).status()).isEqualTo(SpanStatus.OK);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
@@ -206,5 +348,55 @@ class JdbcAgentDirectoryTest {
                 .metadata(metadata)
                 .endpoint(AgentEndpoint.local("test-node-id"))
                 .build();
+    }
+
+    // -------------------------------------------------------------------------
+    // Test telemetry — captures span name, attributes, and final status
+    // -------------------------------------------------------------------------
+
+    static final class RecordingTelemetry implements JenticTelemetry {
+
+        record CapturedSpan(String name, Map<String, Object> attributes, SpanStatus status) {}
+
+        private final List<CapturedSpan> spans = new ArrayList<>();
+
+        void clear() { spans.clear(); }
+
+        List<CapturedSpan> spans() { return List.copyOf(spans); }
+
+        @Override
+        public SpanBuilder spanBuilder(String operationName) {
+            var attrs = new HashMap<String, Object>();
+            return new SpanBuilder() {
+                @Override
+                public SpanBuilder setAttribute(String key, String value) { attrs.put(key, value); return this; }
+                @Override
+                public SpanBuilder setAttribute(String key, long value) { attrs.put(key, value); return this; }
+                @Override
+                public SpanBuilder setAttribute(String key, boolean value) { attrs.put(key, value); return this; }
+                @Override
+                public Span startSpan() {
+                    var finalStatus = new SpanStatus[]{SpanStatus.UNSET};
+                    return new Span() {
+                        @Override
+                        public Span setAttribute(String key, String value) { attrs.put(key, value); return this; }
+                        @Override
+                        public Span setAttribute(String key, long value) { attrs.put(key, value); return this; }
+                        @Override
+                        public Span setAttribute(String key, boolean value) { attrs.put(key, value); return this; }
+                        @Override
+                        public Span setAttribute(String key, double value) { attrs.put(key, value); return this; }
+                        @Override
+                        public Span recordException(Throwable t) { return this; }
+                        @Override
+                        public Span setStatus(SpanStatus s) { finalStatus[0] = s; return this; }
+                        @Override
+                        public SpanScope makeCurrent() { return () -> {}; }
+                        @Override
+                        public void end() { spans.add(new CapturedSpan(operationName, Map.copyOf(attrs), finalStatus[0])); }
+                    };
+                }
+            };
+        }
     }
 }

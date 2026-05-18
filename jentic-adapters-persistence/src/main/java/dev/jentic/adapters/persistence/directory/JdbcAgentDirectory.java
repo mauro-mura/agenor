@@ -3,6 +3,7 @@ package dev.jentic.adapters.persistence.directory;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import dev.jentic.adapters.persistence.JdbcHelper;
+import dev.jentic.core.telemetry.JenticTelemetry;
 
 import java.io.Closeable;
 import java.util.Objects;
@@ -51,7 +52,7 @@ public final class JdbcAgentDirectory implements Closeable {
     }
 
     /**
-     * Creates a new {@code JdbcAgentDirectory} from the given configuration.
+     * Creates a new {@code JdbcAgentDirectory} from the given configuration with noop telemetry.
      *
      * <p>Applies Flyway schema migrations before returning, so the
      * directory is immediately usable after this call returns.
@@ -61,7 +62,23 @@ public final class JdbcAgentDirectory implements Closeable {
      * @throws RuntimeException if schema migration or pool creation fails
      */
     public static JdbcAgentDirectory create(JdbcDirectoryConfig config) {
+        return create(config, JenticTelemetry.noop());
+    }
+
+    /**
+     * Creates a new {@code JdbcAgentDirectory} from the given configuration and telemetry.
+     *
+     * <p>Applies Flyway schema migrations before returning, so the
+     * directory is immediately usable after this call returns.
+     *
+     * @param config    JDBC directory configuration; must not be null
+     * @param telemetry telemetry for {@code directory.*} spans; null treated as noop
+     * @return a fully initialised directory instance
+     * @throws RuntimeException if schema migration or pool creation fails
+     */
+    public static JdbcAgentDirectory create(JdbcDirectoryConfig config, JenticTelemetry telemetry) {
         Objects.requireNonNull(config, "config must not be null");
+        var t = telemetry != null ? telemetry : JenticTelemetry.noop();
 
         var hikari = new HikariConfig();
         hikari.setJdbcUrl(config.jdbcUrl());
@@ -76,9 +93,9 @@ public final class JdbcAgentDirectory implements Closeable {
         var helper = new JdbcHelper(ds);
         return new JdbcAgentDirectory(
                 ds,
-                new JdbcAgentRegistry(helper),
-                new JdbcAgentDiscovery(helper),
-                new JdbcAgentResolver(helper));
+                new JdbcAgentRegistry(helper, t),
+                new JdbcAgentDiscovery(helper, t),
+                new JdbcAgentResolver(helper, t));
     }
 
     /**
