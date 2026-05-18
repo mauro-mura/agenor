@@ -23,12 +23,17 @@ import java.util.concurrent.CompletableFuture;
  * rather than using this composite.
  *
  * @since 0.1.0
+ * @deprecated since 0.22.0, for removal at 0.24.0 (Agenor rebranding). Use
+ *     {@link dev.jentic.core.directory.AgentDirectory} instead. The runtime, starter,
+ *     and all built-in implementations already implement the new interface; only the
+ *     package path changes.
  * @see dev.jentic.core.directory.AgentDirectory
  * @see AgentRegistry
  * @see AgentResolver
  * @see AgentDiscovery
  * @see AgentPresence
  */
+@Deprecated(since = "0.22.0", forRemoval = true)
 public interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, AgentPresence {
 
     // -------------------------------------------------------------------------

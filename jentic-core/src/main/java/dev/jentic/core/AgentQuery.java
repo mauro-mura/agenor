@@ -1,7 +1,6 @@
 package dev.jentic.core;
 
 import java.util.Set;
-import java.util.function.Predicate;
 
 /**
  * Query object for searching agents in the {@link AgentDirectory}.
@@ -9,22 +8,15 @@ import java.util.function.Predicate;
  * <p>Combines multiple criteria (AND logic). A {@code null} value for any criterion
  * means "don't filter by this criterion".
  *
- * <p><strong>Note on {@code customFilter}:</strong> This field is deprecated since 0.20.0.
- * No remote backend (JDBC, Consul, Redis) can evaluate a Java {@link Predicate} server-side.
- * Using this field prevents migration to any distributed directory backend. Use structured
- * criteria ({@code agentType}, {@code requiredCapabilities}, {@code status}) instead.
- *
  * @param agentType            optional agent type filter
  * @param requiredCapabilities optional set of capabilities agents must have (ALL required)
  * @param status               optional status filter
- * @param customFilter         deprecated in-process filter — not supported by remote backends
  * @since 0.1.0
  */
 public record AgentQuery(
         String agentType,
         Set<String> requiredCapabilities,
-        AgentStatus status,
-        @Deprecated(since = "0.20.0", forRemoval = true) Predicate<AgentDescriptor> customFilter
+        AgentStatus status
 ) {
 
     /**
@@ -36,7 +28,7 @@ public record AgentQuery(
      * @since 0.20.0
      */
     public static AgentQuery all() {
-        return new AgentQuery(null, null, null, null);
+        return new AgentQuery(null, null, null);
     }
 
     /**
@@ -55,7 +47,7 @@ public record AgentQuery(
      * @return a new query matching only the specified agent type
      */
     public static AgentQuery byType(String agentType) {
-        return new AgentQuery(agentType, null, null, null);
+        return new AgentQuery(agentType, null, null);
     }
 
     /**
@@ -65,7 +57,7 @@ public record AgentQuery(
      * @return a new query matching only the specified status
      */
     public static AgentQuery byStatus(AgentStatus status) {
-        return new AgentQuery(null, null, status, null);
+        return new AgentQuery(null, null, status);
     }
 
     /**
@@ -77,7 +69,7 @@ public record AgentQuery(
      * @return a new query matching agents with all specified capabilities
      */
     public static AgentQuery withCapabilities(Set<String> capabilities) {
-        return new AgentQuery(null, capabilities, null, null);
+        return new AgentQuery(null, capabilities, null);
     }
 
     /**
@@ -87,8 +79,6 @@ public record AgentQuery(
         private String agentType;
         private Set<String> requiredCapabilities;
         private AgentStatus status;
-        @SuppressWarnings("deprecation")
-        private Predicate<AgentDescriptor> customFilter;
 
         /**
          * Sets the agent type filter.
@@ -141,27 +131,12 @@ public record AgentQuery(
         }
 
         /**
-         * Sets a custom filter predicate.
-         *
-         * @param filter the predicate to apply
-         * @return this builder
-         * @deprecated since 0.20.0, for removal at 0.22.0. Remote backends cannot
-         *     evaluate Java predicates server-side. Use structured criteria instead.
-         */
-        @Deprecated(since = "0.20.0", forRemoval = true)
-        public AgentQueryBuilder customFilter(Predicate<AgentDescriptor> filter) {
-            this.customFilter = filter;
-            return this;
-        }
-
-        /**
          * Builds an immutable {@link AgentQuery}.
          *
          * @return a new query instance
          */
-        @SuppressWarnings("deprecation")
         public AgentQuery build() {
-            return new AgentQuery(agentType, requiredCapabilities, status, customFilter);
+            return new AgentQuery(agentType, requiredCapabilities, status);
         }
     }
 }

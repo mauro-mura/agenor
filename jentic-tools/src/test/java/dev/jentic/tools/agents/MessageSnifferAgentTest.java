@@ -5,7 +5,7 @@ import dev.jentic.core.console.ConsoleEventListener;
 import dev.jentic.core.filter.MessageFilter;
 import dev.jentic.runtime.filter.TopicFilter;
 import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.jentic.tools.history.MessageHistoryService;
@@ -29,7 +29,7 @@ class MessageSnifferAgentTest {
 
     @BeforeEach
     void setUpInfrastructure() {
-        messageDispatcher = new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop());
         scheduler = new SimpleBehaviorScheduler();
         scheduler.start().join();
     }

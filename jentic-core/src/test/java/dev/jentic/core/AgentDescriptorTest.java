@@ -182,14 +182,10 @@ class AgentDescriptorTest {
     @DisplayName("Should handle null status in constructor")
     void shouldDefaultNullStatusToUnknown() {
         AgentDescriptor descriptor = new AgentDescriptor(
-                "agent-1",
-                "name",
-                "type",
+                "agent-1", "name", "type",
                 null,  // null status
-                Set.of("cap1"),
-                Map.of("key", "value"),
-                Instant.now(),
-                Instant.now()
+                Set.of("cap1"), Map.of("key", "value"), null,
+                Instant.now(), Instant.now()
         );
 
         assertThat(descriptor.status()).isEqualTo(AgentStatus.UNKNOWN);
@@ -199,14 +195,11 @@ class AgentDescriptorTest {
     @DisplayName("Should handle null capabilities in constructor")
     void shouldDefaultNullCapabilitiesToEmpty() {
         AgentDescriptor descriptor = new AgentDescriptor(
-                "agent-1",
-                "name",
-                "type",
+                "agent-1", "name", "type",
                 AgentStatus.RUNNING,
                 null,  // null capabilities
-                Map.of("key", "value"),
-                Instant.now(),
-                Instant.now()
+                Map.of("key", "value"), null,
+                Instant.now(), Instant.now()
         );
 
         assertThat(descriptor.capabilities()).isEmpty();
@@ -216,14 +209,10 @@ class AgentDescriptorTest {
     @DisplayName("Should handle null metadata in constructor")
     void shouldDefaultNullMetadataToEmpty() {
         AgentDescriptor descriptor = new AgentDescriptor(
-                "agent-1",
-                "name",
-                "type",
-                AgentStatus.RUNNING,
-                Set.of("cap1"),
+                "agent-1", "name", "type",
+                AgentStatus.RUNNING, Set.of("cap1"),
                 null,  // null metadata
-                Instant.now(),
-                Instant.now()
+                null, Instant.now(), Instant.now()
         );
 
         assertThat(descriptor.metadata()).isEmpty();
@@ -235,12 +224,9 @@ class AgentDescriptorTest {
         Instant before = Instant.now();
 
         AgentDescriptor descriptor = new AgentDescriptor(
-                "agent-1",
-                "name",
-                "type",
-                AgentStatus.RUNNING,
-                Set.of("cap1"),
-                Map.of("key", "value"),
+                "agent-1", "name", "type",
+                AgentStatus.RUNNING, Set.of("cap1"), Map.of("key", "value"),
+                null,
                 null,  // null registeredAt
                 Instant.now()
         );
@@ -258,12 +244,9 @@ class AgentDescriptorTest {
         Instant before = Instant.now();
 
         AgentDescriptor descriptor = new AgentDescriptor(
-                "agent-1",
-                "name",
-                "type",
-                AgentStatus.RUNNING,
-                Set.of("cap1"),
-                Map.of("key", "value"),
+                "agent-1", "name", "type",
+                AgentStatus.RUNNING, Set.of("cap1"), Map.of("key", "value"),
+                null,
                 Instant.now(),
                 null  // null lastSeen
         );

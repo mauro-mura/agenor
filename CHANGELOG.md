@@ -121,6 +121,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`JenticRuntime.getMessageService()`** — use `JenticRuntime.getMessageDispatcher()`.
 - **`JenticRuntime.Builder.messageService()`** — use `Builder.messageDispatcher()`.
 - **`JenticRuntime.Builder.agentDirectory()`** — use `Builder.agentRegistry()` / `agentResolver()` / `agentDiscovery()` / `agentPresence()`.
+- **`AgentDescriptor(String, String, String, AgentStatus, Set, Map, Instant, Instant)` constructor** — use `AgentDescriptor.builder(agentId)` and call `.endpoint(AgentEndpoint.local(nodeId))`. The 8-argument constructor silently set `endpoint = null`, breaking `AgentResolver` logic in distributed deployments.
+- **`AgentQuery.customFilter(Predicate<AgentDescriptor>)`** — remote backends cannot evaluate Java predicates server-side. Use structured criteria: `.agentType()`, `.status()`, `.requiredCapabilities()`.
+
+### Deprecated
+
+- **`dev.jentic.core.AgentDirectory`** — this pre-0.20.0 composite interface will be removed at 0.24.0 (Agenor rebranding). Use `dev.jentic.core.directory.AgentDirectory` instead. The runtime, starter, and all built-in implementations already implement the new interface; only the package path changes.
 
 ### Tests
 

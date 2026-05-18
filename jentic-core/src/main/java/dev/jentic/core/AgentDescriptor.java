@@ -10,8 +10,8 @@ import java.util.Set;
  * Immutable descriptor containing agent metadata for discovery.
  *
  * <p>The {@code endpoint} field was added in 0.20.0 to carry transport routing information.
- * It is nullable for backward compatibility: agents registered before 0.20.0 or via the
- * deprecated {@code LocalAgentDirectory} may have a {@code null} endpoint.
+ * It is nullable: agents built with {@link #builder(String)} without an explicit
+ * {@link AgentDescriptorBuilder#endpoint(AgentEndpoint)} call will have a {@code null} endpoint.
  *
  * @param agentId       unique identifier of the agent
  * @param agentName     human-readable display name
@@ -57,21 +57,6 @@ public record AgentDescriptor(
         this.endpoint = endpoint;
         this.registeredAt = registeredAt != null ? registeredAt : Instant.now();
         this.lastSeen = lastSeen != null ? lastSeen : Instant.now();
-    }
-
-    /**
-     * Backward-compatible constructor without {@code endpoint} — sets endpoint to {@code null}.
-     *
-     * @deprecated since 0.20.0. Use the builder ({@link #builder(String)}) or the 9-arg
-     *     constructor. Will be removed at 0.22.0.
-     */
-    @Deprecated(since = "0.20.0", forRemoval = true)
-    public AgentDescriptor(
-            String agentId, String agentName, String agentType, AgentStatus status,
-            Set<String> capabilities, Map<String, String> metadata,
-            Instant registeredAt, Instant lastSeen) {
-        this(agentId, agentName, agentType, status, capabilities, metadata,
-                null, registeredAt, lastSeen);
     }
 
     /**

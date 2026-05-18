@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * allows the {@link dev.jentic.runtime.messaging.InMemoryMessageDispatcher} to
  * short-circuit point-to-point messages without a transport hop.
  *
- * <p>This implementation replaces the deprecated {@link LocalAgentDirectory}.
+ * <p>This implementation replaces the {@code LocalAgentDirectory} class removed at 0.22.0.
  *
  * @since 0.20.0
  */
@@ -252,7 +252,6 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.jentic.core.A
             Set<String> caps = query.requiredCapabilities();
             p = p.and(d -> d.capabilities().containsAll(caps));
         }
-        // customFilter intentionally not evaluated — see ADR-020
         return p;
     }
 }

@@ -23,7 +23,7 @@ import dev.jentic.core.memory.MemoryScope;
 import dev.jentic.core.memory.MemoryStats;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.behavior.OneShotBehavior;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.runtime.memory.InMemoryStore;
 import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
@@ -40,7 +40,7 @@ class BaseAgentTest {
 
     @BeforeEach
     void setUp() {
-        agentDirectory = new LocalAgentDirectory();
+        agentDirectory = new InMemoryAgentDirectory();
         messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, JenticTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();

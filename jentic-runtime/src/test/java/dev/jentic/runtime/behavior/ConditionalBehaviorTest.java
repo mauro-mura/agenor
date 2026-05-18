@@ -3,7 +3,7 @@ package dev.jentic.runtime.behavior;
 import dev.jentic.core.condition.Condition;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.advanced.ConditionalBehavior;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.core.telemetry.JenticTelemetry;
 import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
@@ -27,8 +27,8 @@ class ConditionalBehaviorTest {
     @BeforeEach
     void setUp() {
         agent = new TestAgent();
-        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop()));
-        agent.setAgentDirectory(new LocalAgentDirectory());
+        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop()));
+        agent.setAgentDirectory(new InMemoryAgentDirectory());
         
         scheduler = new SimpleBehaviorScheduler();
         scheduler.start().join();

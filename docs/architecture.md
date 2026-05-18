@@ -76,12 +76,11 @@ These are deliberately small to keep adapters swappable without breaking user co
 ### Messaging
 
 - **InMemoryMessageDispatcher** (since 0.20.0): Production implementation of `MessageDispatcher` and `FilterableSubscriber`. Delivers messages using virtual threads. Routes `sendTo` calls via `AgentResolver`; throws `AgentNotFoundException` for unknown agents. Emits `message.send` OTel spans. See [Messaging](messaging.md).
-- **InMemoryMessageService** (deprecated since 0.20.0): Legacy publish/subscribe implementation retained for backward compatibility. Use `InMemoryMessageDispatcher` instead.
+- **InMemoryMessageService** (removed at 0.22.0): Use `InMemoryMessageDispatcher`.
 
 ### Agent Directory and Scheduler
 
 - **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.jentic.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
-- **LocalAgentDirectory** (deprecated since 0.20.0): Legacy JVM-local registry retained for backward compatibility. Use `InMemoryAgentDirectory` instead.
 - **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
 - **AgentScanner + AnnotationProcessor**: Scans packages for annotated agents/handlers and wires runtime.
 - **JenticRuntime**: Entry point to bootstrap, start, and stop the agent system.

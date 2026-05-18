@@ -387,7 +387,7 @@ class PersistenceManagerTest {
         persistenceManager.registerAgent(agent);
 
         // Start and stop the agent to trigger on-stop hook
-        agent.setMessageDispatcher(new dev.jentic.runtime.messaging.InMemoryMessageDispatcher(new dev.jentic.runtime.directory.LocalAgentDirectory(), dev.jentic.core.telemetry.JenticTelemetry.noop()));
+        agent.setMessageDispatcher(new dev.jentic.runtime.messaging.InMemoryMessageDispatcher(new dev.jentic.runtime.directory.InMemoryAgentDirectory(), dev.jentic.core.telemetry.JenticTelemetry.noop()));
         agent.setBehaviorScheduler(new dev.jentic.runtime.scheduler.SimpleBehaviorScheduler());
         agent.start().get();
         agent.stop().get();

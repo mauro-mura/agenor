@@ -10,7 +10,7 @@ import dev.jentic.core.config.ConfigurationException;
 import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -277,10 +277,10 @@ class JenticRuntimeTest {
     // ========== BUILDER OPTIONS ==========
 
     @Test
-    void builder_shouldAcceptCustomAgentDirectory() {
-        LocalAgentDirectory dir = new LocalAgentDirectory();
-        JenticRuntime r = JenticRuntime.builder().agentDirectory(dir).build();
-        assertThat(r.getAgentDirectory()).isSameAs(dir);
+    void builder_shouldAcceptCustomAgentRegistry() {
+        InMemoryAgentDirectory dir = new InMemoryAgentDirectory();
+        JenticRuntime r = JenticRuntime.builder().agentRegistry(dir).build();
+        assertThat(r.getAgentDirectory()).isNotNull();
     }
 
     @Test

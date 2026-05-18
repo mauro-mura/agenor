@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>jentic-adapters-persistence</artifactId>
-    <name>Jentic Adapters — Persistence</name>
+    <name>Jentic Adapters - Persistence</name>
     <description>JDBC-backed agent directory and persistent HITL for Jentic (see ADR-022, ADR-023)</description>
 
     <properties>

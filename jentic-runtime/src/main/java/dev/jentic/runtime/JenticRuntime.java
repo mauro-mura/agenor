@@ -46,7 +46,6 @@ import dev.jentic.runtime.behavior.advanced.HumanCheckpointBehavior;
 import dev.jentic.runtime.config.DefaultConfigurationLoader;
 import dev.jentic.runtime.directory.CompositeAgentDirectory;
 import dev.jentic.runtime.directory.InMemoryAgentDirectory;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
 import dev.jentic.runtime.discovery.AnnotationProcessor;
@@ -101,12 +100,10 @@ public class JenticRuntime {
         // Initialize services
         this.telemetry = builder.telemetry != null ? builder.telemetry : JenticTelemetry.noop();
 
-        // Directory: composite from per-capability setters, explicit composite, or in-memory default
+        // Directory: composite from per-capability setters, or in-memory default
         InMemoryAgentDirectory defaultDir = new InMemoryAgentDirectory(
                 java.util.UUID.randomUUID().toString(), this.telemetry);
-        if (builder.agentDirectory != null) {
-            this.agentDirectory = builder.agentDirectory;
-        } else if (builder.agentRegistry != null || builder.agentDiscovery != null
+        if (builder.agentRegistry != null || builder.agentDiscovery != null
                 || builder.agentResolver != null || builder.agentPresence != null) {
             this.agentDirectory = new CompositeAgentDirectory(
                     builder.agentRegistry != null ? builder.agentRegistry : defaultDir,
@@ -642,9 +639,6 @@ public class JenticRuntime {
 
     public static class Builder {
         private JenticConfiguration configuration;
-        // Legacy (deprecated) composite setter
-        private AgentDirectory agentDirectory;
-        // New per-capability setters
         private MessageDispatcher messageDispatcher;
         private AgentRegistry agentRegistry;
         private AgentResolver agentResolver;
@@ -778,20 +772,6 @@ public class JenticRuntime {
          */
         public Builder agentPresence(AgentPresence presence) {
             this.agentPresence = presence;
-            return this;
-        }
-
-        /**
-         * Sets the composite legacy agent directory.
-         *
-         * @param agentDirectory the directory; must not be null
-         * @return this builder
-         * @deprecated since 0.20.0. Use per-capability setters such as
-         *     {@link #agentRegistry}, {@link #agentResolver}, etc.
-         */
-        @Deprecated(since = "0.20.0", forRemoval = true)
-        public Builder agentDirectory(AgentDirectory agentDirectory) {
-            this.agentDirectory = agentDirectory;
             return this;
         }
 

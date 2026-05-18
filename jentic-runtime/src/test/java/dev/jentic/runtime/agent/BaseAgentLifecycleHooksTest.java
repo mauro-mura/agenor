@@ -5,7 +5,7 @@ import dev.jentic.core.Behavior;
 import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.telemetry.JenticTelemetry;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
+import dev.jentic.runtime.directory.InMemoryAgentDirectory;
 import dev.jentic.runtime.messaging.InMemoryMessageDispatcher;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.AfterEach;
@@ -31,7 +31,7 @@ class BaseAgentLifecycleHooksTest {
 
     @BeforeEach
     void setUp() {
-        messageDispatcher = new InMemoryMessageDispatcher(new LocalAgentDirectory(), JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
 

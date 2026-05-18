@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-04-26  
-**Last Modified**: 2026-05-07  
+**Last Modified**: 2026-05-18  
 **Authors**: Jentic Team  
 **References**: ADR-002 (Interface-First Architecture), ADR-004 (Progressive Complexity),
 ADR-018 (Optional Adapter Dependencies Pattern)
@@ -247,3 +247,13 @@ the new signatures; no additional migration is needed for code still on the lega
   `jentic-examples` updated in the same commit.
 - `CHANGELOG.md` `[Unreleased]` section documents this as a breaking change with migration guide.
 - No behavioural change — routing was already done on message fields in the implementation.
+
+---
+
+## Amendment — 2026-05-18: 0.22.0 removals completed
+
+All APIs listed in **Deprecated in 0.20.0, removed in 0.22.0** have been deleted from the
+codebase: `MessageService`, `InMemoryMessageService`, `LocalAgentDirectory`,
+`JenticRuntime.Builder.agentDirectory()`, `AgentDescriptor` 8-arg constructor, and
+`AgentQuery.customFilter`. `dev.jentic.core.AgentDirectory` is now deprecated at 0.22.0
+(`@Deprecated(since="0.22.0", forRemoval=true)`) for removal in a future release.
