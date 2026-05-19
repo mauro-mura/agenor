@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-19
+
 ### Added
 
 - **`jentic-adapters-persistence` — JDBC agent directory (ADR-022, ADR-023)**: new dedicated Maven module providing durable, relational-database-backed implementations of `AgentRegistry`, `AgentDiscovery`, and `AgentResolver` via plain JDBC (PostgreSQL, MySQL, H2).
@@ -671,7 +673,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/mauro-mura/jentic/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/mauro-mura/jentic/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/mauro-mura/jentic/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/mauro-mura/jentic/compare/v0.18.0...v0.19.0
