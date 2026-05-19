@@ -97,7 +97,7 @@ public class HelloAgent extends BaseAgent {
 
     @JenticBehavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
-        messageService.send(Message.builder()
+        getMessageDispatcher().publish(Message.builder()
                 .topic("greetings")
                 .content("Hello from " + getAgentId())
                 .build());
@@ -105,7 +105,7 @@ public class HelloAgent extends BaseAgent {
 
     @JenticMessageHandler("greetings")
     public void handleGreeting(Message message) {
-        log.info("Received: {}", message.getContent());
+        log.info("Received: {}", message.content());
     }
 }
 ```
