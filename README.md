@@ -47,7 +47,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>0.22.0</version>
+            <version>0.23.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -84,7 +84,7 @@ If you prefer explicit version management:
     <dependency>
         <groupId>dev.jentic</groupId>
         <artifactId>jentic-runtime</artifactId>
-        <version>0.22.0</version>
+        <version>0.23.0-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
@@ -186,7 +186,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>0.22.0</version>
+    <version>0.23.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -197,7 +197,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>0.22.0</version>
+    <version>0.23.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -208,7 +208,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-adapters</artifactId>
-    <version>0.22.0</version>
+    <version>0.23.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -219,7 +219,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-tools</artifactId>
-    <version>0.22.0</version>
+    <version>0.23.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -232,7 +232,7 @@ optionally an `LLMProvider` from `application.yml`. Includes Actuator health ind
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
-    <version>0.22.0</version>
+    <version>0.23.0-SNAPSHOT</version>
 </dependency>
 ```
  
