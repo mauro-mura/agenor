@@ -231,16 +231,16 @@ implementations listed above.
 ## Configuration reference
 
 All properties are set via `RedisMessagingFactory.builder()` (standalone) or
-`jentic.messaging.properties.*` (Spring Boot). All Spring Boot values are strings.
+the `jentic.messaging.redis.*` sub-section (Spring Boot).
 
-| Builder method | `jentic.messaging.properties` key | Default | Description |
-|----------------|-----------------------------------|---------|-------------|
-| `uri(String)` | `uri` | `redis://localhost:6379` | Redis connection URI. Supports `redis://`, `rediss://` (TLS), `redis-sentinel://` |
-| `consumerGroupPrefix(String)` | `consumer-group-prefix` | `jentic` | Prefix for all stream keys and consumer group names |
-| `readBlockTimeoutMs(long)` | `read-block-timeout-ms` | `2000` | How long `XREADGROUP BLOCK` waits before returning empty (ms) |
-| `maxStreamLength(int)` | `max-stream-length` | `100000` | Approximate maximum entries per stream before trimming |
-| `pendingEntriesTimeoutMs(long)` | `pending-entries-timeout-ms` | `30000` | Idle time before an unacknowledged pending entry is redelivered (ms) |
-| `maxDeliveryAttempts(int)` | `max-delivery-attempts` | `3` | Delivery failures before the message is moved to the DLQ |
+| Builder method | Spring Boot key | Default | Description |
+|----------------|-----------------|---------|-------------|
+| `uri(String)` | `jentic.messaging.redis.uri` | `redis://localhost:6379` | Redis connection URI. Supports `redis://`, `rediss://` (TLS), `redis-sentinel://` |
+| `consumerGroupPrefix(String)` | `jentic.messaging.redis.consumer-group-prefix` | `jentic` | Prefix for all stream keys and consumer group names |
+| `readBlockTimeoutMs(long)` | `jentic.messaging.redis.read-block-timeout-ms` | `2000` | How long `XREADGROUP BLOCK` waits before returning empty (ms) |
+| `maxStreamLength(int)` | `jentic.messaging.redis.max-stream-length` | `100000` | Approximate maximum entries per stream before trimming |
+| `pendingEntriesTimeoutMs(long)` | `jentic.messaging.redis.pending-entries-timeout-ms` | `30000` | Idle time before an unacknowledged pending entry is redelivered (ms) |
+| `maxDeliveryAttempts(int)` | `jentic.messaging.redis.max-delivery-attempts` | `3` | Delivery failures before the message is moved to the DLQ |
 
 ### URI schemes
 
@@ -275,13 +275,13 @@ Then set the provider in `application.yml`:
 jentic:
   messaging:
     provider: redis
-    properties:
+    redis:
       uri: redis://localhost:6379
       consumer-group-prefix: my-app
-      read-block-timeout-ms: "2000"
-      max-stream-length: "100000"
-      pending-entries-timeout-ms: "30000"
-      max-delivery-attempts: "3"
+      read-block-timeout-ms: 2000
+      max-stream-length: 100000
+      pending-entries-timeout-ms: 30000
+      max-delivery-attempts: 3
 ```
 
 The auto-configuration activates only when **both** conditions are true:

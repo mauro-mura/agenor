@@ -370,26 +370,14 @@ public class JenticAutoConfiguration {
         public dev.jentic.adapters.messaging.redis.RedisMessagingFactory redisMessagingFactory(
                 JenticProperties props,
                 ObjectProvider<JenticTelemetry> telemetry) {
-            var p = props.messaging().properties();
-            long readBlockTimeoutMs = 2000L;
-            int  maxStreamLength = 100_000;
-            long pendingEntriesTimeoutMs = 30_000L;
-            int  maxDeliveryAttempts = 3;
-            try { readBlockTimeoutMs = Long.parseLong(p.getOrDefault("read-block-timeout-ms", "2000")); }
-            catch (NumberFormatException ignored) {}
-            try { maxStreamLength = Integer.parseInt(p.getOrDefault("max-stream-length", "100000")); }
-            catch (NumberFormatException ignored) {}
-            try { pendingEntriesTimeoutMs = Long.parseLong(p.getOrDefault("pending-entries-timeout-ms", "30000")); }
-            catch (NumberFormatException ignored) {}
-            try { maxDeliveryAttempts = Integer.parseInt(p.getOrDefault("max-delivery-attempts", "3")); }
-            catch (NumberFormatException ignored) {}
+            var redis = props.messaging().redis();
             return dev.jentic.adapters.messaging.redis.RedisMessagingFactory.builder()
-                    .uri(p.getOrDefault("uri", "redis://localhost:6379"))
-                    .consumerGroupPrefix(p.getOrDefault("consumer-group-prefix", "jentic"))
-                    .readBlockTimeoutMs(readBlockTimeoutMs)
-                    .maxStreamLength(maxStreamLength)
-                    .pendingEntriesTimeoutMs(pendingEntriesTimeoutMs)
-                    .maxDeliveryAttempts(maxDeliveryAttempts)
+                    .uri(redis != null ? redis.uri() : "redis://localhost:6379")
+                    .consumerGroupPrefix(redis != null ? redis.consumerGroupPrefix() : "jentic")
+                    .readBlockTimeoutMs(redis != null ? redis.readBlockTimeoutMs() : 2000L)
+                    .maxStreamLength(redis != null ? redis.maxStreamLength() : 100_000)
+                    .pendingEntriesTimeoutMs(redis != null ? redis.pendingEntriesTimeoutMs() : 30_000L)
+                    .maxDeliveryAttempts(redis != null ? redis.maxDeliveryAttempts() : 3)
                     .telemetry(telemetry.getIfAvailable(JenticTelemetry::noop))
                     .build();
         }
@@ -463,22 +451,15 @@ public class JenticAutoConfiguration {
         public dev.jentic.adapters.persistence.directory.JdbcAgentDirectory jdbcAgentDirectory(
                 JenticProperties props,
                 ObjectProvider<JenticTelemetry> telemetry) {
-            var p = props.directory().properties();
-            var url = p.get("url");
-            if (url == null || url.isBlank()) {
+            var jdbc = props.directory().jdbc();
+            if (jdbc == null || jdbc.url() == null || jdbc.url().isBlank()) {
                 throw new IllegalStateException(
-                        "jentic.directory.provider=jdbc requires "
-                        + "jentic.directory.properties.url to be set");
+                        "jentic.directory.provider=jdbc requires jentic.directory.jdbc.url to be set");
             }
-            var username = p.getOrDefault("username", "");
-            var password = p.getOrDefault("password", "");
-            int poolSize = 10;
-            try { poolSize = Integer.parseInt(p.getOrDefault("pool-size", "10")); }
-            catch (NumberFormatException ignored) {}
             var config = new dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig(
-                    url, username, password, poolSize,
+                    jdbc.url(), jdbc.username(), jdbc.password(), jdbc.poolSize(),
                     "classpath:db/migration/jentic-directory");
-            log.debug("Creating JdbcAgentDirectory (url={})", url);
+            log.debug("Creating JdbcAgentDirectory (url={})", jdbc.url());
             return dev.jentic.adapters.persistence.directory.JdbcAgentDirectory.create(
                     config, telemetry.getIfAvailable(JenticTelemetry::noop));
         }

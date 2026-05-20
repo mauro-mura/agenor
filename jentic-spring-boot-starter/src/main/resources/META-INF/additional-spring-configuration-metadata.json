@@ -57,11 +57,6 @@
       "defaultValue": "inmemory"
     },
     {
-      "name": "jentic.messaging.properties",
-      "type": "java.util.Map<java.lang.String,java.lang.String>",
-      "description": "Provider-specific messaging properties."
-    },
-    {
       "name": "jentic.messaging.redis.uri",
       "type": "java.lang.String",
       "description": "Redis connection URI. Supports redis://, rediss:// (TLS), and redis-sentinel:// schemes.",
@@ -104,9 +99,27 @@
       "defaultValue": "local"
     },
     {
-      "name": "jentic.directory.properties",
-      "type": "java.util.Map<java.lang.String,java.lang.String>",
-      "description": "Provider-specific directory properties."
+      "name": "jentic.directory.jdbc.url",
+      "type": "java.lang.String",
+      "description": "JDBC connection URL. Required when jentic.directory.provider=jdbc."
+    },
+    {
+      "name": "jentic.directory.jdbc.username",
+      "type": "java.lang.String",
+      "description": "Database username.",
+      "defaultValue": ""
+    },
+    {
+      "name": "jentic.directory.jdbc.password",
+      "type": "java.lang.String",
+      "description": "Database password.",
+      "defaultValue": ""
+    },
+    {
+      "name": "jentic.directory.jdbc.pool-size",
+      "type": "java.lang.Integer",
+      "description": "HikariCP connection pool size.",
+      "defaultValue": 10
     },
     {
       "name": "jentic.llm.provider",
@@ -172,7 +185,9 @@
     {
       "name": "jentic.directory.provider",
       "values": [
-        { "value": "local", "description": "Local in-memory agent directory (default)." }
+        { "value": "local", "description": "Local in-memory agent directory (default)." },
+        { "value": "inmemory", "description": "In-memory agent directory." },
+        { "value": "jdbc", "description": "JDBC-backed agent directory. Requires jentic-adapters-persistence on the classpath and jentic.directory.jdbc.url to be set." }
       ]
     },
     {

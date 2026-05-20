@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Spring Boot starter — typed provider sub-sections replace generic `properties` map (breaking)**
+
+  `jentic.messaging` and `jentic.directory` now use named, type-safe sub-sections instead of a flat `Map<String,String> properties`. This enables IDE auto-complete, native types (int, long), and Bean Validation.
+
+  **Migrate `jentic.messaging.provider=redis`:**
+  ```yaml
+  # Before (0.22)
+  jentic:
+    messaging:
+      provider: redis
+      properties:
+        uri: redis://localhost:6379
+        read-block-timeout-ms: "2000"
+
+  # After (0.23+)
+  jentic:
+    messaging:
+      provider: redis
+      redis:
+        uri: redis://localhost:6379
+        read-block-timeout-ms: 2000   # native long, no quotes
+  ```
+
+  **Migrate `jentic.directory.provider=jdbc`:**
+  ```yaml
+  # Before (0.22)
+  jentic:
+    directory:
+      provider: jdbc
+      properties:
+        url: jdbc:postgresql://localhost:5432/jentic
+        pool-size: "10"
+
+  # After (0.23+)
+  jentic:
+    directory:
+      provider: jdbc
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/jentic
+        pool-size: 10   # native int, no quotes
+  ```
+
 ## [0.22.0] - 2026-05-19
 
 ### Added

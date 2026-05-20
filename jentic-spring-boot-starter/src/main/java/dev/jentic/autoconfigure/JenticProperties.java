@@ -34,7 +34,9 @@ import java.util.Map;
  *   scheduler:
  *     thread-pool-size: 10
  *   messaging:
- *     provider: inmemory
+ *     provider: redis
+ *     redis:
+ *       uri: redis://localhost:6379
  *   directory:
  *     provider: local
  *   llm:
@@ -115,25 +117,41 @@ public record JenticProperties(
      * jentic:
      *   messaging:
      *     provider: redis
-     *     properties:
+     *     redis:
      *       uri: redis://localhost:6379
      *       consumer-group-prefix: jentic
-     *       read-block-timeout-ms: "2000"
-     *       max-stream-length: "100000"
-     *       pending-entries-timeout-ms: "30000"
-     *       max-delivery-attempts: "3"
+     *       read-block-timeout-ms: 2000
+     *       max-stream-length: 100000
+     *       pending-entries-timeout-ms: 30000
+     *       max-delivery-attempts: 3
      * }</pre>
      *
-     * @param provider   messaging provider implementation: {@code inmemory} (default) or {@code redis}
-     * @param properties provider-specific configuration key/value pairs; for Redis: {@code uri},
-     *                   {@code consumer-group-prefix}, {@code read-block-timeout-ms},
-     *                   {@code max-stream-length}, {@code pending-entries-timeout-ms},
-     *                   {@code max-delivery-attempts}
+     * @param provider messaging provider implementation: {@code inmemory} (default) or {@code redis}
+     * @param redis    Redis Streams configuration; only read when {@code provider=redis}
      */
     public record Messaging(
             @DefaultValue("inmemory") String provider,
-            @DefaultValue Map<String, String> properties
-    ) {}
+            Redis redis
+    ) {
+        /**
+         * Redis Streams configuration.
+         *
+         * @param uri                     Redis connection URI; default {@code redis://localhost:6379}
+         * @param consumerGroupPrefix     prefix for stream keys and consumer groups; default {@code jentic}
+         * @param readBlockTimeoutMs      XREADGROUP BLOCK timeout in milliseconds; default {@code 2000}
+         * @param maxStreamLength         max entries per stream before approximate trimming; default {@code 100000}
+         * @param pendingEntriesTimeoutMs idle time before a pending entry is eligible for redelivery in ms; default {@code 30000}
+         * @param maxDeliveryAttempts     max delivery attempts before dead-letter; default {@code 3}
+         */
+        public record Redis(
+                @DefaultValue("redis://localhost:6379") String uri,
+                @DefaultValue("jentic") String consumerGroupPrefix,
+                @DefaultValue("2000") long readBlockTimeoutMs,
+                @DefaultValue("100000") int maxStreamLength,
+                @DefaultValue("30000") long pendingEntriesTimeoutMs,
+                @DefaultValue("3") int maxDeliveryAttempts
+        ) {}
+    }
 
     /**
      * Directory
@@ -143,22 +161,36 @@ public record JenticProperties(
      * jentic:
      *   directory:
      *     provider: jdbc
-     *     properties:
+     *     jdbc:
      *       url: jdbc:postgresql://localhost:5432/mydb
      *       username: jentic
      *       password: ${DB_PASSWORD}
-     *       pool-size: "10"
+     *       pool-size: 10
      * }</pre>
      *
-     * @param provider   agent directory implementation: {@code local} (default), {@code inmemory},
-     *                   or {@code jdbc}
-     * @param properties provider-specific configuration key/value pairs; for JDBC: {@code url},
-     *                   {@code username}, {@code password}, {@code pool-size}
+     * @param provider agent directory implementation: {@code local} (default), {@code inmemory},
+     *                 or {@code jdbc}
+     * @param jdbc     JDBC-specific configuration; only read when {@code provider=jdbc}
      */
     public record Directory(
             @DefaultValue("local") String provider,
-            @DefaultValue Map<String, String> properties
-    ) {}
+            Jdbc jdbc
+    ) {
+        /**
+         * JDBC directory configuration.
+         *
+         * @param url      JDBC connection URL (required when {@code provider=jdbc})
+         * @param username database username; default empty string
+         * @param password database password; default empty string
+         * @param poolSize HikariCP connection pool size; default {@code 10}
+         */
+        public record Jdbc(
+                String url,
+                @DefaultValue("") String username,
+                @DefaultValue("") String password,
+                @DefaultValue("10") int poolSize
+        ) {}
+    }
 
     /**
      * LLM
@@ -238,17 +270,41 @@ public record JenticProperties(
                 ),
                 new JenticConfiguration.MessagingConfig(
                         messaging().provider(),
-                        messaging().properties().isEmpty() ? null : messaging().properties()
+                        buildMessagingProperties()
                 ),
                 new JenticConfiguration.DirectoryConfig(
                         directory().provider(),
-                        directory().properties().isEmpty() ? null : directory().properties()
+                        buildDirectoryProperties()
                 ),
                 new JenticConfiguration.SchedulerConfig(
                         scheduler().provider(),
                         scheduler().threadPoolSize(),
                         null
                 )
+        );
+    }
+
+    private Map<String, String> buildMessagingProperties() {
+        var redis = messaging().redis();
+        if (redis == null) return null;
+        return Map.of(
+                "uri", redis.uri(),
+                "consumer-group-prefix", redis.consumerGroupPrefix(),
+                "read-block-timeout-ms", String.valueOf(redis.readBlockTimeoutMs()),
+                "max-stream-length", String.valueOf(redis.maxStreamLength()),
+                "pending-entries-timeout-ms", String.valueOf(redis.pendingEntriesTimeoutMs()),
+                "max-delivery-attempts", String.valueOf(redis.maxDeliveryAttempts())
+        );
+    }
+
+    private Map<String, String> buildDirectoryProperties() {
+        var jdbc = directory().jdbc();
+        if (jdbc == null || jdbc.url() == null || jdbc.url().isBlank()) return null;
+        return Map.of(
+                "url", jdbc.url(),
+                "username", jdbc.username(),
+                "password", jdbc.password(),
+                "pool-size", String.valueOf(jdbc.poolSize())
         );
     }
 }

@@ -63,15 +63,50 @@ All keys are under the `jentic` prefix. Every key is optional and falls back to 
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `provider` | `inmemory` | Message service implementation |
-| `properties` | `{}` | Provider-specific properties |
+| `provider` | `inmemory` | Implementation: `inmemory`, `redis` |
+| `redis.uri` | `redis://localhost:6379` | Redis URI (only when `provider=redis`) |
+| `redis.consumer-group-prefix` | `jentic` | Prefix for stream keys and consumer groups |
+| `redis.read-block-timeout-ms` | `2000` | XREADGROUP BLOCK timeout (ms) |
+| `redis.max-stream-length` | `100000` | Max entries per stream before trimming |
+| `redis.pending-entries-timeout-ms` | `30000` | Idle time before redelivery of pending entries (ms) |
+| `redis.max-delivery-attempts` | `3` | Attempts before moving to dead-letter |
+
+The `redis.*` sub-section is only read when `provider=redis` and `jentic-adapters` is on the classpath.
+`@ConditionalOnMissingBean` allows providing a custom `RedisMessagingFactory` bean to override all defaults.
+
+Redis example:
+```yaml
+jentic:
+  messaging:
+    provider: redis
+    redis:
+      uri: redis://localhost:6379
+      consumer-group-prefix: my-app
+```
 
 ### `jentic.directory`
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `provider` | `local` | Agent directory implementation |
-| `properties` | `{}` | Provider-specific properties |
+| `provider` | `local` | Implementation: `local`, `inmemory`, `jdbc` |
+| `jdbc.url` | — | JDBC connection URL (required when `provider=jdbc`) |
+| `jdbc.username` | `""` | Database username |
+| `jdbc.password` | `""` | Database password |
+| `jdbc.pool-size` | `10` | HikariCP connection pool size |
+
+The `jdbc.*` sub-section is only read when `provider=jdbc` and `jentic-adapters-persistence` is on the classpath.
+Flyway schema migration runs automatically on startup.
+
+JDBC example:
+```yaml
+jentic:
+  directory:
+    provider: jdbc
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/mydb
+      username: jentic
+      password: ${DB_PASSWORD}
+```
 
 ### `jentic.llm`
 

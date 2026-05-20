@@ -112,11 +112,11 @@ properties go in the `properties` map:
 jentic:
   directory:
     provider: jdbc
-    properties:
+    jdbc:
       url: jdbc:postgresql://localhost:5432/jentic
       username: jentic
       password: ${DB_PASSWORD}
-      pool-size: "10"   # default: 10; must be a string in the properties map
+      pool-size: 10
 ```
 
 The auto-configuration activates when `JdbcAgentDirectory` is on the classpath **and**

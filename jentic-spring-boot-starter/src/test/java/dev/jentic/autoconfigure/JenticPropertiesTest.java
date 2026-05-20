@@ -32,9 +32,9 @@ class JenticPropertiesTest {
             assertThat(props.scheduler().provider()).isEqualTo("simple");
             assertThat(props.scheduler().threadPoolSize()).isEqualTo(10);
             assertThat(props.messaging().provider()).isEqualTo("inmemory");
-            assertThat(props.messaging().properties()).isEmpty();
+            assertThat(props.messaging().redis()).isNull();
             assertThat(props.directory().provider()).isEqualTo("local");
-            assertThat(props.directory().properties()).isEmpty();
+            assertThat(props.directory().jdbc()).isNull();
             assertThat(props.llm().provider()).isEqualTo("none");
             assertThat(props.llm().apiKey()).isNull();
         });

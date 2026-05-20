@@ -1,5 +1,9 @@
 # Configuration Guide
 
+> **This guide covers the native `jentic.yml` format** loaded by `DefaultConfigurationLoader`.
+> If you are using the Spring Boot starter, see [Spring Boot Starter](spring-boot-starter.md) —
+> the `application.yml` format differs in structure for provider-specific sections.
+
 Jentic supports configuration via YAML files and programmatic builders. This page documents the current configuration keys and formats.
 
 ## Loading Configuration
@@ -118,7 +122,7 @@ Notes:
 
 #### Redis messaging (`provider: redis`)
 
-Provider-specific keys go inside `messaging.properties`:
+Provider-specific keys go inside `messaging.properties` as string values:
 
 ```yaml
 jentic:
@@ -133,6 +137,12 @@ jentic:
       max-delivery-attempts: "3"           # default: 3
 ```
 
+> **Note:** Setting `provider: redis` in `jentic.yml` only records the provider name and properties
+> in `JenticConfiguration`. The actual `RedisMessagingFactory` must be wired manually
+> (see `jentic-adapters` documentation) or automatically via the **Spring Boot starter**,
+> which reads these keys and creates the adapter bean.
+> See [Spring Boot Starter](spring-boot-starter.md) for zero-wiring Redis setup.
+
 ---
 
 ### Directory providers
@@ -145,7 +155,7 @@ jentic:
 
 #### JDBC directory (`provider: jdbc`)
 
-Provider-specific keys go inside `directory.properties`. All values are strings.
+Provider-specific keys go inside `directory.properties` as string values:
 
 ```yaml
 jentic:
@@ -155,13 +165,16 @@ jentic:
       url: jdbc:postgresql://localhost:5432/jentic   # required
       username: jentic                               # optional
       password: ${DB_PASSWORD}                       # optional
-      pool-size: "10"                               # default: 10 (must be a string)
+      pool-size: "10"                               # default: 10; must be a string
 ```
 
-Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` (H2 for dev/test).
+> **Note:** In a non-Spring-Boot context, `provider: jdbc` only records the intent in
+> `JenticConfiguration`. `JdbcAgentDirectory` must be instantiated and passed to the runtime
+> manually. The **Spring Boot starter** handles this automatically when
+> `jentic-adapters-persistence` is on the classpath.
+> See [JDBC Agent Directory](adapters/jdbc-directory.md) and [Spring Boot Starter](spring-boot-starter.md).
 
-Flyway runs the schema migration automatically on startup — no manual DDL required.
-See [JDBC Agent Directory](adapters/jdbc-directory.md) for the full adapter guide.
+Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` (H2 for dev/test).
 
 ---
 

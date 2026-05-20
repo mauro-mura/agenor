@@ -74,32 +74,33 @@ class JenticRedisMessagingAutoConfigurationTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void redisPropertiesMapEmptyByDefault() {
+    void redisSubRecordNullByDefault() {
         runner.run(ctx -> {
             JenticProperties props = ctx.getBean(JenticProperties.class);
-            assertThat(props.messaging().properties()).isEmpty();
+            assertThat(props.messaging().redis()).isNull();
         });
     }
 
     @Test
-    void redisPropertiesBindFromApplicationYaml() {
+    void redisSubRecordBindsTypedFields() {
         runner
             .withPropertyValues(
-                "jentic.messaging.properties.uri=redis://my-redis:6380",
-                "jentic.messaging.properties.consumer-group-prefix=acme",
-                "jentic.messaging.properties.read-block-timeout-ms=5000",
-                "jentic.messaging.properties.max-stream-length=50000",
-                "jentic.messaging.properties.pending-entries-timeout-ms=60000",
-                "jentic.messaging.properties.max-delivery-attempts=5"
+                "jentic.messaging.redis.uri=redis://my-redis:6380",
+                "jentic.messaging.redis.consumer-group-prefix=acme",
+                "jentic.messaging.redis.read-block-timeout-ms=5000",
+                "jentic.messaging.redis.max-stream-length=50000",
+                "jentic.messaging.redis.pending-entries-timeout-ms=60000",
+                "jentic.messaging.redis.max-delivery-attempts=5"
             )
             .run(ctx -> {
-                var p = ctx.getBean(JenticProperties.class).messaging().properties();
-                assertThat(p).containsEntry("uri", "redis://my-redis:6380");
-                assertThat(p).containsEntry("consumer-group-prefix", "acme");
-                assertThat(p).containsEntry("read-block-timeout-ms", "5000");
-                assertThat(p).containsEntry("max-stream-length", "50000");
-                assertThat(p).containsEntry("pending-entries-timeout-ms", "60000");
-                assertThat(p).containsEntry("max-delivery-attempts", "5");
+                var redis = ctx.getBean(JenticProperties.class).messaging().redis();
+                assertThat(redis).isNotNull();
+                assertThat(redis.uri()).isEqualTo("redis://my-redis:6380");
+                assertThat(redis.consumerGroupPrefix()).isEqualTo("acme");
+                assertThat(redis.readBlockTimeoutMs()).isEqualTo(5000L);
+                assertThat(redis.maxStreamLength()).isEqualTo(50000);
+                assertThat(redis.pendingEntriesTimeoutMs()).isEqualTo(60000L);
+                assertThat(redis.maxDeliveryAttempts()).isEqualTo(5);
             });
     }
 
