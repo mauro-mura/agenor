@@ -3,7 +3,8 @@
 JDBC-backed persistence adapters for the Jentic multi-agent framework.
 
 This module provides durable storage for agent directory data (registry, discovery,
-endpoint resolution) using a relational database (PostgreSQL, MySQL, H2) via plain JDBC.
+endpoint resolution) and HITL approval queues using a relational database
+(PostgreSQL, MySQL, H2) via plain JDBC.
 It is a dedicated Maven module rather than an `optional=true` dependency in
 `jentic-adapters` because the persistence stack (HikariCP, Flyway, JDBC drivers) is
 heavyweight infrastructure that should not reach the default classpath — see ADR-022.
@@ -12,6 +13,8 @@ heavyweight infrastructure that should not reach the default classpath — see A
 
 ## Capabilities
 
+### Agent directory (since 0.22.0)
+
 | Capability | Interface | Implementation |
 |---|---|---|
 | Agent registration | `AgentRegistry` | `JdbcAgentRegistry` |
@@ -19,9 +22,15 @@ heavyweight infrastructure that should not reach the default classpath — see A
 | Endpoint resolution | `AgentResolver` | `JdbcAgentResolver` |
 | Presence / liveness | `AgentPresence` | **Not implemented** — use in-memory (see ADR-023) |
 
+### HITL approval queue (since 0.23.0)
+
+| Capability | Interface | Implementation |
+|---|---|---|
+| Approval gate | `ApprovalGate` | `JdbcApprovalGate` |
+
 ---
 
-## Quick start
+## Quick start — Agent directory
 
 ```java
 import dev.jentic.adapters.persistence.directory.JdbcAgentDirectory;
@@ -38,8 +47,26 @@ var runtime = JenticRuntime.builder()
         .build();
 ```
 
-See `jentic-examples/src/main/java/.../jdbc/JdbcDirectoryExample.java` for a runnable
-example using H2 in-process (no Docker required).
+See `jentic-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
+
+## Quick start — Persistent HITL
+
+```java
+import dev.jentic.adapters.persistence.hitl.HitlSchemaManager;
+import dev.jentic.adapters.persistence.hitl.JdbcApprovalGate;
+
+new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate();
+
+var gate = new JdbcApprovalGate(dataSource, jdbcUrl);
+gate.recoverExpired();   // mark stale rows EXPIRED on startup
+
+var runtime = JenticRuntime.builder()
+        .withDefaultConfig()
+        .approvalGate(gate)
+        .build();
+```
+
+See `jentic-examples/.../hitl/PersistentHitlExample.java` for a runnable example.
 
 ---
 
@@ -64,7 +91,7 @@ example using H2 in-process (no Docker required).
 
 ## Spring Boot auto-configuration
 
-Add the dependency and set `jentic.directory.provider=jdbc` in `application.yml`:
+### JDBC agent directory
 
 ```yaml
 jentic:
@@ -76,16 +103,34 @@ jentic:
       password: ${DB_PASSWORD}
 ```
 
-The `JdbcDirectoryConfiguration` inner class in `JenticAutoConfiguration` activates
-automatically when the module is on the classpath.
+### Persistent HITL approval queue
+
+```yaml
+jentic:
+  hitl:
+    provider: jdbc
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/mydb   # falls back to directory.jdbc.url
+      username: jentic
+      password: ${DB_PASSWORD}
+      pool-size: 5
+```
+
+Both features can share a single `url` via `jentic.directory.jdbc.url` — the HITL
+configuration reads it as a fallback when `jentic.hitl.jdbc.url` is not set.
 
 ---
 
 ## Schema
 
-Flyway manages all DDL. The initial migration (`V1__create_agent_directory.sql`) creates
-two tables: `jentic_agents` and `jentic_agent_capabilities`. Migrations run automatically
-on `JdbcAgentDirectory.create()`.
+Flyway manages all DDL via two migration locations:
+
+| Location | Tables | Feature |
+|---|---|---|
+| `classpath:db/migration/jentic-directory` | `jentic_agents`, `jentic_agent_capabilities` | Agent directory |
+| `classpath:db/migration/jentic-hitl`      | `jentic_hitl_requests` | HITL approval queue |
+
+Migrations run automatically on factory method / constructor invocation. They are idempotent.
 
 Supported databases: **PostgreSQL** (primary), **MySQL / MariaDB** (optional driver),
 **H2** (tests and development).
@@ -108,3 +153,4 @@ mvn verify -pl jentic-adapters-persistence -Dintegration.tests.enabled=true
 
 - **ADR-022** — `jentic-adapters-persistence` module split (rationale for dedicated module vs `optional=true`)
 - **ADR-023** — Persistent agent directory with JDBC (schema design, upsert semantics, presence trade-off)
+- **ADR-024** — Persistent HITL approval queue (JDBC) (recovery semantics, cross-node LISTEN/NOTIFY)

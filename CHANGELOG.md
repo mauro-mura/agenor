@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`JdbcApprovalGate` — persistent HITL approval queue (ADR-024)**: new class in `dev.jentic.adapters.persistence.hitl` that persists approval requests in the `jentic_hitl_requests` table. Approval requests survive JVM restarts; pending requests are visible from any node via `getPendingRequests()`.
+
+  New classes and migration:
+  - `JdbcApprovalGate` — implements `ApprovalGate` and `AutoCloseable`. Maintains an in-memory `CompletableFuture` map per JVM (local-future constraint — see ADR-024). Timeout scheduler uses virtual threads.
+  - `HitlSchemaManager` — Flyway wrapper for `classpath:db/migration/jentic-hitl`. Idempotent.
+  - `PostgresNotificationListener` — optional cross-node decision propagation via Postgres `LISTEN/NOTIFY` on channel `jentic_hitl`. Activated automatically when the JDBC URL contains `postgresql`.
+  - `V1__create_hitl_queue.sql` — Flyway migration creating `jentic_hitl_requests` table with status, decision, and audit columns.
+
+  Startup recovery: call `gate.recoverExpired()` once after construction to mark rows with `expires_at <= NOW()` as `EXPIRED`.
+
+  ```java
+  new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate();
+  var gate = new JdbcApprovalGate(dataSource, jdbcUrl);
+  gate.recoverExpired();
+  var runtime = JenticRuntime.builder().withDefaultConfig().approvalGate(gate).build();
+  ```
+
+- **`JenticRuntime.Builder.approvalGate(ApprovalGate)`** (since 0.23.0): injects a custom `ApprovalGate` into the runtime. Defaults to `InMemoryApprovalGate` when not set — no behavioral change for existing users.
+
+- **Spring Boot auto-configuration — `jentic.hitl.provider=jdbc`**: new `JdbcHitlConfiguration` inner class in `JenticAutoConfiguration`. Activates when `dev.jentic.adapters.persistence.hitl.JdbcApprovalGate` is on the classpath and `jentic.hitl.provider=jdbc` is set. Exposes a `JdbcApprovalGate` bean and wires it into `JenticRuntime`. New `JenticProperties.Hitl` record with `provider` and `jdbc` sub-record.
+
+  ```yaml
+  jentic:
+    hitl:
+      provider: jdbc
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/mydb  # fallback: directory.jdbc.url
+        username: jentic
+        password: ${DB_PASSWORD}
+  ```
+
 ### Changed
 
 - **Spring Boot starter — typed provider sub-sections replace generic `properties` map (breaking)**

@@ -1,5 +1,6 @@
 package dev.jentic.autoconfigure;
 
+import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.core.llm.LLMProvider;
 import dev.jentic.runtime.JenticRuntime;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,25 @@ class JenticAutoConfigurationTest {
             // Runtime must have been built — no exception during wiring
             assertThat(ctx).hasSingleBean(JenticRuntime.class);
         });
+    }
+
+    // --- HITL wiring ---
+
+    @Test
+    void jdbcApprovalGateActivatedWhenProviderIsJdbc() {
+        runner.withPropertyValues(
+                        "jentic.hitl.provider=jdbc",
+                        "jentic.hitl.jdbc.url=jdbc:h2:mem:hitl_ac_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL")
+                .run(ctx -> {
+                    assertThat(ctx).hasSingleBean(ApprovalGate.class);
+                    assertThat(ctx.getBean(ApprovalGate.class))
+                            .isInstanceOf(dev.jentic.adapters.persistence.hitl.JdbcApprovalGate.class);
+                });
+    }
+
+    @Test
+    void inMemoryApprovalGateIsDefaultWhenHitlProviderNotSet() {
+        runner.run(ctx -> assertThat(ctx).doesNotHaveBean(ApprovalGate.class));
     }
 
     // --- test support configs ---

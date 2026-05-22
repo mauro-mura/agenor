@@ -59,6 +59,7 @@ public record JenticProperties(
         @DefaultValue Scheduler scheduler,
         @DefaultValue Messaging messaging,
         @DefaultValue Directory directory,
+        @DefaultValue Hitl hitl,
         @DefaultValue Llm llm,
         @DefaultValue Telemetry telemetry
 ) {
@@ -189,6 +190,49 @@ public record JenticProperties(
                 @DefaultValue("") String username,
                 @DefaultValue("") String password,
                 @DefaultValue("10") int poolSize
+        ) {}
+    }
+
+    /**
+     * HITL (Human-In-The-Loop) approval queue.
+     *
+     * <p>JDBC provider example:
+     * <pre>{@code
+     * jentic:
+     *   hitl:
+     *     provider: jdbc
+     *     jdbc:
+     *       url: jdbc:postgresql://localhost:5432/mydb
+     *       username: jentic
+     *       password: ${DB_PASSWORD}
+     *       pool-size: 5
+     * }</pre>
+     *
+     * @param provider HITL queue implementation: {@code inmemory} (default) or {@code jdbc}
+     * @param jdbc     JDBC-specific configuration; reuses {@code directory.jdbc} values when absent
+     * @since 0.23.0
+     */
+    public record Hitl(
+            @DefaultValue("inmemory") String provider,
+            HitlJdbc jdbc
+    ) {
+        /**
+         * JDBC HITL configuration.
+         *
+         * <p>When null, the JDBC HITL gate reuses the directory JDBC connection pool
+         * (if both are configured).
+         *
+         * @param url      JDBC connection URL (required when {@code provider=jdbc} and
+         *                 {@code directory.provider != jdbc})
+         * @param username database username; default empty string
+         * @param password database password; default empty string
+         * @param poolSize HikariCP connection pool size; default {@code 5}
+         */
+        public record HitlJdbc(
+                String url,
+                @DefaultValue("") String username,
+                @DefaultValue("") String password,
+                @DefaultValue("5") int poolSize
         ) {}
     }
 

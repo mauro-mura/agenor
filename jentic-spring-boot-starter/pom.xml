@@ -92,6 +92,13 @@
             <version>${lettuce.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- H2 in test scope: lets us verify HITL JDBC auto-wiring against an in-process DB -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

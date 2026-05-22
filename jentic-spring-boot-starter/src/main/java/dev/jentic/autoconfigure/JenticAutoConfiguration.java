@@ -5,6 +5,7 @@ import dev.jentic.core.directory.AgentDiscovery;
 import dev.jentic.core.directory.AgentPresence;
 import dev.jentic.core.directory.AgentRegistry;
 import dev.jentic.core.directory.AgentResolver;
+import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.core.llm.LLMProvider;
 import dev.jentic.core.messaging.MessageDispatcher;
 import dev.jentic.core.telemetry.JenticTelemetry;
@@ -67,7 +68,8 @@ public class JenticAutoConfiguration {
     @ConditionalOnMissingBean
     public JenticRuntime jenticRuntime(JenticProperties props,
                                        ObjectProvider<LLMProvider> llmProvider,
-                                       ObjectProvider<JenticTelemetry> telemetry) {
+                                       ObjectProvider<JenticTelemetry> telemetry,
+                                       ObjectProvider<ApprovalGate> approvalGate) {
         JenticRuntime.Builder builder = JenticRuntime.builder()
                 .withConfiguration(props.toJenticConfiguration());
 
@@ -76,6 +78,10 @@ public class JenticAutoConfiguration {
             builder.service(LLMProvider.class, provider);
         });
         builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
+        approvalGate.ifAvailable(gate -> {
+            log.debug("Wiring ApprovalGate '{}' into JenticRuntime", gate.getClass().getSimpleName());
+            builder.approvalGate(gate);
+        });
 
         log.debug("Building JenticRuntime (in-memory messaging): runtime.name={}", props.runtime().name());
         return builder.build();
@@ -412,12 +418,14 @@ public class JenticAutoConfiguration {
                 JenticProperties props,
                 MessageDispatcher redisMessageDispatcher,
                 ObjectProvider<LLMProvider> llmProvider,
-                ObjectProvider<JenticTelemetry> telemetry) {
+                ObjectProvider<JenticTelemetry> telemetry,
+                ObjectProvider<ApprovalGate> approvalGate) {
             var builder = JenticRuntime.builder()
                     .withConfiguration(props.toJenticConfiguration())
                     .messageDispatcher(redisMessageDispatcher);
             llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
             builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
+            approvalGate.ifAvailable(builder::approvalGate);
             log.debug("Building JenticRuntime (Redis messaging): runtime.name={}", props.runtime().name());
             return builder.build();
         }
@@ -500,7 +508,8 @@ public class JenticAutoConfiguration {
                 dev.jentic.core.directory.AgentDiscovery agentDiscovery,
                 dev.jentic.core.directory.AgentResolver agentResolver,
                 ObjectProvider<LLMProvider> llmProvider,
-                ObjectProvider<JenticTelemetry> telemetry) {
+                ObjectProvider<JenticTelemetry> telemetry,
+                ObjectProvider<ApprovalGate> approvalGate) {
             var builder = JenticRuntime.builder()
                     .withConfiguration(props.toJenticConfiguration())
                     .agentRegistry(agentRegistry)
@@ -508,9 +517,112 @@ public class JenticAutoConfiguration {
                     .agentResolver(agentResolver);
             llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
             builder.telemetry(telemetry.getIfAvailable(JenticTelemetry::noop));
+            approvalGate.ifAvailable(builder::approvalGate);
             log.debug("Building JenticRuntime (JDBC directory): runtime.name={}", props.runtime().name());
             return builder.build();
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // JDBC HITL approval queue — active only when jentic-adapters-persistence is on the classpath
+    // -------------------------------------------------------------------------
+
+    /**
+     * Creates a JDBC-backed {@link ApprovalGate} when:
+     * <ul>
+     *   <li>{@code dev.jentic.adapters.persistence.hitl.JdbcApprovalGate} is on the classpath</li>
+     *   <li>{@code jentic.hitl.provider=jdbc} is configured</li>
+     * </ul>
+     *
+     * <p>The gate is closed automatically on context shutdown via {@code destroyMethod}.
+     * It reuses the JDBC URL from {@code jentic.directory.jdbc} when
+     * {@code jentic.hitl.jdbc.url} is not explicitly set.
+     *
+     * <p>The gate is exposed as an {@link ApprovalGate} bean and wired into the runtime
+     * via the {@link #jenticRuntime} factory method (which accepts an
+     * {@link ObjectProvider}{@code <ApprovalGate>}). No dedicated runtime override bean
+     * is needed here — the default runtime picks up the gate automatically.
+     *
+     * @since 0.23.0
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "dev.jentic.adapters.persistence.hitl.JdbcApprovalGate")
+    @ConditionalOnProperty(prefix = "jentic.hitl", name = "provider", havingValue = "jdbc")
+    static class JdbcHitlConfiguration {
+
+        @Bean(destroyMethod = "close")
+        @ConditionalOnMissingBean(ApprovalGate.class)
+        public dev.jentic.adapters.persistence.hitl.JdbcApprovalGate jdbcApprovalGate(
+                JenticProperties props) {
+            String url = resolveHitlUrl(props);
+            if (url == null || url.isBlank()) {
+                throw new IllegalStateException(
+                        "jentic.hitl.provider=jdbc requires a JDBC URL. "
+                        + "Set jentic.hitl.jdbc.url or jentic.directory.jdbc.url.");
+            }
+            String username = resolveHitlUsername(props);
+            String password  = resolveHitlPassword(props);
+            int poolSize     = resolveHitlPoolSize(props);
+
+            var config = new dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig(
+                    url, username, password, poolSize,
+                    "classpath:db/migration/jentic-hitl");
+            log.debug("Creating JdbcApprovalGate (url={})", url);
+
+            var dataSource = createHitlDataSource(config);
+            new dev.jentic.adapters.persistence.hitl.HitlSchemaManager(
+                    dataSource, "classpath:db/migration/jentic-hitl").migrate();
+
+            var gate = new dev.jentic.adapters.persistence.hitl.JdbcApprovalGate(dataSource, url);
+            gate.recoverExpired();
+            return gate;
+        }
+
+        private static String resolveHitlUrl(JenticProperties props) {
+            var hitlJdbc = props.hitl().jdbc();
+            if (hitlJdbc != null && hitlJdbc.url() != null && !hitlJdbc.url().isBlank()) {
+                return hitlJdbc.url();
+            }
+            var dirJdbc = props.directory().jdbc();
+            return dirJdbc != null ? dirJdbc.url() : null;
+        }
+
+        private static String resolveHitlUsername(JenticProperties props) {
+            var hitlJdbc = props.hitl().jdbc();
+            if (hitlJdbc != null && hitlJdbc.username() != null && !hitlJdbc.username().isBlank()) {
+                return hitlJdbc.username();
+            }
+            var dirJdbc = props.directory().jdbc();
+            return dirJdbc != null ? dirJdbc.username() : "";
+        }
+
+        private static String resolveHitlPassword(JenticProperties props) {
+            var hitlJdbc = props.hitl().jdbc();
+            if (hitlJdbc != null && hitlJdbc.password() != null && !hitlJdbc.password().isBlank()) {
+                return hitlJdbc.password();
+            }
+            var dirJdbc = props.directory().jdbc();
+            return dirJdbc != null ? dirJdbc.password() : "";
+        }
+
+        private static int resolveHitlPoolSize(JenticProperties props) {
+            var hitlJdbc = props.hitl().jdbc();
+            return hitlJdbc != null ? hitlJdbc.poolSize() : 5;
+        }
+
+        private static javax.sql.DataSource createHitlDataSource(
+                dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig config) {
+            var hikari = new com.zaxxer.hikari.HikariConfig();
+            hikari.setJdbcUrl(config.jdbcUrl());
+            hikari.setUsername(config.username());
+            hikari.setPassword(config.password());
+            hikari.setMaximumPoolSize(config.maximumPoolSize());
+            hikari.setPoolName("jentic-hitl-pool");
+            return new com.zaxxer.hikari.HikariDataSource(hikari);
+        }
+
+        private static final Logger log =
+                LoggerFactory.getLogger(JdbcHitlConfiguration.class);
     }
 
     /**

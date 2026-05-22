@@ -17,6 +17,7 @@ import java.util.function.Function;
 
 import dev.jentic.core.context.AgentContext;
 import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.jentic.core.hitl.ApprovalGate;
 import dev.jentic.runtime.hitl.ApprovalService;
 import dev.jentic.runtime.hitl.HitlAnnotationProcessor;
 import dev.jentic.runtime.hitl.InMemoryApprovalGate;
@@ -72,9 +73,9 @@ public class JenticRuntime {
     private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
     private final JenticTelemetry telemetry;
 
-    // HITL: singleton gate and service — lazily initialized, shared across all agents
-    private final InMemoryApprovalGate approvalGate = new InMemoryApprovalGate();
-    private final ApprovalService approvalService = new ApprovalService(approvalGate);
+    // HITL: singleton gate and service — shared across all agents
+    private final ApprovalGate approvalGate;
+    private final ApprovalService approvalService;
 
     // Discovery components
     private final AgentScanner agentScanner;
@@ -128,7 +129,13 @@ public class JenticRuntime {
         this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
                 builder.llmMemoryManagerFactory :
                 this.createDefaultLLMMemoryManagerFactory();
-        
+
+        // HITL: use provided gate or default in-memory
+        this.approvalGate = builder.approvalGate != null
+                ? builder.approvalGate
+                : new InMemoryApprovalGate();
+        this.approvalService = new ApprovalService(this.approvalGate);
+
         // Initialize discovery components
         this.agentScanner = new AgentScanner();
         this.agentFactory = new AgentFactory(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore);
@@ -648,6 +655,7 @@ public class JenticRuntime {
         private MemoryStore memoryStore;
         private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
         private JenticTelemetry telemetry;
+        private ApprovalGate approvalGate;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
 
@@ -800,6 +808,22 @@ public class JenticRuntime {
          */
         public Builder telemetry(JenticTelemetry telemetry) {
             this.telemetry = telemetry;
+            return this;
+        }
+
+        /**
+         * Sets the approval gate used for HITL workflows.
+         *
+         * <p>Defaults to {@link InMemoryApprovalGate} when not set. Provide a
+         * persistent implementation (e.g. {@code JdbcApprovalGate}) to survive
+         * JVM restarts.
+         *
+         * @param gate the approval gate; must not be null
+         * @return {@code this}
+         * @since 0.23.0
+         */
+        public Builder approvalGate(ApprovalGate gate) {
+            this.approvalGate = gate;
             return this;
         }
 
