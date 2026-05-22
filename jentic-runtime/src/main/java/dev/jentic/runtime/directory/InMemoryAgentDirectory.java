@@ -98,55 +98,57 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.jentic.core.A
     @Override
     public CompletableFuture<Void> register(AgentDescriptor descriptor) {
         Objects.requireNonNull(descriptor, "descriptor");
-        return CompletableFuture.runAsync(() -> {
-            // Ensure a local endpoint is set if not already provided
-            AgentDescriptor toStore = descriptor.endpoint() == null
-                    ? AgentDescriptor.builder(descriptor.agentId())
-                            .agentName(descriptor.agentName())
-                            .agentType(descriptor.agentType())
-                            .status(descriptor.status())
-                            .capabilities(descriptor.capabilities())
-                            .metadata(descriptor.metadata())
-                            .endpoint(AgentEndpoint.local(nodeId))
-                            .registeredAt(descriptor.registeredAt())
-                            .lastSeen(descriptor.lastSeen())
-                            .build()
-                    : descriptor;
-            agents.put(descriptor.agentId(), toStore);
-            log.debug("Registered agent: {} ({}) on node {}", toStore.agentName(), toStore.agentId(), nodeId);
-        });
+        if (descriptor.agentId() == null || descriptor.agentId().isBlank()) {
+            log.warn("Cannot register agent with null/blank agentId — skipping directory registration for '{}'",
+                    descriptor.agentName());
+            return CompletableFuture.completedFuture(null);
+        }
+        // Ensure a local endpoint is set if not already provided
+        AgentDescriptor toStore = descriptor.endpoint() == null
+                ? AgentDescriptor.builder(descriptor.agentId())
+                        .agentName(descriptor.agentName())
+                        .agentType(descriptor.agentType())
+                        .status(descriptor.status())
+                        .capabilities(descriptor.capabilities())
+                        .metadata(descriptor.metadata())
+                        .endpoint(AgentEndpoint.local(nodeId))
+                        .registeredAt(descriptor.registeredAt())
+                        .lastSeen(descriptor.lastSeen())
+                        .build()
+                : descriptor;
+        agents.put(descriptor.agentId(), toStore);
+        log.debug("Registered agent: {} ({}) on node {}", toStore.agentName(), toStore.agentId(), nodeId);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<Void> unregister(String agentId) {
         Objects.requireNonNull(agentId, "agentId");
-        return CompletableFuture.runAsync(() -> {
-            var removed = agents.remove(agentId);
-            if (removed != null) {
-                log.debug("Unregistered agent: {} ({})", removed.agentName(), agentId);
-            }
-        });
+        var removed = agents.remove(agentId);
+        if (removed != null) {
+            log.debug("Unregistered agent: {} ({})", removed.agentName(), agentId);
+        }
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<Void> updateStatus(String agentId, AgentStatus status) {
         Objects.requireNonNull(agentId, "agentId");
         Objects.requireNonNull(status, "status");
-        return CompletableFuture.runAsync(() -> {
-            agents.computeIfPresent(agentId, (id, d) ->
-                    AgentDescriptor.builder(d.agentId())
-                            .agentName(d.agentName())
-                            .agentType(d.agentType())
-                            .status(status)
-                            .capabilities(d.capabilities())
-                            .metadata(d.metadata())
-                            .endpoint(d.endpoint())
-                            .registeredAt(d.registeredAt())
-                            .lastSeen(Instant.now())
-                            .build()
-            );
-            log.debug("Updated status for agent '{}' to {}", agentId, status);
-        });
+        agents.computeIfPresent(agentId, (id, d) ->
+                AgentDescriptor.builder(d.agentId())
+                        .agentName(d.agentName())
+                        .agentType(d.agentType())
+                        .status(status)
+                        .capabilities(d.capabilities())
+                        .metadata(d.metadata())
+                        .endpoint(d.endpoint())
+                        .registeredAt(d.registeredAt())
+                        .lastSeen(Instant.now())
+                        .build()
+        );
+        log.debug("Updated status for agent '{}' to {}", agentId, status);
+        return CompletableFuture.completedFuture(null);
     }
 
     // -------------------------------------------------------------------------
