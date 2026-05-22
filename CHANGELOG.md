@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`InMemoryAgentDirectory` — registration race condition**: `register()`, `unregister()`, and `updateStatus()` used `CompletableFuture.runAsync()`, queuing `ConcurrentHashMap` writes on the `ForkJoinPool`. Because `JenticRuntime.registerAgent()` never awaited the returned future, `resolveEndpoint()` could be called before the write completed — manifesting as `AgentNotFoundException` on loaded CI runners even though the agent had been registered at the API level. All three methods are now synchronous (direct map operations, returning `CompletableFuture.completedFuture(null)`), consistent with the already-synchronous `resolveEndpoint()`. A null/blank agentId guard was also added to `register()`: missing constructors resolved as `null` could produce descriptors with no id; the case is now logged as a warning and skipped gracefully instead of throwing a silent NPE.
+
 ## [0.23.0] - 2026-05-22
 
 ### Added
