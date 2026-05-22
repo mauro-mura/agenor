@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-05-22
+
 ### Added
 
 - **`JdbcApprovalGate` — persistent HITL approval queue (ADR-024)**: new class in `dev.jentic.adapters.persistence.hitl` that persists approval requests in the `jentic_hitl_requests` table. Approval requests survive JVM restarts; pending requests are visible from any node via `getPendingRequests()`.
@@ -750,7 +752,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/mauro-mura/jentic/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/mauro-mura/jentic/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/mauro-mura/jentic/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/mauro-mura/jentic/compare/v0.19.0...v0.20.0
