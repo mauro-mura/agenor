@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — Project rebranded from Jentic to Agenor** (target: `0.24.0`). Maven coordinates
+  move from `dev.jentic:jentic-*` to `dev.agenor:agenor-*`; Spring Boot properties from
+  `jentic.*` to `agenor.*`; structural annotations drop their prefix (`@JenticAgent` →
+  `@Agent`, `@JenticBehavior` → `@Behavior`, `@JenticPersist` → `@Persist`,
+  `@JenticPersistenceConfig` → `@PersistenceConfig`); `@JenticMessageHandler` is renamed to
+  `@AgenorMessageHandler` to avoid collision with Spring's `@MessageMapping`. No backward
+  compatibility shim is provided (clean cut — no consumers on Maven Central yet). Full
+  migration table and rationale in [ADR-025](docs/adr/ADR-025-agenor-rebrand.md);
+  step-by-step execution plan in `MIGRATION_PLAN_AGENOR_V2.md`.
+
 ### Fixed
 
 - **`InMemoryAgentDirectory` — registration race condition**: `register()`, `unregister()`, and `updateStatus()` used `CompletableFuture.runAsync()`, queuing `ConcurrentHashMap` writes on the `ForkJoinPool`. Because `JenticRuntime.registerAgent()` never awaited the returned future, `resolveEndpoint()` could be called before the write completed — manifesting as `AgentNotFoundException` on loaded CI runners even though the agent had been registered at the API level. All three methods are now synchronous (direct map operations, returning `CompletableFuture.completedFuture(null)`), consistent with the already-synchronous `resolveEndpoint()`. A null/blank agentId guard was also added to `register()`: missing constructors resolved as `null` could produce descriptors with no id; the case is now logged as a warning and skipped gracefully instead of throwing a silent NPE.
