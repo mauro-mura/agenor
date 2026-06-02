@@ -9,7 +9,7 @@ import java.time.Instant;
  * expires.
  *
  * <p>This is an unchecked exception (extends {@link AgenorException}) consistent
- * with the Jentic exception hierarchy. Callers may catch it explicitly to implement
+ * with the Agenor exception hierarchy. Callers may catch it explicitly to implement
  * fallback or escalation logic.
  *
  * @see ApprovalGate

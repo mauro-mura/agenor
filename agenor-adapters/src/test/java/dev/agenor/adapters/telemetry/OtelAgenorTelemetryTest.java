@@ -247,7 +247,7 @@ class OtelAgenorTelemetryTest {
     }
 
     @Test
-    @DisplayName("Span.makeCurrent() links child spans created via Jentic API to the parent")
+    @DisplayName("Span.makeCurrent() links child spans created via Agenor API to the parent")
     void makeCurrent_AgenorApi_linksChildToParent() {
         var parent = telemetry.spanBuilder("parent.op").startSpan();
         try (var scope = parent.makeCurrent()) {

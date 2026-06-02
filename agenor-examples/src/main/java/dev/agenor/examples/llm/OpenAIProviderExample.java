@@ -8,7 +8,7 @@ import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Example demonstrating OpenAI provider usage in Jentic framework.
+ * Example demonstrating OpenAI provider usage in Agenor framework.
  *
  * Features:
  * - Basic chat
@@ -30,7 +30,7 @@ public class OpenAIProviderExample {
     }
 
     private void run(String apiKey) {
-        System.out.println("=== Jentic OpenAI Provider Examples ===\n");
+        System.out.println("=== Agenor OpenAI Provider Examples ===\n");
 
         example1_BasicChat(apiKey);
         example2_StreamingChat(apiKey);

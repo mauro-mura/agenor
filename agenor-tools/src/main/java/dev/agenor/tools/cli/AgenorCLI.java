@@ -5,13 +5,13 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 /**
- * Main CLI entry point for Jentic framework.
+ * Main CLI entry point for Agenor framework.
  *
  * <p>Usage: {@code agenor [COMMAND] [OPTIONS]}
  */
 @Command(
     name = "agenor",
-    description = "Jentic Multi-Agent Framework CLI",
+    description = "Agenor Multi-Agent Framework CLI",
     version = "0.4.0",
     mixinStandardHelpOptions = true,
     subcommands = {

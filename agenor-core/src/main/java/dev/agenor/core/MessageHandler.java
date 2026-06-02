@@ -4,7 +4,7 @@ import dev.agenor.core.messaging.MessageDispatcher;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Functional interface for handling received messages in the Jentic framework.
+ * Functional interface for handling received messages in the Agenor framework.
  *
  * <p>A {@code MessageHandler} is a callback that processes incoming messages.
  * Handlers are registered with the {@link MessageDispatcher} to receive messages

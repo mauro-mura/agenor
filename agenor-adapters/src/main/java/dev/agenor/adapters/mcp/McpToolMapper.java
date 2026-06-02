@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Stateless mapper between MCP SDK types and Jentic core records.
+ * Stateless mapper between MCP SDK types and Agenor core records.
  */
 final class McpToolMapper {
 

@@ -4,7 +4,7 @@ import dev.agenor.core.Agent;
 
 /**
  * Functional interface for defining conditions that control behavior execution
- * in the Jentic multi-agent framework.
+ * in the Agenor multi-agent framework.
  *
  * <p>Conditions are predicates that evaluate to {@code true} or {@code false}
  * based on agent state, system metrics, time, or any custom criteria. They are

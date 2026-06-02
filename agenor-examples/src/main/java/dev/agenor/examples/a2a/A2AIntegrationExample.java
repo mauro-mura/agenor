@@ -19,12 +19,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Example: A2A Protocol Integration with Jentic Dialogue Protocol.
+ * Example: A2A Protocol Integration with Agenor Dialogue Protocol.
  *
  * <p>This example demonstrates:
  * <ol>
  *   <li>Creating an A2AAdapterConfig for agent metadata</li>
- *   <li>Exposing a Jentic agent as an A2A server via AgenorAgentExecutor</li>
+ *   <li>Exposing a Agenor agent as an A2A server via AgenorAgentExecutor</li>
  *   <li>Using AgenorA2AAdapter for auto-routing (internal/external)</li>
  *   <li>Communicating with external A2A agents</li>
  * </ol>

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Converts between Jentic DialogueMessage and A2A SDK types.
+ * Converts between Agenor DialogueMessage and A2A SDK types.
  *
  * @since 0.5.0
  */
@@ -100,7 +100,7 @@ public class DialogueA2AConverter {
     }
 
     /**
-     * Maps A2A TaskState to Jentic Performative.
+     * Maps A2A TaskState to Agenor Performative.
      */
     public Performative mapTaskStateToPerformative(TaskState state) {
         return switch (state) {
@@ -114,7 +114,7 @@ public class DialogueA2AConverter {
     }
 
     /**
-     * Maps Jentic Performative to A2A TaskState.
+     * Maps Agenor Performative to A2A TaskState.
      */
     public TaskState mapPerformativeToTaskState(Performative performative) {
         return switch (performative) {

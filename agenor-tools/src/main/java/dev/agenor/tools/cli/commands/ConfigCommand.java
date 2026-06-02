@@ -8,7 +8,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 /**
- * Manage Jentic configuration.
+ * Manage Agenor configuration.
  *
  * <p>Usage: {@code agenor config [show|validate|path]}
  */
@@ -76,18 +76,18 @@ public class ConfigCommand extends BaseCommand {
         }
 
         // Check for common required sections
-        boolean hasJentic = content.contains("agenor:");
+        boolean hasAgenor = content.contains("agenor:");
         boolean hasRuntime = content.contains("runtime:");
         boolean hasAgents = content.contains("agents:");
 
         System.out.println("Configuration: " + path);
         System.out.println("---");
-        System.out.printf("  agenor section:  %s%n", hasJentic ? "✓" : "✗ missing");
+        System.out.printf("  agenor section:  %s%n", hasAgenor ? "✓" : "✗ missing");
         System.out.printf("  runtime section: %s%n", hasRuntime ? "✓" : "optional");
         System.out.printf("  agents section:  %s%n", hasAgents ? "✓" : "optional");
         System.out.println("---");
 
-        if (hasJentic) {
+        if (hasAgenor) {
             printSuccess("Configuration is valid");
         } else {
             System.out.println("Warning: Missing 'agenor:' root section");

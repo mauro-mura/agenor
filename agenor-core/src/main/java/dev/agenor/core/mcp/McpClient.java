@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Jentic abstraction over an MCP server connection.
+ * Agenor abstraction over an MCP server connection.
  *
  * <p>Implementations are provided in {@code agenor-adapters}; this interface
  * intentionally carries no dependency on the MCP SDK.

@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a method as a Jentic behavior that the runtime will schedule and execute
+ * Marks a method as a Agenor behavior that the runtime will schedule and execute
  * automatically according to the specified {@link BehaviorType}.
  *
  * <p>The annotated method must be {@code public} and, unless the behavior receives

@@ -55,7 +55,7 @@ public class RestAPIHandler extends HttpServlet {
     /**
      * Creates a RestAPIHandler with full message history support.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      * @param objectMapper JSON mapper
      * @param messageHistory message history service, may be null
      */

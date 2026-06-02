@@ -22,9 +22,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Implements A2A SDK AgentExecutor to expose Jentic agents as A2A servers.
+ * Implements A2A SDK AgentExecutor to expose Agenor agents as A2A servers.
  *
- * <p>Routes incoming A2A requests to internal Jentic agents via MessageDispatcher.
+ * <p>Routes incoming A2A requests to internal Agenor agents via MessageDispatcher.
  * Uses the official A2A Java SDK v0.3.2.Final API.
  *
  * <p>Usage with CDI/Quarkus:
@@ -53,7 +53,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
     private final DialogueA2AConverter converter;
 
     /**
-     * @param internalAgentId   the Jentic agent ID to route A2A requests to
+     * @param internalAgentId   the Agenor agent ID to route A2A requests to
      * @param messageDispatcher the runtime message dispatcher
      * @param timeout           per-request timeout
      * @since 0.20.0
@@ -88,7 +88,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
             // Extract text from message parts
             String userMessage = extractTextFromMessage(a2aMessage);
 
-            // Convert to Jentic DialogueMessage
+            // Convert to Agenor DialogueMessage
             String externalSenderId = "a2a-client-" + taskId;
             DialogueMessage incomingMsg = DialogueMessage.builder()
                 .conversationId(taskId)
@@ -179,7 +179,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
     }
 
     /**
-     * Returns the internal Jentic agent ID this executor routes to.
+     * Returns the internal Agenor agent ID this executor routes to.
      */
     public String getInternalAgentId() {
         return internalAgentId;

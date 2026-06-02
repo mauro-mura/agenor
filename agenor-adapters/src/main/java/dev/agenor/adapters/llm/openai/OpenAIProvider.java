@@ -224,7 +224,7 @@ public class OpenAIProvider implements LLMProvider {
     }
 
     /**
-     * Convert Jentic FunctionDefinition to LangChain4j ToolSpecification.
+     * Convert Agenor FunctionDefinition to LangChain4j ToolSpecification.
      */
     private List<ToolSpecification> convertFunctionsToToolSpecs(List<FunctionDefinition> functions) {
         return functions.stream()
@@ -240,7 +240,7 @@ public class OpenAIProvider implements LLMProvider {
                 .name(func.name())
                 .description(func.description());
 
-        // Convert parameters from Jentic format to LangChain4j JsonObjectSchema
+        // Convert parameters from Agenor format to LangChain4j JsonObjectSchema
         if (func.parameters() != null && !func.parameters().isEmpty()) {
             JsonObjectSchema.Builder schemaBuilder = JsonObjectSchema.builder();
 

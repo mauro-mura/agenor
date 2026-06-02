@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.concurrent.*;
 
 /**
- * Executes evaluation scenarios against a Jentic runtime.
+ * Executes evaluation scenarios against a Agenor runtime.
  *
  * <p>The runner orchestrates the complete evaluation lifecycle:
  * <ol>
@@ -32,7 +32,7 @@ import java.util.concurrent.*;
  *   <li>Teardown - cleanup resources</li>
  * </ol>
  *
- * <p>Reuses existing Jentic tools services:
+ * <p>Reuses existing Agenor tools services:
  * <ul>
  *   <li>{@link MetricsService} - for metrics collection</li>
  *   <li>{@link HealthCheckService} - for health verification</li>
@@ -68,7 +68,7 @@ public class ScenarioRunner {
     /**
      * Creates a runner with a new set of services.
      *
-     * @param runtime the Jentic runtime to evaluate
+     * @param runtime the Agenor runtime to evaluate
      */
     public ScenarioRunner(AgenorRuntime runtime) {
         this(runtime, 500);
@@ -77,7 +77,7 @@ public class ScenarioRunner {
     /**
      * Creates a runner with custom message history size.
      *
-     * @param runtime the Jentic runtime to evaluate
+     * @param runtime the Agenor runtime to evaluate
      * @param historySize maximum messages to retain
      */
     public ScenarioRunner(AgenorRuntime runtime, int historySize) {
@@ -91,7 +91,7 @@ public class ScenarioRunner {
     /**
      * Creates a runner with externally provided services.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      * @param metrics metrics service
      * @param health health check service
      * @param history message history service

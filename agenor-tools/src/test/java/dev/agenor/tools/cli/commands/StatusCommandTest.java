@@ -76,7 +76,7 @@ class StatusCommandTest {
 
         // Then
         String output = outContent.toString();
-        assertTrue(output.contains("Jentic Runtime Status"));
+        assertTrue(output.contains("Agenor Runtime Status"));
         assertTrue(output.contains("Health:"));
         assertTrue(output.contains("5 total, 3 running"));
         assertTrue(output.contains("Uptime:"));
@@ -387,7 +387,7 @@ class StatusCommandTest {
 
         command.run();
 
-        assertTrue(outContent.toString().contains("Jentic Runtime Status"));
+        assertTrue(outContent.toString().contains("Agenor Runtime Status"));
     }
 
     @Test

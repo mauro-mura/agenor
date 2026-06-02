@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Immutable message object for agent communication in the Jentic framework.
+ * Immutable message object for agent communication in the Agenor framework.
  *
  * <p>Messages are the fundamental unit of communication between agents. They
  * encapsulate content along with routing, correlation, and metadata information.

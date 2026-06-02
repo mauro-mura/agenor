@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ExceptionsTest {
 
     // =========================================================================
-    // JENTIC EXCEPTION TESTS (base class)
+    // AGENOR EXCEPTION TESTS (base class)
     // =========================================================================
 
     @Nested

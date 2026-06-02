@@ -23,7 +23,7 @@ public class CustomerSupportExample {
             .temperature(0.7)
             .build();
 
-        // Create Jentic runtime
+        // Create Agenor runtime
         AgenorRuntime runtime = AgenorRuntime.builder()
             .build();
 

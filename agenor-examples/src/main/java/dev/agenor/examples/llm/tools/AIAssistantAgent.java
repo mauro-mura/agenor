@@ -27,7 +27,7 @@ import dev.agenor.runtime.agent.BaseAgent;
 /**
  * AI Assistant Agent with LLM function calling capabilities.
  *
- * Demonstrates proper Jentic architecture patterns:
+ * Demonstrates proper Agenor architecture patterns:
  * - Extends BaseAgent
  * - Uses @Agent annotation
  * - Implements message-driven interaction

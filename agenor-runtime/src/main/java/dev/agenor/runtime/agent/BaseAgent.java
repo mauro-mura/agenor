@@ -32,7 +32,7 @@ import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.runtime.behavior.BaseBehavior;
 
 /**
- * Base implementation for all agents in the Jentic framework.
+ * Base implementation for all agents in the Agenor framework.
  *
  * <p>Provides core functionality including:
  * <ul>

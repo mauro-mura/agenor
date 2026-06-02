@@ -53,7 +53,7 @@ import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 
 /**
- * Main runtime for the Jentic framework with automatic agent discovery.
+ * Main runtime for the Agenor framework with automatic agent discovery.
  * Manages agent lifecycle, service discovery, and annotation processing.
  */
 public class AgenorRuntime {
@@ -169,7 +169,7 @@ public class AgenorRuntime {
             return CompletableFuture.completedFuture(null);
         }
 
-        log.info("Starting Jentic Runtime...");
+        log.info("Starting Agenor Runtime...");
 
         return CompletableFuture.runAsync(() -> {
             try {
@@ -188,13 +188,13 @@ public class AgenorRuntime {
                 startAllAgents();
 
                 running = true;
-                log.info("Jentic Runtime started successfully with {} agents", agents.size());
+                log.info("Agenor Runtime started successfully with {} agents", agents.size());
 
                 // Log agent summary
                 logAgentSummary();
 
             } catch (Exception e) {
-                log.error("Failed to start Jentic Runtime", e);
+                log.error("Failed to start Agenor Runtime", e);
                 throw new RuntimeException("Failed to start runtime", e);
             }
         });
@@ -208,7 +208,7 @@ public class AgenorRuntime {
             return CompletableFuture.completedFuture(null);
         }
 
-        log.info("Stopping Jentic Runtime...");
+        log.info("Stopping Agenor Runtime...");
 
         return CompletableFuture.runAsync(() -> {
             try {
@@ -248,10 +248,10 @@ public class AgenorRuntime {
                 }
 
                 running = false;
-                log.info("Jentic Runtime stopped successfully");
+                log.info("Agenor Runtime stopped successfully");
 
             } catch (Exception e) {
-                log.error("Error stopping Jentic Runtime", e);
+                log.error("Error stopping Agenor Runtime", e);
             }
         });
     }

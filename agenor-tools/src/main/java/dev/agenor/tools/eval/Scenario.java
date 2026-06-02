@@ -56,7 +56,7 @@ public interface Scenario {
      * <p>Called before execution. Use this to register agents,
      * configure services, or prepare test data.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      */
     void setup(AgenorRuntime runtime);
 
@@ -66,7 +66,7 @@ public interface Scenario {
      * <p>Called after setup. Use this to send messages, start agents,
      * or trigger the behavior being tested.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      */
     void execute(AgenorRuntime runtime);
 
@@ -87,7 +87,7 @@ public interface Scenario {
      * <p>Called after verification, regardless of success or failure.
      * Use this to stop agents, release resources, or reset state.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      */
     default void teardown(AgenorRuntime runtime) {
         // Default: no cleanup needed

@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Jetty-based web console for Jentic runtime management.
+ * Jetty-based web console for Agenor runtime management.
  *
  * <p>Provides REST API, WebSocket events, and static resource serving
  * for monitoring and managing agents at runtime.

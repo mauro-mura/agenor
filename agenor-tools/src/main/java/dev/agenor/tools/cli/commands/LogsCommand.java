@@ -237,7 +237,7 @@ public class LogsCommand extends BaseCommand {
                 System.out.printf("[%s] ERROR %s: %s%n", timestamp, source, message);
             }
             case "connection.established" -> {
-                System.out.printf("[%s] ✓ Connected to Jentic Web Console%n", timestamp);
+                System.out.printf("[%s] ✓ Connected to Agenor Web Console%n", timestamp);
             }
             default -> {
                 // Show all events in verbose mode

@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 /**
  * Default implementation of {@link ConfigurationLoader}.
- * Loads Jentic configuration from YAML, JSON, or classpath resources.
+ * Loads Agenor configuration from YAML, JSON, or classpath resources.
  * Supports environment variable substitution via ${VAR_NAME} and ${VAR_NAME:default} syntax.
  */
 public class DefaultConfigurationLoader implements ConfigurationLoader {

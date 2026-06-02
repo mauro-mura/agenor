@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Each test simulates a realistic application scenario using
  * {@link ApplicationContextRunner} with the real {@link AgenorAutoConfiguration}.
- * No mocks of Jentic internals — only the LLMProvider (external dependency) is mocked
+ * No mocks of Agenor internals — only the LLMProvider (external dependency) is mocked
  * where needed.
  */
 class AgenorStarterIntegrationTest {

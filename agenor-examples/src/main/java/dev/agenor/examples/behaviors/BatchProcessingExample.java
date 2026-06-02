@@ -41,7 +41,7 @@ public class BatchProcessingExample {
 
     public static void main(String[] args) throws Exception {
         log.info("=".repeat(80));
-        log.info("JENTIC BATCH PROCESSING EXAMPLE");
+        log.info("AGENOR BATCH PROCESSING EXAMPLE");
         log.info("Scenario: Log Aggregation and Database Batch Operations");
         log.info("=".repeat(80) + "\n");
 
@@ -51,7 +51,7 @@ public class BatchProcessingExample {
         runtime.registerAgent(new LogAggregatorAgent());
         runtime.registerAgent(new DatabaseWriterAgent());
 
-        log.info("🚀 Starting Jentic Runtime...\n");
+        log.info("🚀 Starting Agenor Runtime...\n");
         runtime.start().join();
 
         Thread.sleep(2000);

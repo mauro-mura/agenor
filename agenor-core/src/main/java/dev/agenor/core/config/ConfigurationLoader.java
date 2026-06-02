@@ -5,7 +5,7 @@ import dev.agenor.core.AgenorConfiguration;
 import java.io.InputStream;
 
 /**
- * Contract for loading and validating Jentic configuration.
+ * Contract for loading and validating Agenor configuration.
  * Implementations live in agenor-runtime or agenor-adapters.
  */
 public interface ConfigurationLoader {

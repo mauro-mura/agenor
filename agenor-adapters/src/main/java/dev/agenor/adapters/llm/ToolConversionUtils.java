@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Utility class for converting Jentic function definitions to LangChain4j tool specifications.
+ * Utility class for converting Agenor function definitions to LangChain4j tool specifications.
  */
 public final class ToolConversionUtils {
 
@@ -18,7 +18,7 @@ public final class ToolConversionUtils {
     }
 
     /**
-     * Convert list of Jentic FunctionDefinitions to LangChain4j ToolSpecifications.
+     * Convert list of Agenor FunctionDefinitions to LangChain4j ToolSpecifications.
      */
     public static List<ToolSpecification> convertFunctionsToToolSpecs(List<FunctionDefinition> functions) {
         return functions.stream()
@@ -34,7 +34,7 @@ public final class ToolConversionUtils {
                 .name(func.name())
                 .description(func.description());
 
-        // Convert parameters from Jentic format to LangChain4j JsonObjectSchema
+        // Convert parameters from Agenor format to LangChain4j JsonObjectSchema
         if (func.parameters() != null && !func.parameters().isEmpty()) {
             JsonObjectSchema schema = convertParametersToJsonSchema(func.parameters(), func.getRequiredParameters());
             builder.parameters(schema);

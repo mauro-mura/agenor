@@ -12,7 +12,7 @@ public class DiscoveryExample {
     private static final Logger log = LoggerFactory.getLogger(DiscoveryExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic Agent Discovery Example ===");
+        log.info("=== Agenor Agent Discovery Example ===");
 
         // Create runtime with package scanning
         AgenorRuntime runtime = AgenorRuntime.builder()

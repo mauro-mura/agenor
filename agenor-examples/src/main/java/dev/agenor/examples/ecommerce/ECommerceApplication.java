@@ -16,7 +16,7 @@ public class ECommerceApplication {
 
     public static void main(String[] args) throws Exception {
         log.info("=".repeat(80));
-        log.info("JENTIC E-COMMERCE ORDER PROCESSING - DEMONSTRATION");
+        log.info("AGENOR E-COMMERCE ORDER PROCESSING - DEMONSTRATION");
         log.info("Using: FSM + Parallel Validators + Sequential Fulfillment");
         log.info("=".repeat(80) + "\n");
 
@@ -24,7 +24,7 @@ public class ECommerceApplication {
                 .scanPackage("dev.agenor.examples.ecommerce")
                 .build();
 
-        log.info("🚀 Starting Jentic Runtime...\n");
+        log.info("🚀 Starting Agenor Runtime...\n");
         runtime.start().get(10, TimeUnit.SECONDS);
 
         // Wait for agents to be ready
@@ -91,7 +91,7 @@ public class ECommerceApplication {
         // =====================================================================
 
         log.info("\n\n" + "=".repeat(80));
-        log.info("Shutting down Jentic Runtime...");
+        log.info("Shutting down Agenor Runtime...");
         log.info("=".repeat(80) + "\n");
 
         runtime.stop().get(10, TimeUnit.SECONDS);

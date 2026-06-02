@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch;
  */
 @Command(
     name = "watch",
-    description = "Watch real-time events from Jentic console"
+    description = "Watch real-time events from Agenor console"
 )
 public class WatchCommand implements Runnable {
 

@@ -225,7 +225,7 @@ class PiiRedactionGuardrailTest {
                 "Documentation updates are required before the release.",
                 "The deployment pipeline runs on every pull request.",
                 "Code review comments should be addressed within 48 hours.",
-                "The Jentic framework supports multiple LLM providers."
+                "The Agenor framework supports multiple LLM providers."
         };
 
         @Test

@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a class as a Jentic agent eligible for automatic discovery and registration.
+ * Marks a class as a Agenor agent eligible for automatic discovery and registration.
  *
  * <p>When package scanning is enabled on {@code AgenorRuntime}, all classes annotated
  * with {@code @Agent} are discovered, instantiated, and registered in the

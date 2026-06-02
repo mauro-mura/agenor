@@ -21,7 +21,7 @@ class AgenorConfigurationWrapperTest {
 
         assertThat(wrapper).isNotNull();
         assertThat(wrapper.getConfiguration()).isEqualTo(config);
-        assertThat(wrapper.jentic()).isEqualTo(config);
+        assertThat(wrapper.agenor()).isEqualTo(config);
     }
 
     @Test

@@ -17,10 +17,10 @@ import dev.agenor.core.Message;
 import dev.agenor.core.llm.LLMProvider;
 
 /**
- * Example demonstrating how to use the AIAssistantAgent in a Jentic application.
+ * Example demonstrating how to use the AIAssistantAgent in a Agenor application.
  *
  * This example shows:
- * - Proper Jentic runtime setup
+ * - Proper Agenor runtime setup
  * - Agent registration and lifecycle
  * - Message-based interaction with AI agent
  * - Tool usage through function calling
@@ -54,14 +54,14 @@ public class AIAssistantExample {
                 .maxTokens(1500)
                 .build();
 
-        // Create and configure Jentic runtime
+        // Create and configure Agenor runtime
         AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.llm.tools")
             .service(LLMProvider.class, llmProvider)
             .build();
 
         // Start runtime
-        log.info("Starting Jentic runtime...");
+        log.info("Starting Agenor runtime...");
         runtime.start().join();
 
         try {
@@ -73,7 +73,7 @@ public class AIAssistantExample {
 
         } finally {
             // Clean shutdown
-            log.info("Shutting down Jentic runtime...");
+            log.info("Shutting down Agenor runtime...");
             runtime.stop().join();
         }
 

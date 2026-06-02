@@ -39,7 +39,7 @@ public class EvaluationFrameworkExample {
     private static final Logger log = LoggerFactory.getLogger(EvaluationFrameworkExample.class);
 
     public static void main(String[] args) throws Exception {
-        log.info("=== Jentic Agent Evaluation Framework Example ===\n");
+        log.info("=== Agenor Agent Evaluation Framework Example ===\n");
 
         // 1. Create and start runtime
         AgenorRuntime runtime = AgenorRuntime.builder().build();

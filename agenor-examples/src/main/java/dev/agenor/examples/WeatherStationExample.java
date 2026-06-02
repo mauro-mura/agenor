@@ -22,7 +22,7 @@ public class WeatherStationExample {
     private static final Logger log = LoggerFactory.getLogger(WeatherStationExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic Weather Station Example ===");
+        log.info("=== Agenor Weather Station Example ===");
 
         AgenorRuntime runtime = AgenorRuntime.builder().build();
 

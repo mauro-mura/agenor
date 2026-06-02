@@ -30,7 +30,7 @@ public class MessageFilterExample {
 
     public static void main(String[] args) throws Exception {
         log.info("=".repeat(80));
-        log.info("JENTIC - ADVANCED MESSAGE FILTERING EXAMPLE");
+        log.info("AGENOR - ADVANCED MESSAGE FILTERING EXAMPLE");
         log.info("=".repeat(80));
 
         // Directory is needed by the dispatcher for sendTo resolution;

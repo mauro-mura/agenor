@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.*;
 
 /**
- * Configuration object for the Jentic framework.
+ * Configuration object for the Agenor framework.
  * Can be loaded from YAML, JSON, or properties files.
  *
  * @param runtime   runtime identity settings (name, environment, properties);

@@ -41,7 +41,7 @@ public class StatusCommand extends BaseCommand {
         JsonNode stats = extractData(statsResp);
         JsonNode health = extractData(healthResp);
 
-        System.out.println("=== Jentic Runtime Status ===\n");
+        System.out.println("=== Agenor Runtime Status ===\n");
 
         // Health
         String status = health.path("status").asText("unknown");

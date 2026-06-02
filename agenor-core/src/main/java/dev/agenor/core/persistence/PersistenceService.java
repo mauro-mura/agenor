@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Core interface for agent state persistence in the Jentic framework.
+ * Core interface for agent state persistence in the Agenor framework.
  *
  * <p>Provides an asynchronous API for saving, loading, and managing agent state
  * across restarts, failures, or migrations. Implementations are free to use any

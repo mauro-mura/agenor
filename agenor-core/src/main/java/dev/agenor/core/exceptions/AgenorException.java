@@ -1,7 +1,7 @@
 package dev.agenor.core.exceptions;
 
 /**
- * Base exception for all Jentic framework exceptions
+ * Base exception for all Agenor framework exceptions
  */
 public class AgenorException extends RuntimeException {
 

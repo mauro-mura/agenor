@@ -46,7 +46,7 @@ public class EvaluationContext {
     /**
      * Creates a new evaluation context.
      *
-     * @param runtime the Jentic runtime
+     * @param runtime the Agenor runtime
      * @param metrics collected metrics snapshot
      * @param healthReport health check results
      * @param messages captured messages during execution
@@ -71,7 +71,7 @@ public class EvaluationContext {
     // === Accessors ===
 
     /**
-     * Gets the Jentic runtime.
+     * Gets the Agenor runtime.
      *
      * @return the runtime
      */

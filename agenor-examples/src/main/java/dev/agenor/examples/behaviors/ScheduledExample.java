@@ -31,7 +31,7 @@ public class ScheduledExample {
 
     public static void main(String[] args) throws Exception {
         log.info("=".repeat(80));
-        log.info("JENTIC SCHEDULED BEHAVIOR - DEMONSTRATION");
+        log.info("AGENOR SCHEDULED BEHAVIOR - DEMONSTRATION");
         log.info("Cron-like scheduling with timezone support");
         log.info("=".repeat(80) + "\n");
 

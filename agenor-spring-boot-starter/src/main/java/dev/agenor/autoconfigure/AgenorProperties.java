@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Spring Boot configuration properties for Jentic (prefix: {@code agenor}).
+ * Spring Boot configuration properties for Agenor (prefix: {@code agenor}).
  *
  * <p>Maps {@code application.yml} keys to {@link AgenorConfiguration}. All Spring Boot
  * relaxed-binding rules apply (kebab-case ↔ camelCase ↔ UPPER_CASE env variables).

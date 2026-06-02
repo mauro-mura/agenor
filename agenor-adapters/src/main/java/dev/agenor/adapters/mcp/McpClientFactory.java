@@ -27,7 +27,7 @@ import java.util.concurrent.ForkJoinPool;
  * before returning. Callers should invoke these methods outside of hot paths.
  *
  * <p>Note: {@code io.modelcontextprotocol.client.McpClient} is the SDK builder entry point,
- * distinct from {@code dev.agenor.core.mcp.McpClient} (Jentic interface).
+ * distinct from {@code dev.agenor.core.mcp.McpClient} (Agenor interface).
  */
 public final class McpClientFactory {
 

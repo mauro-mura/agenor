@@ -1,7 +1,7 @@
 package dev.agenor.core.telemetry;
 
 /**
- * Service-provider interface for distributed tracing in Jentic.
+ * Service-provider interface for distributed tracing in Agenor.
  *
  * <p>Implementations must be safe for concurrent use across virtual threads.
  *
@@ -50,7 +50,7 @@ public interface AgenorTelemetry {
     /**
      * Returns the no-op singleton that produces zero-overhead spans.
      *
-     * <p>This is the default used by all Jentic components when no telemetry
+     * <p>This is the default used by all Agenor components when no telemetry
      * implementation is configured.
      *
      * @return the shared noop instance; never {@code null}

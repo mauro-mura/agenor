@@ -13,7 +13,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 /**
- * Metrics collection service for Jentic runtime.
+ * Metrics collection service for Agenor runtime.
  *
  * <p>Collects and aggregates metrics including:
  * <ul>

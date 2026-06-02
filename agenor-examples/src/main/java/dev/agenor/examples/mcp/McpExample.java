@@ -44,7 +44,7 @@ public class McpExample {
     private static final String PACKAGE = "@modelcontextprotocol/server-filesystem";
 
     public static void main(String[] args) throws Exception {
-        System.out.println("=== Jentic MCP Adapter Example ===");
+        System.out.println("=== Agenor MCP Adapter Example ===");
         System.out.println("Root: " + ROOT);
         System.out.println("Transport: Docker STDIO (" + IMAGE + " / " + PACKAGE + ")\n");
 

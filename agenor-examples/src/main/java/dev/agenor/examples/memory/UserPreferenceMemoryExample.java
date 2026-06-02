@@ -42,7 +42,7 @@ import dev.agenor.runtime.memory.InMemoryStore;
 public class UserPreferenceMemoryExample {
 
     public static void main(String[] args) throws Exception {
-        System.out.println("=== Jentic Memory Management with Runtime ===\n");
+        System.out.println("=== Agenor Memory Management with Runtime ===\n");
 
         // 1. Create memory store
         InMemoryStore memoryStore = new InMemoryStore();

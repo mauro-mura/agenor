@@ -8,7 +8,7 @@ import java.util.Objects;
  * Thrown when a guardrail in the chain returns {@link GuardrailResult.Blocked},
  * indicating that the content must not proceed through the pipeline.
  *
- * <p>Extends {@link AgenorException} (unchecked) to be consistent with the Jentic
+ * <p>Extends {@link AgenorException} (unchecked) to be consistent with the Agenor
  * exception hierarchy (ADR-014). Callers may catch it explicitly when they need to
  * handle policy violations, but are not required to declare it.
  *

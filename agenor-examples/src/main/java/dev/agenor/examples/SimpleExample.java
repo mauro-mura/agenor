@@ -18,7 +18,7 @@ public class SimpleExample {
     private static final Logger log = LoggerFactory.getLogger(SimpleExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic Simple Example (Programmatic) ===");
+        log.info("=== Agenor Simple Example (Programmatic) ===");
 
         AgenorRuntime runtime = AgenorRuntime.builder().build();
 

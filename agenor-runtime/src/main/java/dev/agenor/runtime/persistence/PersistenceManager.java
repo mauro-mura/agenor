@@ -24,7 +24,7 @@ import dev.agenor.runtime.agent.BaseAgent;
  * Manages automatic persistence for agents based on their configuration.
  * Handles periodic saves, snapshots, and lifecycle-based persistence.
  *
- * INTEGRATION WITH JENTIC RUNTIME:
+ * INTEGRATION WITH AGENOR RUNTIME:
  * - Register as a service: runtime.builder().service(PersistenceManager.class, manager)
  * - Agents are automatically registered when added to runtime
  * - Lifecycle hooks integrate with agent stop process

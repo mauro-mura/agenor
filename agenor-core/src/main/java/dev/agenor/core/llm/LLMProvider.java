@@ -8,7 +8,7 @@ import java.util.function.Consumer;
  * Core interface for Large Language Model providers.
  *
  * <p>This interface provides a stable, provider-agnostic abstraction for interacting
- * with various LLM services (OpenAI, Anthropic, Ollama, etc.). It follows Jentic's
+ * with various LLM services (OpenAI, Anthropic, Ollama, etc.). It follows Agenor's
  * established pattern of placing interfaces in agenor-core and implementations
  * in agenor-adapters.
  *

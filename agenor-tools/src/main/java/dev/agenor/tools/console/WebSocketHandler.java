@@ -120,7 +120,7 @@ public class WebSocketHandler implements JettyWebSocketCreator, ConsoleEventList
             try {
                 ObjectNode welcome = objectMapper.createObjectNode();
                 welcome.put("type", "connection.established");
-                welcome.put("message", "Connected to Jentic Web Console");
+                welcome.put("message", "Connected to Agenor Web Console");
                 welcome.put("timestamp", Instant.now().toString());
 
                 session.getRemote().sendString(objectMapper.writeValueAsString(welcome));

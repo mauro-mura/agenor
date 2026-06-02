@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Jentic {@link McpClient} that delegates to the official MCP Java SDK's
+ * Agenor {@link McpClient} that delegates to the official MCP Java SDK's
  * {@link McpSyncClient}, bridging its blocking calls to {@link CompletableFuture}
  * via {@code supplyAsync()}.
  *

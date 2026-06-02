@@ -12,7 +12,7 @@ import dev.agenor.tools.console.JettyWebConsole;
 import dev.agenor.tools.history.MessageHistoryService;
 
 /**
- * Example demonstrating CLI usage with a running Jentic runtime.
+ * Example demonstrating CLI usage with a running Agenor runtime.
  *
  * <p>This example starts a runtime with sample agents and a web console,
  * allowing you to interact via the CLI.
@@ -40,7 +40,7 @@ import dev.agenor.tools.history.MessageHistoryService;
  *
  * # Check runtime status
  * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="status"
- * === Jentic Runtime Status ===
+ * === Agenor Runtime Status ===
  *
  * Health:     ✓ UP
  * Agents:     3 total, 3 running
@@ -88,7 +88,7 @@ public class CLIExample {
     private static final Logger log = LoggerFactory.getLogger(CLIExample.class);
 
     public static void main(String[] args) throws Exception {
-        log.info("Starting Jentic CLI Example...");
+        log.info("Starting Agenor CLI Example...");
 
         // Create message history service
         MessageHistoryService messageHistory = new MessageHistoryService(500);

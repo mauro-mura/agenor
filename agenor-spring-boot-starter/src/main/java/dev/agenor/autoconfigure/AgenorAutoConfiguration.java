@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring Boot auto-configuration for Jentic.
+ * Spring Boot auto-configuration for Agenor.
  *
  * <p>Activated automatically when {@link AgenorRuntime} is on the classpath.
  * All beans are guarded by {@code @ConditionalOnMissingBean} — user-declared beans always win.

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Base interface for agent behaviors in the Jentic multi-agent framework.
+ * Base interface for agent behaviors in the Agenor multi-agent framework.
  *
  * <p>Behaviors define <strong>what an agent does over time</strong>. They represent
  * units of autonomous activity that can be executed independently, scheduled
@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  *
  * <p><strong>Behavior Types:</strong>
- * Jentic supports multiple behavior types to accommodate different execution
+ * Agenor supports multiple behavior types to accommodate different execution
  * patterns:
  *
  * <table border="1">

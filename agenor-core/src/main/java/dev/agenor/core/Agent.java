@@ -10,9 +10,9 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Core agent interface defining the lifecycle and basic operations of an agent
- * in the Jentic multi-agent framework.
+ * in the Agenor multi-agent framework.
  *
- * <p>All agents in Jentic must implement this interface, which provides the
+ * <p>All agents in Agenor must implement this interface, which provides the
  * fundamental contract for agent behavior, lifecycle management, and
  * inter-agent communication. An agent is an autonomous entity that can:
  * <ul>

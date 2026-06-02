@@ -23,7 +23,7 @@ import dev.agenor.runtime.hitl.LoggingApprovalNotifier;
 
 /**
  * Demonstrates the Human-in-the-Loop Checkpoint pattern (ADR-015) with real
- * Jentic agents registered in {@link AgenorRuntime}.
+ * Agenor agents registered in {@link AgenorRuntime}.
  *
  * <p>A {@link TreasuryAgent} submits large wire transfers as
  * {@link HumanCheckpointBehavior}s. An {@link OperatorAgent} polls the shared
@@ -48,7 +48,7 @@ public class HitlExample {
     private static final Logger log = LoggerFactory.getLogger(HitlExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic HITL Checkpoint Example ===\n");
+        log.info("=== Agenor HITL Checkpoint Example ===\n");
 
         // Shared gate: TreasuryAgent registers requests, OperatorAgent reads pending
         InMemoryApprovalGate sharedGate = new InMemoryApprovalGate();

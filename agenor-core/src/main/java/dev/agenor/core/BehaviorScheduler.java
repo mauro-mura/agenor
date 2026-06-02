@@ -3,7 +3,7 @@ package dev.agenor.core;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Scheduler interface for managing behavior execution in the Jentic framework.
+ * Scheduler interface for managing behavior execution in the Agenor framework.
  *
  * <p>The {@code BehaviorScheduler} is responsible for orchestrating the
  * execution of agent behaviors according to their types and schedules. It

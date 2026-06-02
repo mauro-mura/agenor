@@ -26,7 +26,7 @@ public class TaskManagerExample {
     private static final Logger log = LoggerFactory.getLogger(TaskManagerExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic Task Manager Example ===");
+        log.info("=== Agenor Task Manager Example ===");
 
         AgenorRuntime runtime = AgenorRuntime.builder().build();
 

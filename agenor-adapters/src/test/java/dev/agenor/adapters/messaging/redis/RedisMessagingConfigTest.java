@@ -32,7 +32,7 @@ class RedisMessagingConfigTest {
 
     @Test
     @DisplayName("blank consumerGroupPrefix defaults to 'agenor'")
-    void constructor_blankPrefix_defaultsToJentic() {
+    void constructor_blankPrefix_defaultsToAgenor() {
         var cfg = new RedisMessagingConfig("redis://localhost", "node-1", "", 0, 0, 0, 0);
         assertThat(cfg.consumerGroupPrefix()).isEqualTo("agenor");
     }

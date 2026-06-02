@@ -23,7 +23,7 @@ public class PingPongExample {
     private static final Logger log = LoggerFactory.getLogger(PingPongExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic Ping-Pong Example ===");
+        log.info("=== Agenor Ping-Pong Example ===");
 
         AgenorRuntime runtime = AgenorRuntime.builder().build();
 

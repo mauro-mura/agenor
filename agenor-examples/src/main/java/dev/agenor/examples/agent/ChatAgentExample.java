@@ -35,7 +35,7 @@ public class ChatAgentExample {
 
     public static void main(String[] args) throws Exception {
         System.out.println("=".repeat(60));
-        System.out.println("Jentic LLM Memory Management - Complete Example");
+        System.out.println("Agenor LLM Memory Management - Complete Example");
         System.out.println("Integration Demo (with Auto-Injection)");
         System.out.println("=".repeat(60));
         System.out.println();

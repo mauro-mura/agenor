@@ -8,7 +8,7 @@ package dev.agenor.core.telemetry;
  * {@link #NOOP_BUILDER} and {@link SpanBuilder#startSpan()} always returns
  * {@link #NOOP_SPAN}.
  *
- * <p>This class is the default telemetry used by all Jentic runtime components
+ * <p>This class is the default telemetry used by all Agenor runtime components
  * when no {@link AgenorTelemetry} implementation is configured. It ensures that
  * the core and runtime modules compile and run without any tracing library on
  * the classpath.

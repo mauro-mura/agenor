@@ -3,7 +3,7 @@ package dev.agenor.core.console;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Web-based management console for Jentic agents.
+ * Web-based management console for Agenor agents.
  *
  * <p>Provides HTTP REST API and WebSocket endpoints for monitoring
  * and managing agents at runtime. Implementations may use different

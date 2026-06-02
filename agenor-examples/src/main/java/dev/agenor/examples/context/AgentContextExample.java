@@ -47,7 +47,7 @@ public class AgentContextExample {
     private static final Logger log = LoggerFactory.getLogger(AgentContextExample.class);
 
     public static void main(String[] args) throws InterruptedException {
-        log.info("=== Jentic AgentContext Example ===");
+        log.info("=== Agenor AgentContext Example ===");
         log.info("Demonstrates plain Agent impl (no BaseAgent) via AgentContext injection");
         log.info("");
 

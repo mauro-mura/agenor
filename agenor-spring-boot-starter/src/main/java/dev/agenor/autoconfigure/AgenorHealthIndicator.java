@@ -5,7 +5,7 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 
 /**
- * Actuator {@link HealthIndicator} for the Jentic runtime.
+ * Actuator {@link HealthIndicator} for the Agenor runtime.
  *
  * <p>Reports {@code UP} when the runtime is running, {@code DOWN} otherwise.
  * Details exposed:

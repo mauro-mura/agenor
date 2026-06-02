@@ -30,7 +30,7 @@ public class RetryExample {
 
     public static void main(String[] args) throws Exception {
         log.info("=".repeat(80));
-        log.info("JENTIC RETRY BEHAVIOR - COMPREHENSIVE EXAMPLE");
+        log.info("AGENOR RETRY BEHAVIOR - COMPREHENSIVE EXAMPLE");
         log.info("Demonstrating retry patterns for real-world scenarios");
         log.info("=".repeat(80) + "\n");
 
@@ -45,7 +45,7 @@ public class RetryExample {
         runtime.registerAgent(fileAgent);
         runtime.registerAgent(msgAgent);
 
-        log.info("🚀 Starting Jentic Runtime...\n");
+        log.info("🚀 Starting Agenor Runtime...\n");
         runtime.start().get(10, TimeUnit.SECONDS);
 
         Thread.sleep(2000);
@@ -112,7 +112,7 @@ public class RetryExample {
         // =====================================================================
 
         log.info("\n\n" + "=".repeat(80));
-        log.info("Shutting down Jentic Runtime...");
+        log.info("Shutting down Agenor Runtime...");
         log.info("=".repeat(80) + "\n");
 
         runtime.stop().get(10, TimeUnit.SECONDS);
