@@ -85,7 +85,7 @@ public record JenticProperties(
      * {@link JenticConfiguration.AgentsConfig} by the core constructor.
      * {@code scan-paths} is kept as a legacy alias consistent with the native YAML format.
      *
-     * @param autoDiscovery  whether to scan for {@code @JenticAgent} classes at startup;
+     * @param autoDiscovery  whether to scan for {@code @Agent} classes at startup;
      *                       default {@code true}
      * @param basePackage    root package to scan for agents
      * @param scanPackages   additional packages to scan (merged with {@code basePackage})

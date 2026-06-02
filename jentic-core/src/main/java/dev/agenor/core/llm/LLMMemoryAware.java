@@ -15,7 +15,7 @@ import dev.agenor.core.memory.llm.LLMMemoryManager;
  * memory can implement {@code LLMMemoryAware} directly:
  *
  * <pre>{@code
- * @JenticAgent("my-domain-agent")
+ * @Agent("my-domain-agent")
  * public class MyDomainAgent extends DomainClass implements Agent, LLMMemoryAware {
  *
  *     private LLMMemoryManager llmMemoryManager;

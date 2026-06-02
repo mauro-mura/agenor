@@ -1,10 +1,10 @@
 package dev.agenor.examples.eval;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
 import dev.agenor.tools.eval.*;
 
 import java.time.Duration;
@@ -103,7 +103,7 @@ public class QuickStartEvaluationExample {
     /**
      * Simple counter agent for testing.
      */
-    @JenticAgent(value = "counter-agent", type = "Processor")
+    @Agent(value = "counter-agent", type = "Processor")
     static class CounterAgent extends BaseAgent {
 
         private final AtomicInteger count = new AtomicInteger(0);
@@ -121,7 +121,7 @@ public class QuickStartEvaluationExample {
             });
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "1s")
+        @Behavior(type = CYCLIC, interval = "1s")
         public void logStatus() {
             System.out.println("Counter value: " + count.get());
         }

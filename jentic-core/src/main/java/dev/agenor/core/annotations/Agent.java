@@ -9,29 +9,29 @@ import java.lang.annotation.Target;
  * Marks a class as a Jentic agent eligible for automatic discovery and registration.
  *
  * <p>When package scanning is enabled on {@code JenticRuntime}, all classes annotated
- * with {@code @JenticAgent} are discovered, instantiated, and registered in the
+ * with {@code @Agent} are discovered, instantiated, and registered in the
  * {@link dev.agenor.core.AgentDirectory}. The runtime then calls {@code start()} on
  * each agent that has {@link #autoStart()} set to {@code true}.
  *
  * <p>Example usage:
  * <pre>{@code
- * @JenticAgent(value = "order-processor", type = "processor",
+ * @Agent(value = "order-processor", type = "processor",
  *              capabilities = {"order.processing", "inventory.check"})
  * public class OrderProcessorAgent extends BaseAgent {
  *
- *     @JenticBehavior(type = CYCLIC, interval = "10s")
+ *     @Behavior(type = CYCLIC, interval = "10s")
  *     public void processPendingOrders() { ... }
  * }
  * }</pre>
  *
  * @since 0.1.0
  * @see dev.agenor.core.Agent
- * @see JenticBehavior
- * @see JenticMessageHandler
+ * @see Behavior
+ * @see AgenorMessageHandler
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JenticAgent {
+public @interface Agent {
 
     /**
      * The agent identifier used for registration and discovery.

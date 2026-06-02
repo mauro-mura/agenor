@@ -33,13 +33,13 @@ Behaviors are the primary mechanism for implementing agent logic. Every behavior
 ### Annotation-based (recommended)
 
 ```java
-@JenticAgent("my-agent")
+@Agent("my-agent")
 public class MyAgent extends BaseAgent {
 
-    @JenticBehavior(type = CYCLIC, interval = "30s")
+    @Behavior(type = CYCLIC, interval = "30s")
     public void poll() { ... }
 
-    @JenticBehavior(type = ONE_SHOT)
+    @Behavior(type = ONE_SHOT)
     public void init() { ... }
 }
 ```

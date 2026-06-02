@@ -45,10 +45,10 @@ import java.util.stream.Collectors;
  * <b>Example Usage:</b>
  *
  * <pre>{@code
- * @JenticAgent("chat-bot")
+ * @Agent("chat-bot")
  * public class ChatBot extends LLMAgent {
  *
- * 	@JenticMessageHandler("user.message")
+ * 	@AgenorMessageHandler("user.message")
  * 	public void handleUserMessage(Message msg) {
  * 		String userInput = msg.getContent(String.class);
  *

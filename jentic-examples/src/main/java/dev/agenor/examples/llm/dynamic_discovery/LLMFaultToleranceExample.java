@@ -2,6 +2,8 @@ package dev.agenor.examples.llm.dynamic_discovery;
 
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.*;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
@@ -64,10 +66,10 @@ public class LLMFaultToleranceExample {
         Thread.sleep(2000);
 
         // Get coordinator from runtime (it was auto-discovered)
-        Agent coordinator = runtime.getAgent("dynamic-coordinator")
+        dev.agenor.core.Agent coordinator = runtime.getAgent("dynamic-coordinator")
             .orElseThrow(() -> new RuntimeException("Coordinator not found!"));
         // Get market researcher from runtime (it was auto-discovered)
-        Agent marketResearcher = runtime.getAgent("dynamic-market-researcher")
+        dev.agenor.core.Agent marketResearcher = runtime.getAgent("dynamic-market-researcher")
                 .orElseThrow(() -> new RuntimeException("Market researcher not found!"));
 
         // Example 1: Standard research with all specialists
@@ -108,7 +110,7 @@ public class LLMFaultToleranceExample {
 /**
  * Dynamic Coordinator - Discovers specialists via AgentDirectory
  */
-@JenticAgent(value = "dynamic-coordinator", type = "coordinator", capabilities = {"research-planning", "synthesis"})
+@Agent(value = "dynamic-coordinator", type = "coordinator", capabilities = {"research-planning", "synthesis"})
 class DynamicCoordinator extends BaseAgent {
 
     private final LLMProvider llm;
@@ -119,7 +121,7 @@ class DynamicCoordinator extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.request", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.request", autoSubscribe = true)
     public void handleResearchRequest(Message message) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) message.content();
@@ -234,17 +236,17 @@ class DynamicCoordinator extends BaseAgent {
         getMessageDispatcher().sendTo(taskMsg);
     }
 
-    @JenticMessageHandler(value = "research.findings.technical", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.technical", autoSubscribe = true)
     public void handleTechnicalFindings(Message message) {
         processFinding(message, "technical-analysis", "Technical");
     }
 
-    @JenticMessageHandler(value = "research.findings.market", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.market", autoSubscribe = true)
     public void handleMarketFindings(Message message) {
         processFinding(message, "market-analysis", "Market");
     }
 
-    @JenticMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
     public void handleCompetitorFindings(Message message) {
         processFinding(message, "competitive-intelligence", "Competitor");
     }
@@ -306,7 +308,7 @@ class DynamicCoordinator extends BaseAgent {
         });
     }
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "20s", autoStart = true)
+    @Behavior(type = BehaviorType.CYCLIC, interval = "20s", autoStart = true)
     public void monitorSpecialists() {
         // Periodically check available specialists
         AgentQuery query = AgentQuery.builder()
@@ -356,7 +358,7 @@ class DynamicCoordinator extends BaseAgent {
 /**
  * Dynamic Technical Researcher
  */
-@JenticAgent(
+@Agent(
     value = "dynamic-tech-researcher",
     type = "specialist",
     capabilities = {"technical-analysis", "architecture-review", "feasibility-study"}
@@ -371,7 +373,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.technical", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.technical", autoSubscribe = true)
     public void handleResearchTask(Message message) {
         taskCount.incrementAndGet();
 
@@ -434,7 +436,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
         });
     }
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
+    @Behavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
     public void reportStatus() {
         if (taskCount.get() > 0) {
             log.info("🔧 Technical Researcher active - Tasks: {}", taskCount.get());
@@ -445,7 +447,7 @@ class DynamicTechnicalResearcher extends BaseAgent {
 /**
  * Dynamic Market Researcher
  */
-@JenticAgent(
+@Agent(
     value = "dynamic-market-researcher",
     type = "specialist",
     capabilities = {"market-analysis", "trend-forecasting", "demand-analysis"}
@@ -460,7 +462,7 @@ class DynamicMarketResearcher extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.market", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.market", autoSubscribe = true)
     public void handleResearchTask(Message message) {
         taskCount.incrementAndGet();
 
@@ -523,7 +525,7 @@ class DynamicMarketResearcher extends BaseAgent {
         });
     }
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
+    @Behavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
     public void reportStatus() {
         if (taskCount.get() > 0) {
             log.info("📈 Market Researcher active - Tasks: {}", taskCount.get());
@@ -534,7 +536,7 @@ class DynamicMarketResearcher extends BaseAgent {
 /**
  * Dynamic Competitor Researcher
  */
-@JenticAgent(
+@Agent(
     value = "dynamic-competitor-researcher",
     type = "specialist",
     capabilities = {"competitive-intelligence", "swot-analysis", "strategy-analysis"}
@@ -549,7 +551,7 @@ class DynamicCompetitorResearcher extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.competitor", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.competitor", autoSubscribe = true)
     public void handleResearchTask(Message message) {
         taskCount.incrementAndGet();
 
@@ -612,7 +614,7 @@ class DynamicCompetitorResearcher extends BaseAgent {
         });
     }
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
+    @Behavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
     public void reportStatus() {
         if (taskCount.get() > 0) {
             log.info("🎯 Competitor Researcher active - Tasks: {}", taskCount.get());

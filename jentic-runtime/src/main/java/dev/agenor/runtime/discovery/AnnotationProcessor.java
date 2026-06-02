@@ -5,16 +5,15 @@ import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.List;
 
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Behavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Agent;
-import dev.agenor.core.Behavior;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticBehavior;
 import dev.agenor.core.messaging.TopicSubscriber;
-import dev.agenor.core.annotations.JenticMessageHandler;
 import dev.agenor.core.composite.CompletionStrategy;
 import dev.agenor.runtime.behavior.BaseBehavior;
 import dev.agenor.runtime.behavior.CyclicBehavior;
@@ -57,13 +56,13 @@ public class AnnotationProcessor {
     }
 
     /**
-     * Process @JenticBehavior annotations
+     * Process @Behavior annotations
      */
     private void processBehaviorAnnotations(Agent agent, Class<?> agentClass) {
         Method[] methods = agentClass.getDeclaredMethods();
 
         for (Method method : methods) {
-            JenticBehavior behaviorAnnotation = method.getAnnotation(JenticBehavior.class);
+            Behavior behaviorAnnotation = method.getAnnotation(Behavior.class);
 
             if (behaviorAnnotation != null) {
                 try {
@@ -77,13 +76,13 @@ public class AnnotationProcessor {
     }
 
     /**
-     * Process @JenticMessageHandler annotations
+     * Process @AgenorMessageHandler annotations
      */
     private void processMessageHandlerAnnotations(Agent agent, Class<?> agentClass) {
         Method[] methods = agentClass.getDeclaredMethods();
 
         for (Method method : methods) {
-            JenticMessageHandler handlerAnnotation = method.getAnnotation(JenticMessageHandler.class);
+            AgenorMessageHandler handlerAnnotation = method.getAnnotation(AgenorMessageHandler.class);
 
             if (handlerAnnotation != null && handlerAnnotation.autoSubscribe()) {
                 try {
@@ -97,9 +96,9 @@ public class AnnotationProcessor {
     }
 
     /**
-     * Create behavior from @JenticBehavior annotation
+     * Create behavior from @Behavior annotation
      */
-    private void createBehaviorFromAnnotation(Agent agent, Method method, JenticBehavior annotation) {
+    private void createBehaviorFromAnnotation(Agent agent, Method method, Behavior annotation) {
         if (!annotation.autoStart()) {
             log.debug("Skipping auto-start for behavior method: {}", method.getName());
             return;
@@ -114,7 +113,7 @@ public class AnnotationProcessor {
 
         method.setAccessible(true);
 
-        Behavior behavior = switch (annotation.type()) {
+        dev.agenor.core.Behavior behavior = switch (annotation.type()) {
             case ONE_SHOT -> createOneShotBehavior(agent, method, annotation);
             case CYCLIC -> createCyclicBehavior(agent, method, annotation);
             case WAKER -> createWakerBehavior(agent, method, annotation);
@@ -144,7 +143,7 @@ public class AnnotationProcessor {
         }
     }
 
-    private Behavior createSequentialBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createSequentialBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         Duration stepTimeout = annotation.stepTimeout().isEmpty()
                 ? null : parseDuration(annotation.stepTimeout());
@@ -167,7 +166,7 @@ public class AnnotationProcessor {
         return sequential;
     }
 
-    private Behavior createParallelBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createParallelBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         String strategyStr = annotation.parallelStrategy().toUpperCase();
 
@@ -196,7 +195,7 @@ public class AnnotationProcessor {
         return parallel;
     }
 
-    private Behavior createFSMBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createFSMBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         String initialState = annotation.fsmInitialState();
         Duration stateTimeout = annotation.stateTimeout().isEmpty() ? null : parseDuration(annotation.stateTimeout());
@@ -224,7 +223,7 @@ public class AnnotationProcessor {
         return fsm;
     }
 
-    private Behavior createConditionalBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createConditionalBehavior(Agent agent, Method method, Behavior annotation) {
         String conditionExpr = annotation.condition();
         if (conditionExpr.isEmpty()) {
             log.warn("CONDITIONAL behavior requires 'condition' parameter: {}", method.getName());
@@ -245,7 +244,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createThrottledBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createThrottledBehavior(Agent agent, Method method, Behavior annotation) {
         String rateLimitSpec = annotation.rateLimit();
         if (rateLimitSpec.isEmpty()) {
             log.warn("THROTTLED behavior requires 'rateLimit' parameter: {}", method.getName());
@@ -267,7 +266,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createBatchBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createBatchBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         int batchSize = annotation.batchSize();
         Duration maxWaitTime = annotation.maxWaitTime().isEmpty() ? null : parseDuration(annotation.maxWaitTime());
@@ -292,7 +291,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createRetryBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createRetryBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         int maxRetries = annotation.maxRetries();
         String backoffStr = annotation.backoff().toUpperCase();
@@ -391,9 +390,9 @@ public class AnnotationProcessor {
     }
 
     /**
-     * Create message handler from @JenticMessageHandler annotation
+     * Create message handler from @AgenorMessageHandler annotation
      */
-    private void createMessageHandlerFromAnnotation(Agent agent, Method method, JenticMessageHandler annotation) {
+    private void createMessageHandlerFromAnnotation(Agent agent, Method method, AgenorMessageHandler annotation) {
         // Validate method signature
         if (!isValidMessageHandlerMethod(method)) {
             log.warn("Invalid message handler method signature: {}. Method should be public, non-static, and take a Message parameter",
@@ -418,7 +417,7 @@ public class AnnotationProcessor {
                 agent.getAgentName(), topic, method.getName(), subscriptionId);
     }
 
-    private Behavior createOneShotBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createOneShotBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
 
         return new OneShotBehavior(behaviorId) {
@@ -429,7 +428,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createCyclicBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createCyclicBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         Duration interval = parseDuration(annotation.interval());
 
@@ -441,7 +440,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createWakerBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createWakerBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         Duration initialDelay = parseDuration(annotation.initialDelay());
 
@@ -449,7 +448,7 @@ public class AnnotationProcessor {
         return WakerBehavior.wakeAfter(initialDelay, () -> invokeMethod(agent, method));
     }
 
-    private Behavior createEventDrivenBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createEventDrivenBehavior(Agent agent, Method method, Behavior annotation) {
         // Event-driven behaviors typically need a topic - for now, use method name as topic
         String topic = method.getName().toLowerCase();
         String behaviorId = generateBehaviorId(agent, method);
@@ -462,7 +461,7 @@ public class AnnotationProcessor {
         };
     }
 
-    private Behavior createCustomBehavior(Agent agent, Method method, JenticBehavior annotation) {
+    private dev.agenor.core.Behavior createCustomBehavior(Agent agent, Method method, Behavior annotation) {
         // Custom behaviors use the interval as their execution pattern
         String behaviorId = generateBehaviorId(agent, method);
         Duration interval = parseDuration(annotation.interval());

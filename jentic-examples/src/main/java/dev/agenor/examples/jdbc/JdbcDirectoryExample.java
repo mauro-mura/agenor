@@ -5,9 +5,9 @@ import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
 import dev.agenor.core.AgentQuery;
 import dev.agenor.core.Message;
 import dev.agenor.core.PageRequest;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
@@ -102,7 +102,7 @@ public class JdbcDirectoryExample {
      * Orchestrator: at startup queries the JDBC directory for workers and publishes
      * a task to each one by topic.
      */
-    @JenticAgent(value = "orchestrator",
+    @Agent(value = "orchestrator",
                  type = "orchestrator",
                  capabilities = {"orchestration"},
                  autoStart = true)
@@ -115,7 +115,7 @@ public class JdbcDirectoryExample {
             this.directory = directory;
         }
 
-        @JenticBehavior(type = ONE_SHOT, autoStart = true)
+        @Behavior(type = ONE_SHOT, autoStart = true)
         public void discoverAndDispatch() {
             var workers = directory.discovery()
                     .findAgents(AgentQuery.byType("data-worker"), PageRequest.first(10))
@@ -134,7 +134,7 @@ public class JdbcDirectoryExample {
             });
         }
 
-        @JenticMessageHandler("tasks.result")
+        @AgenorMessageHandler("tasks.result")
         public void onResult(Message msg) {
             log.info("[Orchestrator] Result received from {}: {}", msg.senderId(), msg.content());
         }
@@ -143,7 +143,7 @@ public class JdbcDirectoryExample {
     /**
      * Worker: processes data tasks and publishes results back.
      */
-    @JenticAgent(type = "data-worker",
+    @Agent(type = "data-worker",
                  capabilities = {"data-processing"},
                  autoStart = true)
     static class DataWorkerAgent extends BaseAgent {
@@ -152,7 +152,7 @@ public class JdbcDirectoryExample {
             super(agentId, "Data Worker " + agentId);
         }
 
-        @JenticMessageHandler("tasks.process")
+        @AgenorMessageHandler("tasks.process")
         public void handleTask(Message msg) {
             log.info("[{}] Processing: {}", getAgentId(), msg.content());
             getMessageDispatcher().publish(

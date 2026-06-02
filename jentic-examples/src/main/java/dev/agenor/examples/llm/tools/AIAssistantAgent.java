@@ -10,12 +10,12 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
 import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
 import dev.agenor.core.llm.LLMMessage;
@@ -29,14 +29,14 @@ import dev.agenor.runtime.agent.BaseAgent;
  *
  * Demonstrates proper Jentic architecture patterns:
  * - Extends BaseAgent
- * - Uses @JenticAgent annotation
+ * - Uses @Agent annotation
  * - Implements message-driven interaction
  * - Follows dependency injection patterns
  * - Includes comprehensive tool registry
  *
  * @since 0.4.0
  */
-@JenticAgent(
+@Agent(
     value = "ai-assistant",
     type = "ai",
     capabilities = {"llm-reasoning", "function-calling", "tool-execution"},
@@ -97,7 +97,7 @@ public class AIAssistantAgent extends BaseAgent {
      *
      * @param message the incoming chat message
      */
-    @JenticMessageHandler("ai.chat.request")
+    @AgenorMessageHandler("ai.chat.request")
     public void handleChatRequest(Message message) {
         try {
             String userInput = message.getContent(String.class);
@@ -145,7 +145,7 @@ public class AIAssistantAgent extends BaseAgent {
      *
      * @param message the tool execution message
      */
-    @JenticMessageHandler("ai.tool.execute")
+    @AgenorMessageHandler("ai.tool.execute")
     public void handleToolExecution(Message message) {
         try {
             ToolExecutionRequest request = message.getContent(ToolExecutionRequest.class);

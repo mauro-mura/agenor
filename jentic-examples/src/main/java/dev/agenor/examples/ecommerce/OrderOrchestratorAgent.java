@@ -1,9 +1,9 @@
 package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.OneShotBehavior;
@@ -16,7 +16,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 
-@JenticAgent(
+@Agent(
         value = "order-orchestrator",
         type = "Orchestrator",
         capabilities = {"order-processing", "workflow-management"}
@@ -101,7 +101,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
     // FSM STATE BEHAVIORS
     // =========================================================================
 
-    private Behavior createIdleStateBehavior() {
+    private dev.agenor.core.Behavior createIdleStateBehavior() {
         return new OneShotBehavior("idle") {
             @Override
             protected void action() {
@@ -112,7 +112,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         };
     }
 
-    private Behavior createValidatingStateBehavior() {
+    private dev.agenor.core.Behavior createValidatingStateBehavior() {
         return new OneShotBehavior("trigger-validations") {
             @Override
             protected void action() {
@@ -217,7 +217,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
                 .whenComplete((r, e) -> sub.unsubscribe());
     }
 
-    private Behavior createPaymentProcessingBehavior() {
+    private dev.agenor.core.Behavior createPaymentProcessingBehavior() {
         return new OneShotBehavior("process-payment") {
             @Override
             protected void action() {
@@ -237,7 +237,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         };
     }
 
-    private Behavior createFulfillmentBehavior() {
+    private dev.agenor.core.Behavior createFulfillmentBehavior() {
         SequentialBehavior sequential = new SequentialBehavior(
                 "fulfillment-sequence")
                 .withStepTimeout(FULFILLMENT_STEP_TIMEOUT); // ✅ Timeout di 10s per ogni step
@@ -292,7 +292,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         return sequential;
     }
 
-    private Behavior createCompletedBehavior() {
+    private dev.agenor.core.Behavior createCompletedBehavior() {
         return new OneShotBehavior("complete-order") {
             @Override
             protected void action() {
@@ -318,7 +318,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
         };
     }
 
-    private Behavior createFailedBehavior() {
+    private dev.agenor.core.Behavior createFailedBehavior() {
         return new OneShotBehavior("handle-failure") {
             @Override
             protected void action() {
@@ -344,7 +344,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
     // CYCLIC BEHAVIOR - Runs the FSM continuously
     // =========================================================================
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "500ms")
+    @Behavior(type = BehaviorType.CYCLIC, interval = "500ms")
     public void runOrderStateMachine() {
         try {
             orderFSM.execute().join();
@@ -357,7 +357,7 @@ public class OrderOrchestratorAgent extends BaseAgent {
     // MESSAGE HANDLERS
     // =========================================================================
 
-    @JenticMessageHandler("new-order")
+    @AgenorMessageHandler("new-order")
     public void handleNewOrder(Message message) {
         Order order = message.getContent(Order.class);
 

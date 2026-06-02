@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.core.telemetry.JenticTelemetry;
 import dev.agenor.core.hitl.ApprovalGate;
@@ -24,13 +25,11 @@ import dev.agenor.runtime.hitl.InMemoryApprovalGate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.agenor.core.Agent;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.JenticConfiguration;
-import dev.agenor.core.annotations.JenticAgent;
 import dev.agenor.core.directory.AgentDiscovery;
 import dev.agenor.core.directory.AgentPresence;
 import dev.agenor.core.directory.AgentRegistry;
@@ -87,7 +86,7 @@ public class JenticRuntime {
     private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
 
-    private final Map<String, Agent> agents = new ConcurrentHashMap<>();
+    private final Map<String, dev.agenor.core.Agent> agents = new ConcurrentHashMap<>();
     private final Map<Class<?>, Object> serviceInstances = new ConcurrentHashMap<>();
 
     private volatile boolean running = false;
@@ -219,7 +218,7 @@ public class JenticRuntime {
             try {
                 // Stop all agents
                 List<CompletableFuture<Void>> stopFutures = new ArrayList<>();
-                for (Agent agent : agents.values()) {
+                for (dev.agenor.core.Agent agent : agents.values()) {
                     if (agent.isRunning()) {
                         CompletableFuture<Void> stopFuture = lifecycleManager
                                 .stopAgent(agent, DEFAULT_SHUTDOWN_TIMEOUT)
@@ -264,21 +263,21 @@ public class JenticRuntime {
     /**
      * Get an agent by ID
      */
-    public Optional<Agent> getAgent(String agentId) {
+    public Optional<dev.agenor.core.Agent> getAgent(String agentId) {
         return Optional.ofNullable(agents.get(agentId));
     }
 
     /**
      * Get all registered agents
      */
-    public Collection<Agent> getAgents() {
+    public Collection<dev.agenor.core.Agent> getAgents() {
         return Collections.unmodifiableCollection(agents.values());
     }
 
     /**
      * Register a new agent instance
      */
-    public void registerAgent(Agent agent) {
+    public void registerAgent(dev.agenor.core.Agent agent) {
         Objects.requireNonNull(agent, "Agent cannot be null");
         String agentId = agent.getAgentId();
         if (agentId == null || agentId.isBlank()) {
@@ -331,7 +330,7 @@ public class JenticRuntime {
     /**
      * Create an agent from a class using annotation discovery
      */
-    public <T extends Agent> T createAgent(Class<T> agentClass) {
+    public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) {
         try {
             T agent = agentFactory.createAgent(agentClass);
             Objects.requireNonNull(agent, "Factory returned null agent for class: " + agentClass.getName());
@@ -376,7 +375,7 @@ public class JenticRuntime {
     /**
      * Returns an {@link AgentContext} wrapping the core runtime services.
      *
-     * <p>Useful when manually instantiating agents that implement {@link Agent}
+     * <p>Useful when manually instantiating agents that implement {@link dev.agenor.core.Agent}
      * directly (without extending {@code BaseAgent}) and need all services
      * in a single object:
      *
@@ -500,7 +499,7 @@ public class JenticRuntime {
 
         // Scan for agent classes
         String[] packageArray = packages.toArray(new String[0]);
-        Set<Class<? extends Agent>> agentClasses = agentScanner.scanForAgents(packageArray);
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = agentScanner.scanForAgents(packageArray);
 
         if (agentClasses.isEmpty()) {
             log.info("No agent classes found in scanned packages");
@@ -508,10 +507,10 @@ public class JenticRuntime {
         }
 
         // Create agent instances
-        Map<String, Agent> discoveredAgents = agentFactory.createAgents(agentClasses);
+        Map<String, dev.agenor.core.Agent> discoveredAgents = agentFactory.createAgents(agentClasses);
 
         // Register discovered agents
-        for (Agent agent : discoveredAgents.values()) {
+        for (dev.agenor.core.Agent agent : discoveredAgents.values()) {
             registerAgent(agent);
         }
 
@@ -525,7 +524,7 @@ public class JenticRuntime {
     private void processAgentAnnotations() {
         log.info("Processing annotations for {} agents", agents.size());
 
-        for (Agent agent : agents.values()) {
+        for (dev.agenor.core.Agent agent : agents.values()) {
             try {
                 annotationProcessor.processAnnotations(agent);
             } catch (Exception e) {
@@ -542,7 +541,7 @@ public class JenticRuntime {
     private void startAllAgents() {
         List<CompletableFuture<Void>> startFutures = new ArrayList<>();
 
-        for (Agent agent : agents.values()) {
+        for (dev.agenor.core.Agent agent : agents.values()) {
             // Check if the agent should auto-start
             if (shouldAutoStart(agent)) {
                 // Use LifecycleManager for proper state tracking and timeout handling
@@ -578,8 +577,8 @@ public class JenticRuntime {
     /**
      * Check if the agent should auto-start based on annotation
      */
-    private boolean shouldAutoStart(Agent agent) {
-        JenticAgent annotation = agent.getClass().getAnnotation(JenticAgent.class);
+    private boolean shouldAutoStart(dev.agenor.core.Agent agent) {
+        Agent annotation = agent.getClass().getAnnotation(Agent.class);
         return annotation == null || annotation.autoStart();
     }
 
@@ -594,7 +593,7 @@ public class JenticRuntime {
 
         log.info("Agent Summary:");
         agents.values().forEach(agent -> {
-            JenticAgent annotation = agent.getClass().getAnnotation(JenticAgent.class);
+            Agent annotation = agent.getClass().getAnnotation(Agent.class);
             String type = annotation != null ? annotation.type() : "unknown";
             String[] capabilities = annotation != null ? annotation.capabilities() : new String[0];
 
@@ -611,7 +610,7 @@ public class JenticRuntime {
      * Unregister an agent from runtime and directory
      */
     public CompletableFuture<Void> unregisterAgent(String agentId) {
-        Agent agent = agents.remove(agentId);
+        dev.agenor.core.Agent agent = agents.remove(agentId);
 
         if (agent == null) {
             log.warn("Attempted to unregister non-existent agent: {}", agentId);

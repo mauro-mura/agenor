@@ -1,9 +1,9 @@
 package dev.agenor.examples;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.JenticRuntime;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class WeatherStationExample {
     /**
      * Agent that collects weather data periodically
      */
-    @JenticAgent(value = "weather-collector",
+    @Agent(value = "weather-collector",
                  type = "sensor",
                  capabilities = {"data-collection", "weather"},
                  autoStart = true)
@@ -79,7 +79,7 @@ public class WeatherStationExample {
             super("weather-collector", "Weather Collector");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "5s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "5s", autoStart = true)
         public void collectWeatherData() {
             String location = locations[random.nextInt(locations.length)];
             double temperature = 15 + random.nextDouble() * 20; // 15-35°C
@@ -110,7 +110,7 @@ public class WeatherStationExample {
     /**
      * Agent that processes raw weather data
      */
-    @JenticAgent(value = "weather-processor",
+    @Agent(value = "weather-processor",
                  type = "processor",
                  capabilities = {"data-processing", "analytics"},
                  autoStart = true)
@@ -120,7 +120,7 @@ public class WeatherStationExample {
             super("weather-processor", "Weather Processor");
         }
 
-        @JenticMessageHandler("weather.raw-data")
+        @AgenorMessageHandler("weather.raw-data")
         public void processWeatherData(Message message) {
             WeatherData rawData = message.getContent(WeatherData.class);
 
@@ -161,7 +161,7 @@ public class WeatherStationExample {
     /**
      * Agent that displays processed weather data
      */
-    @JenticAgent(value = "weather-display",
+    @Agent(value = "weather-display",
                  type = "display",
                  capabilities = {"data-display", "alerts"},
                  autoStart = true)
@@ -171,7 +171,7 @@ public class WeatherStationExample {
             super("weather-display", "Weather Display");
         }
 
-        @JenticMessageHandler("weather.processed-data")
+        @AgenorMessageHandler("weather.processed-data")
         public void displayWeatherData(Message message) {
             WeatherData data = message.getContent(WeatherData.class);
             String alert = message.headers().get("alert");

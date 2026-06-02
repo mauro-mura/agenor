@@ -1,8 +1,8 @@
 package dev.agenor.runtime.discovery;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.messaging.TopicSubscriber;
 import dev.agenor.runtime.agent.BaseAgent;
@@ -52,7 +52,7 @@ class AnnotationProcessorTest {
         processor.processAnnotations(agent);
 
         // Verify behavior was added
-        verify(agent, atLeastOnce()).addBehavior(any(Behavior.class));
+        verify(agent, atLeastOnce()).addBehavior(any(dev.agenor.core.Behavior.class));
 
         // Verify message handler subscription
         verify(topicSubscriber).subscribeTopic(eq("test.topic"), any(MessageHandler.class));
@@ -69,10 +69,10 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        ArgumentCaptor<Behavior> captor = ArgumentCaptor.forClass(Behavior.class);
+        ArgumentCaptor<dev.agenor.core.Behavior> captor = ArgumentCaptor.forClass(dev.agenor.core.Behavior.class);
         verify(agent).addBehavior(captor.capture());
 
-        Behavior behavior = captor.getValue();
+        dev.agenor.core.Behavior behavior = captor.getValue();
         assertThat(behavior).isNotNull();
     }
 
@@ -87,7 +87,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        ArgumentCaptor<Behavior> captor = ArgumentCaptor.forClass(Behavior.class);
+        ArgumentCaptor<dev.agenor.core.Behavior> captor = ArgumentCaptor.forClass(dev.agenor.core.Behavior.class);
         verify(agent).addBehavior(captor.capture());
 
         assertThat(captor.getValue()).isNotNull();
@@ -100,7 +100,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -110,7 +110,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -120,7 +120,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -144,7 +144,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -158,7 +158,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -172,7 +172,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -186,7 +186,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -196,7 +196,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -206,7 +206,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -216,7 +216,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -226,7 +226,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -236,7 +236,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent, never()).addBehavior(any(Behavior.class));
+        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -250,7 +250,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -260,7 +260,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent, never()).addBehavior(any(Behavior.class));
+        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -274,7 +274,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -284,7 +284,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -298,7 +298,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -308,7 +308,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -322,7 +322,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -336,7 +336,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -350,7 +350,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent).addBehavior(any(Behavior.class));
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -399,7 +399,7 @@ class AnnotationProcessorTest {
         processor.processAnnotations(agent);
 
         // Should not add any behavior
-        verify(agent, never()).addBehavior(any(Behavior.class));
+        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     @Test
@@ -409,7 +409,7 @@ class AnnotationProcessorTest {
 
         processor.processAnnotations(agent);
 
-        verify(agent, never()).addBehavior(any(Behavior.class));
+        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
     }
 
     // =========================================================================
@@ -435,12 +435,12 @@ class AnnotationProcessorTest {
             super("test-agent", "Test Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.ONE_SHOT)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
         public void oneShotMethod() {
             // Test method
         }
 
-        @JenticMessageHandler("test.topic")
+        @AgenorMessageHandler("test.topic")
         public void handleMessage(Message msg) {
             // Test handler
         }
@@ -451,7 +451,7 @@ class AnnotationProcessorTest {
             super("oneshot", "OneShot Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.ONE_SHOT)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
         public void doOnce() {
         }
     }
@@ -461,7 +461,7 @@ class AnnotationProcessorTest {
             super("cyclic", "Cyclic Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "5s")
+        @Behavior(type = BehaviorType.CYCLIC, interval = "5s")
         public void periodic() {
         }
     }
@@ -471,7 +471,7 @@ class AnnotationProcessorTest {
             super("ms", "MS Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "500ms")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CYCLIC, interval = "500ms")
         public void periodic() {
         }
     }
@@ -481,7 +481,7 @@ class AnnotationProcessorTest {
             super("min", "Min Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "2min")
+        @Behavior(type = BehaviorType.CYCLIC, interval = "2min")
         public void periodic() {
         }
     }
@@ -491,7 +491,7 @@ class AnnotationProcessorTest {
             super("hours", "Hours Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "1h")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CYCLIC, interval = "1h")
         public void periodic() {
         }
     }
@@ -501,7 +501,7 @@ class AnnotationProcessorTest {
             super("invalid", "Invalid Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "invalid")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CYCLIC, interval = "invalid")
         public void periodic() {
         }
     }
@@ -511,7 +511,7 @@ class AnnotationProcessorTest {
             super("waker", "Waker Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.WAKER, initialDelay = "10s")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.WAKER, initialDelay = "10s")
         public void wakeUp() {
         }
     }
@@ -521,7 +521,7 @@ class AnnotationProcessorTest {
             super("event", "Event Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.EVENT_DRIVEN)
+        @Behavior(type = BehaviorType.EVENT_DRIVEN)
         public void onEvent() {
         }
     }
@@ -531,7 +531,7 @@ class AnnotationProcessorTest {
             super("custom", "Custom Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CUSTOM, interval = "3s")
+        @Behavior(type = BehaviorType.CUSTOM, interval = "3s")
         public void customAction() {
         }
     }
@@ -541,7 +541,7 @@ class AnnotationProcessorTest {
             super("cond-sys", "Conditional System");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL, condition = "system.cpu < 80")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "system.cpu < 80")
         public void whenLowCpu() {
         }
     }
@@ -551,7 +551,7 @@ class AnnotationProcessorTest {
             super("cond-time", "Conditional Time");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL, condition = "time.businesshours")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "time.businesshours")
         public void duringBusinessHours() {
         }
     }
@@ -561,7 +561,7 @@ class AnnotationProcessorTest {
             super("cond-agent", "Conditional Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL, condition = "agent.running")
+        @Behavior(type = BehaviorType.CONDITIONAL, condition = "agent.running")
         public void whenRunning() {
         }
     }
@@ -571,7 +571,7 @@ class AnnotationProcessorTest {
             super("cond-and", "Conditional AND");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL, condition = "system.healthy AND time.weekday")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "system.healthy AND time.weekday")
         public void whenHealthyAndWeekday() {
         }
     }
@@ -581,7 +581,7 @@ class AnnotationProcessorTest {
             super("cond-or", "Conditional OR");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL, condition = "time.weekend OR time.businesshours")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "time.weekend OR time.businesshours")
         public void whenWeekendOrBusiness() {
         }
     }
@@ -591,7 +591,7 @@ class AnnotationProcessorTest {
             super("cond-none", "Conditional None");
         }
 
-        @JenticBehavior(type = BehaviorType.CONDITIONAL)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL)
         public void noCondition() {
         }
     }
@@ -601,7 +601,7 @@ class AnnotationProcessorTest {
             super("throttled", "Throttled Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.THROTTLED, rateLimit = "10/s")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.THROTTLED, rateLimit = "10/s")
         public void throttledAction() {
         }
     }
@@ -611,7 +611,7 @@ class AnnotationProcessorTest {
             super("throttled-none", "Throttled None");
         }
 
-        @JenticBehavior(type = BehaviorType.THROTTLED)
+        @Behavior(type = BehaviorType.THROTTLED)
         public void noRateLimit() {
         }
     }
@@ -621,7 +621,7 @@ class AnnotationProcessorTest {
             super("batch", "Batch Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.BATCH, batchSize = 5, maxWaitTime = "10s")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.BATCH, batchSize = 5, maxWaitTime = "10s")
         public void processBatch() {
         }
     }
@@ -631,7 +631,7 @@ class AnnotationProcessorTest {
             super("batch-invalid", "Batch Invalid");
         }
 
-        @JenticBehavior(type = BehaviorType.BATCH, batchSize = -1)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.BATCH, batchSize = -1)
         public void processBatch() {
         }
     }
@@ -641,7 +641,7 @@ class AnnotationProcessorTest {
             super("retry", "Retry Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.RETRY, maxRetries = 3, backoff = "exponential", initialDelay = "1s")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.RETRY, maxRetries = 3, backoff = "exponential", initialDelay = "1s")
         public void retryAction() {
         }
     }
@@ -651,7 +651,7 @@ class AnnotationProcessorTest {
             super("retry-invalid", "Retry Invalid");
         }
 
-        @JenticBehavior(type = BehaviorType.RETRY, maxRetries = -1)
+        @Behavior(type = BehaviorType.RETRY, maxRetries = -1)
         public void retryAction() {
         }
     }
@@ -661,7 +661,7 @@ class AnnotationProcessorTest {
             super("sequential", "Sequential Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.SEQUENTIAL, interval = "200ms", stepTimeout = "5s")
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.SEQUENTIAL, interval = "200ms", stepTimeout = "5s")
         public void sequentialAction() {
         }
     }
@@ -671,7 +671,7 @@ class AnnotationProcessorTest {
             super("parallel", "Parallel Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.PARALLEL, parallelStrategy = "all", requiredCompletions = 2)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.PARALLEL, parallelStrategy = "all", requiredCompletions = 2)
         public void parallelAction() {
         }
     }
@@ -681,7 +681,7 @@ class AnnotationProcessorTest {
             super("fsm", "FSM Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.FSM, fsmInitialState = "IDLE", stateTimeout = "10s")
+        @Behavior(type = BehaviorType.FSM, fsmInitialState = "IDLE", stateTimeout = "10s")
         public void fsmAction() {
         }
     }
@@ -691,7 +691,7 @@ class AnnotationProcessorTest {
             super("handler", "Handler Agent");
         }
 
-        @JenticMessageHandler("test.topic")
+        @AgenorMessageHandler("test.topic")
         public void handleMessage(Message msg) {
         }
     }
@@ -701,7 +701,7 @@ class AnnotationProcessorTest {
             super("no-auto", "No Auto Agent");
         }
 
-        @JenticMessageHandler(value = "test.topic", autoSubscribe = false)
+        @AgenorMessageHandler(value = "test.topic", autoSubscribe = false)
         public void handleMessage(Message msg) {
         }
     }
@@ -711,7 +711,7 @@ class AnnotationProcessorTest {
             super("invalid-handler", "Invalid Handler");
         }
 
-        @JenticMessageHandler("test.topic")
+        @AgenorMessageHandler("test.topic")
         public void wrongSignature() {
             // Wrong signature - no Message parameter
         }
@@ -722,7 +722,7 @@ class AnnotationProcessorTest {
             super("invalid-behavior", "Invalid Behavior");
         }
 
-        @JenticBehavior(type = BehaviorType.ONE_SHOT)
+        @Behavior(type = BehaviorType.ONE_SHOT)
         public void wrongSignature(String param) {
             // Wrong signature - has parameters
         }
@@ -733,7 +733,7 @@ class AnnotationProcessorTest {
             super("no-auto-start", "No Auto Start");
         }
 
-        @JenticBehavior(type = BehaviorType.ONE_SHOT, autoStart = false)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT, autoStart = false)
         public void notAutoStarted() {
         }
     }
@@ -743,7 +743,7 @@ class AnnotationProcessorTest {
             super("exception", "Exception Agent");
         }
 
-        @JenticBehavior(type = BehaviorType.ONE_SHOT)
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
         private void privateMethod() {
             // Private method will cause issues
         }

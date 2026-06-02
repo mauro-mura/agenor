@@ -4,7 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import dev.agenor.adapters.persistence.hitl.HitlSchemaManager;
 import dev.agenor.adapters.persistence.hitl.JdbcApprovalGate;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalRequest;
 import dev.agenor.runtime.JenticRuntime;
@@ -82,7 +82,7 @@ public class PersistentHitlExample {
     // PaymentAgent: submits a payment for approval in onStart()
     // -------------------------------------------------------------------------
 
-    @JenticAgent(value = "payment-agent")
+    @Agent(value = "payment-agent")
     static class PaymentAgent extends BaseAgent {
 
         private final JdbcApprovalGate gate;
@@ -127,7 +127,7 @@ public class PersistentHitlExample {
     // OperatorAgent: polls pending requests and approves them
     // -------------------------------------------------------------------------
 
-    @JenticAgent(value = "operator-agent")
+    @Agent(value = "operator-agent")
     static class OperatorAgent extends BaseAgent {
 
         private final JdbcApprovalGate gate;

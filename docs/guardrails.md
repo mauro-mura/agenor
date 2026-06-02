@@ -54,7 +54,7 @@ Declare guardrails on the agent class. `JenticRuntime` instantiates them via the
 public no-arg constructor and injects the chain at registration time:
 
 ```java
-@JenticAgent("finance-agent")
+@Agent("finance-agent")
 @WithGuardrails(
     input  = { PiiRedactionGuardrail.class, MaxTokensInputGuardrail.class },
     output = { PiiRedactionGuardrail.class, ContentPolicyGuardrail.class }

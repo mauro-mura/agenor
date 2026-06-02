@@ -1,7 +1,7 @@
 package dev.agenor.examples.console;
 
 import dev.agenor.core.BehaviorType;
-import dev.agenor.core.annotations.JenticBehavior;
+import dev.agenor.core.annotations.Behavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ public class WebConsoleExample {
             super("order-processor", "Order Processor");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "3s")
+        @Behavior(type = BehaviorType.CYCLIC, interval = "3s")
         public void processOrders() {
             // Simulate processing time
             try {
@@ -99,7 +99,7 @@ public class WebConsoleExample {
             super("inventory-manager", "Inventory Manager");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "5s")
+        @Behavior(type = BehaviorType.CYCLIC, interval = "5s")
         public void checkStock() {
             try {
                 Thread.sleep(20 + random.nextInt(50));
@@ -109,7 +109,7 @@ public class WebConsoleExample {
             log.debug("Stock levels checked");
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "10s")
+        @Behavior(type = BehaviorType.CYCLIC, interval = "10s")
         public void warehouseSync() {
             try {
                 Thread.sleep(100 + random.nextInt(200));

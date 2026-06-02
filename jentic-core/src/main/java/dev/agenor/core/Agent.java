@@ -75,7 +75,7 @@ import java.util.concurrent.CompletableFuture;
  * <p><strong>Implementation Notes:</strong>
  * <ul>
  *   <li>Implementations should provide common base functionality</li>
- *   <li>Use {@code @JenticAgent} annotation for automatic discovery</li>
+ *   <li>Use {@code @Agent} annotation for automatic discovery</li>
  *   <li>Ensure proper cleanup in {@link #stop()} to release resources</li>
  *   <li>Handle failures gracefully during startup and shutdown</li>
  * </ul>

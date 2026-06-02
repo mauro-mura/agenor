@@ -216,7 +216,7 @@ batch.setFlushOnStop(false); // Disable
 ### Pattern 1: Agent with Batch Behavior
 
 ```java
-@JenticAgent("data-processor")
+@Agent("data-processor")
 public class DataProcessorAgent extends BaseAgent {
     
     private BatchBehavior<DataItem> batcher;
@@ -233,7 +233,7 @@ public class DataProcessorAgent extends BaseAgent {
         addBehavior(batcher);
     }
     
-    @JenticMessageHandler("data.incoming")
+    @AgenorMessageHandler("data.incoming")
     public void handleData(Message message) {
         DataItem item = message.getContent(DataItem.class);
         batcher.add(item);
@@ -282,7 +282,7 @@ BatchBehavior<Order> orderBatch = new BatchBehavior<Order>(
 ### Pattern 3: Metrics and Monitoring
 
 ```java
-@JenticBehavior(type = CYCLIC, interval = "30s")
+@Behavior(type = CYCLIC, interval = "30s")
 public void reportBatchMetrics() {
     log.info("Batch Metrics:");
     log.info("  - Queue size: {}", batcher.getQueueSize());
@@ -376,7 +376,7 @@ void testBatchProcessing() throws Exception {
 ### From CyclicBehavior
 **Before:**
 ```java
-@JenticBehavior(type = CYCLIC, interval = "5s")
+@Behavior(type = CYCLIC, interval = "5s")
 public void processItems() {
     for (Item item : queue) {
         processItem(item);

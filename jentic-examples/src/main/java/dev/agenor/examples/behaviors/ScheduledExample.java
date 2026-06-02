@@ -1,6 +1,6 @@
 package dev.agenor.examples.behaviors;
 
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.ScheduledBehavior;
@@ -215,7 +215,7 @@ public class ScheduledExample {
     // AGENT
     // =========================================================================
 
-    @JenticAgent(value = "scheduler-demo", type = "scheduler",
+    @Agent(value = "scheduler-demo", type = "scheduler",
                  capabilities = {"scheduled-tasks", "cron", "automation"})
     public static class SchedulerDemoAgent extends BaseAgent {
 

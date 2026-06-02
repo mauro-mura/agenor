@@ -2,6 +2,7 @@ package dev.agenor.examples.llm;
 
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.*;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.agent.BaseAgent;
 
@@ -13,7 +14,7 @@ import dev.agenor.runtime.agent.BaseAgent;
  * - Priority classification
  * - Automated response suggestions
  */
-@JenticAgent(
+@Agent(
         value = "customer-support-agent",
         type = "customer-support",
         capabilities = {"ticket-analysis", "sentiment-detection", "priority-classification"},
@@ -33,7 +34,7 @@ public class CustomerSupportAgent extends BaseAgent {
     /**
      * Analyze customer ticket and extract key information.
      */
-    @JenticMessageHandler(value = "ticket.analyze", autoSubscribe = true)
+    @AgenorMessageHandler(value = "ticket.analyze", autoSubscribe = true)
     public void handleAnalyzeTicket(Message message) {
         String ticketContent = message.content().toString();
 
@@ -69,7 +70,7 @@ public class CustomerSupportAgent extends BaseAgent {
     /**
      * Generate personalized response based on ticket analysis.
      */
-    @JenticMessageHandler(value = "ticket.respond", autoSubscribe = true)
+    @AgenorMessageHandler(value = "ticket.respond", autoSubscribe = true)
     public void handleGenerateResponse(Message message) {
         // Parse ticket data from message content
         String content = message.content().toString();
@@ -113,7 +114,7 @@ public class CustomerSupportAgent extends BaseAgent {
     /**
      * Classify ticket category using function calling.
      */
-    @JenticMessageHandler(value = "ticket.classify", autoSubscribe = true)
+    @AgenorMessageHandler(value = "ticket.classify", autoSubscribe = true)
     public void handleClassifyTicket(Message message) {
         String ticketContent = message.content().toString();
 

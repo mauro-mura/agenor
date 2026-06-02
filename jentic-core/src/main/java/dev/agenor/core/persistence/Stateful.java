@@ -1,5 +1,7 @@
 package dev.agenor.core.persistence;
 
+import dev.agenor.core.annotations.PersistenceConfig;
+
 /**
  * Mixin interface for agents that support state persistence.
  *
@@ -10,8 +12,8 @@ package dev.agenor.core.persistence;
  *
  * <p><strong>Typical usage pattern:</strong>
  * <pre>{@code
- * @JenticAgent("order-processor")
- * @JenticPersistenceConfig(strategy = PersistenceStrategy.ON_STOP)
+ * @Agent("order-processor")
+ * @PersistenceConfig(strategy = PersistenceStrategy.ON_STOP)
  * public class OrderProcessorAgent extends BaseAgent implements Stateful {
  *
  *     private int ordersProcessed = 0;
@@ -45,7 +47,7 @@ package dev.agenor.core.persistence;
  * @see AgentState
  * @see PersistenceService
  * @see PersistenceStrategy
- * @see dev.agenor.core.annotations.JenticPersistenceConfig
+ * @see PersistenceConfig
  */
 public interface Stateful {
 

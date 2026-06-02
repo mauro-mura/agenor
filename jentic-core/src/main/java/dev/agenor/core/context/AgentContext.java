@@ -13,7 +13,7 @@ import dev.agenor.core.messaging.MessageDispatcher;
  * parameter and receive all framework services in a single injection point:
  *
  * <pre>{@code
- * @JenticAgent("order-processor")
+ * @Agent("order-processor")
  * public class OrderProcessorAgent extends DomainEntity implements Agent {
  *
  *     private final AgentContext ctx;
@@ -22,7 +22,7 @@ import dev.agenor.core.messaging.MessageDispatcher;
  *         this.ctx = ctx;
  *     }
  *
- *     @JenticMessageHandler("order.created")
+ *     @AgenorMessageHandler("order.created")
  *     public void handle(Message msg) {
  *         ctx.messageDispatcher().publish("orders.confirmed", msg);
  *     }

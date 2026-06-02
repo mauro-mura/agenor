@@ -102,7 +102,7 @@ try {
 ### With Agent Integration
 
 ```java
-@JenticAgent("payment-processor")
+@Agent("payment-processor")
 public class PaymentProcessorAgent extends BaseAgent {
     
     private CircuitBreakerBehavior<PaymentResult> paymentBreaker;
@@ -135,7 +135,7 @@ public class PaymentProcessorAgent extends BaseAgent {
         addBehavior(paymentBreaker);
     }
     
-    @JenticMessageHandler("payment.request")
+    @AgenorMessageHandler("payment.request")
     public void handlePaymentRequest(Message message) {
         try {
             PaymentResult result = paymentBreaker.call();
@@ -262,7 +262,7 @@ int consecutiveSuccesses = metrics.consecutiveSuccesses();
 
 ```java
 // Periodic metrics reporting
-@JenticBehavior(type = CYCLIC, interval = "60s")
+@Behavior(type = CYCLIC, interval = "60s")
 public void reportMetrics() {
     var metrics = breaker.getMetrics();
     
@@ -438,7 +438,7 @@ public class PaymentService {
 ### Example 2: Database Query Protection
 
 ```java
-@JenticAgent("user-service")
+@Agent("user-service")
 public class UserServiceAgent extends BaseAgent {
     
     private CircuitBreakerBehavior<List<User>> dbBreaker;
@@ -460,7 +460,7 @@ public class UserServiceAgent extends BaseAgent {
         addBehavior(dbBreaker);
     }
     
-    @JenticMessageHandler("user.list")
+    @AgenorMessageHandler("user.list")
     public void handleUserListRequest(Message message) {
         try {
             List<User> users = dbBreaker.call();

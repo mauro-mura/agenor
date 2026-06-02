@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Agent;
-import dev.agenor.core.annotations.JenticPersistenceConfig;
+import dev.agenor.core.annotations.PersistenceConfig;
 import dev.agenor.core.persistence.AgentState;
 import dev.agenor.core.persistence.PersistenceService;
 import dev.agenor.core.persistence.PersistenceStrategy;
@@ -127,10 +127,10 @@ public class PersistenceManager {
         }
 
         Stateful statefulAgent = (Stateful) agent;
-        JenticPersistenceConfig config = agent.getClass().getAnnotation(JenticPersistenceConfig.class);
+        PersistenceConfig config = agent.getClass().getAnnotation(PersistenceConfig.class);
 
         if (config == null) {
-            log.debug("Agent {} has no @JenticPersistenceConfig, using manual persistence",
+            log.debug("Agent {} has no @PersistenceConfig, using manual persistence",
                      agent.getAgentId());
             return;
         }
@@ -229,7 +229,7 @@ public class PersistenceManager {
                 log.info("Created snapshot {} for agent {}", snapshotId, agentId);
 
                 // Cleanup old snapshots if configured
-                JenticPersistenceConfig config = context.config;
+                PersistenceConfig config = context.config;
                 if (config.maxSnapshots() > 0 && persistenceService instanceof FilePersistenceService fps) {
                     fps.cleanupSnapshots(agentId, config.maxSnapshots())
                         .thenAccept(deleted -> {
@@ -498,11 +498,11 @@ public class PersistenceManager {
     private static class AgentPersistenceContext {
         final Agent agent;
         final Stateful statefulAgent;
-        final JenticPersistenceConfig config;
+        final PersistenceConfig config;
         final java.util.List<ScheduledFuture<?>> scheduledTasks;
         Runnable debouncedSave;
 
-        AgentPersistenceContext(Agent agent, Stateful statefulAgent, JenticPersistenceConfig config) {
+        AgentPersistenceContext(Agent agent, Stateful statefulAgent, PersistenceConfig config) {
             this.agent = agent;
             this.statefulAgent = statefulAgent;
             this.config = config;

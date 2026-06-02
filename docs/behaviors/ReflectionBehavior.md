@@ -32,7 +32,7 @@ The best output scored across all iterations is always retained and returned eve
 
 ## Usage
 
-**Note**: `ReflectionBehavior` requires a `ReflectionStrategy` and typed lambdas that cannot be expressed via `@JenticBehavior`. Use the builder API and register the behavior manually in `onStart()` or via `addBehavior()`.
+**Note**: `ReflectionBehavior` requires a `ReflectionStrategy` and typed lambdas that cannot be expressed via `@Behavior`. Use the builder API and register the behavior manually in `onStart()` or via `addBehavior()`.
 
 ### Builder
 

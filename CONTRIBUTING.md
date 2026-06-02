@@ -79,7 +79,7 @@ Follow our coding standards:
 
 ```java
 // Good: Clear, concise, with proper documentation
-@JenticAgent("weather-collector")
+@Agent("weather-collector")
 public class WeatherCollectorAgent extends BaseAgent {
     
     private final WeatherService weatherService;
@@ -91,7 +91,7 @@ public class WeatherCollectorAgent extends BaseAgent {
     /**
      * Collects weather data every 30 seconds
      */
-    @JenticBehavior(type = CYCLIC, interval = "30s")
+    @Behavior(type = CYCLIC, interval = "30s")
     public void collectWeatherData() {
         var data = weatherService.getCurrentWeather();
         

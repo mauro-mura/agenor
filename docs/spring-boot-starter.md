@@ -45,7 +45,7 @@ All keys are under the `jentic` prefix. Every key is optional and falls back to 
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `auto-discovery` | `true` | Discover `@JenticAgent` classes at startup |
+| `auto-discovery` | `true` | Discover `@Agent` classes at startup |
 | `base-package` | — | Root package to scan |
 | `scan-packages` | `[]` | Additional packages to scan |
 | `scan-paths` | `[]` | Legacy alias for `scan-packages` (kept for compatibility with `jentic.yml`) |
@@ -136,7 +136,7 @@ registers it with the runtime. Agents that declare a `LLMProvider` constructor p
 receive it automatically via `AgentFactory` constructor injection:
 
 ```java
-@JenticAgent("my-llm-agent")
+@Agent("my-llm-agent")
 public class MyLlmAgent extends BaseAgent {
 
     private final LLMProvider provider;
@@ -146,7 +146,7 @@ public class MyLlmAgent extends BaseAgent {
         this.provider = provider;
     }
 
-    @JenticBehavior(type = JenticBehaviorType.CYCLIC, interval = "30s")
+    @Behavior(type = JenticBehaviorType.CYCLIC, interval = "30s")
     public void analyze() {
         LLMRequest req = LLMRequest.builder(provider.getProviderName())
                 .userMessage("Summarize the current system status.")
@@ -258,6 +258,6 @@ is stable across Spring Boot 4.x versions.
 ## See Also
 
 - [Configuration Guide](configuration.md) — native `jentic.yml` format and `JenticRuntime` builder
-- [Agent Development Guide](agent-development.md) — `@JenticAgent`, behaviors, lifecycle
+- [Agent Development Guide](agent-development.md) — `@Agent`, behaviors, lifecycle
 - [LLM Integration Guide](llm-integration.md) — `LLMProvider`, `LLMAgent`, providers
 - [Architecture Guide](architecture.md) — module overview

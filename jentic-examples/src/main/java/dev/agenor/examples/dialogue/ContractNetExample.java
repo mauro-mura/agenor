@@ -1,6 +1,6 @@
 package dev.agenor.examples.dialogue;
 
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -80,7 +80,7 @@ public class ContractNetExample {
     // MANAGER AGENT (Initiator)
     // =========================================================================
 
-    @JenticAgent("manager")
+    @Agent("manager")
     static class Manager extends BaseAgent {
 
         private final DialogueCapability dialogue = new DialogueCapability(this);
@@ -147,7 +147,7 @@ public class ContractNetExample {
     // WORKER AGENT (Participant)
     // =========================================================================
 
-    @JenticAgent(type = "worker")
+    @Agent(type = "worker")
     static class Worker extends BaseAgent {
 
         private final String id;

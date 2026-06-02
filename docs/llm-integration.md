@@ -255,7 +255,7 @@ provider.chat(request).thenAccept(response -> {
 If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.agenor.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
 
 ```java
-@JenticAgent("my-domain-agent")
+@Agent("my-domain-agent")
 public class MyDomainAgent extends DomainClass implements Agent, LLMMemoryAware {
 
     private LLMMemoryManager llmMemoryManager;
@@ -267,7 +267,7 @@ public class MyDomainAgent extends DomainClass implements Agent, LLMMemoryAware 
         this.llmMemoryManager = manager;
     }
 
-    @JenticMessageHandler("my.topic")
+    @AgenorMessageHandler("my.topic")
     public void handle(Message msg) {
         // llmMemoryManager is ready here
     }
@@ -277,7 +277,7 @@ public class MyDomainAgent extends DomainClass implements Agent, LLMMemoryAware 
 `LLMAgent` itself implements `LLMMemoryAware` — no changes required for existing subclasses.
 
 ```java
-@JenticAgent("customer-support")
+@Agent("customer-support")
 public class SupportAgent extends LLMAgent {
 
     private final LLMProvider provider;
@@ -305,7 +305,7 @@ public class SupportAgent extends LLMAgent {
         }
     }
 
-    @JenticMessageHandler("support.query")
+    @AgenorMessageHandler("support.query")
     public void handleQuery(Message msg) {
         String question = msg.getContent(String.class);
 

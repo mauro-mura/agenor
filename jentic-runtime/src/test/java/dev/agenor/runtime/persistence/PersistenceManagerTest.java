@@ -1,11 +1,11 @@
 package dev.agenor.runtime.persistence;
 
 import dev.agenor.core.AgentStatus;
+import dev.agenor.core.annotations.PersistenceConfig;
 import dev.agenor.core.persistence.AgentState;
 import dev.agenor.core.persistence.PersistenceService;
 import dev.agenor.core.persistence.PersistenceStrategy;
 import dev.agenor.core.persistence.Stateful;
-import dev.agenor.core.annotations.JenticPersistenceConfig;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -147,7 +147,7 @@ class PersistenceManagerTest {
 
     // Test helper classes
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.MANUAL)
+    @PersistenceConfig(strategy = PersistenceStrategy.MANUAL)
     static class TestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
         private boolean running = false;
@@ -190,7 +190,7 @@ class PersistenceManagerTest {
         }
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.PERIODIC, interval = "100ms")
+    @PersistenceConfig(strategy = PersistenceStrategy.PERIODIC, interval = "100ms")
     static class PeriodicTestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
         private boolean running = false;
@@ -274,7 +274,7 @@ class PersistenceManagerTest {
     }
 
     @Test
-    @DisplayName("Should skip registration when agent has no @JenticPersistenceConfig")
+    @DisplayName("Should skip registration when agent has no @PersistenceConfig")
     void testRegisterAgentWithoutAnnotation() {
         NoAnnotationAgent agent = new NoAnnotationAgent("no-annotation");
         persistenceManager.registerAgent(agent);
@@ -505,7 +505,7 @@ class PersistenceManagerTest {
         public void restoreState(AgentState state) {}
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.MANUAL)
+    @PersistenceConfig(strategy = PersistenceStrategy.MANUAL)
     static class ManualTestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
 
@@ -527,7 +527,7 @@ class PersistenceManagerTest {
         }
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.ON_STOP)
+    @PersistenceConfig(strategy = PersistenceStrategy.ON_STOP)
     static class OnStopTestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
 
@@ -547,7 +547,7 @@ class PersistenceManagerTest {
         }
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.DEBOUNCED, interval = "200ms")
+    @PersistenceConfig(strategy = PersistenceStrategy.DEBOUNCED, interval = "200ms")
     static class DebouncedTestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
 
@@ -567,7 +567,7 @@ class PersistenceManagerTest {
         }
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.SNAPSHOT, snapshotInterval = "500ms")
+    @PersistenceConfig(strategy = PersistenceStrategy.SNAPSHOT, snapshotInterval = "500ms")
     static class SnapshotTestAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);
 
@@ -587,7 +587,7 @@ class PersistenceManagerTest {
         public void restoreState(AgentState state) {}
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.IMMEDIATE)
+    @PersistenceConfig(strategy = PersistenceStrategy.IMMEDIATE)
     static class ImmediateTestAgent extends BaseAgent implements Stateful {
         ImmediateTestAgent(String id) { super(id, id); }
 
@@ -600,7 +600,7 @@ class PersistenceManagerTest {
         public void restoreState(AgentState state) {}
     }
 
-    @JenticPersistenceConfig(strategy = PersistenceStrategy.PERIODIC, interval = "1h",
+    @PersistenceConfig(strategy = PersistenceStrategy.PERIODIC, interval = "1h",
             autoSnapshot = true, snapshotInterval = "500ms", maxSnapshots = 2)
     static class AutoSnapshotAgent extends BaseAgent implements Stateful {
         final AtomicInteger counter = new AtomicInteger(0);

@@ -92,10 +92,10 @@ If you prefer explicit version management:
 ### Your First Agent
 
 ```java
-@JenticAgent("hello-agent")
+@Agent("hello-agent")
 public class HelloAgent extends BaseAgent {
 
-    @JenticBehavior(type = CYCLIC, interval = "5s")
+    @Behavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
         getMessageDispatcher().publish(Message.builder()
                 .topic("greetings")
@@ -103,7 +103,7 @@ public class HelloAgent extends BaseAgent {
                 .build());
     }
 
-    @JenticMessageHandler("greetings")
+    @AgenorMessageHandler("greetings")
     public void handleGreeting(Message message) {
         log.info("Received: {}", message.content());
     }

@@ -12,9 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 
@@ -77,7 +77,7 @@ public class TaskManagerExample {
     /**
      * Agent that creates tasks periodically
      */
-    @JenticAgent(value = "task-creator",
+    @Agent(value = "task-creator",
                  type = "creator",
                  capabilities = {"task-creation"},
                  autoStart = true)
@@ -90,7 +90,7 @@ public class TaskManagerExample {
             super("task-creator", "Task Creator");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "4s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "4s", autoStart = true)
         public void createTask() {
             taskCounter++;
             String taskType = taskTypes[ThreadLocalRandom.current().nextInt(taskTypes.length)];
@@ -126,7 +126,7 @@ public class TaskManagerExample {
     /**
      * Agent that processes tasks
      */
-    @JenticAgent(type = "processor",
+    @Agent(type = "processor",
                  capabilities = {"task-processing"},
                  autoStart = true)
     public static class TaskProcessorAgent extends BaseAgent {
@@ -138,7 +138,7 @@ public class TaskManagerExample {
             super(processorId, "Task Processor " + processorId);
         }
 
-        @JenticMessageHandler("tasks.new")
+        @AgenorMessageHandler("tasks.new")
         public void receiveNewTask(Message message) {
             Task task = message.getContent(Task.class);
             processingQueue.offer(task);
@@ -158,7 +158,7 @@ public class TaskManagerExample {
             getMessageDispatcher().publish(processingMessage);
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "2s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "2s", autoStart = true)
         public void processTasks() {
             Task task = processingQueue.poll();
             if (task == null) {
@@ -213,7 +213,7 @@ public class TaskManagerExample {
     /**
      * Agent that monitors task completion and maintains statistics
      */
-    @JenticAgent(value = "task-monitor",
+    @Agent(value = "task-monitor",
                  type = "monitor",
                  capabilities = {"monitoring", "statistics"},
                  autoStart = true)
@@ -227,14 +227,14 @@ public class TaskManagerExample {
             super("task-monitor", "Task Monitor");
         }
 
-        @JenticMessageHandler("tasks.new")
+        @AgenorMessageHandler("tasks.new")
         public void trackNewTask(Message message) {
             totalTasks++;
             Task task = message.getContent(Task.class);
             log.debug("Tracking new task: {} (total: {})", task.id(), totalTasks);
         }
 
-        @JenticMessageHandler("tasks.completed")
+        @AgenorMessageHandler("tasks.completed")
         public void trackCompletedTask(Message message) {
             Task task = message.getContent(Task.class);
             String processor = message.headers().get("processor");
@@ -250,7 +250,7 @@ public class TaskManagerExample {
             }
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "10s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "10s", autoStart = true)
         public void reportStatistics() {
             int pendingTasks = totalTasks - completedTasks - failedTasks;
             double successRate = totalTasks > 0 ? (double) completedTasks / totalTasks * 100 : 0;

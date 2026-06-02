@@ -19,7 +19,7 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 | [LLM Integration Guide](llm-integration.md) | OpenAI, Anthropic, Ollama providers |
 | [Guardrails Guide](guardrails.md) | The Guardrails Layer |
 | [Memory Guide](memory.md) | `MemoryStore`, `MemoryScope`, `InMemoryStore`, `BaseAgent` memory API |
-| [Agent State Persistence Guide](persistence.md) | `Stateful`, `FilePersistenceService`, `@JenticPersistenceConfig` |
+| [Agent State Persistence Guide](persistence.md) | `Stateful`, `FilePersistenceService`, `@PersistenceConfig` |
 | [Messaging Guide](messaging.md) | MessageDispatcher, topics, direct messaging, subscriptions (since 0.20.0) |
 | [Agent Directory Guide](directory.md) | AgentRegistry, AgentDiscovery, AgentResolver, AgentPresence (since 0.20.0) |
 | [Dialogue Protocol](dialog-protocol.md) | A2A protocol, request/reply, CFP |

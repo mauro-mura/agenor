@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.DialogueHandler;
@@ -27,7 +27,7 @@ import java.util.List;
  * Handles transaction-related queries: history, disputes, exports.
  * Supports collaborative reasoning via ConsultableAgent interface.
  */
-@JenticAgent(
+@Agent(
     value = "transaction-agent",
     type = "handler",
     capabilities = {"transaction-history", "disputes", "consultable"}

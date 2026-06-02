@@ -6,11 +6,11 @@ import java.util.Random;
 
 import dev.agenor.core.BehaviorType;
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.runtime.agent.BaseAgent;
 
-@JenticAgent(
+@Agent(
     value = "sensor-agent"
 )
 public class TemperatureSensorAgent extends BaseAgent {
@@ -22,7 +22,7 @@ public class TemperatureSensorAgent extends BaseAgent {
         super("sensor-agent", "Temperature Sensor");
     }
 
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CYCLIC,
         interval = "5s"
     )

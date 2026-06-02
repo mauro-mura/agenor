@@ -1,7 +1,6 @@
 package dev.agenor.runtime.discovery;
 
-import dev.agenor.core.Agent;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +30,7 @@ class AgentScannerTest {
     @DisplayName("Should scan currrent package")
     void shouldScanCurrentPackage() {
         // When
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         // Then
         assertThat(agents).isNotEmpty();
@@ -46,10 +45,10 @@ class AgentScannerTest {
     @DisplayName("Should ignore invalid classes")
     void shouldIgnoreInvalidClasses() {
         // When
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         // Then
-        // Should not include classes without @JenticAgent annotation
+        // Should not include classes without @Agent annotation
         boolean foundInvalid = agents.stream()
             .anyMatch(clazz -> clazz.getSimpleName().equals("TestInvalidAgent"));
         assertThat(foundInvalid).isFalse();
@@ -69,7 +68,7 @@ class AgentScannerTest {
     @DisplayName("Should handle empty packages")
     void shouldHandleEmptyPackages() {
         // When
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("non.existent.package");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("non.existent.package");
 
         // Then
         assertThat(agents).isEmpty();
@@ -79,7 +78,7 @@ class AgentScannerTest {
     @DisplayName("Should")
     void shouldHandleNullAndEmptyPackageNames() {
         // When
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents(null, "", "  ");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents(null, "", "  ");
 
         // Then
         assertThat(agents).isEmpty();
@@ -88,11 +87,11 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should find all valid agent classes")
     void shouldFindAllValidAgentClasses() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
-        // All found classes should have @JenticAgent annotation
-        for (Class<? extends Agent> agentClass : agents) {
-            assertThat(agentClass.isAnnotationPresent(JenticAgent.class)).isTrue();
+        // All found classes should have @Agent annotation
+        for (Class<? extends dev.agenor.core.Agent> agentClass : agents) {
+            assertThat(agentClass.isAnnotationPresent(Agent.class)).isTrue();
         }
     }
 
@@ -101,9 +100,9 @@ class AgentScannerTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Should ignore classes without @JenticAgent annotation")
+    @DisplayName("Should ignore classes without @Agent annotation")
     void shouldIgnoreNonAnnotatedClasses() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         boolean foundInvalid = agents.stream()
             .anyMatch(clazz -> clazz.getSimpleName().equals("TestInvalidAgent"));
@@ -113,7 +112,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should ignore interfaces")
     void shouldIgnoreInterfaces() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         boolean foundInterface = agents.stream()
             .anyMatch(clazz -> clazz.getSimpleName().equals("TestAgentInterface"));
@@ -123,13 +122,13 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should ignore abstract classes")
     void shouldIgnoreAbstractClasses() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         boolean foundAbstract = agents.stream()
             .anyMatch(clazz -> clazz.isInterface() || java.lang.reflect.Modifier.isAbstract(clazz.getModifiers()));
 
         // All found classes should be concrete
-        for (Class<? extends Agent> agentClass : agents) {
+        for (Class<? extends dev.agenor.core.Agent> agentClass : agents) {
             assertThat(java.lang.reflect.Modifier.isAbstract(agentClass.getModifiers())).isFalse();
         }
     }
@@ -141,7 +140,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should handle empty package names")
     void shouldHandleEmptyPackageNames() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("");
 
         assertThat(agents).isEmpty();
     }
@@ -149,7 +148,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should handle whitespace-only package names")
     void shouldHandleWhitespaceOnlyPackageNames() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("   ");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("   ");
 
         assertThat(agents).isEmpty();
     }
@@ -157,7 +156,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should handle null package names")
     void shouldHandleNullPackageNames() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents((String) null);
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents((String) null);
 
         assertThat(agents).isEmpty();
     }
@@ -165,7 +164,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should handle mixed null and valid package names")
     void shouldHandleMixedNullAndValidPackageNames() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents(
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents(
             null,
             "dev.agenor.runtime.discovery",
             ""
@@ -177,7 +176,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should handle non-existent package")
     void shouldHandleNonExistentPackage() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("non.existent.package");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("non.existent.package");
 
         assertThat(agents).isEmpty();
     }
@@ -189,7 +188,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should scan multiple packages")
     void shouldScanMultiplePackages() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents(
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents(
             "dev.agenor.runtime.discovery"
         );
 
@@ -200,7 +199,7 @@ class AgentScannerTest {
     @DisplayName("Should deduplicate results from multiple packages")
     void shouldDeduplicateResults() {
         // Scanning same package twice should not create duplicates
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents(
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents(
             "dev.agenor.runtime.discovery",
             "dev.agenor.runtime.discovery"
         );
@@ -222,7 +221,7 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should scan subdirectories recursively")
     void shouldScanSubdirectoriesRecursively() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime");
 
         // Should find agents in subdirectories
         assertThat(agents).isNotEmpty();
@@ -236,7 +235,7 @@ class AgentScannerTest {
     @DisplayName("Should handle different classloaders")
     void shouldHandleDifferentClassloaders() {
         // Scanner should try multiple classloaders
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         assertThat(agents).isNotEmpty();
     }
@@ -249,7 +248,7 @@ class AgentScannerTest {
     @DisplayName("Should continue scanning when encountering class loading errors")
     void shouldContinueOnClassLoadingErrors() {
         // Even if some classes fail to load, should continue
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         assertThat(agents).isNotEmpty();
     }
@@ -258,10 +257,10 @@ class AgentScannerTest {
     @DisplayName("Should handle inner classes gracefully")
     void shouldHandleInnerClassesGracefully() {
         // Scanner should skip inner classes (those with $ in name)
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         // No class names should contain $
-        for (Class<? extends Agent> agentClass : agents) {
+        for (Class<? extends dev.agenor.core.Agent> agentClass : agents) {
             assertThat(agentClass.getName()).doesNotContain("$");
         }
     }
@@ -273,14 +272,14 @@ class AgentScannerTest {
     @Test
     @DisplayName("Should validate agent class completely")
     void shouldValidateAgentClassCompletely() {
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
-        for (Class<? extends Agent> agentClass : agents) {
-            // Must have @JenticAgent annotation
-            assertThat(agentClass.isAnnotationPresent(JenticAgent.class)).isTrue();
+        for (Class<? extends dev.agenor.core.Agent> agentClass : agents) {
+            // Must have @Agent annotation
+            assertThat(agentClass.isAnnotationPresent(Agent.class)).isTrue();
 
             // Must implement Agent interface
-            assertThat(Agent.class.isAssignableFrom(agentClass)).isTrue();
+            assertThat(dev.agenor.core.Agent.class.isAssignableFrom(agentClass)).isTrue();
 
             // Must not be an interface
             assertThat(agentClass.isInterface()).isFalse();
@@ -298,7 +297,7 @@ class AgentScannerTest {
     @DisplayName("Should handle file protocol URLs")
     void shouldHandleFileProtocolUrls() {
         // When scanning from file system (not JAR)
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         assertThat(agents).isNotEmpty();
     }
@@ -312,7 +311,7 @@ class AgentScannerTest {
     void shouldScanPackageEfficiently() {
         long startTime = System.currentTimeMillis();
 
-        Set<Class<? extends Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
+        Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("dev.agenor.runtime.discovery");
 
         long endTime = System.currentTimeMillis();
         long duration = endTime - startTime;
@@ -326,7 +325,7 @@ class AgentScannerTest {
     @DisplayName("Should return empty set for invalid packages without errors")
     void shouldReturnEmptySetForInvalidPackages() {
         assertThatCode(() -> {
-            Set<Class<? extends Agent>> agents = scanner.scanForAgents("invalid.package.name");
+            Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("invalid.package.name");
             assertThat(agents).isEmpty();
         }).doesNotThrowAnyException();
     }
@@ -334,7 +333,7 @@ class AgentScannerTest {
 
 // Test classes for AgentScannerTest
 
-@JenticAgent("test-valid")
+@Agent("test-valid")
 class TestValidAgent extends BaseAgent {
     public TestValidAgent() {
         super("test-valid", "Test Valid Agent");
@@ -349,6 +348,6 @@ class TestInvalidAgent extends BaseAgent {
 }
 
 // This interface should be ignored
-@JenticAgent("test-interface")
-interface TestAgentInterface extends Agent {
+@Agent("test-interface")
+interface TestAgentInterface extends dev.agenor.core.Agent {
 }

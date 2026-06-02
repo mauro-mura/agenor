@@ -29,7 +29,7 @@ We will use **Java 21 LTS with Virtual Threads (Project Loom)** as the baseline 
 
 ```java
 // Virtual threads make agent behaviors naturally concurrent
-@JenticBehavior(type = CYCLIC, interval = "1s")
+@Behavior(type = CYCLIC, interval = "1s")
 public void periodicTask() {
     // Each behavior runs in its own virtual thread
     // No need to manage thread pools

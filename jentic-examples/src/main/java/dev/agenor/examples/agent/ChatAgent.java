@@ -1,8 +1,8 @@
 package dev.agenor.examples.agent;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.MemoryEntry;
 import dev.agenor.core.memory.MemoryQuery;
@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
  *
  * @since 0.6.0
  */
-@JenticAgent(value = "chat-agent")
+@Agent(value = "chat-agent")
 public class ChatAgent extends LLMAgent {
 
     /**
@@ -100,7 +100,7 @@ public class ChatAgent extends LLMAgent {
      *
      * @param message the user message
      */
-    @JenticMessageHandler("user.message")
+    @AgenorMessageHandler("user.message")
     public void handleUserMessage(Message message) {
         String userInput = message.getContent(String.class);
         log.info("Received user message: {}", userInput);
@@ -155,7 +155,7 @@ public class ChatAgent extends LLMAgent {
      *
      * @param message the command message
      */
-    @JenticMessageHandler("clear.conversation")
+    @AgenorMessageHandler("clear.conversation")
     public void handleClearConversation(Message message) {
         log.info("Clearing conversation history");
 
@@ -187,7 +187,7 @@ public class ChatAgent extends LLMAgent {
      *
      * @param message the command message
      */
-    @JenticMessageHandler("summarize.conversation")
+    @AgenorMessageHandler("summarize.conversation")
     public void handleSummarizeConversation(Message message) {
         // Parse count from header, default to 10
         int count = 10;
@@ -226,7 +226,7 @@ public class ChatAgent extends LLMAgent {
      *
      * @param message the query message
      */
-    @JenticMessageHandler("query.status")
+    @AgenorMessageHandler("query.status")
     public void handleStatusQuery(Message message) {
         Map<String, Object> status = Map.of(
                 "agentId", getAgentId(),

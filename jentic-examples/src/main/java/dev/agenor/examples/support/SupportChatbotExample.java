@@ -135,7 +135,7 @@ public class SupportChatbotExample {
             .service(LanguageDetector.class, languageDetector)
             .service(LocalizationService.class, localization)
             .service(RateLimiter.class, rateLimiter)
-            // Scan package for @JenticAgent annotated classes
+            // Scan package for @Agent annotated classes
             .scanPackage("dev.agenor.examples.support.agents")
             .build();
 

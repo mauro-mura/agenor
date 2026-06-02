@@ -1,6 +1,6 @@
 package dev.agenor.examples.behaviors;
 
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.RetryBehavior;
@@ -124,7 +124,7 @@ public class RetryExample {
     // SCENARIO 1: API Client Agent
     // =========================================================================
 
-    @JenticAgent(value = "api-client", type = "ApiClient",
+    @Agent(value = "api-client", type = "ApiClient",
                  capabilities = {"http", "retry", "monitoring"})
     public static class ApiClientAgent extends BaseAgent {
 
@@ -181,7 +181,7 @@ public class RetryExample {
     // SCENARIO 2: Database Agent
     // =========================================================================
 
-    @JenticAgent(value = "database-agent", type = "Database",
+    @Agent(value = "database-agent", type = "Database",
                  capabilities = {"database", "retry", "transaction"})
     public static class DatabaseAgent extends BaseAgent {
 
@@ -236,7 +236,7 @@ public class RetryExample {
     // SCENARIO 3: File Processor Agent
     // =========================================================================
 
-    @JenticAgent(value = "file-processor", type = "FileProcessor",
+    @Agent(value = "file-processor", type = "FileProcessor",
                  capabilities = {"file-io", "retry"})
     public static class FileProcessorAgent extends BaseAgent {
 
@@ -290,7 +290,7 @@ public class RetryExample {
     // SCENARIO 4: Message Processor Agent
     // =========================================================================
 
-    @JenticAgent(value = "message-processor", type = "MessageProcessor",
+    @Agent(value = "message-processor", type = "MessageProcessor",
                  capabilities = {"messaging", "retry", "validation"})
     public static class MessageProcessorAgent extends BaseAgent {
 

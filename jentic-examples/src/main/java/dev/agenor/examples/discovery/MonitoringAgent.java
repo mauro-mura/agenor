@@ -1,9 +1,9 @@
 package dev.agenor.examples.discovery;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +16,7 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
 /**
  * Agent that monitors system activity and reports status.
  */
-@JenticAgent(value = "system-monitor",
+@Agent(value = "system-monitor",
              type = "monitor",
              capabilities = {"monitoring", "reporting", "system-health"},
              autoStart = true)
@@ -31,7 +31,7 @@ public class MonitoringAgent extends BaseAgent {
         super("system-monitor", "System Monitor");
     }
 
-    @JenticBehavior(type = CYCLIC, interval = "8s", autoStart = true)
+    @Behavior(type = CYCLIC, interval = "8s", autoStart = true)
     public void sendHeartbeat() {
         heartbeatCount++;
 
@@ -51,7 +51,7 @@ public class MonitoringAgent extends BaseAgent {
         getMessageDispatcher().publish(heartbeat);
     }
 
-    @JenticBehavior(type = CYCLIC, interval = "15s", autoStart = true)
+    @Behavior(type = CYCLIC, interval = "15s", autoStart = true)
     public void reportStatistics() {
         Message report = Message.builder()
             .topic("system.report")
@@ -67,7 +67,7 @@ public class MonitoringAgent extends BaseAgent {
         getMessageDispatcher().publish(report);
     }
 
-    @JenticMessageHandler("system.alert")
+    @AgenorMessageHandler("system.alert")
     public void handleSystemAlert(Message message) {
         messagesReceived++;
         String alertLevel = message.headers().getOrDefault("level", "UNKNOWN");

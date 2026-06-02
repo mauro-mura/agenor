@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.DialogueHandler;
@@ -28,7 +28,7 @@ import java.util.List;
  * Handles budget-related queries: creation, tracking, alerts.
  * Supports collaborative reasoning via ConsultableAgent interface.
  */
-@JenticAgent(
+@Agent(
     value = "budget-agent",
     type = "handler",
     capabilities = {"budget-management", "spending-tracking", "consultable"}

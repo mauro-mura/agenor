@@ -302,7 +302,7 @@ User Query
 ## DialogueCapability Usage
 
 ```java
-@JenticAgent("my-agent")
+@Agent("my-agent")
 public class MyAgent extends BaseAgent implements ConsultableAgent {
     
     private final DialogueCapability dialogue = new DialogueCapability(this);

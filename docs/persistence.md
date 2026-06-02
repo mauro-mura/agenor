@@ -33,7 +33,7 @@ jentic-runtime / dev.agenor.runtime.persistence
 
 An agent opts into persistence by implementing `Stateful`. The agent then decides **which fields**
 to save (`captureState`) and how to restore them (`restoreState`). The runtime calls these methods
-automatically based on `@JenticPersistenceConfig`.
+automatically based on `@PersistenceConfig`.
 
 ```
 Agent fields ──captureState()──▶ AgentState ──FilePersistenceService──▶ <agentId>.json
@@ -45,8 +45,8 @@ Agent fields ◀──restoreState()── AgentState ◀──FilePersistenceSe
 ## Stateful interface
 
 ```java
-@JenticAgent("order-processor")
-@JenticPersistenceConfig(
+@Agent("order-processor")
+@PersistenceConfig(
     strategy = PersistenceStrategy.ON_STOP,
     autoSnapshot = true,
     snapshotInterval = "1h",
@@ -90,28 +90,28 @@ Guidelines for `restoreState()`:
 
 ---
 
-## @JenticPersist
+## @Persist
 
-`@JenticPersist` is a **field- and method-level** annotation that lets the runtime discover which
+`@Persist` is a **field- and method-level** annotation that lets the runtime discover which
 members to include in the persisted state automatically, without requiring a manual
 `captureState()`/`restoreState()` implementation.
 
 ### Field usage
 
 ```java
-@JenticAgent("order-processor")
+@Agent("order-processor")
 public class OrderProcessorAgent extends BaseAgent implements Stateful {
 
-    @JenticPersist
+    @Persist
     private int ordersProcessed = 0;
 
-    @JenticPersist("customer_id")       // explicit key — stable across field renames
+    @Persist("customer_id")       // explicit key — stable across field renames
     private String customerId;
 
-    @JenticPersist(required = true)     // restoration fails if key is absent in the saved document
+    @Persist(required = true)     // restoration fails if key is absent in the saved document
     private String sessionToken;
 
-    @JenticPersist(encrypted = true)    // value is encrypted at rest
+    @Persist(encrypted = true)    // value is encrypted at rest
     private String apiKey;
 }
 ```
@@ -121,7 +121,7 @@ public class OrderProcessorAgent extends BaseAgent implements Stateful {
 When placed on a getter, the framework calls the getter on save and the matching setter on restore.
 
 ```java
-@JenticPersist("order_state")
+@Persist("order_state")
 public OrderState getOrderState() { return orderState; }
 ```
 
@@ -133,9 +133,9 @@ public OrderState getOrderState() { return orderState; }
 | `required` | `boolean` | `false` | When `true`, restoration throws an exception if the key is missing. Use for fields that are essential to resume correct operation. |
 | `encrypted` | `boolean` | `false` | When `true`, the value is encrypted before writing and decrypted transparently on restore. Suitable for secrets (API keys, tokens). |
 
-### @JenticPersist vs manual captureState / restoreState
+### @Persist vs manual captureState / restoreState
 
-| | `@JenticPersist` | Manual `captureState` / `restoreState` |
+| | `@Persist` | Manual `captureState` / `restoreState` |
 |---|---|---|
 | Boilerplate | Minimal — annotate fields | Explicit builder calls for each field |
 | Control | Framework-driven | Full control over snapshot shape |
@@ -143,13 +143,13 @@ public OrderState getOrderState() { return orderState; }
 | Conditional logic | Not supported | Any logic in `restoreState` |
 | Encrypted fields | `encrypted = true` | Manual |
 
-Use `@JenticPersist` for straightforward persistence of individual fields. Implement
+Use `@Persist` for straightforward persistence of individual fields. Implement
 `captureState` / `restoreState` manually when you need custom logic, derived values, or
 transformations during save/restore.
 
 ---
 
-## @JenticPersistenceConfig
+## @PersistenceConfig
 
 Sets the automatic-save policy at class level. When absent, the strategy defaults to `MANUAL`.
 
@@ -263,8 +263,8 @@ manager.stop().join();               // cancels scheduled tasks, saves all agent
 | Scenario | Recommended approach |
 |----------|---------------------|
 | Agent business state (counters, queues, current IDs) | `Stateful` + `FilePersistenceService` |
-| Save on restart/stop only | `@JenticPersistenceConfig(strategy=ON_STOP)` |
-| Scheduled auto-save | `@JenticPersistenceConfig(strategy=PERIODIC)` |
+| Save on restart/stop only | `@PersistenceConfig(strategy=ON_STOP)` |
+| Scheduled auto-save | `@PersistenceConfig(strategy=PERIODIC)` |
 | Point-in-time rollback | `FilePersistenceService.createSnapshot` + `restoreSnapshot` |
 | Searchable/sharable knowledge base | Use `MemoryStore` instead — see [memory.md](memory.md) |
 
@@ -273,5 +273,5 @@ manager.stop().join();               // cancels scheduled tasks, saves all agent
 ## See Also
 
 - [Memory Guide](memory.md) — `MemoryStore`, `rememberLong`, `InMemoryStore`
-- [Agent Development Guide](agent-development.md) — `@JenticPersist`, `@JenticPersistenceConfig` annotations
+- [Agent Development Guide](agent-development.md) — `@Persist`, `@PersistenceConfig` annotations
 - [Architecture Guide](architecture.md) — module overview

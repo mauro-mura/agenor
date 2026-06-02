@@ -1,8 +1,8 @@
 package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.util.Map;
 
-@JenticAgent(
+@Agent(
     value = "payment-validator",
     type = "Validator",
     capabilities = {"payment-validation"}
@@ -25,7 +25,7 @@ public class PaymentValidatorAgent extends BaseAgent {
         this.behaviorScheduler = behaviorScheduler;
     }
 
-    @JenticMessageHandler("validate-payment")
+    @AgenorMessageHandler("validate-payment")
     public void handleValidatePayment(Message message) {
         BigDecimal amount = new BigDecimal(message.getContent(String.class));
 

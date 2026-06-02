@@ -4,11 +4,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+import dev.agenor.core.annotations.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.BehaviorType;
-import dev.agenor.core.annotations.JenticAgent;
 import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalGate;
 import dev.agenor.core.hitl.ApprovalNotifier;
@@ -82,7 +82,7 @@ public class HitlExample {
     // Registers one HumanCheckpointBehavior per transfer in onStart().
     // =========================================================================
 
-    @JenticAgent(value = "treasury-agent", type = "finance",
+    @Agent(value = "treasury-agent", type = "finance",
                  capabilities = {"wire-transfer", "hitl"})
     static class TreasuryAgent extends BaseAgent {
 
@@ -150,7 +150,7 @@ public class HitlExample {
     // here it simulates a human operator at a console.
     // =========================================================================
 
-    @JenticAgent(value = "operator-agent", type = "ops",
+    @Agent(value = "operator-agent", type = "ops",
                  capabilities = {"approval-console"})
     static class OperatorAgent extends BaseAgent {
 

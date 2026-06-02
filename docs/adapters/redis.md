@@ -323,7 +323,7 @@ single-node deployments that need `subscribeFiltered`.
 real `JenticRuntime` agents:
 
 - **`OrderAgent`** (CYCLIC, 4 s) — publishes orders to `orders.created` and logs fulfillment ACKs received via `onDirectMessage`.
-- **`FulfillmentAgent`** (`@JenticMessageHandler("orders.created")`) — processes each order and replies directly to the sender via `sendTo(msg.reply(...))`.
+- **`FulfillmentAgent`** (`@AgenorMessageHandler("orders.created")`) — processes each order and replies directly to the sender via `sendTo(msg.reply(...))`.
 
 Requires a running Valkey or Redis server on `localhost:6379` (or set `REDIS_URI`):
 

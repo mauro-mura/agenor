@@ -53,7 +53,7 @@ import dev.agenor.runtime.behavior.BaseBehavior;
  *
  * <p>Example usage:
  * <pre>{@code
- * @JenticAgent("my-agent")
+ * @Agent("my-agent")
  * public class MyAgent extends BaseAgent {
  *
  *     @Override
@@ -63,7 +63,7 @@ import dev.agenor.runtime.behavior.BaseBehavior;
  *         rememberLong("user-preference", "dark-mode");
  *     }
  *
- *     @JenticMessageHandler("process-request")
+ *     @AgenorMessageHandler("process-request")
  *     public void handleRequest(Message message) {
  *         recall("session-id", MemoryScope.SHORT_TERM)
  *             .thenAccept(sessionId -> {
@@ -527,7 +527,7 @@ public abstract class BaseAgent implements Agent {
 
     /**
      * Handle direct messages received by this agent.
-     * Override to customize handling, or use @JenticMessageHandler annotations.
+     * Override to customize handling, or use @AgenorMessageHandler annotations.
      */
     protected void handleDirectMessage(Message message) {
         log.trace("Agent '{}' received direct message from '{}': {}",
@@ -541,7 +541,7 @@ public abstract class BaseAgent implements Agent {
      * Called when agent receives a direct message.
      * Override to handle direct messages in a centralized way.
      *
-     * Note: This is only called if no @JenticMessageHandler matches.
+     * Note: This is only called if no @AgenorMessageHandler matches.
      *
      * @param message the received message
      */

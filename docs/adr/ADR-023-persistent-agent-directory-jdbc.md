@@ -187,7 +187,7 @@ CREATE INDEX idx_jentic_agents_node   ON jentic_agents(node_id);
 `agent_id` in the framework is a **stable logical identity**, not an ephemeral UUID. The
 `Agent` interface Javadoc specifies: *"Recommended format: lowercase alphanumeric with hyphens
 (e.g., `order-processor-1`)"*. The `BaseAgent(String agentId)` constructor and the
-`@JenticAgent` annotation value both reinforce this: agents are expected to carry the same
+`@Agent` annotation value both reinforce this: agents are expected to carry the same
 `agent_id` across restarts.
 
 Consequence: `AgentRegistry.register()` must use **upsert semantics**, not a plain `INSERT`.

@@ -1,9 +1,9 @@
 package dev.agenor.examples.behaviors;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.BatchBehavior;
@@ -106,7 +106,7 @@ public class BatchProcessingExample {
     // =========================================================================
 
     /** Generates log events at varying rates. */
-    @JenticAgent(value = "event-generator", type = "Producer", capabilities = {"event-generation"})
+    @Agent(value = "event-generator", type = "Producer", capabilities = {"event-generation"})
     public static class EventGeneratorAgent extends BaseAgent {
 
         private static final Logger log = LoggerFactory.getLogger(EventGeneratorAgent.class);
@@ -120,7 +120,7 @@ public class BatchProcessingExample {
             super("event-generator", "Event Generator");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "500ms")
+        @Behavior(type = CYCLIC, interval = "500ms")
         public void generateEvents() {
             int eventsThisCycle = random.nextInt(5) + 1;
             for (int i = 0; i < eventsThisCycle; i++) {
@@ -157,7 +157,7 @@ public class BatchProcessingExample {
     // =========================================================================
 
     /** Aggregates log events using BatchBehavior and writes batches to storage. */
-    @JenticAgent(value = "log-aggregator", type = "Processor", capabilities = {"log-batching", "storage"})
+    @Agent(value = "log-aggregator", type = "Processor", capabilities = {"log-batching", "storage"})
     public static class LogAggregatorAgent extends BaseAgent {
 
         private static final Logger log = LoggerFactory.getLogger(LogAggregatorAgent.class);
@@ -191,7 +191,7 @@ public class BatchProcessingExample {
             addBehavior(logBatcher);
         }
 
-        @JenticMessageHandler("log.event")
+        @AgenorMessageHandler("log.event")
         public void handleLogEvent(Message message) {
             LogEvent event = message.getContent(LogEvent.class);
             if (!logBatcher.add(event)) {
@@ -238,7 +238,7 @@ public class BatchProcessingExample {
     // =========================================================================
 
     /** Batches database write operations. */
-    @JenticAgent(value = "db-writer", type = "Persistence", capabilities = {"database", "batch-operations"})
+    @Agent(value = "db-writer", type = "Persistence", capabilities = {"database", "batch-operations"})
     public static class DatabaseWriterAgent extends BaseAgent {
 
         private static final Logger log = LoggerFactory.getLogger(DatabaseWriterAgent.class);
@@ -261,7 +261,7 @@ public class BatchProcessingExample {
             addBehavior(dbBatcher);
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "800ms")
+        @Behavior(type = CYCLIC, interval = "800ms")
         public void generateDatabaseOperations() {
             Random random = ThreadLocalRandom.current();
             int opsThisCycle = random.nextInt(3) + 1;

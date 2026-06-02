@@ -17,34 +17,34 @@ import java.lang.annotation.Target;
  * <p>Common examples:
  * <pre>{@code
  * // Cyclic behavior — executes every 30 seconds
- * @JenticBehavior(type = CYCLIC, interval = "30s")
+ * @Behavior(type = CYCLIC, interval = "30s")
  * public void pollExternalService() { ... }
  *
  * // Scheduled behavior — runs at the top of every hour
- * @JenticBehavior(type = SCHEDULED, cron = "0 0 * * * *")
+ * @Behavior(type = SCHEDULED, cron = "0 0 * * * *")
  * public void generateHourlyReport() { ... }
  *
  * // Retry behavior — up to 5 attempts with exponential backoff
- * @JenticBehavior(type = RETRY, maxRetries = 5, backoff = "exponential")
+ * @Behavior(type = RETRY, maxRetries = 5, backoff = "exponential")
  * public void callUnreliableApi() { ... }
  *
  * // Throttled behavior — max 10 executions per second
- * @JenticBehavior(type = THROTTLED, rateLimit = "10/s")
+ * @Behavior(type = THROTTLED, rateLimit = "10/s")
  * public void handleIncomingEvent() { ... }
  *
  * // Batch behavior — collect up to 50 items or flush after 5 seconds
- * @JenticBehavior(type = BATCH, batchSize = 50, maxWaitTime = "5s")
+ * @Behavior(type = BATCH, batchSize = 50, maxWaitTime = "5s")
  * public void processBatch() { ... }
  * }</pre>
  *
  * @since 0.1.0
  * @see BehaviorType
  * @see dev.agenor.core.Behavior
- * @see JenticAgent
+ * @see Agent
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JenticBehavior {
+public @interface Behavior {
 
     // -------------------------------------------------------------------------
     // Core parameters

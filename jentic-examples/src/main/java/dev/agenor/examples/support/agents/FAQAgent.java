@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import dev.agenor.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
@@ -28,7 +28,7 @@ import java.util.List;
  * Supports query expansion, hybrid search, LLM-enhanced responses,
  * and collaborative reasoning via DialogueCapability.
  */
-@JenticAgent(
+@Agent(
     value = "faq-agent",
     type = "handler",
     capabilities = {"knowledge-retrieval", "faq", "rag", "hybrid-search", "consultable"}

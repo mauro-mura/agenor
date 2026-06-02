@@ -51,7 +51,7 @@ Design goals:
 - LLMProvider: Provider-agnostic contract for LLM interaction (`chat`, `chatStream`, `getAvailableModels`).
 - MemoryStore: Interface for agent memory (short-term and long-term entries).
 - Condition: `Predicate<Agent>`-like interface used to gate behavior execution.
-- Annotations: `@JenticAgent`, `@JenticBehavior`, `@JenticMessageHandler`, `@JenticPersist`, `@JenticPersistenceConfig`, `@DialogueHandler`.
+- Annotations: `@Agent`, `@Behavior`, `@AgenorMessageHandler`, `@Persist`, `@PersistenceConfig`, `@DialogueHandler`.
 
 These are deliberately small to keep adapters swappable without breaking user code.
 
@@ -209,7 +209,7 @@ Community adapters are welcome. See `CONTRIBUTING.md`.
 1. An Agent publishes a `Message` via `MessageDispatcher.publish(msg)` (topic broadcast, routing on `msg.topic()`) or `sendTo(msg)` (point-to-point, routing on `msg.receiverId()`).
 2. For point-to-point, the dispatcher calls `AgentResolver.resolveEndpoint(agentId)` to obtain the target `AgentEndpoint`.
 3. Agents subscribe via `subscribeTopic(topic, handler)` or `subscribeRecipient(agentId, handler)`, both returning a `Subscription`.
-4. `@JenticMessageHandler(topic)` annotations are also supported; the runtime registers the handler automatically.
+4. `@AgenorMessageHandler(topic)` annotations are also supported; the runtime registers the handler automatically.
 5. Optional predicate filtering is available via `FilterableSubscriber.subscribeFiltered(filter, handler)` (in-memory only).
 6. The in-memory implementation delivers messages on virtual threads within the JVM; custom backends (Redis, Kafka) plug in without changing agent code.
 

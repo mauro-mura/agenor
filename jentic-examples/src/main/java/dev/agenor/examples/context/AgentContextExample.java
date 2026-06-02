@@ -1,11 +1,9 @@
 package dev.agenor.examples.context;
 
-import dev.agenor.core.Agent;
-import dev.agenor.core.Behavior;
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
@@ -105,7 +103,7 @@ public class AgentContextExample {
     /**
      * Classic agent — extends BaseAgent, publishes orders every 3 seconds.
      */
-    @JenticAgent(value = "order-submitter", type = "producer", capabilities = {"order-submission"})
+    @Agent(value = "order-submitter", type = "producer", capabilities = {"order-submission"})
     public static class OrderSubmitterAgent extends BaseAgent {
 
         private static final String[] PRODUCTS = {"Laptop", "Phone", "Tablet", "Monitor", "Keyboard"};
@@ -116,7 +114,7 @@ public class AgentContextExample {
             super("order-submitter", "Order Submitter");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "3s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "3s", autoStart = true)
         public void submitOrder() {
             var orderId = "ORD-" + (++orderCounter);
             var product = PRODUCTS[random.nextInt(PRODUCTS.length)];
@@ -147,11 +145,11 @@ public class AgentContextExample {
      * <p>This is the core demonstration of the AgentContext pattern: the agent
      * has its own inheritance hierarchy and does not extend BaseAgent.
      *
-     * <p>{@code @JenticMessageHandler} works exactly as on BaseAgent subclasses:
+     * <p>{@code @AgenorMessageHandler} works exactly as on BaseAgent subclasses:
      * {@code AnnotationProcessor} wires the subscription via reflection on any {@code Agent}.
      */
-    @JenticAgent(value = "order-processor", type = "consumer", capabilities = {"order-processing"})
-    public static class OrderProcessorAgent extends OrderRepository implements Agent {
+    @Agent(value = "order-processor", type = "consumer", capabilities = {"order-processing"})
+    public static class OrderProcessorAgent extends OrderRepository implements dev.agenor.core.Agent {
 
         private static final Logger log = LoggerFactory.getLogger(OrderProcessorAgent.class);
 
@@ -187,7 +185,7 @@ public class AgentContextExample {
                 return CompletableFuture.completedFuture(null);
             }
             return CompletableFuture.runAsync(() ->
-                    log.info("[Processor] Started — @JenticMessageHandler will route orders.new")
+                    log.info("[Processor] Started — @AgenorMessageHandler will route orders.new")
             );
         }
 
@@ -203,7 +201,7 @@ public class AgentContextExample {
         }
 
         @Override
-        public void addBehavior(Behavior behavior) { /* no scheduled behaviors in this example */ }
+        public void addBehavior(dev.agenor.core.Behavior behavior) { /* no scheduled behaviors in this example */ }
 
         @Override
         public void removeBehavior(String behaviorId) { /* no-op */ }
@@ -215,7 +213,7 @@ public class AgentContextExample {
 
         // ----- Message handler — AnnotationProcessor subscribes this automatically -----
 
-        @JenticMessageHandler("orders.new")
+        @AgenorMessageHandler("orders.new")
         public void handleOrder(Message message) {
             var orderId = message.getContent(String.class);
             var product = message.headers().getOrDefault("product", "unknown");

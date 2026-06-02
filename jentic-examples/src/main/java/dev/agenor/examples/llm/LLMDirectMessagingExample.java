@@ -2,6 +2,8 @@ package dev.agenor.examples.llm;
 
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.*;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
@@ -14,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * LLM multi-agent example — annotations + point-to-point direct messaging.
  *
- * Demonstrates @JenticAgent, @JenticBehavior, @JenticMessageHandler with agents
+ * Demonstrates @Agent, @Behavior, @AgenorMessageHandler with agents
  * registered manually via registerAgent() and communicating via direct receiverId
  * addressing (point-to-point), with LLM function calling through OpenAI GPT-4.
  *
@@ -72,7 +74,7 @@ public class LLMDirectMessagingExample {
     // COORDINATOR
     // =========================================================================
 
-    @JenticAgent(value = "coordinator", type = "coordinator", capabilities = {"planning", "synthesis"})
+    @Agent(value = "coordinator", type = "coordinator", capabilities = {"planning", "synthesis"})
     public static class CoordinatorAgent extends BaseAgent {
 
         private final LLMProvider llm;
@@ -83,7 +85,7 @@ public class LLMDirectMessagingExample {
             this.llm = llm;
         }
 
-        @JenticMessageHandler(value = "research.request", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.request", autoSubscribe = true)
         public void handleResearchRequest(Message message) {
             @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) message.content();
@@ -99,20 +101,20 @@ public class LLMDirectMessagingExample {
             createResearchPlan(ctx);
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "10s", autoStart = true)
+        @Behavior(type = BehaviorType.CYCLIC, interval = "10s", autoStart = true)
         public void checkResearchProgress() {
             if (!activeResearch.isEmpty()) {
                 log.info("📊 Active research tasks: {}", activeResearch.size());
             }
         }
 
-        @JenticMessageHandler(value = "research.findings.technical", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.findings.technical", autoSubscribe = true)
         public void handleTechnicalFindings(Message message) { processFinding(message, "Technical"); }
 
-        @JenticMessageHandler(value = "research.findings.market", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.findings.market", autoSubscribe = true)
         public void handleMarketFindings(Message message) { processFinding(message, "Market"); }
 
-        @JenticMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
         public void handleCompetitorFindings(Message message) { processFinding(message, "Competitor"); }
 
         private void createResearchPlan(ResearchContext ctx) {
@@ -236,7 +238,7 @@ public class LLMDirectMessagingExample {
     // SPECIALISTS
     // =========================================================================
 
-    @JenticAgent(value = "tech-researcher", type = "specialist",
+    @Agent(value = "tech-researcher", type = "specialist",
                  capabilities = {"technical-analysis", "specs-evaluation"})
     public static class TechnicalResearcher extends BaseAgent {
 
@@ -248,7 +250,7 @@ public class LLMDirectMessagingExample {
             this.llm = llm;
         }
 
-        @JenticMessageHandler(value = "research.task.technical", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.task.technical", autoSubscribe = true)
         public void handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
@@ -295,14 +297,14 @@ public class LLMDirectMessagingExample {
             });
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
+        @Behavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
         public void reportStatus() {
             int count = taskCount.get();
             if (count > 0) log.info("🔧 Technical Researcher - Tasks completed: {}", count);
         }
     }
 
-    @JenticAgent(value = "market-researcher", type = "specialist",
+    @Agent(value = "market-researcher", type = "specialist",
                  capabilities = {"market-analysis", "trend-forecasting"})
     public static class MarketResearcher extends BaseAgent {
 
@@ -314,7 +316,7 @@ public class LLMDirectMessagingExample {
             this.llm = llm;
         }
 
-        @JenticMessageHandler(value = "research.task.market", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.task.market", autoSubscribe = true)
         public void handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
@@ -375,14 +377,14 @@ public class LLMDirectMessagingExample {
             });
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
+        @Behavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
         public void reportStatus() {
             int count = taskCount.get();
             if (count > 0) log.info("📈 Market Researcher - Tasks completed: {}", count);
         }
     }
 
-    @JenticAgent(value = "competitor-researcher", type = "specialist",
+    @Agent(value = "competitor-researcher", type = "specialist",
                  capabilities = {"competitive-intelligence", "swot-analysis"})
     public static class CompetitorResearcher extends BaseAgent {
 
@@ -394,7 +396,7 @@ public class LLMDirectMessagingExample {
             this.llm = llm;
         }
 
-        @JenticMessageHandler(value = "research.task.competitor", autoSubscribe = true)
+        @AgenorMessageHandler(value = "research.task.competitor", autoSubscribe = true)
         public void handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
@@ -455,7 +457,7 @@ public class LLMDirectMessagingExample {
             });
         }
 
-        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
+        @Behavior(type = BehaviorType.CYCLIC, interval = "15s", autoStart = true)
         public void reportStatus() {
             int count = taskCount.get();
             if (count > 0) log.info("🎯 Competitor Researcher - Tasks completed: {}", count);

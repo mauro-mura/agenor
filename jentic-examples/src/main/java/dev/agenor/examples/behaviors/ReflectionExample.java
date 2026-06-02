@@ -1,7 +1,7 @@
 package dev.agenor.examples.behaviors;
 
 import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
@@ -92,7 +92,7 @@ public class ReflectionExample {
     // Agent
     // -------------------------------------------------------------------------
 
-    @JenticAgent("content-review-agent")
+    @Agent("content-review-agent")
     public static class ContentReviewAgent extends LLMAgent {
 
         private static final String TASK =

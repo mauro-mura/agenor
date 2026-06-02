@@ -1,15 +1,15 @@
 package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-@JenticAgent(
+@Agent(
         value = "notification-service",
         type = "Notification",
         capabilities = {"email", "sms"}
@@ -24,7 +24,7 @@ public class NotificationServiceAgent extends BaseAgent {
         this.behaviorScheduler = behaviorScheduler;
     }
 
-    @JenticMessageHandler("order-notification")
+    @AgenorMessageHandler("order-notification")
     public void handleNotification(Message message) {
         Map<String, String> content = message.getContent(Map.class);
 

@@ -1,12 +1,12 @@
 package dev.agenor.examples.eval;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.filter.TopicFilter;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
 import dev.agenor.tools.eval.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ import static dev.agenor.core.BehaviorType.*;
  *
  * <p>This example shows how to:
  * <ul>
- *   <li>Create agents with @JenticAgent and @JenticBehavior annotations</li>
+ *   <li>Create agents with @Agent and @Behavior annotations</li>
  *   <li>Define custom evaluation scenarios</li>
  *   <li>Use standard scenarios for common tests</li>
  *   <li>Run evaluations and generate reports</li>
@@ -311,7 +311,7 @@ public class EvaluationFrameworkExample {
     /**
      * Order processor agent with annotated behaviors.
      */
-    @JenticAgent(
+    @Agent(
         value = "order-processor",
         type = "Processor",
         capabilities = {"order-validation", "order-processing"}
@@ -347,7 +347,7 @@ public class EvaluationFrameworkExample {
         /**
          * Periodic status reporting behavior.
          */
-        @JenticBehavior(type = CYCLIC, interval = "5s")
+        @Behavior(type = CYCLIC, interval = "5s")
         public void reportStatus() {
             log.debug("Status: processed={}, errors={}, totalValue={}",
                 processedCount.get(), errorCount.get(), totalValue);
@@ -418,7 +418,7 @@ public class EvaluationFrameworkExample {
     /**
      * Inventory checker agent.
      */
-    @JenticAgent(
+    @Agent(
         value = "inventory-checker",
         type = "Processor",
         capabilities = {"inventory-check", "stock-management"}
@@ -486,7 +486,7 @@ public class EvaluationFrameworkExample {
     /**
      * Notification agent for alerts and notifications.
      */
-    @JenticAgent(
+    @Agent(
         value = "notification-agent",
         type = "Notifier",
         capabilities = {"email", "sms", "push-notification"}
@@ -513,7 +513,7 @@ public class EvaluationFrameworkExample {
             log.info("NotificationAgent stopped. Notifications sent: {}", sentNotifications.size());
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "10s")
+        @Behavior(type = CYCLIC, interval = "10s")
         public void flushPendingNotifications() {
             // Periodic flush of any pending notifications
             log.trace("Checking for pending notifications...");

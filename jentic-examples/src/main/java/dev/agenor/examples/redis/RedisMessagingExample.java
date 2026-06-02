@@ -2,9 +2,9 @@ package dev.agenor.examples.redis;
 
 import dev.agenor.adapters.messaging.redis.RedisMessagingFactory;
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
  * <ol>
  *   <li><b>Topic pub/sub over Redis</b>: {@code OrderAgent} publishes order-created
  *       events to the {@code orders.created} stream every 4 seconds;
- *       {@code FulfillmentAgent} subscribes via {@code @JenticMessageHandler} and
+ *       {@code FulfillmentAgent} subscribes via {@code @AgenorMessageHandler} and
  *       receives each event through a dedicated consumer group (fan-out).</li>
  *   <li><b>Direct reply over Redis</b>: {@code FulfillmentAgent} replies directly to
  *       {@code OrderAgent} via {@code MessageDispatcher.sendTo}. Because both agents
@@ -96,7 +96,7 @@ public class RedisMessagingExample {
      * Publishes a new order to the {@code orders.created} topic every 4 seconds
      * and logs the ACK that {@code FulfillmentAgent} sends back directly.
      */
-    @JenticAgent(value = "order-agent",
+    @Agent(value = "order-agent",
                  type = "example",
                  capabilities = {"order-publish"},
                  autoStart = true)
@@ -108,7 +108,7 @@ public class RedisMessagingExample {
             super("order-agent", "Order Agent");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "4s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "4s", autoStart = true)
         public void publishOrder() {
             orderSeq++;
             var order = Message.builder()
@@ -138,7 +138,7 @@ public class RedisMessagingExample {
     /**
      * Subscribes to {@code orders.created} and replies directly to the sender.
      */
-    @JenticAgent(value = "fulfillment-agent",
+    @Agent(value = "fulfillment-agent",
                  type = "example",
                  capabilities = {"fulfillment"},
                  autoStart = true)
@@ -150,7 +150,7 @@ public class RedisMessagingExample {
             super("fulfillment-agent", "Fulfillment Agent");
         }
 
-        @JenticMessageHandler("orders.created")
+        @AgenorMessageHandler("orders.created")
         public void handleOrder(Message msg) {
             processed++;
             log.info("[FulfillmentAgent] Processing order: {} (seq={})",

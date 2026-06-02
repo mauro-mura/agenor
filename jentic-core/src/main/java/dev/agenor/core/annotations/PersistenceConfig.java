@@ -11,29 +11,29 @@ import java.lang.annotation.Target;
  * Configures the persistence behavior for an agent class.
  *
  * <p>Place this annotation on any class that extends {@code BaseAgent} to control
- * <em>when</em> the runtime saves the fields marked with {@link JenticPersist}
+ * <em>when</em> the runtime saves the fields marked with {@link Persist}
  * and how snapshots are managed.
  *
  * <h2>Example — periodic auto-save every 30 seconds</h2>
  * <pre>{@code
- * @JenticAgent("order-processor")
- * @JenticPersistenceConfig(
+ * @Agent("order-processor")
+ * @PersistenceConfig(
  *     strategy = PersistenceStrategy.PERIODIC,
  *     interval  = "30s"
  * )
  * public class OrderProcessorAgent extends BaseAgent {
  *
- *     @JenticPersist(required = true)
+ *     @Persist(required = true)
  *     private String currentOrderId;
  *
- *     @JenticPersist
+ *     @Persist
  *     private int retryCount = 0;
  * }
  * }</pre>
  *
  * <h2>Example — save on stop and hourly snapshots, keep last 24</h2>
  * <pre>{@code
- * @JenticPersistenceConfig(
+ * @PersistenceConfig(
  *     strategy         = PersistenceStrategy.ON_STOP,
  *     autoSnapshot     = true,
  *     snapshotInterval = "1h",
@@ -46,12 +46,12 @@ import java.lang.annotation.Target;
  * (no automatic persistence; the agent must call {@code persistState()} explicitly).
  *
  * @since 0.2.0
- * @see JenticPersist
+ * @see Persist
  * @see PersistenceStrategy
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JenticPersistenceConfig {
+public @interface PersistenceConfig {
 
     /**
      * Determines when the runtime automatically saves agent state.

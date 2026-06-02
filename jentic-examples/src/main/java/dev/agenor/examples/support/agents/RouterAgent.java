@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.examples.support.context.ConversationContext;
 import dev.agenor.examples.support.context.ConversationContextManager;
@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Query/response persistence
  * - Analytics tracking
  */
-@JenticAgent(
+@Agent(
     value = "router-agent",
     type = "router",
     capabilities = {"intent-classification", "routing", "sentiment-analysis", "rate-limiting"}

@@ -1,9 +1,9 @@
 package dev.agenor.examples.discovery;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.agent.BaseAgent;
 
 import java.util.Random;
@@ -14,7 +14,7 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
 /**
  * Agent that collects simulated sensor data and publishes it.
  */
-@JenticAgent(value = "data-collector",
+@Agent(value = "data-collector",
              type = "sensor",
              capabilities = {"data-collection", "sensors", "telemetry"},
              autoStart = true)
@@ -27,7 +27,7 @@ public class DataCollectorAgent extends BaseAgent {
         super("data-collector", "Data Collector");
     }
 
-    @JenticBehavior(type = CYCLIC, interval = "6s", autoStart = true)
+    @Behavior(type = CYCLIC, interval = "6s", autoStart = true)
     public void collectSensorData() {
         dataPoints++;
 
@@ -64,7 +64,7 @@ public class DataCollectorAgent extends BaseAgent {
         }
     }
 
-    @JenticMessageHandler("sensor.request")
+    @AgenorMessageHandler("sensor.request")
     public void handleDataRequest(Message message) {
         String requestedSensor = message.headers().get("sensor-id");
 

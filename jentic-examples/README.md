@@ -41,7 +41,7 @@ One behavior type per example, all self-contained.
 
 | Example | Main class | Behavior |
 |---------|-----------|---------|
-| `ThrottledExample` | `dev.agenor.examples.behaviors.ThrottledExample` | `@JenticBehavior(type = THROTTLED)` rate limiting |
+| `ThrottledExample` | `dev.agenor.examples.behaviors.ThrottledExample` | `@Behavior(type = THROTTLED)` rate limiting |
 | `ConditionalBehaviorExample` | `dev.agenor.examples.behaviors.ConditionalBehaviorExample` | `CONDITIONAL` — runs only when a condition is true |
 | `RetryExample` | `dev.agenor.examples.behaviors.RetryExample` | `RetryBehavior` with exponential/linear/jitter/fixed backoff |
 | `CircuitBreakerExample` | `dev.agenor.examples.behaviors.CircuitBreakerExample` | `CIRCUIT_BREAKER` — open/half-open/closed state machine |

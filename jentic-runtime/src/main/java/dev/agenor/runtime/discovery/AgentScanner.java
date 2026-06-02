@@ -1,7 +1,6 @@
 package dev.agenor.runtime.discovery;
 
-import dev.agenor.core.Agent;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +16,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Scanner for discovering classes annotated with @JenticAgent.
+ * Scanner for discovering classes annotated with @Agent.
  * Supports both file system and JAR-based class scanning.
  */
 public class AgentScanner {
@@ -28,10 +27,10 @@ public class AgentScanner {
      * Scan for agent classes in the specified packages
      *
      * @param packageNames packages to scan
-     * @return set of classes annotated with @JenticAgent
+     * @return set of classes annotated with @Agent
      */
-    public Set<Class<? extends Agent>> scanForAgents(String... packageNames) {
-        Set<Class<? extends Agent>> agentClasses = new HashSet<>();
+    public Set<Class<? extends dev.agenor.core.Agent>> scanForAgents(String... packageNames) {
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = new HashSet<>();
 
         for (String packageName : packageNames) {
             if (packageName == null || packageName.trim().isEmpty()) {
@@ -46,7 +45,7 @@ public class AgentScanner {
                 for (Class<?> clazz : classes) {
                     if (isAgentClass(clazz)) {
                         @SuppressWarnings("unchecked")
-                        Class<? extends Agent> agentClass = (Class<? extends Agent>) clazz;
+                        Class<? extends dev.agenor.core.Agent> agentClass = (Class<? extends dev.agenor.core.Agent>) clazz;
                         agentClasses.add(agentClass);
                         log.info("Discovered agent class: {}", clazz.getName());
                     }
@@ -65,8 +64,8 @@ public class AgentScanner {
      * Check if a class is a valid agent class
      */
     private boolean isAgentClass(Class<?> clazz) {
-        return clazz.isAnnotationPresent(JenticAgent.class) &&
-               Agent.class.isAssignableFrom(clazz) &&
+        return clazz.isAnnotationPresent(Agent.class) &&
+               dev.agenor.core.Agent.class.isAssignableFrom(clazz) &&
                !clazz.isInterface();
     }
 

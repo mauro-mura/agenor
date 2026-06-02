@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.DialogueHandler;
@@ -27,7 +27,7 @@ import java.util.List;
  * Handles account-related queries: profile info, linked accounts, settings.
  * Supports collaborative reasoning via ConsultableAgent interface.
  */
-@JenticAgent(
+@Agent(
     value = "account-agent",
     type = "handler",
     capabilities = {"account-management", "profile", "consultable"}

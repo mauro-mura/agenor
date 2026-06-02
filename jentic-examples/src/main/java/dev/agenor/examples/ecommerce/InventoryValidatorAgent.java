@@ -1,8 +1,8 @@
 package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
-@JenticAgent(
+@Agent(
     value = "inventory-validator",
     type = "Validator",
     capabilities = {"inventory-validation"}
@@ -25,7 +25,7 @@ public class InventoryValidatorAgent extends BaseAgent {
         this.behaviorScheduler = behaviorScheduler;
     }
 
-    @JenticMessageHandler("validate-inventory")
+    @AgenorMessageHandler("validate-inventory")
     public void handleValidateInventory(Message message) {
         List<OrderItem> items = message.getContent(List.class);
 

@@ -1,7 +1,7 @@
 package dev.agenor.tools.agents;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.console.ConsoleEventListener;
 import dev.agenor.core.filter.MessageFilter;
 import dev.agenor.core.messaging.FilterableSubscriber;
@@ -43,7 +43,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 0.4.0
  */
-@JenticAgent(
+@Agent(
     value = "message-sniffer",
     type = "system",
     capabilities = {"monitoring", "message-history", "debugging"},

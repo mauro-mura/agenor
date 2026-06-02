@@ -14,15 +14,14 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import dev.agenor.core.annotations.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.agenor.core.Agent;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.BehaviorScheduler;
-import dev.agenor.core.annotations.JenticAgent;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.core.exceptions.AgentException;
 import dev.agenor.core.memory.MemoryStore;
@@ -89,12 +88,12 @@ public class AgentFactory {
     /**
      * Create agent instances from the given classes
      */
-    public Map<String, Agent> createAgents(Set<Class<? extends Agent>> agentClasses) {
-        Map<String, Agent> agents = new HashMap<>();
+    public Map<String, dev.agenor.core.Agent> createAgents(Set<Class<? extends dev.agenor.core.Agent>> agentClasses) {
+        Map<String, dev.agenor.core.Agent> agents = new HashMap<>();
 
-        for (Class<? extends Agent> agentClass : agentClasses) {
+        for (Class<? extends dev.agenor.core.Agent> agentClass : agentClasses) {
             try {
-                Agent agent = createAgent(agentClass);
+                dev.agenor.core.Agent agent = createAgent(agentClass);
 
                 // Extract agent ID from annotation or use class name
                 String agentId = extractAgentId(agentClass, agent);
@@ -115,7 +114,7 @@ public class AgentFactory {
      * Service injection is performed separately by
      * {@link dev.agenor.runtime.JenticRuntime#registerAgent}.
      */
-    public <T extends Agent> T createAgent(Class<T> agentClass) throws AgentException {
+    public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) throws AgentException {
         try {
             log.debug("Creating agent from class: {}", agentClass.getName());
 
@@ -138,7 +137,7 @@ public class AgentFactory {
     /**
      * Try to instantiate using constructor dependency injection
      */
-    private <T extends Agent> T tryConstructorInjection(Class<T> agentClass) throws Exception {
+    private <T extends dev.agenor.core.Agent> T tryConstructorInjection(Class<T> agentClass) throws Exception {
         Constructor<?>[] constructors = agentClass.getDeclaredConstructors();
 
         // Sort constructors by parameter count (try most specific first)
@@ -189,8 +188,8 @@ public class AgentFactory {
     /**
      * Extract agent ID from annotation or agent instance
      */
-    private String extractAgentId(Class<? extends Agent> agentClass, Agent agent) {
-        JenticAgent annotation = agentClass.getAnnotation(JenticAgent.class);
+    private String extractAgentId(Class<? extends dev.agenor.core.Agent> agentClass, dev.agenor.core.Agent agent) {
+        Agent annotation = agentClass.getAnnotation(Agent.class);
 
         if (annotation != null && !annotation.value().trim().isEmpty()) {
             return annotation.value().trim();
@@ -203,8 +202,8 @@ public class AgentFactory {
     /**
      * Extract agent metadata from annotation
      */
-    public AgentDescriptor createDescriptor(Class<? extends Agent> agentClass, Agent agent) {
-        JenticAgent annotation = agentClass.getAnnotation(JenticAgent.class);
+    public AgentDescriptor createDescriptor(Class<? extends dev.agenor.core.Agent> agentClass, dev.agenor.core.Agent agent) {
+        Agent annotation = agentClass.getAnnotation(Agent.class);
 
         if (annotation == null) {
             // Minimal descriptor for non-annotated agents
@@ -242,10 +241,10 @@ public class AgentFactory {
      * Scan for agent classes in the given packages
      *
      * @param packageNames packages to scan
-     * @return set of classes annotated with @JenticAgent
+     * @return set of classes annotated with @Agent
      */
-    public Set<Class<? extends Agent>> scanForAgents(String... packageNames) {
-        Set<Class<? extends Agent>> agentClasses = new HashSet<>();
+    public Set<Class<? extends dev.agenor.core.Agent>> scanForAgents(String... packageNames) {
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = new HashSet<>();
 
         for (String packageName : packageNames) {
             if (packageName == null || packageName.trim().isEmpty()) {
@@ -260,7 +259,7 @@ public class AgentFactory {
                 for (Class<?> clazz : classes) {
                     if (isAgentClass(clazz)) {
                         @SuppressWarnings("unchecked")
-                        Class<? extends Agent> agentClass = (Class<? extends Agent>) clazz;
+                        Class<? extends dev.agenor.core.Agent> agentClass = (Class<? extends dev.agenor.core.Agent>) clazz;
                         agentClasses.add(agentClass);
                         log.info("Discovered agent class: {}", clazz.getName());
                     }
@@ -279,8 +278,8 @@ public class AgentFactory {
      * Check if a class is a valid agent class
      */
     private boolean isAgentClass(Class<?> clazz) {
-        return clazz.isAnnotationPresent(JenticAgent.class) &&
-                Agent.class.isAssignableFrom(clazz) &&
+        return clazz.isAnnotationPresent(Agent.class) &&
+                dev.agenor.core.Agent.class.isAssignableFrom(clazz) &&
                 !clazz.isInterface();
     }
 

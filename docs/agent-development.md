@@ -12,18 +12,18 @@ This guide shows how to build agents, behaviors, and message handlers with Jenti
 ## Create Your First Agent
 
 ```java
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.Message;
 import dev.agenor.runtime.agent.BaseAgent;
 
 import static dev.agenor.core.BehaviorType.CYCLIC;
 
-@JenticAgent("hello-agent")
+@Agent("hello-agent")
 public class HelloAgent extends BaseAgent {
 
-    @JenticBehavior(type = CYCLIC, interval = "5s")
+    @Behavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
         getMessageDispatcher().publish(Message.builder()
                 .topic("greetings")
@@ -31,7 +31,7 @@ public class HelloAgent extends BaseAgent {
                 .build());
     }
 
-    @JenticMessageHandler("greetings")
+    @AgenorMessageHandler("greetings")
     public void handleGreeting(Message message) {
         log.info("Received: {}", message.getContent());
     }
@@ -59,7 +59,7 @@ public class App {
 Every `BaseAgent` exposes two overridable hooks that are called by the runtime during startup and shutdown:
 
 ```java
-@JenticAgent("my-agent")
+@Agent("my-agent")
 public class MyAgent extends BaseAgent {
 
     @Override
@@ -109,11 +109,11 @@ Supported behavior types (see `jentic-runtime` implementations):
 - Composite: sequential, parallel, FSM (runtime support utilities)
 - Advanced: conditional, throttled, batch, retry, circuit breaker, scheduled, pipeline
 
-Annotate public methods on your agent class with `@JenticBehavior` and use `BehaviorType` plus optional timing parameters like `interval` or `delay`.
+Annotate public methods on your agent class with `@Behavior` and use `BehaviorType` plus optional timing parameters like `interval` or `delay`.
 
 ## Message Handling
 
-Use `@JenticMessageHandler("topic")` on public methods that accept a `Message` parameter. The in-memory message service will deliver matching topic messages within the JVM.
+Use `@AgenorMessageHandler("topic")` on public methods that accept a `Message` parameter. The in-memory message service will deliver matching topic messages within the JVM.
 
 ## LLM Agents — LLMAgent
 
@@ -127,7 +127,7 @@ Use `@JenticMessageHandler("topic")` on public methods that accept a `Message` p
 ### Minimal Example
 
 ```java
-@JenticAgent("chat-bot")
+@Agent("chat-bot")
 public class ChatBot extends LLMAgent {
 
     @Override
@@ -138,7 +138,7 @@ public class ChatBot extends LLMAgent {
         }
     }
 
-    @JenticMessageHandler("user.message")
+    @AgenorMessageHandler("user.message")
     public void handleUserMessage(Message msg) {
         String userInput = msg.getContent(String.class);
 
@@ -363,7 +363,7 @@ Conditions also compose with `and()`, `or()`, `negate()` (default methods on `Co
 Jentic supports structured agent communication through `DialogueCapability`. Attach it to any `BaseAgent` via composition and initialise it in `onStart()`.
 
 ```java
-@JenticAgent("coordinator")
+@Agent("coordinator")
 public class CoordinatorAgent extends BaseAgent {
 
     private final DialogueCapability dialogue = new DialogueCapability(this);
@@ -400,33 +400,33 @@ For the full protocol reference see [`docs/dialog-protocol.md`](dialog-protocol.
 
 ## Persistence and Annotations
 
-### @JenticPersist — mark fields for automatic persistence
+### @Persist — mark fields for automatic persistence
 
 ```java
-@JenticAgent("order-processor")
+@Agent("order-processor")
 public class OrderProcessorAgent extends BaseAgent {
 
-    @JenticPersist
+    @Persist
     private int processedCount = 0;
 
-    @JenticPersist("customer_id")   // explicit key in persisted state
+    @Persist("customer_id")   // explicit key in persisted state
     private String customerId;
 
-    @JenticPersist(required = true) // fail fast on restore if missing
+    @Persist(required = true) // fail fast on restore if missing
     private String sessionToken;
 
-    @JenticPersist(encrypted = true) // encrypted at rest
+    @Persist(encrypted = true) // encrypted at rest
     private String apiKey;
 }
 ```
 
-The runtime reads all `@JenticPersist` fields when saving state and restores them on reload. Use `value` to stabilise the schema key across renames.
+The runtime reads all `@Persist` fields when saving state and restores them on reload. Use `value` to stabilise the schema key across renames.
 
-### @JenticPersistenceConfig — configure save strategy at class level
+### @PersistenceConfig — configure save strategy at class level
 
 ```java
-@JenticAgent("critical-agent")
-@JenticPersistenceConfig(
+@Agent("critical-agent")
+@PersistenceConfig(
     strategy         = PersistenceStrategy.PERIODIC,
     interval         = "30s",
     autoSnapshot     = true,
@@ -434,7 +434,7 @@ The runtime reads all `@JenticPersist` fields when saving state and restores the
     maxSnapshots     = 24
 )
 public class CriticalAgent extends BaseAgent {
-    @JenticPersist(required = true)
+    @Persist(required = true)
     private String currentOrderId;
 }
 ```
@@ -458,8 +458,8 @@ Map<String, Object> state = persistence.load("agent-123");
 
 // Via the higher-level PersistenceManager
 PersistenceManager manager = new PersistenceManager(persistence);
-manager.persist(myAgent);        // save @JenticPersist fields
-manager.restore(myAgent);        // restore @JenticPersist fields
+manager.persist(myAgent);        // save @Persist fields
+manager.restore(myAgent);        // restore @Persist fields
 ```
 
 ## Configuration

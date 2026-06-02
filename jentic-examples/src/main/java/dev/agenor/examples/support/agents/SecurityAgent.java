@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.DialogueHandler;
@@ -29,7 +29,7 @@ import java.util.List;
  * Handles security-related queries: password reset, 2FA, device management.
  * Supports collaborative reasoning via ConsultableAgent interface.
  */
-@JenticAgent(
+@Agent(
     value = "security-agent",
     type = "handler",
     capabilities = {"security", "authentication", "2fa", "consultable"}

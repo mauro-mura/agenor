@@ -2,8 +2,8 @@ package dev.agenor.examples.behaviors;
 
 import dev.agenor.core.BehaviorType;
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class ConditionalBehaviorExample {
 /**
  * Agent that performs resource-intensive tasks only when system load is low.
  */
-@JenticAgent("resource-aware-agent")
+@Agent("resource-aware-agent")
 class ResourceAwareAgent extends BaseAgent {
 
     public ResourceAwareAgent() {
@@ -74,7 +74,7 @@ class ResourceAwareAgent extends BaseAgent {
      * Heavy task that executes only when CPU < 50% AND Memory < 70%
      * Runs every 3 seconds but only executes when condition is met
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CONDITIONAL,
         condition = "system.cpu < 50 AND system.memory < 70",
         interval = "3s"
@@ -103,7 +103,7 @@ class ResourceAwareAgent extends BaseAgent {
 /**
  * Agent that sends notifications only during business hours.
  */
-@JenticAgent("business-hours-agent")
+@Agent("business-hours-agent")
 class BusinessHoursAgent extends BaseAgent {
 
     public BusinessHoursAgent() {
@@ -119,7 +119,7 @@ class BusinessHoursAgent extends BaseAgent {
      * Sends notifications only during business hours (9 AM - 5 PM) on weekdays
      * Checks every 5 seconds but only sends when condition is met
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CONDITIONAL,
         condition = "time.businessHours AND time.weekday",
         interval = "5s"
@@ -140,7 +140,7 @@ class BusinessHoursAgent extends BaseAgent {
 /**
  * Agent that adapts its behavior based on system conditions.
  */
-@JenticAgent("adaptive-agent")
+@Agent("adaptive-agent")
 class AdaptiveAgent extends BaseAgent {
 
     public AdaptiveAgent() {
@@ -156,7 +156,7 @@ class AdaptiveAgent extends BaseAgent {
      * High priority task that runs when system is healthy
      * Executes every 2 seconds when condition is met
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CONDITIONAL,
         condition = "system.healthy",
         interval = "2s"
@@ -169,7 +169,7 @@ class AdaptiveAgent extends BaseAgent {
      * Low priority task that runs only when system is VERY idle
      * Executes every 4 seconds when CPU < 30% AND Memory < 50%
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CONDITIONAL,
         condition = "system.cpu < 30 AND system.memory < 50",
         interval = "4s"
@@ -182,7 +182,7 @@ class AdaptiveAgent extends BaseAgent {
      * Emergency monitoring that runs when system is under load
      * Executes every 6 seconds when condition is met
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CONDITIONAL,
         condition = "system.underload",
         interval = "6s"

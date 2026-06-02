@@ -1,7 +1,7 @@
 package dev.agenor.runtime.discovery;
 
 import dev.agenor.core.*;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.core.exceptions.AgentException;
 import dev.agenor.core.memory.MemoryStore;
@@ -148,11 +148,11 @@ class AgentFactoryTest {
     @Test
     @DisplayName("Should create multiple agents from class set")
     void shouldCreateMultipleAgents() {
-        Set<Class<? extends Agent>> agentClasses = new HashSet<>();
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = new HashSet<>();
         agentClasses.add(SimpleTestAgent.class);
         agentClasses.add(AnnotatedAgent.class);
 
-        Map<String, Agent> agents = factory.createAgents(agentClasses);
+        Map<String, dev.agenor.core.Agent> agents = factory.createAgents(agentClasses);
 
         assertThat(agents).hasSize(2);
         assertThat(agents).containsKeys("simple-agent", "annotated-agent");
@@ -161,11 +161,11 @@ class AgentFactoryTest {
     @Test
     @DisplayName("Should skip failed agent creation in batch")
     void shouldSkipFailedAgentCreation() {
-        Set<Class<? extends Agent>> agentClasses = new HashSet<>();
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = new HashSet<>();
         agentClasses.add(SimpleTestAgent.class);
         agentClasses.add(AgentWithUnsatisfiableConstructor.class);
 
-        Map<String, Agent> agents = factory.createAgents(agentClasses);
+        Map<String, dev.agenor.core.Agent> agents = factory.createAgents(agentClasses);
 
         // Should only have the successful one
         assertThat(agents).hasSize(1);
@@ -253,7 +253,7 @@ class AgentFactoryTest {
     @Test
     @DisplayName("createDescriptor uses getAgentId() over annotation value for multi-instance agents")
     void createDescriptor_prefersRuntimeIdOverAnnotationValueForMultiInstanceAgent() {
-        // @JenticAgent("worker") declares a class-level type label, but each Worker instance
+        // @Agent("worker") declares a class-level type label, but each Worker instance
         // overrides getAgentId() to return its own logical ID ("worker-1", "worker-2", …).
         // The descriptor's agentId must match getAgentId(), not the annotation's value,
         // so that AgentResolver.resolveEndpoint("worker-1") can find the agent.
@@ -263,7 +263,7 @@ class AgentFactoryTest {
         assertThat(descriptor.agentId())
                 .as("descriptor agentId must equal getAgentId(), not the annotation value 'worker'")
                 .isEqualTo("worker-1");
-        // agentType falls back to class simple name when @JenticAgent has no 'type' attribute
+        // agentType falls back to class simple name when @Agent has no 'type' attribute
         assertThat(descriptor.agentType()).isEqualTo("MultiInstanceWorker");
     }
 
@@ -297,21 +297,21 @@ class AgentFactoryTest {
     // TEST HELPER CLASSES
     // =========================================================================
 
-    @JenticAgent("simple-agent")
+    @dev.agenor.core.annotations.Agent("simple-agent")
     static class SimpleTestAgent extends BaseAgent {
         public SimpleTestAgent() {
             super("simple-agent", "Simple Test Agent");
         }
     }
 
-    @JenticAgent("annotated-agent")
+    @Agent("annotated-agent")
     static class AnnotatedAgent extends BaseAgent {
         public AnnotatedAgent() {
             super("annotated-agent", "Annotated Agent");
         }
     }
 
-    @JenticAgent("descriptor-agent")
+    @dev.agenor.core.annotations.Agent("descriptor-agent")
     static class AgentWithDescriptorAccess extends BaseAgent {
         private AgentDescriptor descriptor;
 
@@ -336,42 +336,42 @@ class AgentFactoryTest {
         }
     }
 
-    @JenticAgent("  ")
+    @Agent("  ")
     static class AgentWithEmptyAnnotation extends BaseAgent {
         public AgentWithEmptyAnnotation() {
             super("fallback-id", "Fallback Agent");
         }
     }
 
-    @JenticAgent("  trimmed-id  ")
+    @Agent("  trimmed-id  ")
     static class AgentWithWhitespaceId extends BaseAgent {
         public AgentWithWhitespaceId() {
             super("trimmed-id", "Trimmed Agent");
         }
     }
 
-    @JenticAgent(value = "full-agent", type = "custom-type", capabilities = {"capability1", "capability2"}, autoStart = true)
+    @dev.agenor.core.annotations.Agent(value = "full-agent", type = "custom-type", capabilities = {"capability1", "capability2"}, autoStart = true)
     static class AnnotatedAgentFull extends BaseAgent {
         public AnnotatedAgentFull() {
             super("full-agent", "Full Agent");
         }
     }
 
-    @JenticAgent(value = "empty-caps", capabilities = {"valid", "", "  ", "another"})
+    @Agent(value = "empty-caps", capabilities = {"valid", "", "  ", "another"})
     static class AgentWithEmptyCapabilities extends BaseAgent {
         public AgentWithEmptyCapabilities() {
             super("empty-caps", "Empty Caps Agent");
         }
     }
 
-    @JenticAgent(value = "empty-type", type = "")
+    @dev.agenor.core.annotations.Agent(value = "empty-type", type = "")
     static class AgentWithEmptyType extends BaseAgent {
         public AgentWithEmptyType() {
             super("empty-type", "Empty Type Agent");
         }
     }
 
-    @JenticAgent("service-agent")
+    @dev.agenor.core.annotations.Agent("service-agent")
     static class TestAgentWithMessageService extends BaseAgent {
         private final MessageDispatcher msgDispatcher;
 
@@ -386,7 +386,7 @@ class AgentFactoryTest {
         }
     }
 
-    @JenticAgent("custom-service-agent")
+    @dev.agenor.core.annotations.Agent("custom-service-agent")
     static class TestAgentWithService extends BaseAgent {
         private final TestService testService;
 
@@ -404,7 +404,7 @@ class AgentFactoryTest {
         // Custom service for testing
     }
 
-    @JenticAgent("unsatisfiable")
+    @dev.agenor.core.annotations.Agent("unsatisfiable")
     static class AgentWithUnsatisfiableConstructor extends BaseAgent {
         public AgentWithUnsatisfiableConstructor(UnknownService service) {
             super("unsatisfiable", "Unsatisfiable");
@@ -415,14 +415,14 @@ class AgentFactoryTest {
         // Unknown service type
     }
 
-    @JenticAgent("string-agent")
+    @Agent("string-agent")
     static class AgentWithStringConstructor extends BaseAgent {
         public AgentWithStringConstructor(String name) {
             super("string-agent", name != null ? name : "String Agent");
         }
     }
 
-    @JenticAgent("multi-constructor")
+    @dev.agenor.core.annotations.Agent("multi-constructor")
     static class AgentWithMultipleConstructors extends BaseAgent {
         private int usedConstructorParams;
 
@@ -447,7 +447,7 @@ class AgentFactoryTest {
     }
 
     /** Multi-instance agent: annotation value is a class-level type label, not an instance ID. */
-    @JenticAgent("worker")
+    @dev.agenor.core.annotations.Agent("worker")
     static class MultiInstanceWorker extends BaseAgent {
         private final String instanceId;
 
@@ -505,7 +505,7 @@ class AgentFactoryTest {
     // -------------------------------------------------------------------------
 
     /** Minimal Agent stub used by plain agent test helpers. */
-    abstract static class AbstractPlainAgent implements Agent {
+    abstract static class AbstractPlainAgent implements dev.agenor.core.Agent {
 
         private final String agentId;
 
@@ -527,7 +527,7 @@ class AgentFactoryTest {
         @Override public dev.agenor.core.messaging.MessageDispatcher getMessageDispatcher() { return null; }
     }
 
-    @JenticAgent("plain-context-agent")
+    @dev.agenor.core.annotations.Agent("plain-context-agent")
     static class PlainAgentWithContext extends AbstractPlainAgent {
 
         private final AgentContext context;
@@ -540,7 +540,7 @@ class AgentFactoryTest {
         public AgentContext getContext() { return context; }
     }
 
-    @JenticAgent("plain-services-agent")
+    @Agent("plain-services-agent")
     static class PlainAgentWithServices extends AbstractPlainAgent {
 
         private final MessageDispatcher msgDispatcher;

@@ -15,13 +15,13 @@ We will use **Annotation-Based Configuration** as the primary mechanism for defi
 ### Annotation Design
 
 ```java
-@JenticAgent(value = "weather-station", 
+@Agent(value = "weather-station", 
              type = "sensor", 
              capabilities = {"data-collection", "weather-monitoring"},
              autoStart = true)
 public class WeatherStationAgent extends BaseAgent {
     
-    @JenticBehavior(type = CYCLIC, 
+    @Behavior(type = CYCLIC, 
                     interval = "30s", 
                     initialDelay = "10s",
                     autoStart = true)
@@ -29,7 +29,7 @@ public class WeatherStationAgent extends BaseAgent {
         // Periodic data collection
     }
     
-    @JenticMessageHandler("weather.request")
+    @AgenorMessageHandler("weather.request")
     public void handleWeatherRequest(Message message) {
         // Handle incoming requests
     }
@@ -68,7 +68,7 @@ jentic:
 ### Discovery Mechanism
 
 ```java
-// Runtime scans for @JenticAgent annotations
+// Runtime scans for @Agent annotations
 @Component
 public class AnnotationAgentScanner {
     

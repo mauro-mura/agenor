@@ -337,7 +337,7 @@ Total: ~3100ms (varies)
 
 ### Scenario 1: External API Calls
 ```java
-@JenticAgent("api-client")
+@Agent("api-client")
 public class ApiClientAgent extends BaseAgent {
     
     @Override
@@ -375,7 +375,7 @@ public class ApiClientAgent extends BaseAgent {
 
 ### Scenario 2: Database Operations
 ```java
-@JenticAgent("database-worker")
+@Agent("database-worker")
 public class DatabaseWorkerAgent extends BaseAgent {
     
     @Override
@@ -411,7 +411,7 @@ public class DatabaseWorkerAgent extends BaseAgent {
 
 ### Scenario 3: Message Processing
 ```java
-@JenticAgent("message-processor")
+@Agent("message-processor")
 public class MessageProcessorAgent extends BaseAgent {
     
     @Override
@@ -444,7 +444,7 @@ public class MessageProcessorAgent extends BaseAgent {
 
 ### Scenario 4: File Operations
 ```java
-@JenticAgent("file-processor")
+@Agent("file-processor")
 public class FileProcessorAgent extends BaseAgent {
     
     @Override

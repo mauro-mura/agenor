@@ -3,9 +3,9 @@ package dev.agenor.examples;
 import dev.agenor.core.AgentQuery;
 import dev.agenor.core.Message;
 import dev.agenor.core.PageRequest;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class PingPongExample {
     // =========================================================================
 
     /** Sends periodic ping messages and stops after receiving 5 pongs. */
-    @JenticAgent(value = "ping-agent",
+    @Agent(value = "ping-agent",
                  type = "example",
                  capabilities = {"ping", "messaging"},
                  autoStart = true)
@@ -70,7 +70,7 @@ public class PingPongExample {
             super("ping-agent", "Ping Agent");
         }
 
-        @JenticBehavior(type = CYCLIC, interval = "3s", autoStart = true)
+        @Behavior(type = CYCLIC, interval = "3s", autoStart = true)
         public void sendPing() {
             pingCount++;
             Message pingMessage = Message.builder()
@@ -83,7 +83,7 @@ public class PingPongExample {
             getMessageDispatcher().publish(pingMessage);
         }
 
-        @JenticMessageHandler("pong")
+        @AgenorMessageHandler("pong")
         public void handlePong(Message message) {
             pongReceived++;
             log.info("Received: {} (Total pongs received: {})", message.content(), pongReceived);
@@ -105,7 +105,7 @@ public class PingPongExample {
     }
 
     /** Responds to every ping with a pong addressed back to the sender. */
-    @JenticAgent(value = "pong-agent",
+    @Agent(value = "pong-agent",
                  type = "example",
                  capabilities = {"pong", "messaging"},
                  autoStart = true)
@@ -118,7 +118,7 @@ public class PingPongExample {
             super("pong-agent", "Pong Agent");
         }
 
-        @JenticMessageHandler("ping")
+        @AgenorMessageHandler("ping")
         public void handlePing(Message message) {
             pingReceived++;
             String pingNumber = message.headers().get("ping-number");

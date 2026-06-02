@@ -8,23 +8,23 @@ import java.lang.annotation.Target;
 /**
  * Marks a field or method for automatic inclusion in agent state persistence.
  *
- * <p>The runtime persistence layer reads all members annotated with {@code @JenticPersist}
+ * <p>The runtime persistence layer reads all members annotated with {@code @Persist}
  * when saving agent state, and restores their values when the agent is reloaded.
  * By default, the persistence key matches the Java member name; set {@link #value()}
  * to override it (useful when the serialized schema must remain stable across renames).
  *
  * <h2>Field usage</h2>
  * <pre>{@code
- * @JenticPersist
+ * @Persist
  * private int processedCount = 0;
  *
- * @JenticPersist("customer_id")   // explicit key in persisted state
+ * @Persist("customer_id")   // explicit key in persisted state
  * private String customerId;
  *
- * @JenticPersist(required = true) // restoration fails if key is absent
+ * @Persist(required = true) // restoration fails if key is absent
  * private String sessionToken;
  *
- * @JenticPersist(encrypted = true) // value is encrypted at rest
+ * @Persist(encrypted = true) // value is encrypted at rest
  * private String apiKey;
  * }</pre>
  *
@@ -33,19 +33,19 @@ import java.lang.annotation.Target;
  * and the setter on restore.
  *
  * <pre>{@code
- * @JenticPersist("order_state")
+ * @Persist("order_state")
  * public OrderState getOrderState() { return orderState; }
  * }</pre>
  *
  * <p>The persistence strategy and snapshot schedule are configured at class level via
- * {@link JenticPersistenceConfig}.
+ * {@link PersistenceConfig}.
  *
  * @since 0.2.0
- * @see JenticPersistenceConfig
+ * @see PersistenceConfig
  */
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JenticPersist {
+public @interface Persist {
 
     /**
      * Key used to identify this field in the persisted state document.

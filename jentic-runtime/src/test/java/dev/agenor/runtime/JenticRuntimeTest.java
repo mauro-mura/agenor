@@ -1,11 +1,10 @@
 package dev.agenor.runtime;
 
-import dev.agenor.core.Agent;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.JenticConfiguration;
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.config.ConfigurationException;
 import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
@@ -61,7 +60,7 @@ class JenticRuntimeTest {
         runtime.registerAgent(agent1);
         runtime.registerAgent(agent2);
 
-        Collection<Agent> agents = runtime.getAgents();
+        Collection<dev.agenor.core.Agent> agents = runtime.getAgents();
         assertThat(agents).hasSize(2)
                           .containsExactlyInAnyOrder(agent1, agent2);
     }
@@ -542,7 +541,7 @@ class JenticRuntimeTest {
     // ========== MULTI-INSTANCE AGENT ROUTING ==========
 
     /**
-     * Regression: @JenticAgent("worker") annotation value was used as the descriptor agentId for
+     * Regression: @Agent("worker") annotation value was used as the descriptor agentId for
      * ALL instances of the class, so resolveEndpoint("worker-1") returned empty and sendTo never
      * delivered. The descriptor agentId must come from getAgentId(), not the annotation.
      * Same root cause: autoSubscribeDirectMessages() used the internal UUID field instead of
@@ -639,7 +638,7 @@ class JenticRuntimeTest {
         }
     }
 
-    @JenticAgent("discoverable-test-agent")
+    @Agent("discoverable-test-agent")
     static class DiscoverableTestAgent extends BaseAgent {
         public DiscoverableTestAgent() {
             super("discoverable-test-agent", "Discoverable Test Agent");
@@ -665,8 +664,8 @@ class JenticRuntimeTest {
         }
     }
 
-    @JenticAgent("plain-llm-agent")
-    static class PlainLLMMemoryAwareAgent implements Agent, LLMMemoryAware {
+    @Agent("plain-llm-agent")
+    static class PlainLLMMemoryAwareAgent implements dev.agenor.core.Agent, LLMMemoryAware {
         private final String agentId;
         private LLMMemoryManager receivedManager;
 
@@ -693,7 +692,7 @@ class JenticRuntimeTest {
         }
     }
 
-    @JenticAgent("direct-message-agent")
+    @Agent("direct-message-agent")
     static class DirectMessageAgent extends BaseAgent {
         private final CountDownLatch latch;
         private final AtomicReference<String> captured;
@@ -746,13 +745,13 @@ class JenticRuntimeTest {
     }
 
     /** Handles "rr.request" topic and replies via getMessageDispatcher().sendTo(). */
-    @JenticAgent("echo-responder-agent")
+    @Agent("echo-responder-agent")
     static class EchoResponderAgent extends BaseAgent {
         EchoResponderAgent(String agentId) {
             super(agentId, agentId);
         }
 
-        @JenticMessageHandler("rr.request")
+        @AgenorMessageHandler("rr.request")
         public void onRequest(Message message) {
             Message reply = message.reply("pong")
                     .topic("rr.reply")
@@ -761,10 +760,10 @@ class JenticRuntimeTest {
         }
     }
 
-    /** Multi-instance worker: @JenticAgent annotation holds the class-level type label ("worker"),
+    /** Multi-instance worker: @Agent annotation holds the class-level type label ("worker"),
      *  while getAgentId() returns the instance-specific logical ID. Uses the no-arg super()
      *  constructor so that BaseAgent.agentId = UUID (simulating the ContractNetExample pattern). */
-    @JenticAgent("worker")
+    @Agent("worker")
     static class MultiInstanceWorker extends BaseAgent {
         private final String instanceId;
         private final CountDownLatch latch;
@@ -787,7 +786,7 @@ class JenticRuntimeTest {
         }
     }
 
-    @JenticAgent("message-capturing-agent")
+    @Agent("message-capturing-agent")
     static class MessageCapturingAgent extends BaseAgent {
         private final CountDownLatch latch;
         private final AtomicReference<String> captured;
@@ -798,7 +797,7 @@ class JenticRuntimeTest {
             this.captured = captured;
         }
 
-        @JenticMessageHandler("capture.topic")
+        @AgenorMessageHandler("capture.topic")
         public void onMessage(Message message) {
             captured.set(message.getContent(String.class));
             latch.countDown();

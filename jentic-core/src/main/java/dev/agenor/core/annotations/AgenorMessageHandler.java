@@ -20,16 +20,16 @@ import java.lang.annotation.Target;
  *
  * <p>Example:
  * <pre>{@code
- * @JenticAgent("inventory-agent")
+ * @Agent("inventory-agent")
  * public class InventoryAgent extends BaseAgent {
  *
- *     @JenticMessageHandler("orders.new")
+ *     @AgenorMessageHandler("orders.new")
  *     public void onNewOrder(Message message) {
  *         var order = message.getContentAs(Order.class);
  *         reserveStock(order);
  *     }
  *
- *     @JenticMessageHandler(value = "inventory.*", autoSubscribe = false)
+ *     @AgenorMessageHandler(value = "inventory.*", autoSubscribe = false)
  *     public void onInventoryEvent(Message message) {
  *         // subscribed manually when needed
  *     }
@@ -39,11 +39,11 @@ import java.lang.annotation.Target;
  * @since 0.1.0
  * @see MessageDispatcher
  * @see dev.agenor.core.Message
- * @see JenticAgent
+ * @see Agent
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JenticMessageHandler {
+public @interface AgenorMessageHandler {
 
     /**
      * The topic (or topic pattern) this handler subscribes to.

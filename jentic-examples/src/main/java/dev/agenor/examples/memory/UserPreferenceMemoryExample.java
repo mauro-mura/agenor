@@ -6,10 +6,10 @@ import java.util.Map;
 
 import dev.agenor.core.BehaviorType;
 import dev.agenor.core.Message;
+import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.messaging.MessageDispatcher;
-import dev.agenor.core.annotations.JenticAgent;
-import dev.agenor.core.annotations.JenticBehavior;
-import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.memory.MemoryScope;
 import dev.agenor.core.memory.MemoryStats;
 import dev.agenor.runtime.JenticRuntime;
@@ -26,8 +26,8 @@ import dev.agenor.runtime.memory.InMemoryStore;
  * <ul>
  *   <li>JenticRuntime with automatic agent discovery</li>
  *   <li>MemoryStore integration via builder</li>
- *   <li>@JenticMessageHandler automatic registration</li>
- *   <li>@JenticBehavior automatic scheduling</li>
+ *   <li>@AgenorMessageHandler automatic registration</li>
+ *   <li>@Behavior automatic scheduling</li>
  *   <li>Short-term and long-term memory</li>
  *   <li>Automatic state persistence</li>
  * </ul>
@@ -50,7 +50,7 @@ public class UserPreferenceMemoryExample {
         // 2. Create runtime with automatic discovery and memory support
         System.out.println("Creating runtime with agent discovery...");
         JenticRuntime runtime = JenticRuntime.builder()
-            .scanPackages("dev.agenor.examples.memory")  // Scan for @JenticAgent
+            .scanPackages("dev.agenor.examples.memory")  // Scan for @Agent
             .memoryStore(memoryStore)                     // Enable memory features
             .build();
 
@@ -180,13 +180,13 @@ public class UserPreferenceMemoryExample {
  *
  * <p><b>Key features:</b>
  * <ul>
- *   <li>@JenticAgent for discovery</li>
- *   <li>@JenticMessageHandler for automatic subscription</li>
- *   <li>@JenticBehavior for scheduled tasks (DISABLED in this example)</li>
+ *   <li>@Agent for discovery</li>
+ *   <li>@AgenorMessageHandler for automatic subscription</li>
+ *   <li>@Behavior for scheduled tasks (DISABLED in this example)</li>
  *   <li>Memory methods from BaseAgent</li>
  * </ul>
  */
-@JenticAgent(
+@Agent(
     value = "user-preference-agent",
     type = "PreferenceTracker",
     capabilities = {"memory-management", "preference-tracking"},
@@ -244,9 +244,9 @@ class UserPreferenceAgent extends BaseAgent {
 
     /**
      * Handles user preference updates.
-     * Automatically subscribed via @JenticMessageHandler by AnnotationProcessor.
+     * Automatically subscribed via @AgenorMessageHandler by AnnotationProcessor.
      */
-    @JenticMessageHandler("user.preference.update")
+    @AgenorMessageHandler("user.preference.update")
     public void handlePreferenceUpdate(Message message) {
         String userId = message.headers().get("userId");
         String preference = message.getContent(String.class);
@@ -276,7 +276,7 @@ class UserPreferenceAgent extends BaseAgent {
     /**
      * Retrieves user preferences.
      */
-    @JenticMessageHandler("user.preference.get")
+    @AgenorMessageHandler("user.preference.get")
     public void handlePreferenceGet(Message message) {
         String userId = message.headers().get("userId");
 
@@ -298,7 +298,7 @@ class UserPreferenceAgent extends BaseAgent {
     /**
      * Tracks user interactions with short-term memory (1-hour TTL).
      */
-    @JenticMessageHandler("user.interaction")
+    @AgenorMessageHandler("user.interaction")
     public void handleInteraction(Message message) {
         String userId = message.headers().get("userId");
         String interaction = message.getContent(String.class);
@@ -322,7 +322,7 @@ class UserPreferenceAgent extends BaseAgent {
     /**
      * Searches user history across all stored memories.
      */
-    @JenticMessageHandler("user.history.search")
+    @AgenorMessageHandler("user.history.search")
     public void handleHistorySearch(Message message) {
         String query = message.getContent(String.class);
 
@@ -350,7 +350,7 @@ class UserPreferenceAgent extends BaseAgent {
      * NOTE: Disabled (autoStart=false) to avoid noise in example output.
      * Enable by setting autoStart=true to see periodic stats.
      */
-    @JenticBehavior(
+    @Behavior(
         type = BehaviorType.CYCLIC,
         interval = "5m",
         autoStart = false  // Disabled for cleaner example output

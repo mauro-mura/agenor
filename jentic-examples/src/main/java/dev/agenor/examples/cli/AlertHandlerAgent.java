@@ -3,12 +3,12 @@ package dev.agenor.examples.cli;
 import java.util.concurrent.CompletableFuture;
 
 import dev.agenor.core.Message;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.filter.TopicFilter;
 
-@JenticAgent(
+@Agent(
     value = "alert-agent"
 )
 public class AlertHandlerAgent extends BaseAgent {

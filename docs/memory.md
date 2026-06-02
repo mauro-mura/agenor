@@ -4,7 +4,7 @@ This guide covers Jentic's **key-value memory system**: `MemoryStore`, `MemorySc
 the `BaseAgent` helper API, shared memory for multi-agent coordination, and the `InMemoryStore`
 implementation.
 
-> **Looking for agent state persistence?** (`Stateful`, `captureState`, `@JenticPersistenceConfig`,
+> **Looking for agent state persistence?** (`Stateful`, `captureState`, `@PersistenceConfig`,
 > `FilePersistenceService`) — see the dedicated **[Agent State Persistence Guide](persistence.md)**.
 > The two systems are independent; this guide covers key-value memory only.
 
@@ -285,7 +285,7 @@ log.info("Short-term: {}, Long-term: {}, ~{} tokens",
 ### Complete example: agent with memory
 
 ```java
-@JenticAgent("preferences-agent")
+@Agent("preferences-agent")
 public class PreferencesAgent extends BaseAgent {
 
     @Override
@@ -293,7 +293,7 @@ public class PreferencesAgent extends BaseAgent {
         log.info("Memory ready: {}", hasMemory());
     }
 
-    @JenticMessageHandler("user.update-preference")
+    @AgenorMessageHandler("user.update-preference")
     public void storePreference(Message msg) {
         String value = msg.getContent(String.class);
 
@@ -302,7 +302,7 @@ public class PreferencesAgent extends BaseAgent {
         );
     }
 
-    @JenticMessageHandler("user.get-preference")
+    @AgenorMessageHandler("user.get-preference")
     public void getPreference(Message msg) {
         recall("theme", MemoryScope.LONG_TERM).thenAccept(opt -> {
             String theme = opt.orElse("system");
@@ -407,13 +407,13 @@ System.out.println("Empty?             : " + stats.isEmpty());
 | Cross-agent data sharing | `shareMemory` / `recallShared` |
 | Agent business state (counters, queues) | See [persistence.md](persistence.md) — `Stateful` + `FilePersistenceService` |
 | LLM conversation history | `LLMMemoryManager` (see `docs/llm-integration.md`) |
-| Scheduled auto-save / snapshots | See [persistence.md](persistence.md) — `@JenticPersistenceConfig` |
+| Scheduled auto-save / snapshots | See [persistence.md](persistence.md) — `@PersistenceConfig` |
 
 ---
 
 ## See Also
 
 - [Agent State Persistence Guide](persistence.md) — `Stateful`, `AgentState`, `FilePersistenceService`, `PersistenceManager`
-- [Agent Development Guide](agent-development.md) — `@JenticPersist`, `@JenticPersistenceConfig` annotations
+- [Agent Development Guide](agent-development.md) — `@Persist`, `@PersistenceConfig` annotations
 - [LLM Integration Guide](llm-integration.md) — `LLMMemoryManager`, `ContextWindowStrategy`
 - [Architecture Guide](architecture.md) — module overview

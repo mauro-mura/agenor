@@ -4,6 +4,8 @@ import dev.agenor.adapters.llm.LLMProviderFactory;
 import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.*;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
@@ -92,7 +94,7 @@ public class LLMCapabilityDiscoveryExample {
  *
  * Key Pattern: Query by specific capabilities needed for the task
  */
-@JenticAgent(
+@Agent(
     value = "capability-coordinator",
     type = "coordinator",
     capabilities = {"research-orchestration", "synthesis"},
@@ -108,7 +110,7 @@ class CapabilityCoordinator extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.request", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.request", autoSubscribe = true)
     public void handleResearchRequest(Message message) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) message.content();
@@ -277,22 +279,22 @@ class CapabilityCoordinator extends BaseAgent {
         });
     }
 
-    @JenticMessageHandler(value = "research.findings.technical", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.technical", autoSubscribe = true)
     public void handleTechnicalFindings(Message msg) {
         processFinding(msg, "technical-analysis", "Technical");
     }
 
-    @JenticMessageHandler(value = "research.findings.market", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.market", autoSubscribe = true)
     public void handleMarketFindings(Message msg) {
         processFinding(msg, "market-analysis", "Market");
     }
 
-    @JenticMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
     public void handleCompetitorFindings(Message msg) {
         processFinding(msg, "competitive-intelligence", "Competitor");
     }
 
-    @JenticMessageHandler(value = "research.findings.trends", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.findings.trends", autoSubscribe = true)
     public void handleTrendFindings(Message msg) {
         processFinding(msg, "trend-forecasting", "Trends");
     }
@@ -341,7 +343,7 @@ class CapabilityCoordinator extends BaseAgent {
         });
     }
 
-    @JenticBehavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
+    @Behavior(type = BehaviorType.CYCLIC, interval = "30s", autoStart = true)
     public void monitorCapabilities() {
         // Show available capabilities in the system
         AgentQuery query = AgentQuery.builder()
@@ -388,7 +390,7 @@ class CapabilityCoordinator extends BaseAgent {
 /**
  * Tech Specialist with multiple capabilities
  */
-@JenticAgent(
+@Agent(
     value = "capability-tech-specialist",
     type = "specialist",
     capabilities = {
@@ -408,7 +410,7 @@ class CapabilityTechSpecialist extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.technical", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.technical", autoSubscribe = true)
     public void handleTask(Message msg) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) msg.content();
@@ -444,7 +446,7 @@ class CapabilityTechSpecialist extends BaseAgent {
 /**
  * Market Specialist with forecasting capability
  */
-@JenticAgent(
+@Agent(
     value = "capability-market-specialist",
     type = "specialist",
     capabilities = {
@@ -463,7 +465,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.market", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.market", autoSubscribe = true)
     public void handleTask(Message msg) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) msg.content();
@@ -495,7 +497,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
     }
 
     // ✅ Can also handle trend analysis (has trend-forecasting capability)
-    @JenticMessageHandler(value = "research.task.trends", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.trends", autoSubscribe = true)
     public void handleTrends(Message msg) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) msg.content();
@@ -530,7 +532,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
 /**
  * Competitor Specialist
  */
-@JenticAgent(
+@Agent(
     value = "capability-competitor-specialist",
     type = "specialist",
     capabilities = {
@@ -549,7 +551,7 @@ class CapabilityCompetitorSpecialist extends BaseAgent {
         this.llm = llm;
     }
 
-    @JenticMessageHandler(value = "research.task.competitor", autoSubscribe = true)
+    @AgenorMessageHandler(value = "research.task.competitor", autoSubscribe = true)
     public void handleTask(Message msg) {
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) msg.content();

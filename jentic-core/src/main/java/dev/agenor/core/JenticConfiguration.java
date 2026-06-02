@@ -87,7 +87,7 @@ public record JenticConfiguration(
     /**
      * Agent discovery and scanning configuration.
      *
-     * @param autoDiscovery whether to scan for {@code @JenticAgent} classes at startup
+     * @param autoDiscovery whether to scan for {@code @Agent} classes at startup
      * @param basePackage   primary root package to scan; merged into {@code scanPackages}
      * @param scanPaths     legacy alias for additional packages (kept for YAML compatibility);
      *                      merged into {@code scanPackages} at construction time

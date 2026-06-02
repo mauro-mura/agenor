@@ -417,10 +417,10 @@ JenticRuntime runtime = JenticRuntime.builder()
     .build();
 
 // Agent (LLMMemoryManager auto-injected)
-@JenticAgent("chat-bot")
+@Agent("chat-bot")
 public class ChatBot extends LLMAgent {
     
-    @JenticMessageHandler("user.message")
+    @AgenorMessageHandler("user.message")
     public void handleMessage(Message msg) {
         String input = msg.getContent(String.class);
         

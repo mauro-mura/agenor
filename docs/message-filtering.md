@@ -226,7 +226,7 @@ filterable.subscribeFiltered(filter, message -> {
 ### Inside an agent's onStart()
 
 ```java
-@JenticAgent("order-processor")
+@Agent("order-processor")
 public class OrderProcessorAgent extends BaseAgent {
 
     @Override
@@ -245,12 +245,12 @@ public class OrderProcessorAgent extends BaseAgent {
 }
 ```
 
-### With @JenticMessageHandler and inline filtering
+### With @AgenorMessageHandler and inline filtering
 
-`@JenticMessageHandler` routes by topic. For additional conditions, combine it with a secondary filter check inside the handler, or use programmatic subscription as above:
+`@AgenorMessageHandler` routes by topic. For additional conditions, combine it with a secondary filter check inside the handler, or use programmatic subscription as above:
 
 ```java
-@JenticMessageHandler("orders.*")
+@AgenorMessageHandler("orders.*")
 public void handleOrder(Message msg) {
     // Topic already filtered by annotation pattern
     // Extra guard for header check
@@ -414,7 +414,7 @@ Behavior apiBehavior = ThrottledBehavior.cyclic(
 ### Subclassing (full control)
 
 ```java
-@JenticAgent("api-caller")
+@Agent("api-caller")
 public class ApiCallerAgent extends BaseAgent {
 
     private final ThrottledBehavior apiPoller = new ThrottledBehavior(
@@ -459,7 +459,7 @@ public class ApiCallerAgent extends BaseAgent {
 ## Complete example: Filtered + throttled agent
 
 ```java
-@JenticAgent("order-enricher")
+@Agent("order-enricher")
 public class OrderEnricherAgent extends BaseAgent {
 
     @Override
@@ -494,6 +494,6 @@ public class OrderEnricherAgent extends BaseAgent {
 
 ## See Also
 
-- [Agent Development Guide](agent-development.md) — `@JenticMessageHandler`, behaviors
+- [Agent Development Guide](agent-development.md) — `@AgenorMessageHandler`, behaviors
 - [Architecture Guide](architecture.md) — module overview
 - [LLM Integration Guide](llm-integration.md) — rate limiting for LLM API calls

@@ -2,7 +2,7 @@ package dev.agenor.examples.support.agents;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.Agent;
 import dev.agenor.examples.support.context.ConversationContext;
 import dev.agenor.examples.support.context.ConversationContextManager;
 import dev.agenor.examples.support.model.SupportIntent;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Handles escalation requests and handoff to human agents.
  * Manages queue, provides wait times, and offers alternatives.
  */
-@JenticAgent(
+@Agent(
     value = "escalation-agent",
     type = "handler",
     capabilities = {"escalation", "human-handoff"}
