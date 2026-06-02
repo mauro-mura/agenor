@@ -31,28 +31,28 @@ public class JdbcAgentRegistry implements AgentRegistry {
     private static final Logger log = LoggerFactory.getLogger(JdbcAgentRegistry.class);
 
     private static final String INSERT_AGENT =
-            "INSERT INTO jentic_agents " +
+            "INSERT INTO agenor_agents " +
             "(agent_id, agent_name, agent_type, status, node_id, " +
             " endpoint_transport_type, endpoint_props, metadata, registered_at, last_seen) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE_AGENT =
-            "UPDATE jentic_agents SET " +
+            "UPDATE agenor_agents SET " +
             "agent_name = ?, agent_type = ?, status = ?, node_id = ?, " +
             "endpoint_transport_type = ?, endpoint_props = ?, metadata = ?, last_seen = ? " +
             "WHERE agent_id = ?";
 
     private static final String DELETE_AGENT =
-            "DELETE FROM jentic_agents WHERE agent_id = ?";
+            "DELETE FROM agenor_agents WHERE agent_id = ?";
 
     private static final String UPDATE_STATUS =
-            "UPDATE jentic_agents SET status = ?, last_seen = ? WHERE agent_id = ?";
+            "UPDATE agenor_agents SET status = ?, last_seen = ? WHERE agent_id = ?";
 
     private static final String DELETE_CAPABILITIES =
-            "DELETE FROM jentic_agent_capabilities WHERE agent_id = ?";
+            "DELETE FROM agenor_agent_capabilities WHERE agent_id = ?";
 
     private static final String INSERT_CAPABILITY =
-            "INSERT INTO jentic_agent_capabilities (agent_id, capability) VALUES (?, ?)";
+            "INSERT INTO agenor_agent_capabilities (agent_id, capability) VALUES (?, ?)";
 
     private final JdbcHelper helper;
     private final AgenorTelemetry telemetry;

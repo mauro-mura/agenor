@@ -39,7 +39,7 @@ class JdbcAgentDirectoryTest {
     @BeforeEach
     void setUp() {
         var cfg = new HikariConfig();
-        cfg.setJdbcUrl("jdbc:h2:mem:jentic_test_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+        cfg.setJdbcUrl("jdbc:h2:mem:agenor_test_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
         cfg.setUsername("sa");
         cfg.setPassword("");
         cfg.setMaximumPoolSize(5);

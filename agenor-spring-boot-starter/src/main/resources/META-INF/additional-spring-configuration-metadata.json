@@ -20,18 +20,18 @@
     {
       "name": "agenor.agents.auto-discovery",
       "type": "java.lang.Boolean",
-      "description": "Whether to automatically discover and register @AgenorAgent classes at startup.",
+      "description": "Whether to automatically discover and register @Agent classes at startup.",
       "defaultValue": true
     },
     {
       "name": "agenor.agents.base-package",
       "type": "java.lang.String",
-      "description": "Root package to scan for @AgenorAgent classes. Merged with scan-packages."
+      "description": "Root package to scan for @Agent classes. Merged with scan-packages."
     },
     {
       "name": "agenor.agents.scan-packages",
       "type": "java.util.List<java.lang.String>",
-      "description": "Additional packages to scan for @AgenorAgent classes. Merged with base-package."
+      "description": "Additional packages to scan for @Agent classes. Merged with base-package."
     },
     {
       "name": "agenor.agents.scan-paths",

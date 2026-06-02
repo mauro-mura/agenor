@@ -54,7 +54,7 @@ public class JdbcDirectoryExample {
 
         // In production: JdbcDirectoryConfig.of("jdbc:postgresql://host:5432/db", user, pass)
         var config = JdbcDirectoryConfig.of(
-                "jdbc:h2:mem:jentic_example;DB_CLOSE_DELAY=-1",
+                "jdbc:h2:mem:agenor_example;DB_CLOSE_DELAY=-1",
                 "sa", "");
 
         try (var jdbcDirectory = JdbcAgentDirectory.create(config)) {

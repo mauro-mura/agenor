@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Listens for cross-node HITL decisions via Postgres {@code LISTEN/NOTIFY}.
  *
- * <p>Opens a dedicated non-pooled connection and listens on channel {@code jentic_hitl}.
+ * <p>Opens a dedicated non-pooled connection and listens on channel {@code agenor_hitl}.
  * When a {@code NOTIFY} arrives with payload {@code <requestId>:<decisionJson>}, this
  * listener looks up the local future map and completes the future if present.
  *
@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 public final class PostgresNotificationListener implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(PostgresNotificationListener.class);
-    private static final String CHANNEL = "jentic_hitl";
+    private static final String CHANNEL = "agenor_hitl";
 
     private final DataSource dataSource;
     private final Map<String, CompletableFuture<ApprovalDecision>> localFutures;
@@ -42,7 +42,7 @@ public final class PostgresNotificationListener implements AutoCloseable {
 
     /**
      * Creates a listener that will complete futures in {@code localFutures} when a
-     * Postgres {@code NOTIFY jentic_hitl} message arrives.
+     * Postgres {@code NOTIFY agenor_hitl} message arrives.
      *
      * @param dataSource   data source used to open the dedicated listen connection
      * @param localFutures mutable map of in-flight futures (keyed by request ID), shared with

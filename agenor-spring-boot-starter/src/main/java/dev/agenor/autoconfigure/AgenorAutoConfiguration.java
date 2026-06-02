@@ -230,7 +230,7 @@ public class AgenorAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "dev.agenor.adapters.telemetry.OtelTelemetryFactory")
-    @ConditionalOnProperty(prefix = "jentic.telemetry", name = "enabled",
+    @ConditionalOnProperty(prefix = "agenor.telemetry", name = "enabled",
             havingValue = "true", matchIfMissing = true)
     static class TelemetryConfiguration {
 
@@ -267,7 +267,7 @@ public class AgenorAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
-        @ConditionalOnProperty(prefix = "jentic.llm", name = "provider", havingValue = "openai")
+        @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "openai")
         public LLMProvider openAiLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "openai");
@@ -280,7 +280,7 @@ public class AgenorAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
-        @ConditionalOnProperty(prefix = "jentic.llm", name = "provider", havingValue = "anthropic")
+        @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "anthropic")
         public LLMProvider anthropicLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "anthropic");
@@ -294,7 +294,7 @@ public class AgenorAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
-        @ConditionalOnProperty(prefix = "jentic.llm", name = "provider", havingValue = "ollama")
+        @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "ollama")
         public LLMProvider ollamaLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
             String baseUrl = llm.baseUrl() != null ? llm.baseUrl() : "http://localhost:11434";
@@ -368,7 +368,7 @@ public class AgenorAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "io.lettuce.core.RedisClient")
-    @ConditionalOnProperty(prefix = "jentic.messaging", name = "provider", havingValue = "redis")
+    @ConditionalOnProperty(prefix = "agenor.messaging", name = "provider", havingValue = "redis")
     static class RedisMessagingConfiguration {
 
         @Bean(destroyMethod = "close")
@@ -451,7 +451,7 @@ public class AgenorAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "dev.agenor.adapters.persistence.directory.JdbcAgentDirectory")
-    @ConditionalOnProperty(prefix = "jentic.directory", name = "provider", havingValue = "jdbc")
+    @ConditionalOnProperty(prefix = "agenor.directory", name = "provider", havingValue = "jdbc")
     static class JdbcDirectoryConfiguration {
 
         @Bean(destroyMethod = "close")
@@ -547,7 +547,7 @@ public class AgenorAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "dev.agenor.adapters.persistence.hitl.JdbcApprovalGate")
-    @ConditionalOnProperty(prefix = "jentic.hitl", name = "provider", havingValue = "jdbc")
+    @ConditionalOnProperty(prefix = "agenor.hitl", name = "provider", havingValue = "jdbc")
     static class JdbcHitlConfiguration {
 
         @Bean(destroyMethod = "close")

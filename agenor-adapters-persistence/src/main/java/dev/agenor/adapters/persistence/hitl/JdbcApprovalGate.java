@@ -26,12 +26,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * JDBC-backed implementation of {@link ApprovalGate}.
  *
- * <p>Each approval request is persisted in {@code jentic_hitl_requests}. A local
+ * <p>Each approval request is persisted in {@code agenor_hitl_requests}. A local
  * {@link CompletableFuture} registry (in-memory, per JVM) is keyed by request ID so the
  * calling virtual thread can park cheaply on {@code future.join()} (ADR-001).
  *
  * <p>When a decision is submitted, the row is updated and the local future is completed.
- * On Postgres, a {@code NOTIFY jentic_hitl} message is emitted so other JVMs listening on this
+ * On Postgres, a {@code NOTIFY agenor_hitl} message is emitted so other JVMs listening on this
  * channel can complete their local futures via {@link PostgresNotificationListener}.
  *
  * <p><b>Restart recovery</b>: call {@link #recoverExpired()} at construction time to mark
@@ -117,7 +117,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
     public void recoverExpired() {
         jdbc.inTransaction(conn -> {
             int updated = jdbc.update(conn,
-                    "UPDATE jentic_hitl_requests SET status = ? WHERE status = ? AND expires_at <= ?",
+                    "UPDATE agenor_hitl_requests SET status = ? WHERE status = ? AND expires_at <= ?",
                     List.of(STATUS_EXPIRED, STATUS_PENDING, Timestamp.from(Instant.now())));
             if (updated > 0) {
                 log.info("HITL startup recovery: marked {} expired requests", updated);
@@ -181,7 +181,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
         return jdbc.query(conn ->
                 jdbc.queryList(conn,
                         "SELECT request_id, agent_id, action, payload, metadata, created_at, expires_at"
-                        + " FROM jentic_hitl_requests WHERE status = ? AND expires_at > ?",
+                        + " FROM agenor_hitl_requests WHERE status = ? AND expires_at > ?",
                         List.of(STATUS_PENDING, Timestamp.from(Instant.now())),
                         rs -> {
                             var metadata = parseMetadata(rs.getString("metadata"));
@@ -217,7 +217,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
         var now = Timestamp.from(Instant.now());
         jdbc.inTransaction(conn ->
                 jdbc.update(conn,
-                        "INSERT INTO jentic_hitl_requests"
+                        "INSERT INTO agenor_hitl_requests"
                         + " (request_id, agent_id, action, payload, metadata,"
                         + "  created_at, expires_at, status)"
                         + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -254,7 +254,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
         String finalData = data;
         jdbc.inTransaction(conn ->
                 jdbc.update(conn,
-                        "UPDATE jentic_hitl_requests"
+                        "UPDATE agenor_hitl_requests"
                         + " SET status = ?, decision_type = ?, decision_data = ?, decided_at = ?"
                         + " WHERE request_id = ? AND status = ?",
                         List.of(finalType, finalType, finalData, now, requestId, STATUS_PENDING)));
@@ -265,7 +265,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
     private RowSummary loadRow(String requestId) {
         return jdbc.query(conn ->
                 jdbc.queryOne(conn,
-                        "SELECT request_id, status FROM jentic_hitl_requests WHERE request_id = ?",
+                        "SELECT request_id, status FROM agenor_hitl_requests WHERE request_id = ?",
                         List.of(requestId),
                         rs -> new RowSummary(rs.getString("request_id"), rs.getString("status")))
         ).join();
@@ -293,7 +293,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
     private void markExpired(String requestId) {
         jdbc.inTransaction(conn ->
                 jdbc.update(conn,
-                        "UPDATE jentic_hitl_requests SET status = ?"
+                        "UPDATE agenor_hitl_requests SET status = ?"
                         + " WHERE request_id = ? AND status = ?",
                         List.of(STATUS_EXPIRED, requestId, STATUS_PENDING)));
     }
@@ -322,7 +322,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
                     Map.of("type", type, "data", data));
             jdbc.inTransaction(conn -> {
                 try (var stmt = conn.createStatement()) {
-                    stmt.execute("NOTIFY jentic_hitl, '" + payload.replace("'", "''") + "'");
+                    stmt.execute("NOTIFY agenor_hitl, '" + payload.replace("'", "''") + "'");
                 }
             });
         } catch (Exception e) {

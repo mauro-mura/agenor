@@ -26,20 +26,20 @@ import java.util.concurrent.CompletableFuture;
 public class JdbcAgentDiscovery implements AgentDiscovery {
 
     private static final String SELECT_BY_ID =
-            "SELECT a.*, c.capability FROM jentic_agents a " +
-            "LEFT JOIN jentic_agent_capabilities c ON a.agent_id = c.agent_id " +
+            "SELECT a.*, c.capability FROM agenor_agents a " +
+            "LEFT JOIN agenor_agent_capabilities c ON a.agent_id = c.agent_id " +
             "WHERE a.agent_id = ?";
 
     private static final String SELECT_BY_CAPABILITY =
-            "SELECT a.*, c.capability FROM jentic_agents a " +
-            "JOIN jentic_agent_capabilities c ON a.agent_id = c.agent_id " +
+            "SELECT a.*, c.capability FROM agenor_agents a " +
+            "JOIN agenor_agent_capabilities c ON a.agent_id = c.agent_id " +
             "WHERE a.agent_id IN (" +
-            "  SELECT agent_id FROM jentic_agent_capabilities WHERE capability = ?" +
+            "  SELECT agent_id FROM agenor_agent_capabilities WHERE capability = ?" +
             ")";
 
     private static final String SELECT_BY_TYPE =
-            "SELECT a.*, c.capability FROM jentic_agents a " +
-            "LEFT JOIN jentic_agent_capabilities c ON a.agent_id = c.agent_id " +
+            "SELECT a.*, c.capability FROM agenor_agents a " +
+            "LEFT JOIN agenor_agent_capabilities c ON a.agent_id = c.agent_id " +
             "WHERE a.agent_type = ?";
 
     private final JdbcHelper helper;
@@ -149,14 +149,14 @@ public class JdbcAgentDiscovery implements AgentDiscovery {
         var whereParams = new ArrayList<>();
         var where = buildWhereClause(query, whereParams);
 
-        var countSql = "SELECT COUNT(DISTINCT a.agent_id) FROM jentic_agents a" + where;
+        var countSql = "SELECT COUNT(DISTINCT a.agent_id) FROM agenor_agents a" + where;
         var total = helper.queryOne(conn, countSql, whereParams, rs -> rs.getLong(1));
 
         if (total == null || total == 0) return Page.empty(request);
 
         var pageSql =
-                "SELECT a.*, c.capability FROM jentic_agents a " +
-                "LEFT JOIN jentic_agent_capabilities c ON a.agent_id = c.agent_id" +
+                "SELECT a.*, c.capability FROM agenor_agents a " +
+                "LEFT JOIN agenor_agent_capabilities c ON a.agent_id = c.agent_id" +
                 where +
                 " ORDER BY a.agent_id LIMIT ? OFFSET ?";
 
@@ -185,7 +185,7 @@ public class JdbcAgentDiscovery implements AgentDiscovery {
         if (caps != null && !caps.isEmpty()) {
             var placeholders = "?,".repeat(caps.size());
             conditions.add(
-                    "a.agent_id IN (SELECT agent_id FROM jentic_agent_capabilities " +
+                    "a.agent_id IN (SELECT agent_id FROM agenor_agent_capabilities " +
                     "WHERE capability IN (" + placeholders.substring(0, placeholders.length() - 1) + ") " +
                     "GROUP BY agent_id HAVING COUNT(DISTINCT capability) = ?)");
             params.addAll(caps);

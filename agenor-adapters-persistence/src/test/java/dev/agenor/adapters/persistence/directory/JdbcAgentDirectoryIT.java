@@ -36,9 +36,9 @@ class JdbcAgentDirectoryIT {
     @Container
     static GenericContainer<?> postgres = new GenericContainer<>("postgres:16-alpine")
             .withExposedPorts(5432)
-            .withEnv("POSTGRES_DB", "jentic_test")
+            .withEnv("POSTGRES_DB", "agenor_test")
             .withEnv("POSTGRES_USER", "agenor")
-            .withEnv("POSTGRES_PASSWORD", "jentic_test")
+            .withEnv("POSTGRES_PASSWORD", "agenor_test")
             .withStartupTimeout(Duration.ofSeconds(60));
 
     private JdbcAgentDirectory directory;
@@ -46,9 +46,9 @@ class JdbcAgentDirectoryIT {
     @BeforeEach
     void setUp() {
         var url = "jdbc:postgresql://" + postgres.getHost() + ":"
-                + postgres.getMappedPort(5432) + "/jentic_test";
+                + postgres.getMappedPort(5432) + "/agenor_test";
         directory = JdbcAgentDirectory.create(
-                JdbcDirectoryConfig.of(url, "agenor", "jentic_test"));
+                JdbcDirectoryConfig.of(url, "agenor", "agenor_test"));
     }
 
     @AfterEach
@@ -159,8 +159,8 @@ class JdbcAgentDirectoryIT {
     @DisplayName("factory create runs migrations and returns usable directory")
     void createRunsMigrationsAndIsUsable() {
         var url = "jdbc:postgresql://" + postgres.getHost() + ":"
-                + postgres.getMappedPort(5432) + "/jentic_test";
-        try (var dir = JdbcAgentDirectory.create(JdbcDirectoryConfig.of(url, "agenor", "jentic_test"))) {
+                + postgres.getMappedPort(5432) + "/agenor_test";
+        try (var dir = JdbcAgentDirectory.create(JdbcDirectoryConfig.of(url, "agenor", "agenor_test"))) {
             var desc = agentDescriptor("smoke-test", "Smoke", AgentStatus.RUNNING, Set.of("smoke"));
             dir.registry().register(desc).join();
             assertThat(dir.discovery().findById("smoke-test").join()).isPresent();

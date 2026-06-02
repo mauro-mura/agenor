@@ -22,7 +22,7 @@ public class JdbcAgentResolver implements AgentResolver {
 
     private static final String SELECT_ENDPOINT =
             "SELECT node_id, endpoint_transport_type, endpoint_props " +
-            "FROM jentic_agents WHERE agent_id = ?";
+            "FROM agenor_agents WHERE agent_id = ?";
 
     private final JdbcHelper helper;
     private final AgenorTelemetry telemetry;

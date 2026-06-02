@@ -287,7 +287,7 @@ class JdbcApprovalGateTest {
         var helper = new JdbcHelper(dataSource);
         String actualStatus = helper.query(conn ->
                 helper.queryOne(conn,
-                        "SELECT status FROM jentic_hitl_requests WHERE request_id = ?",
+                        "SELECT status FROM agenor_hitl_requests WHERE request_id = ?",
                         java.util.List.of(requestId),
                         rs -> rs.getString("status"))
         ).join();

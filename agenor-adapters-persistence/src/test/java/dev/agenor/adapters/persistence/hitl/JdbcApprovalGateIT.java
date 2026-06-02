@@ -37,9 +37,9 @@ class JdbcApprovalGateIT {
     @Container
     static GenericContainer<?> postgres = new GenericContainer<>("postgres:16-alpine")
             .withExposedPorts(5432)
-            .withEnv("POSTGRES_DB", "jentic_test")
+            .withEnv("POSTGRES_DB", "agenor_test")
             .withEnv("POSTGRES_USER", "agenor")
-            .withEnv("POSTGRES_PASSWORD", "jentic_test")
+            .withEnv("POSTGRES_PASSWORD", "agenor_test")
             .withStartupTimeout(Duration.ofSeconds(60));
 
     private HikariDataSource dataSource;
@@ -49,11 +49,11 @@ class JdbcApprovalGateIT {
     @BeforeEach
     void setUp() {
         jdbcUrl = "jdbc:postgresql://" + postgres.getHost() + ":"
-                + postgres.getMappedPort(5432) + "/jentic_test";
+                + postgres.getMappedPort(5432) + "/agenor_test";
         var cfg = new HikariConfig();
         cfg.setJdbcUrl(jdbcUrl);
         cfg.setUsername("agenor");
-        cfg.setPassword("jentic_test");
+        cfg.setPassword("agenor_test");
         cfg.setMaximumPoolSize(5);
         dataSource = new HikariDataSource(cfg);
 
@@ -163,7 +163,7 @@ class JdbcApprovalGateIT {
         var helper = new dev.agenor.adapters.persistence.JdbcHelper(dataSource);
         String actual = helper.query(conn ->
                 helper.queryOne(conn,
-                        "SELECT status FROM jentic_hitl_requests WHERE request_id = ?",
+                        "SELECT status FROM agenor_hitl_requests WHERE request_id = ?",
                         java.util.List.of(requestId),
                         rs -> rs.getString("status"))
         ).join();
