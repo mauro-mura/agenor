@@ -6,7 +6,7 @@ import dev.agenor.core.AgentQuery;
 import dev.agenor.core.Page;
 import dev.agenor.core.PageRequest;
 import dev.agenor.core.directory.AgentDiscovery;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 
 import java.sql.Connection;
@@ -43,19 +43,19 @@ public class JdbcAgentDiscovery implements AgentDiscovery {
             "WHERE a.agent_type = ?";
 
     private final JdbcHelper helper;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     public JdbcAgentDiscovery(JdbcHelper helper) {
-        this(helper, JenticTelemetry.noop());
+        this(helper, AgenorTelemetry.noop());
     }
 
     /**
      * @param helper    JDBC helper; must not be null
      * @param telemetry telemetry for {@code directory.find} spans; null treated as noop
      */
-    public JdbcAgentDiscovery(JdbcHelper helper, JenticTelemetry telemetry) {
+    public JdbcAgentDiscovery(JdbcHelper helper, AgenorTelemetry telemetry) {
         this.helper = Objects.requireNonNull(helper, "helper must not be null");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     @Override

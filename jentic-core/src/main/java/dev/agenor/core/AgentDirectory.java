@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>For mix-and-match backends (e.g., JDBC registry + in-memory presence), wire the
  * individual capability interfaces ({@link AgentRegistry}, {@link AgentResolver},
- * {@link AgentDiscovery}, {@link AgentPresence}) via {@code JenticRuntime.Builder}
+ * {@link AgentDiscovery}, {@link AgentPresence}) via {@code AgenorRuntime.Builder}
  * rather than using this composite.
  *
  * @since 0.1.0

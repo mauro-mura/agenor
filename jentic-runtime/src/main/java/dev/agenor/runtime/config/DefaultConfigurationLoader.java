@@ -2,7 +2,7 @@ package dev.agenor.runtime.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import dev.agenor.core.JenticConfiguration;
+import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.config.ConfigurationLoader;
 import dev.agenor.core.config.ConfigurationException;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromFile(String path) {
+    public AgenorConfiguration loadFromFile(String path) {
         if (path == null || path.trim().isEmpty()) {
             throw new ConfigurationException("Configuration path cannot be null or empty");
         }
@@ -55,7 +55,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
             content = substituteEnvironmentVariables(content);
 
             ObjectMapper mapper = selectMapper(path);
-            JenticConfigurationWrapper wrapper = mapper.readValue(content, JenticConfigurationWrapper.class);
+            AgenorConfigurationWrapper wrapper = mapper.readValue(content, AgenorConfigurationWrapper.class);
 
             log.info("Loaded configuration from: {}", path);
             return wrapper.getConfiguration();
@@ -67,7 +67,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromClasspath(String resourcePath) {
+    public AgenorConfiguration loadFromClasspath(String resourcePath) {
         if (resourcePath == null || resourcePath.trim().isEmpty()) {
             throw new ConfigurationException("Resource path cannot be null or empty");
         }
@@ -87,7 +87,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
             content = substituteEnvironmentVariables(content);
 
             ObjectMapper mapper = selectMapper(resourcePath);
-            JenticConfigurationWrapper wrapper = mapper.readValue(content, JenticConfigurationWrapper.class);
+            AgenorConfigurationWrapper wrapper = mapper.readValue(content, AgenorConfigurationWrapper.class);
 
             log.info("Loaded configuration from classpath: {}", resourcePath);
             return wrapper.getConfiguration();
@@ -99,7 +99,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromStream(InputStream inputStream, String format) {
+    public AgenorConfiguration loadFromStream(InputStream inputStream, String format) {
         if (inputStream == null) {
             throw new ConfigurationException("Input stream cannot be null");
         }
@@ -109,7 +109,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
             content = substituteEnvironmentVariables(content);
 
             ObjectMapper mapper = "json".equalsIgnoreCase(format) ? jsonMapper : yamlMapper;
-            JenticConfigurationWrapper wrapper = mapper.readValue(content, JenticConfigurationWrapper.class);
+            AgenorConfigurationWrapper wrapper = mapper.readValue(content, AgenorConfigurationWrapper.class);
 
             log.info("Loaded configuration from stream (format: {})", format);
             return wrapper.getConfiguration();
@@ -121,7 +121,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadDefault() {
+    public AgenorConfiguration loadDefault() {
         // 1. Try filesystem: agenor.yml in the working directory
         Path fsPath = Paths.get(System.getProperty("user.dir"), "agenor.yml");
         if (Files.exists(fsPath)) {
@@ -140,16 +140,16 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
         }
 
         // 3. Fall back to built-in defaults
-        return JenticConfiguration.defaults();
+        return AgenorConfiguration.defaults();
     }
 
     @Override
-    public void validate(JenticConfiguration config) {
+    public void validate(AgenorConfiguration config) {
         if (config == null) {
             throw new ConfigurationException("Configuration cannot be null");
         }
 
-        JenticConfiguration.RuntimeConfig runtime = config.runtime();
+        AgenorConfiguration.RuntimeConfig runtime = config.runtime();
         if (runtime.name() == null || runtime.name().trim().isEmpty()) {
             throw new ConfigurationException("runtime.name cannot be null or empty");
         }
@@ -159,7 +159,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
             log.warn("Unknown environment '{}', expected: development, staging, production, or test", env);
         }
 
-        JenticConfiguration.AgentsConfig agents = config.agents();
+        AgenorConfiguration.AgentsConfig agents = config.agents();
         if (agents.autoDiscovery() && agents.getAllScanPackages().isEmpty()) {
             log.warn("autoDiscovery is enabled but no scanPackages configured");
         }

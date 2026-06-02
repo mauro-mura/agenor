@@ -20,7 +20,7 @@ package dev.agenor.core.telemetry;
  * }</pre>
  *
  * <p>Implementations must be safe for use across virtual threads. The
- * {@link dev.agenor.core.telemetry.NoopJenticTelemetry noop} implementation
+ * {@link NoopAgenorTelemetry noop} implementation
  * performs no work and introduces zero allocations.
  *
  * @since 0.19.0

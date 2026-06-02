@@ -175,7 +175,7 @@ public interface CommitmentTracker {
 **Server-side** (expose internal agents):
 ```java
 // Implements io.a2a.server.agentexecution.AgentExecutor
-public class JenticAgentExecutor implements AgentExecutor {
+public class AgenorAgentExecutor implements AgentExecutor {
     
     private final MessageDispatcher messageDispatcher;
     private final DialogueA2AConverter converter;
@@ -208,7 +208,7 @@ public class JenticAgentExecutor implements AgentExecutor {
 **Client-side** (call external agents):
 ```java
 // Uses io.a2a.client.Client
-public class JenticA2AClient {
+public class AgenorA2AClient {
     
     private final Client a2aClient;
     
@@ -256,10 +256,10 @@ jentic-runtime/
 
 jentic-adapters/
 └── a2a/
-    ├── JenticA2AAdapter.java         # Coordination/configuration
-    ├── JenticAgentExecutor.java      # Implements AgentExecutor (SDK)
-    ├── JenticAgentCardProducer.java  # Produces AgentCard for internal agents
-    ├── JenticA2AClient.java          # Wraps SDK Client
+    ├── AgenorA2AAdapter.java         # Coordination/configuration
+    ├── AgenorAgentExecutor.java      # Implements AgentExecutor (SDK)
+    ├── AgenorAgentCardProducer.java  # Produces AgentCard for internal agents
+    ├── AgenorA2AClient.java          # Wraps SDK Client
     └── DialogueA2AConverter.java     # DialogueMessage <-> A2A Message/Task
 ```
 

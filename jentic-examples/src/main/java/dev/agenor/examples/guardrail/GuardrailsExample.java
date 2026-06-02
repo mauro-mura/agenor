@@ -10,7 +10,7 @@ import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.LLMAgent;
 import dev.agenor.runtime.guardrail.ContentPolicyGuardrail;
 import dev.agenor.runtime.guardrail.GuardrailChain;
@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li><b>Output content policy</b> — LLM response containing a blocked keyword
  *       is intercepted and the consumer receives a {@link GuardrailViolationException}.</li>
  *   <li><b>Declarative wiring via {@code @WithGuardrails}</b> — annotation-configured
- *       agent receives its chain automatically from {@code JenticRuntime}.</li>
+ *       agent receives its chain automatically from {@code AgenorRuntime}.</li>
  *   <li><b>Programmatic chain builder</b> — explicit builder API for agents that
  *       need constructor-configured guardrails (e.g. YAML policy path).</li>
  * </ol>
@@ -91,7 +91,7 @@ public class GuardrailsExample {
      * Finance agent that declares its guardrails via {@code @WithGuardrails}.
      *
      * <p>{@link PiiRedactionGuardrail} is applied to inputs (email, phone, IBAN, CC, CF).
-     * {@code JenticRuntime} instantiates and injects the chain automatically at
+     * {@code AgenorRuntime} instantiates and injects the chain automatically at
      * registration time.
      *
      * <p>Note: {@link ContentPolicyGuardrail} requires a YAML path constructor —
@@ -213,19 +213,19 @@ public class GuardrailsExample {
     }
 
     // -------------------------------------------------------------------------
-    // Scenario 3: Declarative @WithGuardrails wiring via JenticRuntime
+    // Scenario 3: Declarative @WithGuardrails wiring via AgenorRuntime
     // -------------------------------------------------------------------------
 
     private static void scenario3_declarativeWiring() throws GuardrailViolationException {
         log.info("--- Scenario 3: @WithGuardrails declarative wiring ---");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         FinanceAgent agent = new FinanceAgent(
                 stubProvider("Your request has been processed."));
         runtime.registerAgent(agent);
 
-        // JenticRuntime has automatically injected the PiiRedactionGuardrail
+        // AgenorRuntime has automatically injected the PiiRedactionGuardrail
         // declared on @WithGuardrails(input = { PiiRedactionGuardrail.class })
         boolean chainInjected = agent.getGuardrailChain() != null
                 && !agent.getGuardrailChain().hasNoInputGuardrails();

@@ -3,7 +3,7 @@ package dev.agenor.tools.console;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.agenor.core.Agent;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.tools.history.MessageHistoryService;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,7 +36,7 @@ public class RestAPIHandler extends HttpServlet {
 
     private static final Logger logger = LoggerFactory.getLogger(RestAPIHandler.class);
 
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final ObjectMapper objectMapper;
     private final MessageHistoryService messageHistory;
 
@@ -45,10 +45,10 @@ public class RestAPIHandler extends HttpServlet {
     /**
      * Creates a RestAPIHandler without message history support.
      *
-     * @deprecated Use {@link #RestAPIHandler(JenticRuntime, ObjectMapper, MessageHistoryService)}
+     * @deprecated Use {@link #RestAPIHandler(AgenorRuntime, ObjectMapper, MessageHistoryService)}
      */
     @Deprecated
-    public RestAPIHandler(JenticRuntime runtime, ObjectMapper objectMapper) {
+    public RestAPIHandler(AgenorRuntime runtime, ObjectMapper objectMapper) {
         this(runtime, objectMapper, null);
     }
 
@@ -59,7 +59,7 @@ public class RestAPIHandler extends HttpServlet {
      * @param objectMapper JSON mapper
      * @param messageHistory message history service, may be null
      */
-    public RestAPIHandler(JenticRuntime runtime, ObjectMapper objectMapper,
+    public RestAPIHandler(AgenorRuntime runtime, ObjectMapper objectMapper,
                           MessageHistoryService messageHistory) {
         this.runtime = runtime;
         this.objectMapper = objectMapper;

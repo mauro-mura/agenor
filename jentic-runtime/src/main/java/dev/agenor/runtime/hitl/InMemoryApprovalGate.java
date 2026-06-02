@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * {@link ApprovalTimeoutException} and both internal maps are cleaned up.
  *
  * <p>This class is intended to be used as a singleton managed by
- * {@code JenticRuntime}. The {@link #submit} method is package-private and
+ * {@code AgenorRuntime}. The {@link #submit} method is package-private and
  * called exclusively by {@link ApprovalService}.
  *
  * @see ApprovalGate

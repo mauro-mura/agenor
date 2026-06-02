@@ -1,7 +1,7 @@
 package dev.agenor.examples.behaviors;
 
 import dev.agenor.core.annotations.Agent;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.ScheduledBehavior;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ public class ScheduledExample {
         log.info("Cron-like scheduling with timezone support");
         log.info("=".repeat(80) + "\n");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(new SchedulerDemoAgent());
         runtime.start().join();
 
@@ -83,7 +83,7 @@ public class ScheduledExample {
         log.info("✅ Example completed successfully\n");
     }
 
-    private static void demonstrateBasicScheduling(JenticRuntime runtime) {
+    private static void demonstrateBasicScheduling(AgenorRuntime runtime) {
         log.info("Creating various scheduled behaviors...\n");
 
         ScheduledBehavior everySecond = new ScheduledBehavior("every-second", "* * * * * *") {
@@ -122,7 +122,7 @@ public class ScheduledExample {
         registerBehaviorWithAgent(runtime, hourly);
     }
 
-    private static void demonstrateRealWorldUseCases(JenticRuntime runtime) {
+    private static void demonstrateRealWorldUseCases(AgenorRuntime runtime) {
         ScheduledBehavior businessHours = ScheduledBehavior.weekdays(
                 "business-hours-check", 9, 0,
                 () -> log.info("💼 Business Hours Task - Market Opening Check"));
@@ -173,7 +173,7 @@ public class ScheduledExample {
         registerBehaviorWithAgent(runtime, monitoring);
     }
 
-    private static void demonstrateMetrics(JenticRuntime runtime) throws Exception {
+    private static void demonstrateMetrics(AgenorRuntime runtime) throws Exception {
         log.info("Creating behavior with metrics tracking...\n");
 
         ScheduledBehavior metricsDemo = new ScheduledBehavior("metrics-demo", "*/2 * * * * *") {
@@ -205,7 +205,7 @@ public class ScheduledExample {
     }
 
     /** Attach a behavior to the first available agent in the runtime. */
-    private static void registerBehaviorWithAgent(JenticRuntime runtime, ScheduledBehavior behavior) {
+    private static void registerBehaviorWithAgent(AgenorRuntime runtime, ScheduledBehavior behavior) {
         runtime.getAgents().stream()
                 .findFirst()
                 .ifPresent(agent -> agent.addBehavior(behavior));

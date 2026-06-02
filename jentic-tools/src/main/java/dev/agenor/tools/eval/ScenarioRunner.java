@@ -3,7 +3,7 @@ package dev.agenor.tools.eval;
 import dev.agenor.core.Message;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.core.messaging.Subscription;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.tools.health.HealthCheckService;
 import dev.agenor.tools.health.HealthCheckService.HealthReport;
 import dev.agenor.tools.metrics.MetricsService;
@@ -41,7 +41,7 @@ import java.util.concurrent.*;
  *
  * <p>Example usage:
  * <pre>{@code
- * JenticRuntime runtime = JenticRuntime.create();
+ * AgenorRuntime runtime = AgenorRuntime.create();
  * ScenarioRunner runner = new ScenarioRunner(runtime);
  *
  * EvaluationResult result = runner.run(myScenario);
@@ -59,7 +59,7 @@ public class ScenarioRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ScenarioRunner.class);
 
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final MetricsService metrics;
     private final HealthCheckService health;
     private final MessageHistoryService history;
@@ -70,7 +70,7 @@ public class ScenarioRunner {
      *
      * @param runtime the Jentic runtime to evaluate
      */
-    public ScenarioRunner(JenticRuntime runtime) {
+    public ScenarioRunner(AgenorRuntime runtime) {
         this(runtime, 500);
     }
 
@@ -80,7 +80,7 @@ public class ScenarioRunner {
      * @param runtime the Jentic runtime to evaluate
      * @param historySize maximum messages to retain
      */
-    public ScenarioRunner(JenticRuntime runtime, int historySize) {
+    public ScenarioRunner(AgenorRuntime runtime, int historySize) {
         this.runtime = Objects.requireNonNull(runtime, "Runtime cannot be null");
         this.metrics = new MetricsService(runtime);
         this.health = new HealthCheckService(runtime);
@@ -97,7 +97,7 @@ public class ScenarioRunner {
      * @param history message history service
      */
     public ScenarioRunner(
-            JenticRuntime runtime,
+            AgenorRuntime runtime,
             MetricsService metrics,
             HealthCheckService health,
             MessageHistoryService history) {

@@ -5,7 +5,7 @@ import dev.agenor.core.guardrail.GuardrailResult;
 import dev.agenor.core.guardrail.GuardrailViolationException;
 import dev.agenor.core.guardrail.InputGuardrail;
 import dev.agenor.core.guardrail.OutputGuardrail;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public final class GuardrailChain {
 
     private final List<InputGuardrail>  inputGuardrails;
     private final List<OutputGuardrail> outputGuardrails;
-    private volatile JenticTelemetry telemetry;
+    private volatile AgenorTelemetry telemetry;
 
     private GuardrailChain(Builder builder) {
         this.inputGuardrails  = Collections.unmodifiableList(new ArrayList<>(builder.inputGuardrails));
@@ -64,13 +64,13 @@ public final class GuardrailChain {
 
     /**
      * Sets the telemetry instance used to emit {@code guardrail.evaluate} spans.
-     * Can be called after construction (e.g. by {@code JenticRuntime} after registration).
+     * Can be called after construction (e.g. by {@code AgenorRuntime} after registration).
      *
      * @param telemetry the telemetry instance; {@code null} is treated as noop
      * @since 0.19.0
      */
-    public void setTelemetry(JenticTelemetry telemetry) {
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+    public void setTelemetry(AgenorTelemetry telemetry) {
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -247,7 +247,7 @@ public final class GuardrailChain {
 
         private final List<InputGuardrail>  inputGuardrails  = new ArrayList<>();
         private final List<OutputGuardrail> outputGuardrails = new ArrayList<>();
-        private JenticTelemetry telemetry = JenticTelemetry.noop();
+        private AgenorTelemetry telemetry = AgenorTelemetry.noop();
 
         private Builder() {}
 
@@ -258,8 +258,8 @@ public final class GuardrailChain {
          * @return {@code this}
          * @since 0.19.0
          */
-        public Builder telemetry(JenticTelemetry telemetry) {
-            this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        public Builder telemetry(AgenorTelemetry telemetry) {
+            this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
             return this;
         }
 

@@ -171,7 +171,7 @@ class ConsumerLoopTelemetryTest {
     // Recording telemetry (local to this test class)
     // -------------------------------------------------------------------------
 
-    static class RecordingTelemetry implements JenticTelemetry {
+    static class RecordingTelemetry implements AgenorTelemetry {
         final List<RecordingSpan> spans = new ArrayList<>();
 
         @Override

@@ -5,7 +5,7 @@ import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.messaging.TopicPublisher;
 import dev.agenor.core.messaging.TopicSubscriber;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,16 +37,16 @@ public final class RedisTopicPublisher implements TopicPublisher, TopicSubscribe
 
     private final RedisStreamClient streamClient;
     private final RedisMessagingConfig config;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     // subscriptionId → ConsumerLoop
     private final Map<String, ConsumerLoop> activeLoops = new ConcurrentHashMap<>();
 
     RedisTopicPublisher(RedisStreamClient streamClient, RedisMessagingConfig config,
-                        JenticTelemetry telemetry) {
+                        AgenorTelemetry telemetry) {
         this.streamClient = Objects.requireNonNull(streamClient, "streamClient");
         this.config       = Objects.requireNonNull(config, "config");
-        this.telemetry    = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry    = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------

@@ -247,7 +247,7 @@ public abstract class LLMAgent extends BaseAgent {
 **Pattern**: Factory-based automatic injection
 
 ```java
-public class JenticRuntime {
+public class AgenorRuntime {
     private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
 
     public void registerAgent(Agent agent) {
@@ -404,7 +404,7 @@ dev.agenor.runtime.agent/
 └── LLMAgent.java                  (complete LLM features)
 
 dev.agenor.runtime/
-└── JenticRuntime.java             (auto-injection)
+└── AgenorRuntime.java             (auto-injection)
 ```
 
 ### Example Usage
@@ -412,7 +412,7 @@ dev.agenor.runtime/
 **Simple Case** (auto-injection):
 ```java
 // Setup (3 lines)
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
     .memoryStore(new InMemoryStore())
     .build();
 
@@ -446,7 +446,7 @@ public class ChatBot extends LLMAgent {
 ```java
 TokenEstimator tikToken = new TikTokenEstimator();
 
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
     .memoryStore(new InMemoryStore())
     .llmMemoryManagerFactory(agentId ->
         new DefaultLLMMemoryManager(

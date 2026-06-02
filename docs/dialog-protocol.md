@@ -46,11 +46,11 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 ┌─────────────────────────────────────────────────────────────┐
 │                     JENTIC ADAPTERS                         │
 │  ┌──────────────────┐  ┌──────────────────┐                 │
-│  │ JenticA2AAdapter │  │ JenticA2AClient  │                 │
+│  │ AgenorA2AAdapter │  │ AgenorA2AClient  │                 │
 │  │ (routing)        │  │ (HTTP client)    │                 │
 │  └──────────────────┘  └──────────────────┘                 │
 │  ┌───────────────────┐  ┌────────────────────┐              │
-│  │JenticAgentExecutor│  │DialogueA2AConverter│              │
+│  │AgenorAgentExecutor│  │DialogueA2AConverter│              │
 │  │ (server)          │  │ (conversion)       │              │
 │  └───────────────────┘  └────────────────────┘              │
 └─────────────────────────────────────────────────────────────┘
@@ -234,7 +234,7 @@ The adapter layer enables communication with external A2A agents:
 
 ```java
 public class A2AExample {
-    public void send(JenticA2AAdapter adapter, Object data) {
+    public void send(AgenorA2AAdapter adapter, Object data) {
         // Send to internal agent (auto-detected)
         adapter.send(DialogueMessage.builder()
             .receiverId("internal-agent")
@@ -256,7 +256,7 @@ public class A2AExample {
 
 ```java
 public class A2AServerExample {
-    public void execute(JenticAgentExecutor executor, Object a2aRequest) {
+    public void execute(AgenorAgentExecutor executor, Object a2aRequest) {
         // Handle incoming A2A request
         executor.execute(a2aRequest, status -> {
             // Status updates: "working", "completed", "failed"
@@ -298,9 +298,9 @@ jentic-runtime/
 
 jentic-adapters/
 └── a2a/
-    ├── JenticA2AAdapter.java       # Main routing
-    ├── JenticA2AClient.java        # External client
-    ├── JenticAgentExecutor.java    # Server-side
+    ├── AgenorA2AAdapter.java       # Main routing
+    ├── AgenorA2AClient.java        # External client
+    ├── AgenorAgentExecutor.java    # Server-side
     ├── DialogueA2AConverter.java   # Conversion
     └── A2AAdapterConfig.java       # Configuration
 ```

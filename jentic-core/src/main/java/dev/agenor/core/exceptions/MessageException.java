@@ -3,7 +3,7 @@ package dev.agenor.core.exceptions;
 /**
  * Exception thrown during message processing
  */
-public class MessageException extends JenticException {
+public class MessageException extends AgenorException {
 
     private final String messageId;
 

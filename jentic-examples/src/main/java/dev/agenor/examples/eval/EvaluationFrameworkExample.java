@@ -4,7 +4,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.messaging.FilterableSubscriber;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.filter.TopicFilter;
 import dev.agenor.tools.eval.*;
@@ -42,7 +42,7 @@ public class EvaluationFrameworkExample {
         log.info("=== Jentic Agent Evaluation Framework Example ===\n");
 
         // 1. Create and start runtime
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.start();
 
         // 2. Create scenario runner
@@ -132,7 +132,7 @@ public class EvaluationFrameworkExample {
     /**
      * Tests message processing flow.
      */
-    static Scenario messageProcessingScenario(JenticRuntime runtime) {
+    static Scenario messageProcessingScenario(AgenorRuntime runtime) {
         return Scenario.builder("message-processing")
             .description("Tests order message processing flow")
             .timeout(Duration.ofSeconds(10))

@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 /**
  * Marks an agent behavior as requiring human approval before execution.
  *
- * <p>{@code JenticRuntime} reads this annotation at agent registration time,
+ * <p>{@code AgenorRuntime} reads this annotation at agent registration time,
  * parses the {@link #timeout()} string, instantiates the {@link #notifier()} class
  * via its no-arg constructor, and wraps the behavior in a
  * {@code HumanCheckpointBehavior} with the singleton {@code InMemoryApprovalGate}.

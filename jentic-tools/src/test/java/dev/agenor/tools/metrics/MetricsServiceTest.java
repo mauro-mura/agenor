@@ -1,7 +1,7 @@
 package dev.agenor.tools.metrics;
 
 import dev.agenor.core.Agent;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -16,7 +16,7 @@ import static org.mockito.Mockito.*;
 class MetricsServiceTest {
 
     @Mock
-    private JenticRuntime runtime;
+    private AgenorRuntime runtime;
 
     @Mock
     private Agent agent;

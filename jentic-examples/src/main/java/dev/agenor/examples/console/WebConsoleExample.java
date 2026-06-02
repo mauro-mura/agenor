@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.console.WebConsole;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.tools.console.JettyWebConsole;
 
@@ -19,7 +19,7 @@ public class WebConsoleExample {
     public static void main(String[] args) throws Exception {
         logger.info("=== Web Console Example ===");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         OrderProcessor orderProcessor = new OrderProcessor();
         InventoryManager inventoryManager = new InventoryManager();
         runtime.registerAgent(orderProcessor);

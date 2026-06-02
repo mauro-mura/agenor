@@ -1,6 +1,6 @@
 package dev.agenor.runtime.config;
 
-import dev.agenor.core.JenticConfiguration;
+import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.config.ConfigurationLoader;
 import dev.agenor.core.config.ConfigurationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +54,7 @@ class ConfigurationLoaderIntegrationTest {
         Files.writeString(configFile, yamlContent);
 
         // Load
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         // Validate
         assertThatCode(() -> loader.validate(config)).doesNotThrowAnyException();
@@ -96,7 +96,7 @@ class ConfigurationLoaderIntegrationTest {
             Path configFile = tempDir.resolve("mixed-env.yml");
             Files.writeString(configFile, yamlContent);
 
-            JenticConfiguration config = loader.loadFromFile(configFile.toString());
+            AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
             assertThat(config.runtime().name()).isEqualTo("from-sysprop");
             assertThat(config.runtime().environment()).isEqualTo("staging");
@@ -113,27 +113,27 @@ class ConfigurationLoaderIntegrationTest {
     @DisplayName("Should handle complex package validation scenarios")
     void shouldHandleComplexPackageValidationScenarios() {
         // Valid single-level package
-        JenticConfiguration config1 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config1 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of("agents"), null),
                 null, null, null
         );
         assertThatCode(() -> loader.validate(config1)).doesNotThrowAnyException();
 
         // Valid multi-level package with underscores
-        JenticConfiguration config2 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config2 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of("com.my_company.core_agents"), null),
                 null, null, null
         );
         assertThatCode(() -> loader.validate(config2)).doesNotThrowAnyException();
 
         // Valid package with numbers (not at start)
-        JenticConfiguration config3 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config3 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of("com.example.agents2"), null),
                 null, null, null
         );
@@ -144,9 +144,9 @@ class ConfigurationLoaderIntegrationTest {
     @DisplayName("Should reject various invalid package names")
     void shouldRejectVariousInvalidPackageNames() {
         // Package ending with dot
-        JenticConfiguration config1 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config1 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of("com.example."), null),
                 null, null, null
         );
@@ -154,9 +154,9 @@ class ConfigurationLoaderIntegrationTest {
                 .isInstanceOf(ConfigurationException.class);
 
         // Package starting with dot
-        JenticConfiguration config2 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config2 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of(".com.example"), null),
                 null, null, null
         );
@@ -164,9 +164,9 @@ class ConfigurationLoaderIntegrationTest {
                 .isInstanceOf(ConfigurationException.class);
 
         // Package with spaces
-        JenticConfiguration config3 = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null,
+        AgenorConfiguration config3 = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null,
                         java.util.List.of("com example"), null),
                 null, null, null
         );
@@ -193,7 +193,7 @@ class ConfigurationLoaderIntegrationTest {
 
             // Change working directory simulation would be complex
             // This test verifies the method doesn't crash
-            JenticConfiguration config = loader.loadDefault();
+            AgenorConfiguration config = loader.loadDefault();
             assertThat(config).isNotNull();
 
         } catch (Exception e) {
@@ -235,9 +235,9 @@ class ConfigurationLoaderIntegrationTest {
     @Test
     @DisplayName("Should validate configuration with empty runtime name")
     void shouldValidateConfigurationWithEmptyRuntimeName() {
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("   ", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("   ", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null, null, null),
                 null, null, null
         );
 
@@ -258,7 +258,7 @@ class ConfigurationLoaderIntegrationTest {
         Path configFile = tempDir.resolve("absolute.yml");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toAbsolutePath().toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toAbsolutePath().toString());
 
         assertThat(config.runtime().name()).isEqualTo("absolute-path-test");
     }
@@ -269,9 +269,9 @@ class ConfigurationLoaderIntegrationTest {
         String[] environments = {"development", "staging", "production", "test"};
 
         for (String env : environments) {
-            JenticConfiguration config = new JenticConfiguration(
-                    new JenticConfiguration.RuntimeConfig("test", env, null),
-                    new JenticConfiguration.AgentsConfig(true, null, null, null, null),
+            AgenorConfiguration config = new AgenorConfiguration(
+                    new AgenorConfiguration.RuntimeConfig("test", env, null),
+                    new AgenorConfiguration.AgentsConfig(true, null, null, null, null),
                     null, null, null
             );
 
@@ -301,7 +301,7 @@ class ConfigurationLoaderIntegrationTest {
             Path configFile = tempDir.resolve("nested-env.yml");
             Files.writeString(configFile, yamlContent);
 
-            JenticConfiguration config = loader.loadFromFile(configFile.toString());
+            AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
             assertThat(config.agents().getAllScanPackages())
                     .contains("com.example.agents", "com.example.services");
@@ -330,7 +330,7 @@ class ConfigurationLoaderIntegrationTest {
         Files.writeString(configFile, yamlContent);
 
         // Should not throw YAML parsing exception
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().properties().get("username")).isNotNull();
     }

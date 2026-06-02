@@ -1,6 +1,6 @@
 package dev.agenor.adapters.telemetry;
 
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -15,11 +15,11 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.util.Objects;
 
 /**
- * Factory for creating {@link OtelJenticTelemetry} instances.
+ * Factory for creating {@link OtelAgenorTelemetry} instances.
  *
  * <p>Use the fluent {@link #builder()} to configure exporter, endpoint, and service name:
  * <pre>{@code
- * JenticTelemetry telemetry = OtelTelemetryFactory.builder()
+ * AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
  *     .serviceName("my-agent")
  *     .exporter("otlp-http")
  *     .endpoint("http://localhost:4318")
@@ -30,7 +30,7 @@ import java.util.Objects;
  * <pre>{@code
  * // OTEL_SERVICE_NAME=my-agent
  * // OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
- * JenticTelemetry telemetry = OtelTelemetryFactory.fromEnvironment();
+ * AgenorTelemetry telemetry = OtelTelemetryFactory.fromEnvironment();
  * }</pre>
  *
  * <p>Supported exporter types: {@code otlp-http} (default), {@code otlp-grpc}, {@code none}.
@@ -57,7 +57,7 @@ public final class OtelTelemetryFactory {
     }
 
     /**
-     * Creates an {@link OtelJenticTelemetry} reading configuration entirely from
+     * Creates an {@link OtelAgenorTelemetry} reading configuration entirely from
      * standard OTel environment variables:
      * <ul>
      *   <li>{@code OTEL_SERVICE_NAME} — service name (default: {@code agenor})</li>
@@ -65,9 +65,9 @@ public final class OtelTelemetryFactory {
      *   <li>{@code OTEL_EXPORTER_TYPE} — {@code otlp-http} | {@code otlp-grpc} | {@code none} (default: {@code otlp-http})</li>
      * </ul>
      *
-     * @return a configured {@link JenticTelemetry}; never {@code null}
+     * @return a configured {@link AgenorTelemetry}; never {@code null}
      */
-    public static JenticTelemetry fromEnvironment() {
+    public static AgenorTelemetry fromEnvironment() {
         String serviceName = System.getenv().getOrDefault("OTEL_SERVICE_NAME", DEFAULT_SERVICE_NAME);
         String endpoint    = System.getenv().getOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", DEFAULT_ENDPOINT_HTTP);
         String type        = System.getenv().getOrDefault("OTEL_EXPORTER_TYPE", "otlp-http");
@@ -83,7 +83,7 @@ public final class OtelTelemetryFactory {
     // -------------------------------------------------------------------------
 
     /**
-     * Fluent builder for {@link OtelJenticTelemetry}.
+     * Fluent builder for {@link OtelAgenorTelemetry}.
      */
     public static final class Builder {
 
@@ -136,15 +136,15 @@ public final class OtelTelemetryFactory {
         }
 
         /**
-         * Builds and returns the {@link JenticTelemetry} instance.
+         * Builds and returns the {@link AgenorTelemetry} instance.
          *
-         * <p>When {@code exporter} is {@code "none"}, returns {@link JenticTelemetry#noop()}.
+         * <p>When {@code exporter} is {@code "none"}, returns {@link AgenorTelemetry#noop()}.
          *
-         * @return a configured {@link JenticTelemetry}; never {@code null}
+         * @return a configured {@link AgenorTelemetry}; never {@code null}
          */
-        public JenticTelemetry build() {
+        public AgenorTelemetry build() {
             if ("none".equalsIgnoreCase(exporter)) {
-                return JenticTelemetry.noop();
+                return AgenorTelemetry.noop();
             }
 
             Resource resource = Resource.getDefault().merge(
@@ -163,7 +163,7 @@ public final class OtelTelemetryFactory {
                     .setTracerProvider(tracerProvider)
                     .build();
 
-            return new OtelJenticTelemetry(openTelemetry);
+            return new OtelAgenorTelemetry(openTelemetry);
         }
 
         private SpanExporter buildExporter() {

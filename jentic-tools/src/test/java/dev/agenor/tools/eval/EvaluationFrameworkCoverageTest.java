@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.Message;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.tools.health.HealthCheckService.HealthReport;
 import dev.agenor.tools.health.HealthCheckService.HealthStatus;
@@ -205,13 +205,13 @@ class EvaluationFrameworkCoverageTest {
     class EvaluationContextExtendedTests {
 
         private EvaluationContext context;
-        private JenticRuntime runtime;
+        private AgenorRuntime runtime;
         private MetricsSnapshot metrics;
         private HealthReport health;
 
         @BeforeEach
         void setUp() {
-            runtime = JenticRuntime.builder().build();
+            runtime = AgenorRuntime.builder().build();
 
             metrics = new MetricsSnapshot(
                 Map.of(
@@ -610,12 +610,12 @@ class EvaluationFrameworkCoverageTest {
     @DisplayName("ScenarioRunner")
     class ScenarioRunnerTests {
 
-        private JenticRuntime runtime;
+        private AgenorRuntime runtime;
         private ScenarioRunner runner;
 
         @BeforeEach
         void setUp() {
-            runtime = JenticRuntime.builder().build();
+            runtime = AgenorRuntime.builder().build();
             runtime.start();
             runner = new ScenarioRunner(runtime);
         }

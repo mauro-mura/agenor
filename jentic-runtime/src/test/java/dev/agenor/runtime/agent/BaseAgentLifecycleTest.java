@@ -1,8 +1,8 @@
 package dev.agenor.runtime.agent;
 
 import dev.agenor.core.AgentStatus;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.core.telemetry.JenticTelemetry;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +19,7 @@ class BaseAgentLifecycleTest {
     @BeforeEach
     void setUp() {
         agent = new TestAgent("test-agent", "Test Agent");
-        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop()));
+        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop()));
         agent.setAgentDirectory(new InMemoryAgentDirectory());
         agent.setBehaviorScheduler(new SimpleBehaviorScheduler());
     }
@@ -47,7 +47,7 @@ class BaseAgentLifecycleTest {
     void shouldHandleStartupFailure() {
         // Given
         FailingStartAgent failingAgent = new FailingStartAgent("failing-agent");
-        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop()));
+        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop()));
 
         // When
         assertThatThrownBy(() -> failingAgent.start().join())
@@ -63,7 +63,7 @@ class BaseAgentLifecycleTest {
     void shouldHandleShutdownError() {
         // Given
         FailingStopAgent failingAgent = new FailingStopAgent("failing-stop-agent");
-        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop()));
+        failingAgent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop()));
 
         // Start successfully
         failingAgent.start().join();

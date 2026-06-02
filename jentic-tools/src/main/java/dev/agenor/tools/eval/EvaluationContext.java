@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 
 import dev.agenor.core.Agent;
 import dev.agenor.core.Message;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.tools.health.HealthCheckService.HealthReport;
 import dev.agenor.tools.health.HealthCheckService.HealthStatus;
 import dev.agenor.tools.metrics.MetricsService.MetricsSnapshot;
@@ -36,7 +36,7 @@ import dev.agenor.tools.metrics.MetricsService.MetricsSnapshot;
  */
 public class EvaluationContext {
 
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final MetricsSnapshot metrics;
     private final HealthReport healthReport;
     private final List<Message> messages;
@@ -54,7 +54,7 @@ public class EvaluationContext {
      * @param endTime scenario end time
      */
     public EvaluationContext(
-            JenticRuntime runtime,
+            AgenorRuntime runtime,
             MetricsSnapshot metrics,
             HealthReport healthReport,
             List<Message> messages,
@@ -75,7 +75,7 @@ public class EvaluationContext {
      *
      * @return the runtime
      */
-    public JenticRuntime runtime() {
+    public AgenorRuntime runtime() {
         return runtime;
     }
 

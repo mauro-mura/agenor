@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>This test acts as the CI-enforced proof that consumers who depend only on
  * {@code agenor-core} (or {@code agenor-runtime}) without explicitly declaring
  * an OTel dependency will not encounter {@link ClassNotFoundException} at runtime
- * — they get {@link NoopJenticTelemetry} by default.
+ * — they get {@link NoopAgenorTelemetry} by default.
  *
  * <p>The test also confirms the noop lifecycle works end-to-end without any
  * OTel import.
@@ -41,13 +41,13 @@ class TelemetryClasspathIsolationTest {
     }
 
     // -------------------------------------------------------------------------
-    // NoopJenticTelemetry works without OTel
+    // NoopAgenorTelemetry works without OTel
     // -------------------------------------------------------------------------
 
     @Test
     @DisplayName("full noop telemetry lifecycle does not throw when OTel is absent")
     void noopTelemetry_fullLifecycle_doesNotThrow() {
-        JenticTelemetry noop = JenticTelemetry.noop();
+        AgenorTelemetry noop = AgenorTelemetry.noop();
 
         assertThatCode(() -> {
             Span span = noop.spanBuilder("test.isolation.op")
@@ -64,9 +64,9 @@ class TelemetryClasspathIsolationTest {
     }
 
     @Test
-    @DisplayName("JenticTelemetry.noop() resolves to NoopJenticTelemetry with no OTel on classpath")
+    @DisplayName("AgenorTelemetry.noop() resolves to NoopAgenorTelemetry with no OTel on classpath")
     void noopTelemetry_classLoadedFromCoreAlone() {
-        assertThat(JenticTelemetry.noop())
-                .isInstanceOf(NoopJenticTelemetry.class);
+        assertThat(AgenorTelemetry.noop())
+                .isInstanceOf(NoopAgenorTelemetry.class);
     }
 }

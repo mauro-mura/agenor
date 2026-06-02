@@ -4,7 +4,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.console.ConsoleEventListener;
 import dev.agenor.core.filter.MessageFilter;
 import dev.agenor.runtime.filter.TopicFilter;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
@@ -29,7 +29,7 @@ class MessageSnifferAgentTest {
 
     @BeforeEach
     void setUpInfrastructure() {
-        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop());
         scheduler = new SimpleBehaviorScheduler();
         scheduler.start().join();
     }

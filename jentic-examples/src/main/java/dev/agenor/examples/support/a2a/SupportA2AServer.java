@@ -1,7 +1,7 @@
 package dev.agenor.examples.support.a2a;
 
 import dev.agenor.adapters.a2a.A2AAdapterConfig;
-import dev.agenor.adapters.a2a.JenticAgentExecutor;
+import dev.agenor.adapters.a2a.AgenorAgentExecutor;
 import dev.agenor.core.messaging.MessageDispatcher;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCard;
@@ -39,7 +39,7 @@ import java.time.Duration;
  * }
  * </pre>
  *
- * <h2>Usage with JenticRuntime</h2>
+ * <h2>Usage with AgenorRuntime</h2>
  * <pre>
  * // Get executor for custom server integration
  * AgentExecutor executor = SupportA2AServer.createExecutor(
@@ -96,7 +96,7 @@ public final class SupportA2AServer {
      */
     public static AgentExecutor createExecutor(MessageDispatcher messageService, Duration timeout) {
         log.info("Creating A2A executor routing to: {}", DEFAULT_ROUTER_AGENT);
-        return new JenticAgentExecutor(DEFAULT_ROUTER_AGENT, messageService, timeout);
+        return new AgenorAgentExecutor(DEFAULT_ROUTER_AGENT, messageService, timeout);
     }
 
     /**
@@ -111,7 +111,7 @@ public final class SupportA2AServer {
                                                 String targetAgentId,
                                                 Duration timeout) {
         log.info("Creating A2A executor routing to: {}", targetAgentId);
-        return new JenticAgentExecutor(targetAgentId, messageService, timeout);
+        return new AgenorAgentExecutor(targetAgentId, messageService, timeout);
     }
 
     // ========== AGENT CARD FACTORY ==========

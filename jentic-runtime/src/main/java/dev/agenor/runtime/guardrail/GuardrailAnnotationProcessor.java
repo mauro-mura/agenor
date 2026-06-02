@@ -1,6 +1,6 @@
 package dev.agenor.runtime.guardrail;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 import dev.agenor.core.guardrail.InputGuardrail;
 import dev.agenor.core.guardrail.OutputGuardrail;
 import dev.agenor.core.guardrail.WithGuardrails;
@@ -12,11 +12,11 @@ import org.slf4j.LoggerFactory;
  * Reads the {@link WithGuardrails} annotation from an {@link LLMAgent} subclass
  * and injects a {@link GuardrailChain} into the agent at registration time.
  *
- * <p>Called by {@code JenticRuntime.registerAgent()} whenever the registered
+ * <p>Called by {@code AgenorRuntime.registerAgent()} whenever the registered
  * agent is an instance of {@link LLMAgent}:
  *
  * <pre>{@code
- * // Inside JenticRuntime.registerAgent():
+ * // Inside AgenorRuntime.registerAgent():
  * if (agent instanceof LLMAgent llmAgent) {
  *     GuardrailAnnotationProcessor.process(llmAgent);
  * }
@@ -147,7 +147,7 @@ public final class GuardrailAnnotationProcessor {
      * Thrown when a guardrail class listed in {@code @WithGuardrails} cannot be
      * instantiated at agent bootstrap time.
      */
-    public static class GuardrailWiringException extends JenticException {
+    public static class GuardrailWiringException extends AgenorException {
 		private static final long serialVersionUID = -4857694926905374881L;
 
 		public GuardrailWiringException(String message, Throwable cause) {

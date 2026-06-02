@@ -85,7 +85,7 @@ var mcpClient = McpClientFactory.fromStdio(
 | `McpTool` | `jentic-core` | Record: `name`, `description`, `inputSchema` |
 | `McpToolResult` | `jentic-core` | Record: `content`, `isError` |
 | `McpClient` | `jentic-core` | Interface: `listTools()`, `callTool()`, `close()` |
-| `JenticMcpClientAdapter` | `jentic-adapters` | Wraps `McpSyncClient` via `supplyAsync()` |
+| `AgenorMcpClientAdapter` | `jentic-adapters` | Wraps `McpSyncClient` via `supplyAsync()` |
 | `McpClientFactory` | `jentic-adapters` | Creates adapters for SSE and STDIO transports |
 | `McpToolRegistry` | `jentic-adapters` | Thread-safe cache (TTL 60s, `invalidate()`) |
 | `McpFunctionAdapter` | `jentic-adapters` | `McpTool` → `FunctionDefinition`; `FunctionCall` → `LLMMessage` |

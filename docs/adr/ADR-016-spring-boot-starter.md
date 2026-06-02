@@ -9,7 +9,7 @@
 ## Context
 
 Integrating Jentic into a Spring Boot 3.x application currently requires explicit `@Configuration`
-boilerplate: manually constructing `JenticRuntime` via its builder, declaring lifecycle methods,
+boilerplate: manually constructing `AgenorRuntime` via its builder, declaring lifecycle methods,
 and optionally wiring an `LLMProvider`. This friction conflicts with the progressive-complexity
 principle established in ADR-004 and discourages adoption in the Spring ecosystem.
 
@@ -39,7 +39,7 @@ Forces in tension:
 ## Decision
 
 Add a `jentic-spring-boot-starter` Maven module to the monorepo that provides automatic
-wiring of `JenticRuntime` (and optionally an `LLMProvider`) into any Spring Boot **4.0.x**
+wiring of `AgenorRuntime` (and optionally an `LLMProvider`) into any Spring Boot **4.0.x**
 application via Spring Boot's standard auto-configuration mechanism.
 
 **Update (2026-04-15):** The module was originally targeting Spring Boot **3.5.x**. With
@@ -53,7 +53,7 @@ Key constraints:
 2. Every auto-configured bean guarded by `@ConditionalOnMissingBean` — user-declared beans
    always win.
 3. No new interfaces or abstractions introduced in `jentic-core` or `jentic-runtime`; the
-   starter is a pure glue layer over the existing `JenticRuntime.Builder` API.
+   starter is a pure glue layer over the existing `AgenorRuntime.Builder` API.
 4. `jentic.llm.provider=none` (default) — no `LLMProvider` bean is created unless explicitly
    configured, avoiding a hard dependency on `jentic-adapters`.
 5. The `AutoConfiguration.imports` mechanism (introduced in Spring Boot 2.7, mandatory in 3.x)
@@ -115,23 +115,23 @@ src/main/resources/META-INF/spring/
 
 Content:
 ```
-dev.agenor.autoconfigure.JenticAutoConfiguration
+dev.agenor.autoconfigure.AgenorAutoConfiguration
 ```
 
 ### Core beans
 
 ```java
 @AutoConfiguration
-@ConditionalOnClass(JenticRuntime.class)
-@EnableConfigurationProperties(JenticProperties.class)
-public class JenticAutoConfiguration {
+@ConditionalOnClass(AgenorRuntime.class)
+@EnableConfigurationProperties(AgenorProperties.class)
+public class AgenorAutoConfiguration {
 
     @Bean(initMethod = "start", destroyMethod = "stop")
     @ConditionalOnMissingBean
-    public JenticRuntime jenticRuntime(JenticProperties props,
+    public AgenorRuntime agenorRuntime(AgenorProperties props,
                                        ObjectProvider<LLMProvider> llmProvider) {
-        JenticRuntime.Builder builder = JenticRuntime.builder()
-            .configuration(props.toJenticConfiguration());
+        AgenorRuntime.Builder builder = AgenorRuntime.builder()
+            .configuration(props.toAgenorConfiguration());
         llmProvider.ifAvailable(builder::service);
         return builder.build();
     }
@@ -140,7 +140,7 @@ public class JenticAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "agenor.llm", name = "provider",
                            havingValue = "openai")
-    public LLMProvider openAiLlmProvider(JenticProperties props) {
+    public LLMProvider openAiLlmProvider(AgenorProperties props) {
         return LLMProviderFactory.openai()
             .apiKey(props.llm().apiKey())
             .modelName(props.llm().model())
@@ -205,9 +205,9 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
   - `isPauseable() { return false; }` added to the `SmartLifecycle` implementation (Spring
     Framework 7 introduced context-pausing; the Jentic runtime has no pause/resume semantics).
   - **Breaking change — actuator health package renamed**: `org.springframework.boot.actuate.health`
-    → `org.springframework.boot.health.contributor`. Updated in `JenticHealthIndicator`,
-    `JenticAutoConfiguration.ActuatorConfiguration` (`@ConditionalOnClass` guard + return type),
-    and all test classes (`JenticHealthIndicatorTest`, `JenticStarterIntegrationTest`).
+    → `org.springframework.boot.health.contributor`. Updated in `AgenorHealthIndicator`,
+    `AgenorAutoConfiguration.ActuatorConfiguration` (`@ConditionalOnClass` guard + return type),
+    and all test classes (`AgenorHealthIndicatorTest`, `AgenorStarterIntegrationTest`).
   - No `javax.*` → `jakarta.*` changes were needed — the starter already used only `jakarta.*`
     namespaces. No Jentic core changes were required.
 - GraalVM native image hints are deferred to a post-1.0.0 milestone.

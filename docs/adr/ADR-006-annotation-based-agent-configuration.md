@@ -74,7 +74,7 @@ public class AnnotationAgentScanner {
     
     public Set<Class<?>> scanForAgents(String basePackage) {
         // Use reflection to find annotated classes
-        return reflections.getTypesAnnotatedWith(JenticAgent.class);
+        return reflections.getTypesAnnotatedWith(AgenorAgent.class);
     }
 }
 ```

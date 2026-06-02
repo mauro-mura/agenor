@@ -18,8 +18,8 @@ Jentic embraces an interface‑first, modular architecture. Core contracts live 
 | MessageDispatcher        | InMemoryMessageDispatcher        | OllamaProvider                 |
 | directory.AgentDirectory | InMemoryAgentDirectory           | LLMProviderFactory             |
 | Behavior                 | SimpleBehaviorScheduler          | A2A Adapter                    |
-| BehaviorScheduler        | Behaviors (Cyclic…)              | JenticA2AClient                |
-| LLMProvider              | InMemoryStore                    | JenticAgentExecutor            |
+| BehaviorScheduler        | Behaviors (Cyclic…)              | AgenorA2AClient                |
+| LLMProvider              | InMemoryStore                    | AgenorAgentExecutor            |
 | MemoryStore              | DefaultLLMMemoryManager          |                                |
 | Condition                | Filters, RateLimiters            |                                |
 |                          | Conditions, Dialogue             |                                |
@@ -83,7 +83,7 @@ These are deliberately small to keep adapters swappable without breaking user co
 - **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.agenor.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
 - **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
 - **AgentScanner + AnnotationProcessor**: Scans packages for annotated agents/handlers and wires runtime.
-- **JenticRuntime**: Entry point to bootstrap, start, and stop the agent system.
+- **AgenorRuntime**: Entry point to bootstrap, start, and stop the agent system.
 
 ### Memory
 
@@ -163,9 +163,9 @@ LLMProvider ollama    = LLMProviderFactory.create("ollama", null); // no key nee
 
 Implements the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A):
 
-- **JenticA2AAdapter**: exposes a Jentic agent as an A2A server, built from `A2AAdapterConfig`.
-- **JenticA2AClient**: sends A2A messages to remote agents.
-- **JenticAgentExecutor**: handles incoming A2A tasks and routes them to a local agent.
+- **AgenorA2AAdapter**: exposes a Jentic agent as an A2A server, built from `A2AAdapterConfig`.
+- **AgenorA2AClient**: sends A2A messages to remote agents.
+- **AgenorAgentExecutor**: handles incoming A2A tasks and routes them to a local agent.
 
 For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 
@@ -219,7 +219,7 @@ See [Messaging Guide](messaging.md) for the complete API reference.
 
 - AgentDirectory registers agents at startup and maintains status (STARTING, RUNNING, STOPPED, etc.).
 - Agents may query other agents via AgentDirectory using AgentQuery.
-- JenticRuntime orchestrates:
+- AgenorRuntime orchestrates:
   - scanning configured base packages
   - constructing agents via AgentFactory
   - registering agents in the directory
@@ -251,7 +251,7 @@ Guidelines:
 
 ## 11. Error Handling & Observability
 
-- Exceptions derive from JenticException hierarchy (AgentException, MessageException, LLMException).
+- Exceptions derive from AgenorException hierarchy (AgentException, MessageException, LLMException).
 - Logging via SLF4J with pluggable backend (logback in tests/examples).
 - Planned: metrics for behavior execution, message throughput, and directory health.
 
@@ -276,7 +276,7 @@ User input
 | `InputGuardrail` | `@FunctionalInterface` — validates/transforms user input |
 | `OutputGuardrail` | `@FunctionalInterface` — validates/transforms LLM output |
 | `GuardrailContext` | Immutable record: `agentId`, `topic`, `metadata` |
-| `GuardrailViolationException` | Unchecked, extends `JenticException` |
+| `GuardrailViolationException` | Unchecked, extends `AgenorException` |
 | `@WithGuardrails` | Annotation for declarative chain wiring |
 
 ### Implementations (`jentic-runtime` / `dev.agenor.runtime.guardrail`)
@@ -292,7 +292,7 @@ User input
 
 ### Wiring
 
-`JenticRuntime.registerAgent()` calls `GuardrailAnnotationProcessor.process(agent)` for every
+`AgenorRuntime.registerAgent()` calls `GuardrailAnnotationProcessor.process(agent)` for every
 `LLMAgent` instance. The processor reads `@WithGuardrails`, instantiates the listed guardrail
 classes via their no-arg constructors, and injects the resulting `GuardrailChain`. Programmatic
 chains set before registration are merged (annotation chain prepended).
@@ -303,7 +303,7 @@ chains set before registration are merged (annotation chain prepended).
   compile time, making silent mishandling of `Blocked` impossible.
 - `LLMAgent` exposes `applyInputGuardrails` / `applyOutputGuardrails` as `protected` hooks;
   subclasses call them around their own `llmProvider.chat()` invocation.
-- `GuardrailViolationException` is unchecked, consistent with the `JenticException` hierarchy.
+- `GuardrailViolationException` is unchecked, consistent with the `AgenorException` hierarchy.
 
 See `docs/guardrails.md` for the full developer guide.
 
@@ -341,7 +341,7 @@ See the ADRs in `docs/adr/` (repository only) for rationale and decisions.
 ```java
 public class Main {
     public static void main(String[] args) {
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
             .scanPackage("dev.agenor.examples")
             .build();
 

@@ -7,7 +7,7 @@ import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.MemoryEntry;
 import dev.agenor.core.memory.llm.ContextWindowStrategy;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.guardrail.GuardrailChain;
 import dev.agenor.runtime.memory.llm.ContextWindowStrategies;
 import dev.agenor.core.llm.LLMProvider;
@@ -258,7 +258,7 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	 * call.
 	 *
 	 * <p>
-	 * Called by {@code JenticRuntime} when an agent is annotated with
+	 * Called by {@code AgenorRuntime} when an agent is annotated with
 	 * {@code @WithGuardrails}, or can be called directly for programmatic
 	 * configuration. Pass {@code null} to remove an existing chain.
 	 *
@@ -285,13 +285,13 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	 *
 	 * <p>Wraps the current {@link LLMProvider} (if set) with an
 	 * {@link InstrumentedLLMProvider} and propagates telemetry to the
-	 * {@link GuardrailChain} (if present). Called by {@code JenticRuntime}
+	 * {@link GuardrailChain} (if present). Called by {@code AgenorRuntime}
 	 * at agent registration time.
 	 *
 	 * @param telemetry the telemetry instance; {@code null} is silently ignored
 	 * @since 0.19.0
 	 */
-	public void installTelemetry(JenticTelemetry telemetry) {
+	public void installTelemetry(AgenorTelemetry telemetry) {
 		if (telemetry == null) {
 			return;
 		}

@@ -3,7 +3,7 @@ package dev.agenor.adapters.persistence.directory;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import dev.agenor.adapters.persistence.JdbcHelper;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 
 import java.io.Closeable;
 import java.util.Objects;
@@ -22,7 +22,7 @@ import java.util.Objects;
  * // Auto-configured when agenor.directory.provider=jdbc
  * // Manual wiring:
  * var dir = JdbcAgentDirectory.create(JdbcDirectoryConfig.of(url, user, pass));
- * JenticRuntime runtime = JenticRuntime.builder()
+ * AgenorRuntime runtime = AgenorRuntime.builder()
  *     .agentRegistry(dir.registry())
  *     .agentDiscovery(dir.discovery())
  *     .agentResolver(dir.resolver())
@@ -62,7 +62,7 @@ public final class JdbcAgentDirectory implements Closeable {
      * @throws RuntimeException if schema migration or pool creation fails
      */
     public static JdbcAgentDirectory create(JdbcDirectoryConfig config) {
-        return create(config, JenticTelemetry.noop());
+        return create(config, AgenorTelemetry.noop());
     }
 
     /**
@@ -76,9 +76,9 @@ public final class JdbcAgentDirectory implements Closeable {
      * @return a fully initialised directory instance
      * @throws RuntimeException if schema migration or pool creation fails
      */
-    public static JdbcAgentDirectory create(JdbcDirectoryConfig config, JenticTelemetry telemetry) {
+    public static JdbcAgentDirectory create(JdbcDirectoryConfig config, AgenorTelemetry telemetry) {
         Objects.requireNonNull(config, "config must not be null");
-        var t = telemetry != null ? telemetry : JenticTelemetry.noop();
+        var t = telemetry != null ? telemetry : AgenorTelemetry.noop();
 
         var hikari = new HikariConfig();
         hikari.setJdbcUrl(config.jdbcUrl());

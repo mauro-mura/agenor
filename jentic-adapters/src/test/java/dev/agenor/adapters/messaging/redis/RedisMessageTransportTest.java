@@ -2,7 +2,7 @@ package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.TransportEndpoint;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +46,7 @@ class RedisMessageTransportTest {
     @SuppressWarnings("unchecked")
     void setUp() {
         config    = new RedisMessagingConfig("redis://localhost", "node-1", "agenor", 100, 1000, 1000, 3);
-        transport = new RedisMessageTransport(streamClient, config, JenticTelemetry.noop());
+        transport = new RedisMessageTransport(streamClient, config, AgenorTelemetry.noop());
         lenient().when(streamClient.xadd(any(), any())).thenReturn("1-0");
         lenient().when(streamClient.newConsumerConnection()).thenReturn(mockConn);
         lenient().when(mockConn.sync()).thenReturn(mockCmds);

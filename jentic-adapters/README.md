@@ -18,14 +18,14 @@ dev.agenor.adapters
 │   └── ollama/
 │       └── OllamaProvider.java      # Ollama (local) chat + streaming
 ├── a2a/
-│   ├── JenticA2AAdapter.java        # Smart router: internal vs external A2A
-│   ├── JenticA2AClient.java         # HTTP/JSON-RPC client for external A2A agents
-│   ├── JenticAgentExecutor.java     # Expose a Jentic agent as A2A server
+│   ├── AgenorA2AAdapter.java        # Smart router: internal vs external A2A
+│   ├── AgenorA2AClient.java         # HTTP/JSON-RPC client for external A2A agents
+│   ├── AgenorAgentExecutor.java     # Expose a Jentic agent as A2A server
 │   ├── A2AAdapterConfig.java        # Configuration + AgentCard builder
 │   └── DialogueA2AConverter.java   # DialogueMessage ↔ A2A Task/Message
 ├── mcp/
 │   ├── McpClientFactory.java        # Recommended entry point (SSE + STDIO transports)
-│   ├── JenticMcpClientAdapter.java  # McpClient implementation wrapping the MCP SDK
+│   ├── AgenorMcpClientAdapter.java  # McpClient implementation wrapping the MCP SDK
 │   ├── McpToolRegistry.java         # Tool discovery and caching with TTL support
 │   └── McpFunctionAdapter.java      # Maps MCP tools to Jentic function-calling framework
 └── knowledge/
@@ -110,7 +110,7 @@ classpath even if you don't use the backend.
 ### Default behaviour (no optional libs declared)
 
 If you declare only `jentic-adapters` with no optional libraries, the runtime automatically
-falls back to the in-memory implementations (`NoopJenticTelemetry`, `InMemoryMessageDispatcher`).
+falls back to the in-memory implementations (`NoopAgenorTelemetry`, `InMemoryMessageDispatcher`).
 No `ClassNotFoundException` is thrown; no configuration is required.
 
 ---
@@ -214,21 +214,21 @@ The A2A adapter implements the [Google Agent-to-Agent (A2A) protocol](https://go
 
 ```
 External A2A Agent ←──────────────────────────────→ Jentic agent
-(any framework)       JenticA2AAdapter               (BaseAgent subclass)
+(any framework)       AgenorA2AAdapter               (BaseAgent subclass)
                         │
                         ├── isInternalAgent()?  → MessageService (direct)
-                        └── isExternalA2AUrl()? → JenticA2AClient (HTTP/JSON-RPC)
+                        └── isExternalA2AUrl()? → AgenorA2AClient (HTTP/JSON-RPC)
 
-Incoming A2A request ──→ JenticAgentExecutor ──→ MessageService ──→ Jentic agent
+Incoming A2A request ──→ AgenorAgentExecutor ──→ MessageService ──→ Jentic agent
                          (A2A server side)
 ```
 
-### JenticA2AAdapter — smart router
+### AgenorA2AAdapter — smart router
 
-`JenticA2AAdapter` routes outgoing messages: if the `receiverId` matches a registered agent in `AgentDirectory` it sends internally via `MessageService`; if it looks like an HTTP/HTTPS URL it sends externally via `JenticA2AClient`.
+`AgenorA2AAdapter` routes outgoing messages: if the `receiverId` matches a registered agent in `AgentDirectory` it sends internally via `MessageService`; if it looks like an HTTP/HTTPS URL it sends externally via `AgenorA2AClient`.
 
 ```java
-var adapter = new JenticA2AAdapter(
+var adapter = new AgenorA2AAdapter(
     messageService,
     agentDirectory,
     "my-agent-id",
@@ -263,12 +263,12 @@ AgentCard card = adapter.getExternalAgentCard("https://external-agent.example.co
 boolean reachable = adapter.validateExternalAgent("https://external-agent.example.com").join();
 ```
 
-### JenticA2AClient — outbound HTTP client
+### AgenorA2AClient — outbound HTTP client
 
-`JenticA2AClient` handles raw HTTP/JSON-RPC communication with external A2A agents. Normally you use `JenticA2AAdapter` which wraps it; use `JenticA2AClient` directly only when you need fine-grained control.
+`AgenorA2AClient` handles raw HTTP/JSON-RPC communication with external A2A agents. Normally you use `AgenorA2AAdapter` which wraps it; use `AgenorA2AClient` directly only when you need fine-grained control.
 
 ```java
-var client = new JenticA2AClient(Duration.ofMinutes(5));
+var client = new AgenorA2AClient(Duration.ofMinutes(5));
 
 // Send and receive
 DialogueMessage response = client.send(
@@ -284,13 +284,13 @@ AgentCard card = client.getAgentCard("https://external-agent.example.com").join(
 boolean isA2A = client.isA2AAgent("https://some-service.example.com").join();
 ```
 
-### JenticAgentExecutor — expose Jentic agent as A2A server
+### AgenorAgentExecutor — expose Jentic agent as A2A server
 
-`JenticAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Jentic `DialogueMessage` objects, dispatches them to the target agent via `MessageService`, and maps the reply back to an A2A task result.
+`AgenorAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Jentic `DialogueMessage` objects, dispatches them to the target agent via `MessageService`, and maps the reply back to an A2A task result.
 
 ```java
 // Standalone usage
-AgentExecutor executor = new JenticAgentExecutor(
+AgentExecutor executor = new AgenorAgentExecutor(
     "target-agent-id",   // internal Jentic agent to route requests to
     messageService,
     Duration.ofMinutes(5)
@@ -308,7 +308,7 @@ public class MyExecutorProducer {
 
     @Produces
     public AgentExecutor createExecutor() {
-        return new JenticAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
+        return new AgenorAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
     }
 }
 ```

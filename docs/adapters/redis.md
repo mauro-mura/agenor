@@ -7,7 +7,7 @@ beyond a RESP-compatible server.
 
 `RedisMessageDispatcher` is the primary entry point — it composes `RedisTopicPublisher`
 (topic pub/sub) and `RedisMessageTransport` (inter-node point-to-point) into the single
-`MessageDispatcher` interface that `JenticRuntime` expects. Lower-level components are
+`MessageDispatcher` interface that `AgenorRuntime` expects. Lower-level components are
 available via `RedisMessagingFactory` for cases where fine-grained control is needed.
 
 Architectural rationale: ADR-021 — Redis MessageTransport (repository: `docs/adr/`)
@@ -68,7 +68,7 @@ Lettuce 7.5.1 pulls `reactor-core:3.6.x`. If your project also depends on MCP (w
 
 ---
 
-## Quick start — with JenticRuntime (recommended)
+## Quick start — with AgenorRuntime (recommended)
 
 ```java
 try (var factory = RedisMessagingFactory.builder()
@@ -77,8 +77,8 @@ try (var factory = RedisMessagingFactory.builder()
         .build()) {
 
     // messageDispatcher() returns a RedisMessageDispatcher — the full MessageDispatcher
-    // implementation that JenticRuntime.Builder.messageDispatcher() accepts.
-    JenticRuntime runtime = JenticRuntime.builder()
+    // implementation that AgenorRuntime.Builder.messageDispatcher() accepts.
+    AgenorRuntime runtime = AgenorRuntime.builder()
             .messageDispatcher(factory.messageDispatcher())
             .build();
 
@@ -96,7 +96,7 @@ Agent code is identical to the in-memory case — swap the dispatcher, keep the 
 ### Direct API (advanced)
 
 Use `factory.topicPublisher()` and `factory.messageTransport()` directly only when you
-need fine-grained control outside of a `JenticRuntime` context:
+need fine-grained control outside of a `AgenorRuntime` context:
 
 ```java
 try (var factory = RedisMessagingFactory.builder()
@@ -296,7 +296,7 @@ If either condition is false the in-memory dispatcher remains active — no erro
 |-----------|-----------|-------------|
 | `RedisMessagingFactory` | `redisMessagingFactory` | Lifecycle-managed factory; `close()` called on context shutdown |
 | `MessageDispatcher` | `redisMessageDispatcher` | `RedisMessageDispatcher` — full `MessageDispatcher` wired with lazy `AgentResolver` |
-| `JenticRuntime` | `jenticRuntime` | Runtime built with the Redis dispatcher as its messaging backend |
+| `AgenorRuntime` | `agenorRuntime` | Runtime built with the Redis dispatcher as its messaging backend |
 
 All beans are conditional on `@ConditionalOnMissingBean`, so you can override any of them
 by declaring your own bean of the same type.
@@ -320,7 +320,7 @@ single-node deployments that need `subscribeFiltered`.
 ## Running the example
 
 `RedisMessagingExample` in `jentic-examples` demonstrates both messaging patterns with two
-real `JenticRuntime` agents:
+real `AgenorRuntime` agents:
 
 - **`OrderAgent`** (CYCLIC, 4 s) — publishes orders to `orders.created` and logs fulfillment ACKs received via `onDirectMessage`.
 - **`FulfillmentAgent`** (`@AgenorMessageHandler("orders.created")`) — processes each order and replies directly to the sender via `sendTo(msg.reply(...))`.
@@ -362,7 +362,7 @@ Stopping runtime...
 | Class | Interfaces | Responsibility |
 |-------|-----------|---------------|
 | `RedisMessagingFactory` | `AutoCloseable` | Builder; creates and wires all components; manages shared Lettuce connection. Entry point via `messageDispatcher()` or `messageDispatcher(Supplier<AgentResolver>)` |
-| `RedisMessageDispatcher` | `MessageDispatcher` | **Primary entry point.** Composes topic pub/sub and point-to-point into the single interface `JenticRuntime` expects. Local fast-path for same-JVM agents; remote path via `AgentResolver` + `RedisMessageTransport` |
+| `RedisMessageDispatcher` | `MessageDispatcher` | **Primary entry point.** Composes topic pub/sub and point-to-point into the single interface `AgenorRuntime` expects. Local fast-path for same-JVM agents; remote path via `AgentResolver` + `RedisMessageTransport` |
 | `RedisTopicPublisher` | `TopicPublisher`, `TopicSubscriber` | Publishes to topic streams; creates per-subscription consumer groups |
 | `RedisMessageTransport` | `MessageTransport` | Sends to node streams; subscribes with a node-scoped consumer group |
 | `RedisStreamClient` | — (internal) | `XADD`, `ensureConsumerGroup`, creates consumer connections |

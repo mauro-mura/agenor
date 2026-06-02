@@ -15,6 +15,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import dev.agenor.core.annotations.Agent;
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,7 @@ import dev.agenor.runtime.agent.BaseAgent;
 /**
  * Factory for creating agent instances from annotated classes.
  * Responsible for instantiation and descriptor creation only — service injection
- * is handled by {@link dev.agenor.runtime.JenticRuntime#registerAgent}.
+ * is handled by {@link AgenorRuntime#registerAgent}.
  *
  * <p>Supports two agent styles:
  * <ul>
@@ -112,7 +113,7 @@ public class AgentFactory {
     /**
      * Create a single agent instance and set its descriptor.
      * Service injection is performed separately by
-     * {@link dev.agenor.runtime.JenticRuntime#registerAgent}.
+     * {@link AgenorRuntime#registerAgent}.
      */
     public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) throws AgentException {
         try {

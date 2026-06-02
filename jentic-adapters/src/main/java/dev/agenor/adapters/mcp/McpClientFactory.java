@@ -1,7 +1,7 @@
 package dev.agenor.adapters.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
@@ -15,7 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 /**
- * Factory for {@link JenticMcpClientAdapter}.
+ * Factory for {@link AgenorMcpClientAdapter}.
  *
  * <p>Supported transports (F2 scope):
  * <ul>
@@ -48,7 +48,7 @@ public final class McpClientFactory {
      *
      * @param serverUrl base URL of the MCP server (e.g. {@code http://localhost:3000/sse})
      */
-    public static JenticMcpClientAdapter fromSse(String serverUrl) {
+    public static AgenorMcpClientAdapter fromSse(String serverUrl) {
         return fromSse(serverUrl, ForkJoinPool.commonPool());
     }
 
@@ -58,8 +58,8 @@ public final class McpClientFactory {
      * @param serverUrl base URL of the MCP server
      * @param executor  executor used for {@code supplyAsync()} calls
      */
-    public static JenticMcpClientAdapter fromSse(String serverUrl, Executor executor) {
-        return fromSse(serverUrl, executor, JenticTelemetry.noop());
+    public static AgenorMcpClientAdapter fromSse(String serverUrl, Executor executor) {
+        return fromSse(serverUrl, executor, AgenorTelemetry.noop());
     }
 
     /**
@@ -69,7 +69,7 @@ public final class McpClientFactory {
      * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
      * @since 0.19.0
      */
-    public static JenticMcpClientAdapter fromSse(String serverUrl, JenticTelemetry telemetry) {
+    public static AgenorMcpClientAdapter fromSse(String serverUrl, AgenorTelemetry telemetry) {
         return fromSse(serverUrl, ForkJoinPool.commonPool(), telemetry);
     }
 
@@ -81,7 +81,7 @@ public final class McpClientFactory {
      * @param telemetry telemetry instance for emitting {@code mcp.tool.call} spans
      * @since 0.19.0
      */
-    public static JenticMcpClientAdapter fromSse(String serverUrl, Executor executor, JenticTelemetry telemetry) {
+    public static AgenorMcpClientAdapter fromSse(String serverUrl, Executor executor, AgenorTelemetry telemetry) {
         var transport = HttpClientSseClientTransport.builder(serverUrl)
                 .jsonMapper(DEFAULT_JSON_MAPPER)
                 .build();
@@ -89,7 +89,7 @@ public final class McpClientFactory {
                 .requestTimeout(DEFAULT_TIMEOUT)
                 .build();
         sdkClient.initialize();
-        return new JenticMcpClientAdapter(sdkClient, executor, telemetry, "sse");
+        return new AgenorMcpClientAdapter(sdkClient, executor, telemetry, "sse");
     }
 
     // -------------------------------------------------------------------------
@@ -106,7 +106,7 @@ public final class McpClientFactory {
      * @param command first element of the command line (e.g. {@code "npx"})
      * @param args    remaining arguments
      */
-    public static JenticMcpClientAdapter fromStdio(String command, String... args) {
+    public static AgenorMcpClientAdapter fromStdio(String command, String... args) {
         return fromStdio(ForkJoinPool.commonPool(), command, args);
     }
 
@@ -117,8 +117,8 @@ public final class McpClientFactory {
      * @param command  first element of the command line
      * @param args     remaining arguments
      */
-    public static JenticMcpClientAdapter fromStdio(Executor executor, String command, String... args) {
-        return fromStdio(executor, JenticTelemetry.noop(), command, args);
+    public static AgenorMcpClientAdapter fromStdio(Executor executor, String command, String... args) {
+        return fromStdio(executor, AgenorTelemetry.noop(), command, args);
     }
 
     /**
@@ -129,7 +129,7 @@ public final class McpClientFactory {
      * @param args      remaining arguments
      * @since 0.19.0
      */
-    public static JenticMcpClientAdapter fromStdio(JenticTelemetry telemetry, String command, String... args) {
+    public static AgenorMcpClientAdapter fromStdio(AgenorTelemetry telemetry, String command, String... args) {
         return fromStdio(ForkJoinPool.commonPool(), telemetry, command, args);
     }
 
@@ -142,7 +142,7 @@ public final class McpClientFactory {
      * @param args      remaining arguments
      * @since 0.19.0
      */
-    public static JenticMcpClientAdapter fromStdio(Executor executor, JenticTelemetry telemetry,
+    public static AgenorMcpClientAdapter fromStdio(Executor executor, AgenorTelemetry telemetry,
                                                    String command, String... args) {
         var fullCommand = new ArrayList<String>();
         fullCommand.add(command);
@@ -156,6 +156,6 @@ public final class McpClientFactory {
                 .requestTimeout(DEFAULT_TIMEOUT)
                 .build();
         sdkClient.initialize();
-        return new JenticMcpClientAdapter(sdkClient, executor, telemetry, "stdio");
+        return new AgenorMcpClientAdapter(sdkClient, executor, telemetry, "stdio");
     }
 }

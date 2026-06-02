@@ -175,7 +175,7 @@ class HitlCoreTypesTest {
         }
 
         @Test
-        @DisplayName("is unchecked (extends JenticException / RuntimeException)")
+        @DisplayName("is unchecked (extends AgenorException / RuntimeException)")
         void isUnchecked() {
             var ex = new ApprovalTimeoutException("id", Instant.now());
             assertThat(ex).isInstanceOf(RuntimeException.class);

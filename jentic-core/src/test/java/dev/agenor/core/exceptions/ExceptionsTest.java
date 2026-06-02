@@ -19,14 +19,14 @@ class ExceptionsTest {
     // =========================================================================
 
     @Nested
-    @DisplayName("JenticException")
-    class JenticExceptionTest {
+    @DisplayName("AgenorException")
+    class AgenorExceptionTest {
 
         @Test
         @DisplayName("Should create exception with message")
         void shouldCreateWithMessage() {
             String message = "Test exception message";
-            JenticException exception = new JenticException(message);
+            AgenorException exception = new AgenorException(message);
 
             assertThat(exception.getMessage()).isEqualTo(message);
             assertThat(exception.getCause()).isNull();
@@ -37,7 +37,7 @@ class ExceptionsTest {
         void shouldCreateWithMessageAndCause() {
             String message = "Test exception message";
             Throwable cause = new RuntimeException("Root cause");
-            JenticException exception = new JenticException(message, cause);
+            AgenorException exception = new AgenorException(message, cause);
 
             assertThat(exception.getMessage()).isEqualTo(message);
             assertThat(exception.getCause()).isEqualTo(cause);

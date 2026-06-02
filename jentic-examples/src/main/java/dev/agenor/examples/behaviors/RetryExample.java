@@ -1,7 +1,7 @@
 package dev.agenor.examples.behaviors;
 
 import dev.agenor.core.annotations.Agent;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.RetryBehavior;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class RetryExample {
         FileProcessorAgent fileAgent = new FileProcessorAgent();
         MessageProcessorAgent msgAgent = new MessageProcessorAgent();
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(apiAgent);
         runtime.registerAgent(dbAgent);
         runtime.registerAgent(fileAgent);

@@ -1,6 +1,6 @@
 package dev.agenor.runtime.config;
 
-import dev.agenor.core.JenticConfiguration;
+import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.config.ConfigurationLoader;
 import dev.agenor.core.config.ConfigurationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +41,7 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should create default configuration")
     void shouldCreateDefaultConfiguration() {
-        JenticConfiguration config = JenticConfiguration.defaults();
+        AgenorConfiguration config = AgenorConfiguration.defaults();
 
         assertThat(config).isNotNull();
         assertThat(config.runtime().name()).isEqualTo("agenor-runtime");
@@ -80,7 +80,7 @@ class ConfigurationLoaderTest {
         Files.writeString(configFile, yamlContent);
 
         // Load configuration
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         // Verify runtime config
         assertThat(config.runtime().name()).isEqualTo("test-runtime");
@@ -113,7 +113,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("minimal.yml");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("minimal-runtime");
         assertThat(config.runtime().environment()).isEqualTo("development"); // Default
@@ -145,7 +145,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("config.json");
         Files.writeString(configFile, jsonContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("json-runtime");
         assertThat(config.runtime().environment()).isEqualTo("production");
@@ -179,7 +179,7 @@ class ConfigurationLoaderTest {
             Path configFile = tempDir.resolve("env-config.yml");
             Files.writeString(configFile, yamlContent);
 
-            JenticConfiguration config = loader.loadFromFile(configFile.toString());
+            AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
             assertThat(config.runtime().name()).isEqualTo("env-runtime");
             assertThat(config.runtime().environment()).isEqualTo("test");
@@ -207,7 +207,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("default-env.yml");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("default-runtime");
     }
@@ -229,7 +229,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("missing-env.yml");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("${MISSING_VAR}");
     }
@@ -251,7 +251,7 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should handle leading slash in classpath resource")
     void shouldHandleLeadingSlashInClasspath() throws Exception {
-        JenticConfiguration config = loader.loadFromClasspath("/jentic-test.yml");
+        AgenorConfiguration config = loader.loadFromClasspath("/jentic-test.yml");
 
         assertThat(config).isNotNull();
     }
@@ -298,7 +298,7 @@ class ConfigurationLoaderTest {
 
         ByteArrayInputStream stream = new ByteArrayInputStream(yamlContent.getBytes());
 
-        JenticConfiguration config = loader.loadFromStream(stream, "yaml");
+        AgenorConfiguration config = loader.loadFromStream(stream, "yaml");
 
         assertThat(config.runtime().name()).isEqualTo("stream-runtime");
         assertThat(config.agents().scanPackages()).containsExactly("com.stream");
@@ -322,7 +322,7 @@ class ConfigurationLoaderTest {
 
         ByteArrayInputStream stream = new ByteArrayInputStream(jsonContent.getBytes());
 
-        JenticConfiguration config = loader.loadFromStream(stream, "json");
+        AgenorConfiguration config = loader.loadFromStream(stream, "json");
 
         assertThat(config.runtime().name()).isEqualTo("stream-json-runtime");
         assertThat(config.agents().scanPackages()).containsExactly("com.json.stream");
@@ -338,7 +338,7 @@ class ConfigurationLoaderTest {
             """;
 
         InputStream stream = new ByteArrayInputStream(yamlContent.getBytes(StandardCharsets.UTF_8));
-        JenticConfiguration config = loader.loadFromStream(stream, "unknown");
+        AgenorConfiguration config = loader.loadFromStream(stream, "unknown");
 
         assertThat(config.runtime().name()).isEqualTo("unknown-format");
     }
@@ -350,9 +350,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should validate valid configuration")
     void shouldValidateValidConfiguration() {
-        JenticConfiguration config = new JenticConfiguration(
-            new JenticConfiguration.RuntimeConfig("valid-runtime", "production", null),
-            new JenticConfiguration.AgentsConfig(true, "com.example", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+            new AgenorConfiguration.RuntimeConfig("valid-runtime", "production", null),
+            new AgenorConfiguration.AgentsConfig(true, "com.example", null, null, null),
             null, null,null
         );
 
@@ -371,9 +371,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should reject empty runtime name")
     void shouldRejectEmptyRuntimeName() {
-        JenticConfiguration config = new JenticConfiguration(
-            new JenticConfiguration.RuntimeConfig("", "development", null),
-            new JenticConfiguration.AgentsConfig(true, "com.example", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+            new AgenorConfiguration.RuntimeConfig("", "development", null),
+            new AgenorConfiguration.AgentsConfig(true, "com.example", null, null, null),
                 null, null,null
         );
 
@@ -385,9 +385,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should reject invalid package names")
     void shouldRejectInvalidPackageNames() {
-        JenticConfiguration config = new JenticConfiguration(
-            new JenticConfiguration.RuntimeConfig("runtime", "development", null),
-            new JenticConfiguration.AgentsConfig(true, "invalid..package", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+            new AgenorConfiguration.RuntimeConfig("runtime", "development", null),
+            new AgenorConfiguration.AgentsConfig(true, "invalid..package", null, null, null),
                 null, null,null
         );
 
@@ -405,7 +405,7 @@ class ConfigurationLoaderTest {
 
         // Il constructor stesso dovrebbe lanciare IllegalArgumentException
         assertThatThrownBy(() ->
-                new JenticConfiguration.AgentsConfig(true, "", null , packagesWithNull, null)
+                new AgenorConfiguration.AgentsConfig(true, "", null , packagesWithNull, null)
         )
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("null");
@@ -415,9 +415,9 @@ class ConfigurationLoaderTest {
     @DisplayName("Should reject empty package names during validation")
     void shouldRejectEmptyPackageNames() {
         // Questo test verifica stringhe vuote, non null
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("runtime", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null, Arrays.asList("com.valid", ""), null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("runtime", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null, Arrays.asList("com.valid", ""), null),
                 null, null,null
         );
 
@@ -487,7 +487,7 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should return defaults when no configuration file found")
     void shouldReturnDefaultsWhenNoFileFound() {
-        JenticConfiguration config = loader.loadDefault();
+        AgenorConfiguration config = loader.loadDefault();
 
         assertThat(config).isNotNull();
         assertThat(config.runtime().name()).isEqualTo("agenor-runtime");
@@ -508,7 +508,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("empty.yml");
         Files.writeString(configFile, emptyYaml);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         // Should use defaults for missing sections
         assertThat(config.runtime()).isNotNull();
@@ -528,7 +528,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("partial.yml");
         Files.writeString(configFile, partialYaml);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("partial-runtime");
         assertThat(config.runtime().environment()).isEqualTo("staging");
@@ -558,7 +558,7 @@ class ConfigurationLoaderTest {
             Path configFile = tempDir.resolve("multi-env.yml");
             Files.writeString(configFile, yamlContent);
 
-            JenticConfiguration config = loader.loadFromFile(configFile.toString());
+            AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
             assertThat(config.runtime().name()).isEqualTo("multi-env-app");
             assertThat(config.runtime().environment()).isEqualTo("production");
@@ -618,7 +618,7 @@ class ConfigurationLoaderTest {
             Path configFile = tempDir.resolve("prop.yml");
             Files.writeString(configFile, yamlContent);
 
-            JenticConfiguration config = loader.loadFromFile(configFile.toString());
+            AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
             assertThat(config.runtime().name()).isEqualTo("property-value");
 
@@ -639,7 +639,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("config.yaml");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("yaml-ext");
     }
@@ -656,7 +656,7 @@ class ConfigurationLoaderTest {
         Path configFile = tempDir.resolve("config.conf");
         Files.writeString(configFile, yamlContent);
 
-        JenticConfiguration config = loader.loadFromFile(configFile.toString());
+        AgenorConfiguration config = loader.loadFromFile(configFile.toString());
 
         assertThat(config.runtime().name()).isEqualTo("unknown-ext");
     }
@@ -664,9 +664,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should warn for unknown environment")
     void shouldWarnForUnknownEnvironment() {
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "custom-env", null),
-                new JenticConfiguration.AgentsConfig(false, "com.test", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "custom-env", null),
+                new AgenorConfiguration.AgentsConfig(false, "com.test", null, null, null),
                 null, null, null
         );
 
@@ -683,9 +683,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should warn when autoDiscovery enabled but no packages")
     void shouldWarnWhenAutoDiscoveryWithoutPackages() {
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, null, null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, null, null, null, null),
                 null, null, null
         );
 
@@ -702,9 +702,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should validate package names starting with letter")
     void shouldValidatePackageNamesStartWithLetter() {
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, "com.example.valid123", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, "com.example.valid123", null, null, null),
                 null, null, null
         );
 
@@ -720,9 +720,9 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should reject package name starting with number")
     void shouldRejectPackageNameStartingWithNumber() {
-        JenticConfiguration config = new JenticConfiguration(
-                new JenticConfiguration.RuntimeConfig("test", "development", null),
-                new JenticConfiguration.AgentsConfig(true, "123invalid", null, null, null),
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test", "development", null),
+                new AgenorConfiguration.AgentsConfig(true, "123invalid", null, null, null),
                 null, null, null
         );
 
@@ -747,7 +747,7 @@ class ConfigurationLoaderTest {
             Path configFile = tempDir.resolve("agenor.yml");
             Files.writeString(configFile, malformedYaml);
 
-            JenticConfiguration config = loader.loadDefault();
+            AgenorConfiguration config = loader.loadDefault();
 
             assertThat(config).isNotNull();
             assertThat(config.runtime().name()).isEqualTo("agenor-runtime");

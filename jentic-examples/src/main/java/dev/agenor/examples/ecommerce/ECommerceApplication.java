@@ -2,7 +2,7 @@ package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.messaging.MessageDispatcher;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +20,7 @@ public class ECommerceApplication {
         log.info("Using: FSM + Parallel Validators + Sequential Fulfillment");
         log.info("=".repeat(80) + "\n");
 
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
                 .scanPackage("dev.agenor.examples.ecommerce")
                 .build();
 

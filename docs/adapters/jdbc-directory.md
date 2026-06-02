@@ -84,14 +84,14 @@ the migration idempotent — safe to call repeatedly.
 ```java
 import dev.agenor.adapters.persistence.directory.JdbcAgentDirectory;
 import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 var config = JdbcDirectoryConfig.of(
         "jdbc:postgresql://localhost:5432/jentic",
         "jentic", System.getenv("DB_PASSWORD"));
 
 try (var dir = JdbcAgentDirectory.create(config)) {
-    var runtime = JenticRuntime.builder()
+    var runtime = AgenorRuntime.builder()
             .agentRegistry(dir.registry())
             .agentDiscovery(dir.discovery())
             .agentResolver(dir.resolver())
@@ -120,7 +120,7 @@ jentic:
 ```
 
 The auto-configuration activates when `JdbcAgentDirectory` is on the classpath **and**
-`provider=jdbc` is set. See `JenticAutoConfiguration.JdbcDirectoryConfiguration` for
+`provider=jdbc` is set. See `AgenorAutoConfiguration.JdbcDirectoryConfiguration` for
 the exact conditions.
 
 ---
@@ -155,7 +155,7 @@ in-memory presence. This is the recommended setup: JDBC for durability, in-memor
 low-latency heartbeats.
 
 ```java
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .agentRegistry(dir.registry())
         .agentDiscovery(dir.discovery())
         .agentResolver(dir.resolver())
@@ -163,7 +163,7 @@ var runtime = JenticRuntime.builder()
         .build();
 ```
 
-The `JenticRuntime.Builder` assembles a `CompositeAgentDirectory` from the three JDBC
+The `AgenorRuntime.Builder` assembles a `CompositeAgentDirectory` from the three JDBC
 capabilities plus the default in-memory `AgentPresence`. The result satisfies the full
 `AgentDirectory` interface without any changes to agent code.
 

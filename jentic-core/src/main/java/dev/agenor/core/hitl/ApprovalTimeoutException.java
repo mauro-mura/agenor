@@ -1,6 +1,6 @@
 package dev.agenor.core.hitl;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 import java.time.Instant;
 
@@ -8,7 +8,7 @@ import java.time.Instant;
  * Thrown when no human decision is submitted before an {@link ApprovalRequest}
  * expires.
  *
- * <p>This is an unchecked exception (extends {@link JenticException}) consistent
+ * <p>This is an unchecked exception (extends {@link AgenorException}) consistent
  * with the Jentic exception hierarchy. Callers may catch it explicitly to implement
  * fallback or escalation logic.
  *
@@ -16,7 +16,7 @@ import java.time.Instant;
  * @see ApprovalRequest
  * @since 0.13.0
  */
-public class ApprovalTimeoutException extends JenticException {
+public class ApprovalTimeoutException extends AgenorException {
 
     private final String requestId;
     private final Instant expiresAt;

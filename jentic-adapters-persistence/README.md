@@ -35,12 +35,12 @@ heavyweight infrastructure that should not reach the default classpath — see A
 ```java
 import dev.agenor.adapters.persistence.directory.JdbcAgentDirectory;
 import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 var dir = JdbcAgentDirectory.create(
         JdbcDirectoryConfig.of("jdbc:postgresql://localhost:5432/mydb", user, pass));
 
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .agentRegistry(dir.registry())
         .agentDiscovery(dir.discovery())
         .agentResolver(dir.resolver())
@@ -60,7 +60,7 @@ new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate(
 var gate = new JdbcApprovalGate(dataSource, jdbcUrl);
 gate.recoverExpired();   // mark stale rows EXPIRED on startup
 
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .withDefaultConfig()
         .approvalGate(gate)
         .build();

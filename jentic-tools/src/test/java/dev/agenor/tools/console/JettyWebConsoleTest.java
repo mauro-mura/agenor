@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -24,14 +25,13 @@ import org.junit.jupiter.api.TestMethodOrder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class JettyWebConsoleTest {
 
     private static JettyWebConsole console;
-    private static JenticRuntime runtime;
+    private static AgenorRuntime runtime;
     private static HttpClient httpClient;
     private static ObjectMapper objectMapper;
     private static final int TEST_PORT = 8889;
@@ -39,7 +39,7 @@ class JettyWebConsoleTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        runtime = JenticRuntime.builder().build();
+        runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(new TestAgent("agent-1", "Test Agent 1"));
         runtime.registerAgent(new TestAgent("agent-2", "Test Agent 2"));
 

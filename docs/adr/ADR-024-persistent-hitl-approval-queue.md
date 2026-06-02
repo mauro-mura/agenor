@@ -93,14 +93,14 @@ explicit polling via `getPendingRequests()` + re-submission.
 `dev.agenor.adapters.persistence.hitl`), reusing the Hikari/Flyway/JDBC infrastructure
 already present. No pom.xml change is needed.
 
-### `JenticRuntime` builder
+### `AgenorRuntime` builder
 
-A new `approvalGate(ApprovalGate gate)` setter is added to `JenticRuntime.Builder`. The
+A new `approvalGate(ApprovalGate gate)` setter is added to `AgenorRuntime.Builder`. The
 default (`InMemoryApprovalGate`) is used when no gate is provided.
 
 ### Spring Boot starter
 
-A new `JdbcHitlConfiguration` inner class in `JenticAutoConfiguration` activates when:
+A new `JdbcHitlConfiguration` inner class in `AgenorAutoConfiguration` activates when:
 - `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` is on the classpath
 - `jentic.hitl.provider=jdbc` is set
 
@@ -113,7 +113,7 @@ jentic:
       url: jdbc:postgresql://localhost:5432/mydb  # reuses directory.jdbc.url if set
 ```
 
-The `JdbcApprovalGate` bean is exposed as `ApprovalGate` and wired into `JenticRuntime` via
+The `JdbcApprovalGate` bean is exposed as `ApprovalGate` and wired into `AgenorRuntime` via
 the new builder setter.
 
 ---

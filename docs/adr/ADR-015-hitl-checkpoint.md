@@ -38,7 +38,7 @@ Agent behavior executes critical action
   → resumes with ApprovalDecision (APPROVED / REJECTED / MODIFIED)
 ```
 
-Declarative wiring via `@RequiresApproval` annotation processed by `JenticRuntime` at agent
+Declarative wiring via `@RequiresApproval` annotation processed by `AgenorRuntime` at agent
 registration time, consistent with `@WithGuardrails` (ADR-014).
 
 ---
@@ -65,7 +65,7 @@ ApprovalDecision decision = gate.requestApproval(request).join();
 - Composable: callers can chain `.thenApply()`, `.whenComplete()`, set their own timeout
 - Virtual thread park/unpark is near-zero cost (Project Loom, ADR-001)
 - Timeout via `ScheduledExecutorService` — no additional dependency
-- `completeExceptionally(ApprovalTimeoutException)` integrates cleanly with the `JenticException` hierarchy
+- `completeExceptionally(ApprovalTimeoutException)` integrates cleanly with the `AgenorException` hierarchy
 
 **Cons**:
 - Callers must not call `.join()` on a carrier/platform thread; documented constraint
@@ -138,7 +138,7 @@ scheduledExecutor.schedule(
     TimeUnit.MILLISECONDS);
 ```
 
-`ApprovalTimeoutException` extends `JenticException` (unchecked), carrying `requestId` and
+`ApprovalTimeoutException` extends `AgenorException` (unchecked), carrying `requestId` and
 `expiresAt` for logging and alerting. Expired entries are removed from the pending map in the
 timeout callback to prevent memory leaks.
 
@@ -155,7 +155,7 @@ jentic-core
         ├── ApprovalDecision.java         (sealed interface — Approved | Rejected | Modified)
         ├── ApprovalGate.java             (interface — requestApproval returns CompletableFuture)
         ├── ApprovalNotifier.java         (SPI interface — fire-and-forget notify)
-        ├── ApprovalTimeoutException.java (unchecked, extends JenticException)
+        ├── ApprovalTimeoutException.java (unchecked, extends AgenorException)
         └── RequiresApproval.java         (@interface annotation — timeout, notifier class)
 
 jentic-runtime
@@ -174,7 +174,7 @@ jentic-runtime
 public class PaymentBehavior extends AgentBehavior { ... }
 ```
 
-`JenticRuntime.registerAgent()` detects `@RequiresApproval`, parses the `timeout` string
+`AgenorRuntime.registerAgent()` detects `@RequiresApproval`, parses the `timeout` string
 (`"5s"` / `"10m"` / `"2h"`), instantiates the notifier via no-arg constructor, and wraps
 the behavior in `HumanCheckpointBehavior` with the singleton `InMemoryApprovalGate`.
 
@@ -197,7 +197,7 @@ the external decision submission interface and a `getPendingRequests()` snapshot
 - `@RequiresApproval` requires no-arg constructor for `ApprovalNotifier` — notifiers needing config must be wired programmatically via `HumanCheckpointBehavior` builder
 
 ### Neutral
-- `ApprovalTimeoutException` is unchecked, consistent with `JenticException` hierarchy; callers may catch it explicitly but are not required to declare it
+- `ApprovalTimeoutException` is unchecked, consistent with `AgenorException` hierarchy; callers may catch it explicitly but are not required to declare it
 - `WebhookApprovalNotifier` retry logic runs on a separate virtual thread and does not affect agent execution latency
 
 ## Compliance

@@ -1,6 +1,6 @@
 package dev.agenor.core.knowledge;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 import java.io.Serial;
 
@@ -23,7 +23,7 @@ import java.io.Serial;
  * });
  * }</pre>
  */
-public class EmbeddingException extends JenticException {
+public class EmbeddingException extends AgenorException {
 
 	@Serial
 	private static final long serialVersionUID = -1951833008129004485L;

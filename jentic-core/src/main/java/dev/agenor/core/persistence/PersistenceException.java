@@ -1,11 +1,11 @@
 package dev.agenor.core.persistence;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 /**
  * Exception thrown during persistence operations
  */
-public class PersistenceException extends JenticException {
+public class PersistenceException extends AgenorException {
 
     private final String agentId;
     private final PersistenceOperation operation;

@@ -7,7 +7,7 @@ import dev.agenor.core.AgentStatus;
 import dev.agenor.core.Page;
 import dev.agenor.core.PageRequest;
 import dev.agenor.core.directory.AgentDirectory;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +46,7 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
 
     /** UUID identifying this JVM instance — constant for the lifetime of the runtime. */
     private final String nodeId;
-    private volatile JenticTelemetry telemetry;
+    private volatile AgenorTelemetry telemetry;
 
     private final ConcurrentHashMap<String, AgentDescriptor> agents = new ConcurrentHashMap<>();
 
@@ -54,7 +54,7 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
      * Creates an {@code InMemoryAgentDirectory} with a randomly generated node ID and noop telemetry.
      */
     public InMemoryAgentDirectory() {
-        this(UUID.randomUUID().toString(), JenticTelemetry.noop());
+        this(UUID.randomUUID().toString(), AgenorTelemetry.noop());
     }
 
     /**
@@ -63,7 +63,7 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
      * @param nodeId the node identifier for this JVM; must not be null
      */
     public InMemoryAgentDirectory(String nodeId) {
-        this(nodeId, JenticTelemetry.noop());
+        this(nodeId, AgenorTelemetry.noop());
     }
 
     /**
@@ -72,9 +72,9 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
      * @param nodeId    the node identifier for this JVM; must not be null
      * @param telemetry telemetry instance for {@code directory.resolve} spans; null treated as noop
      */
-    public InMemoryAgentDirectory(String nodeId, JenticTelemetry telemetry) {
+    public InMemoryAgentDirectory(String nodeId, AgenorTelemetry telemetry) {
         this.nodeId = Objects.requireNonNull(nodeId, "nodeId");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /**
@@ -82,8 +82,8 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
      *
      * @param telemetry the telemetry instance; null treated as noop
      */
-    public void setTelemetry(JenticTelemetry telemetry) {
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+    public void setTelemetry(AgenorTelemetry telemetry) {
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /** Returns the node ID assigned to this JVM instance. */

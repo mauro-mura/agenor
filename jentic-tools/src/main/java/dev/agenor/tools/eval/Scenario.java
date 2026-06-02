@@ -1,6 +1,6 @@
 package dev.agenor.tools.eval;
 
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 import java.time.Duration;
 import java.util.List;
@@ -58,7 +58,7 @@ public interface Scenario {
      *
      * @param runtime the Jentic runtime
      */
-    void setup(JenticRuntime runtime);
+    void setup(AgenorRuntime runtime);
 
     /**
      * Execution phase - trigger agent behavior.
@@ -68,7 +68,7 @@ public interface Scenario {
      *
      * @param runtime the Jentic runtime
      */
-    void execute(JenticRuntime runtime);
+    void execute(AgenorRuntime runtime);
 
     /**
      * Verification phase - check outcomes.
@@ -89,7 +89,7 @@ public interface Scenario {
      *
      * @param runtime the Jentic runtime
      */
-    default void teardown(JenticRuntime runtime) {
+    default void teardown(AgenorRuntime runtime) {
         // Default: no cleanup needed
     }
 

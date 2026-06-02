@@ -6,7 +6,7 @@ import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.reflection.ReflectionConfig;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.LLMAgent;
 import dev.agenor.runtime.behavior.ReflectionBehavior;
 import dev.agenor.runtime.memory.InMemoryStore;
@@ -69,7 +69,7 @@ public class ReflectionExample {
               .maxTokens(500)
               .build();
 
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
                 .memoryStore(new InMemoryStore())
                 .build();
 

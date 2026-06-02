@@ -1,6 +1,6 @@
 package dev.agenor.core.memory;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 /**
  * Base exception for memory storage operations.
@@ -29,7 +29,7 @@ import dev.agenor.core.exceptions.JenticException;
  *
  * @since 0.6.0
  */
-public class MemoryException extends JenticException {
+public class MemoryException extends AgenorException {
 
     private static final long serialVersionUID = -2380496751158852185L;
 	private final ErrorType errorType;

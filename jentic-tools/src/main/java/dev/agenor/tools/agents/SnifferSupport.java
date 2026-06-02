@@ -1,7 +1,7 @@
 package dev.agenor.tools.agents;
 
 import dev.agenor.core.filter.MessageFilter;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.tools.history.MessageHistoryService;
 import dev.agenor.tools.history.MessageHistoryService.StoredMessage;
 
@@ -40,7 +40,7 @@ public final class SnifferSupport {
      * @param runtime the runtime to register with
      * @return the registered sniffer
      */
-    public static MessageSnifferAgent register(JenticRuntime runtime) {
+    public static MessageSnifferAgent register(AgenorRuntime runtime) {
         return register(runtime, MessageFilter.acceptAll(),
                        MessageSnifferAgent.DEFAULT_HISTORY_SIZE);
     }
@@ -53,9 +53,9 @@ public final class SnifferSupport {
      * @param historySize max messages to retain
      * @return the registered sniffer
      */
-    public static MessageSnifferAgent register(JenticRuntime runtime,
-                                                MessageFilter filter,
-                                                int historySize) {
+    public static MessageSnifferAgent register(AgenorRuntime runtime,
+                                               MessageFilter filter,
+                                               int historySize) {
         MessageSnifferAgent sniffer = new MessageSnifferAgent(filter, historySize);
         runtime.registerAgent(sniffer);
         return sniffer;
@@ -68,8 +68,8 @@ public final class SnifferSupport {
      * @param history shared history service
      * @return the registered sniffer
      */
-    public static MessageSnifferAgent register(JenticRuntime runtime,
-                                                MessageHistoryService history) {
+    public static MessageSnifferAgent register(AgenorRuntime runtime,
+                                               MessageHistoryService history) {
         return register(runtime, MessageFilter.acceptAll(), history);
     }
 
@@ -81,9 +81,9 @@ public final class SnifferSupport {
      * @param history shared history service
      * @return the registered sniffer
      */
-    public static MessageSnifferAgent register(JenticRuntime runtime,
-                                                MessageFilter filter,
-                                                MessageHistoryService history) {
+    public static MessageSnifferAgent register(AgenorRuntime runtime,
+                                               MessageFilter filter,
+                                               MessageHistoryService history) {
         MessageSnifferAgent sniffer = new MessageSnifferAgent(filter, history);
         runtime.registerAgent(sniffer);
         return sniffer;
@@ -95,7 +95,7 @@ public final class SnifferSupport {
      * @param runtime the runtime
      * @return optional sniffer if registered
      */
-    public static Optional<MessageSnifferAgent> get(JenticRuntime runtime) {
+    public static Optional<MessageSnifferAgent> get(AgenorRuntime runtime) {
         return runtime.getAgent(MessageSnifferAgent.AGENT_ID)
             .filter(a -> a instanceof MessageSnifferAgent)
             .map(a -> (MessageSnifferAgent) a);
@@ -108,7 +108,7 @@ public final class SnifferSupport {
      * @param count max messages
      * @return messages or empty list if no sniffer
      */
-    public static List<StoredMessage> getRecent(JenticRuntime runtime, int count) {
+    public static List<StoredMessage> getRecent(AgenorRuntime runtime, int count) {
         return get(runtime)
             .map(s -> s.getRecent(count))
             .orElse(List.of());
@@ -121,7 +121,7 @@ public final class SnifferSupport {
      * @param topicPattern wildcard pattern
      * @return matching messages
      */
-    public static List<StoredMessage> findByTopic(JenticRuntime runtime, String topicPattern) {
+    public static List<StoredMessage> findByTopic(AgenorRuntime runtime, String topicPattern) {
         return get(runtime)
             .map(s -> s.findByTopic(topicPattern))
             .orElse(List.of());
@@ -134,7 +134,7 @@ public final class SnifferSupport {
      * @param senderId sender agent ID
      * @return messages from sender
      */
-    public static List<StoredMessage> findBySender(JenticRuntime runtime, String senderId) {
+    public static List<StoredMessage> findBySender(AgenorRuntime runtime, String senderId) {
         return get(runtime)
             .map(s -> s.findBySender(senderId))
             .orElse(List.of());
@@ -146,7 +146,7 @@ public final class SnifferSupport {
      * @param runtime the runtime
      * @return message count or 0 if no sniffer
      */
-    public static int getMessageCount(JenticRuntime runtime) {
+    public static int getMessageCount(AgenorRuntime runtime) {
         return get(runtime)
             .map(MessageSnifferAgent::getMessageCount)
             .orElse(0);
@@ -157,7 +157,7 @@ public final class SnifferSupport {
      *
      * @param runtime the runtime
      */
-    public static void clear(JenticRuntime runtime) {
+    public static void clear(AgenorRuntime runtime) {
         get(runtime).ifPresent(MessageSnifferAgent::clear);
     }
 
@@ -167,7 +167,7 @@ public final class SnifferSupport {
      * @param runtime the runtime
      * @return true if sniffer is active
      */
-    public static boolean isActive(JenticRuntime runtime) {
+    public static boolean isActive(AgenorRuntime runtime) {
         return get(runtime)
             .map(MessageSnifferAgent::isCapturing)
             .orElse(false);

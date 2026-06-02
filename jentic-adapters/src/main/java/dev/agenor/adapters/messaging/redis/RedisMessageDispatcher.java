@@ -22,7 +22,7 @@ import java.util.function.Supplier;
  * <p>Composes {@link RedisTopicPublisher} (topic pub/sub) and
  * {@link RedisMessageTransport} (inter-node point-to-point) into the single
  * {@link MessageDispatcher} interface expected by
- * {@code JenticRuntime.Builder.messageDispatcher(...)}.
+ * {@code AgenorRuntime.Builder.messageDispatcher(...)}.
  *
  * <p>Obtain instances via {@link RedisMessagingFactory#messageDispatcher()} or
  * {@link RedisMessagingFactory#messageDispatcher(Supplier)}.

@@ -6,6 +6,7 @@ import dev.agenor.core.persistence.AgentState;
 import dev.agenor.core.persistence.PersistenceService;
 import dev.agenor.core.persistence.PersistenceStrategy;
 import dev.agenor.core.persistence.Stateful;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -387,7 +388,7 @@ class PersistenceManagerTest {
         persistenceManager.registerAgent(agent);
 
         // Start and stop the agent to trigger on-stop hook
-        agent.setMessageDispatcher(new dev.agenor.runtime.messaging.InMemoryMessageDispatcher(new dev.agenor.runtime.directory.InMemoryAgentDirectory(), dev.agenor.core.telemetry.JenticTelemetry.noop()));
+        agent.setMessageDispatcher(new dev.agenor.runtime.messaging.InMemoryMessageDispatcher(new dev.agenor.runtime.directory.InMemoryAgentDirectory(), AgenorTelemetry.noop()));
         agent.setBehaviorScheduler(new dev.agenor.runtime.scheduler.SimpleBehaviorScheduler());
         agent.start().get();
         agent.stop().get();

@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import dev.agenor.core.Agent;
 import dev.agenor.core.composite.SchedulingHint;
 import dev.agenor.core.console.ConsoleEventListener;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
@@ -32,19 +32,19 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     private final ConcurrentHashMap<String, ScheduledFuture<?>> scheduledBehaviors = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile ConsoleEventListener eventListener = ConsoleEventListener.noOp();
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     public SimpleBehaviorScheduler() {
-        this(4, JenticTelemetry.noop());
+        this(4, AgenorTelemetry.noop());
     }
 
     public SimpleBehaviorScheduler(int threadPoolSize) {
-        this(threadPoolSize, JenticTelemetry.noop());
+        this(threadPoolSize, AgenorTelemetry.noop());
     }
 
-    public SimpleBehaviorScheduler(int threadPoolSize, JenticTelemetry telemetry) {
+    public SimpleBehaviorScheduler(int threadPoolSize, AgenorTelemetry telemetry) {
         this.scheduler  = new ScheduledThreadPoolExecutor(threadPoolSize);
-        this.telemetry  = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry  = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /**

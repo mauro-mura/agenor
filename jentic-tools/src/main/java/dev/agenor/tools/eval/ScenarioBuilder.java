@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 /**
  * Fluent builder for creating evaluation scenarios.
@@ -36,10 +36,10 @@ public class ScenarioBuilder {
     private final String id;
     private String description;
     private Duration timeout = Duration.ofSeconds(30);
-    private Consumer<JenticRuntime> setupAction = runtime -> {};
-    private Consumer<JenticRuntime> executeAction = runtime -> {};
+    private Consumer<AgenorRuntime> setupAction = runtime -> {};
+    private Consumer<AgenorRuntime> executeAction = runtime -> {};
     private Function<EvaluationContext, List<AssertionResult>> verifyAction = ctx -> List.of();
-    private Consumer<JenticRuntime> teardownAction = runtime -> {};
+    private Consumer<AgenorRuntime> teardownAction = runtime -> {};
 
     /**
      * Creates a new builder with the given scenario ID.
@@ -78,7 +78,7 @@ public class ScenarioBuilder {
      * @param action setup logic
      * @return this builder
      */
-    public ScenarioBuilder setup(Consumer<JenticRuntime> action) {
+    public ScenarioBuilder setup(Consumer<AgenorRuntime> action) {
         this.setupAction = Objects.requireNonNull(action, "Setup action cannot be null");
         return this;
     }
@@ -89,7 +89,7 @@ public class ScenarioBuilder {
      * @param action execution logic
      * @return this builder
      */
-    public ScenarioBuilder execute(Consumer<JenticRuntime> action) {
+    public ScenarioBuilder execute(Consumer<AgenorRuntime> action) {
         this.executeAction = Objects.requireNonNull(action, "Execute action cannot be null");
         return this;
     }
@@ -111,7 +111,7 @@ public class ScenarioBuilder {
      * @param action teardown logic
      * @return this builder
      */
-    public ScenarioBuilder teardown(Consumer<JenticRuntime> action) {
+    public ScenarioBuilder teardown(Consumer<AgenorRuntime> action) {
         this.teardownAction = Objects.requireNonNull(action, "Teardown action cannot be null");
         return this;
     }
@@ -135,10 +135,10 @@ public class ScenarioBuilder {
         String id,
         String description,
         Duration timeout,
-        Consumer<JenticRuntime> setupAction,
-        Consumer<JenticRuntime> executeAction,
+        Consumer<AgenorRuntime> setupAction,
+        Consumer<AgenorRuntime> executeAction,
         Function<EvaluationContext, List<AssertionResult>> verifyAction,
-        Consumer<JenticRuntime> teardownAction
+        Consumer<AgenorRuntime> teardownAction
     ) implements Scenario {
 
         @Override
@@ -157,12 +157,12 @@ public class ScenarioBuilder {
         }
 
         @Override
-        public void setup(JenticRuntime runtime) {
+        public void setup(AgenorRuntime runtime) {
             setupAction.accept(runtime);
         }
 
         @Override
-        public void execute(JenticRuntime runtime) {
+        public void execute(AgenorRuntime runtime) {
             executeAction.accept(runtime);
         }
 
@@ -172,7 +172,7 @@ public class ScenarioBuilder {
         }
 
         @Override
-        public void teardown(JenticRuntime runtime) {
+        public void teardown(AgenorRuntime runtime) {
             teardownAction.accept(runtime);
         }
     }

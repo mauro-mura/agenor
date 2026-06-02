@@ -1,6 +1,6 @@
 # Spring Boot Starter
 
-`jentic-spring-boot-starter` provides zero-configuration auto-wiring of `JenticRuntime`
+`jentic-spring-boot-starter` provides zero-configuration auto-wiring of `AgenorRuntime`
 into any Spring Boot 4.0.x application. Add one dependency, configure `application.yml`,
 and Jentic starts with the Spring context.
 
@@ -26,7 +26,7 @@ jentic:
     base-package: com.example.agents
 ```
 
-That is all. `JenticRuntime` is created, started, and stopped automatically by the
+That is all. `AgenorRuntime` is created, started, and stopped automatically by the
 Spring lifecycle. Agents in the configured package are discovered and registered at startup.
 
 ## Configuration Reference
@@ -146,7 +146,7 @@ public class MyLlmAgent extends BaseAgent {
         this.provider = provider;
     }
 
-    @Behavior(type = JenticBehaviorType.CYCLIC, interval = "30s")
+    @Behavior(type = AgenorBehaviorType.CYCLIC, interval = "30s")
     public void analyze() {
         LLMRequest req = LLMRequest.builder(provider.getProviderName())
                 .userMessage("Summarize the current system status.")
@@ -209,23 +209,23 @@ to override any default:
 
 ```java
 @Configuration
-public class MyJenticConfig {
+public class MyAgenorConfig {
 
-    // Overrides the auto-configured JenticRuntime
-    @Bean(name = "jenticRuntime")
-    public JenticRuntime jenticRuntime() {
-        return JenticRuntime.builder()
+    // Overrides the auto-configured AgenorRuntime
+    @Bean(name = "agenorRuntime")
+    public AgenorRuntime agenorRuntime() {
+        return AgenorRuntime.builder()
                 .fromClasspathConfig("my-jentic.yml")   // use a custom YAML file
                 .build();
     }
 
     // Must also provide the lifecycle bean when overriding the runtime
     @Bean
-    public SmartLifecycle jenticRuntimeLifecycle(JenticRuntime jenticRuntime) {
+    public SmartLifecycle AgenorRuntimeLifecycle(AgenorRuntime agenorRuntime) {
         return new SmartLifecycle() {
             private volatile boolean running = false;
-            public void start() { jenticRuntime.start().join(); running = true; }
-            public void stop()  { jenticRuntime.stop().join();  running = false; }
+            public void start() { agenorRuntime.start().join(); running = true; }
+            public void stop()  { agenorRuntime.stop().join();  running = false; }
             public boolean isRunning() { return running; }
         };
     }
@@ -237,13 +237,13 @@ public class MyJenticConfig {
 The starter configures the runtime exclusively from `application.yml` via
 `@ConfigurationProperties`. It does **not** load `jentic.yml` from the classpath.
 
-If you need to load from a `jentic.yml` file, declare your own `JenticRuntime` bean
+If you need to load from a `jentic.yml` file, declare your own `AgenorRuntime` bean
 (which suppresses auto-configuration via `@ConditionalOnMissingBean`):
 
 ```java
 @Bean
-public JenticRuntime jenticRuntime() {
-    return JenticRuntime.builder()
+public AgenorRuntime agenorRuntime() {
+    return AgenorRuntime.builder()
             .fromClasspathConfig("jentic.yml")
             .build();
 }
@@ -257,7 +257,7 @@ is stable across Spring Boot 4.x versions.
 
 ## See Also
 
-- [Configuration Guide](configuration.md) — native `jentic.yml` format and `JenticRuntime` builder
+- [Configuration Guide](configuration.md) — native `jentic.yml` format and `AgenorRuntime` builder
 - [Agent Development Guide](agent-development.md) — `@Agent`, behaviors, lifecycle
 - [LLM Integration Guide](llm-integration.md) — `LLMProvider`, `LLMAgent`, providers
 - [Architecture Guide](architecture.md) — module overview

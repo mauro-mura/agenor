@@ -4,7 +4,7 @@ import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.dialogue.DialogueCapability;
 
@@ -39,7 +39,7 @@ public class ContractNetExample {
         Worker w2 = new Worker("worker-2", 0.9);
         Worker w3 = new Worker("worker-3", 0.4);
 
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
                 .build();
 
         runtime.registerAgent(manager);

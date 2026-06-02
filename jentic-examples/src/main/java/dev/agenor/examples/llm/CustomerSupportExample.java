@@ -5,7 +5,7 @@ import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.*;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.messaging.Subscription;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +24,7 @@ public class CustomerSupportExample {
             .build();
 
         // Create Jentic runtime
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .build();
 
         // Create and register agent
@@ -43,7 +43,7 @@ public class CustomerSupportExample {
         runtime.stop().join();
     }
 
-    private static void example1_TicketAnalysis(JenticRuntime runtime, CustomerSupportAgent agent) {
+    private static void example1_TicketAnalysis(AgenorRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("=== Example 1: Ticket Analysis ===");
 
         String ticket = """
@@ -64,7 +64,7 @@ public class CustomerSupportExample {
             .join();
     }
 
-    private static void example2_ResponseGeneration(JenticRuntime runtime, CustomerSupportAgent agent) {
+    private static void example2_ResponseGeneration(AgenorRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 2: Response Generation ===");
 
         String ticketData = "Can't access premium features|frustrated|high";
@@ -81,7 +81,7 @@ public class CustomerSupportExample {
             .join();
     }
 
-    private static void example3_Classification(JenticRuntime runtime, CustomerSupportAgent agent) {
+    private static void example3_Classification(AgenorRuntime runtime, CustomerSupportAgent agent) {
         System.out.println("\n=== Example 3: Classification ===");
 
         String ticket = "My invoice shows incorrect charges for last month";
@@ -103,7 +103,7 @@ public class CustomerSupportExample {
      * Uses the dispatcher's topic subscription so external (non-agent) callers can receive replies.
      */
     private static CompletableFuture<Message> sendAndAwaitReply(
-            JenticRuntime runtime, Message request, String replyTopic, long timeoutMs) {
+        AgenorRuntime runtime, Message request, String replyTopic, long timeoutMs) {
         CompletableFuture<Message> future = new CompletableFuture<>();
         Subscription sub = runtime.getMessageDispatcher().subscribeTopic(replyTopic, msg -> {
             if (request.id().equals(msg.correlationId())) {

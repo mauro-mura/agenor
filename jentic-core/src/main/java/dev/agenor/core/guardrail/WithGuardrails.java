@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 /**
  * Declaratively attaches guardrails to an {@code LLMAgent} subclass.
  *
- * <p>{@code JenticRuntime} reads this annotation at agent registration time,
+ * <p>{@code AgenorRuntime} reads this annotation at agent registration time,
  * instantiates the listed guardrail classes via their no-arg constructors,
  * builds a {@code GuardrailChain}, and injects it into the agent.
  *

@@ -1,7 +1,7 @@
 package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.directory.AgentResolver;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  * RedisTopicPublisher  publisher  = factory.topicPublisher();
  * RedisMessageTransport transport = factory.messageTransport();
  *
- * // Wire into JenticRuntime.Builder ...
+ * // Wire into AgenorRuntime.Builder ...
  *
  * // On shutdown:
  * factory.close();
@@ -135,7 +135,7 @@ public final class RedisMessagingFactory implements AutoCloseable {
         private int maxStreamLength;
         private long pendingEntriesTimeoutMs;
         private int maxDeliveryAttempts;
-        private JenticTelemetry telemetry;
+        private AgenorTelemetry telemetry;
 
         private Builder() {}
 
@@ -222,7 +222,7 @@ public final class RedisMessagingFactory implements AutoCloseable {
          * @param telemetry telemetry; {@code null} treated as noop
          * @return {@code this}
          */
-        public Builder telemetry(JenticTelemetry telemetry) {
+        public Builder telemetry(AgenorTelemetry telemetry) {
             this.telemetry = telemetry;
             return this;
         }

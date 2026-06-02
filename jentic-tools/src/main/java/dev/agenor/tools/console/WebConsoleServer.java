@@ -1,6 +1,6 @@
 package dev.agenor.tools.console;
 
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 /**
  * Backward-compatible alias for JettyWebConsole.
@@ -35,7 +35,7 @@ public class WebConsoleServer {
         return delegate.getPort();
     }
 
-    public JenticRuntime getRuntime() {
+    public AgenorRuntime getRuntime() {
         return delegate.getRuntime();
     }
 
@@ -45,14 +45,14 @@ public class WebConsoleServer {
 
     public static class Builder {
         private int port = 8080;
-        private JenticRuntime runtime;
+        private AgenorRuntime runtime;
 
         public Builder port(int port) {
             this.port = port;
             return this;
         }
 
-        public Builder runtime(JenticRuntime runtime) {
+        public Builder runtime(AgenorRuntime runtime) {
             this.runtime = runtime;
             return this;
         }

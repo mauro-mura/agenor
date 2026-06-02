@@ -1,7 +1,7 @@
 package dev.agenor.examples;
 
 import dev.agenor.core.Message;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.CyclicBehavior;
 import dev.agenor.runtime.behavior.OneShotBehavior;
@@ -20,7 +20,7 @@ public class SimpleExample {
     public static void main(String[] args) throws InterruptedException {
         log.info("=== Jentic Simple Example (Programmatic) ===");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         // Create agents programmatically
         SimpleAgent agent1 = new SimpleAgent("agent-1", "First Agent");

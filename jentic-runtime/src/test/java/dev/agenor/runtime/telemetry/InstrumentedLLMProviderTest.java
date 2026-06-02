@@ -4,7 +4,7 @@ import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
 import dev.agenor.core.llm.StreamingChunk;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 /**
  * Verifies that {@link InstrumentedLLMProvider} correctly delegates all calls to the
  * underlying provider and does not interfere with responses or exceptions.
- * Uses {@link JenticTelemetry#noop()} so no real OTel wiring is needed.
+ * Uses {@link AgenorTelemetry#noop()} so no real OTel wiring is needed.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("InstrumentedLLMProvider")
@@ -43,7 +43,7 @@ class InstrumentedLLMProviderTest {
 
     @BeforeEach
     void setUp() {
-        instrumented = new InstrumentedLLMProvider(delegate, JenticTelemetry.noop());
+        instrumented = new InstrumentedLLMProvider(delegate, AgenorTelemetry.noop());
     }
 
     // -------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class InstrumentedLLMProviderTest {
     @DisplayName("constructor rejects null delegate")
     void constructor_nullDelegate_throws() {
         org.assertj.core.api.Assertions.assertThatNullPointerException()
-                .isThrownBy(() -> new InstrumentedLLMProvider(null, JenticTelemetry.noop()));
+                .isThrownBy(() -> new InstrumentedLLMProvider(null, AgenorTelemetry.noop()));
     }
 
     @Test

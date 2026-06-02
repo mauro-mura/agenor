@@ -6,7 +6,7 @@ import dev.agenor.adapters.persistence.JdbcHelper;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.AgentStatus;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanBuilder;
 import dev.agenor.core.telemetry.SpanScope;
@@ -354,7 +354,7 @@ class JdbcAgentDirectoryTest {
     // Test telemetry — captures span name, attributes, and final status
     // -------------------------------------------------------------------------
 
-    static final class RecordingTelemetry implements JenticTelemetry {
+    static final class RecordingTelemetry implements AgenorTelemetry {
 
         record CapturedSpan(String name, Map<String, Object> attributes, SpanStatus status) {}
 

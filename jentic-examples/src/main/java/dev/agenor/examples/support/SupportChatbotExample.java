@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import dev.agenor.examples.support.production.LanguageDetector.Language;
 import dev.agenor.examples.support.production.LocalizationService;
 import dev.agenor.examples.support.production.RateLimiter;
 import dev.agenor.examples.support.service.MockUserDataService;
-import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.knowledge.QueryExpander;
 
 /**
@@ -122,7 +122,7 @@ public class SupportChatbotExample {
         // ========== RUNTIME ==========
 
         // Create runtime with package scanning and service injection
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             // Core services
             .service(KnowledgeStore.class, knowledgeStore)
             .service(QueryExpander.class, queryExpander)
@@ -226,7 +226,7 @@ public class SupportChatbotExample {
     /**
      * Interactive console mode with production features.
      */
-    private static void runInteractiveMode(JenticRuntime runtime) throws Exception {
+    private static void runInteractiveMode(AgenorRuntime runtime) throws Exception {
         // Get services from runtime (in real app, these would be injected)
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         String sessionId = UUID.randomUUID().toString().substring(0, 8);
@@ -274,8 +274,8 @@ public class SupportChatbotExample {
     /**
      * Demo mode with predefined queries.
      */
-    private static void runDemoMode(JenticRuntime runtime,
-            AtomicReference<SupportResponse> lastResponse) throws Exception {
+    private static void runDemoMode(AgenorRuntime runtime,
+                                    AtomicReference<SupportResponse> lastResponse) throws Exception {
 
         String[] demoQueries = {
             // Greeting

@@ -5,7 +5,7 @@ import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.context.AgentContext;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class AgentContextExample {
         log.info("Demonstrates plain Agent impl (no BaseAgent) via AgentContext injection");
         log.info("");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         // Classic BaseAgent-based agent
         runtime.registerAgent(new OrderSubmitterAgent());

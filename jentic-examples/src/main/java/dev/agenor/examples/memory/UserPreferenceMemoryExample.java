@@ -12,19 +12,19 @@ import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.memory.MemoryScope;
 import dev.agenor.core.memory.MemoryStats;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.memory.InMemoryStore;
 
 /**
- * Complete runnable example demonstrating memory management with JenticRuntime.
+ * Complete runnable example demonstrating memory management with AgenorRuntime.
  *
- * <p>This example shows the <b>proper integration pattern</b> using JenticRuntime
+ * <p>This example shows the <b>proper integration pattern</b> using AgenorRuntime
  * for automatic agent discovery, annotation processing, and dependency injection.
  *
  * <p><b>Features demonstrated:</b>
  * <ul>
- *   <li>JenticRuntime with automatic agent discovery</li>
+ *   <li>AgenorRuntime with automatic agent discovery</li>
  *   <li>MemoryStore integration via builder</li>
  *   <li>@AgenorMessageHandler automatic registration</li>
  *   <li>@Behavior automatic scheduling</li>
@@ -49,7 +49,7 @@ public class UserPreferenceMemoryExample {
 
         // 2. Create runtime with automatic discovery and memory support
         System.out.println("Creating runtime with agent discovery...");
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.memory")  // Scan for @Agent
             .memoryStore(memoryStore)                     // Enable memory features
             .build();
@@ -174,7 +174,7 @@ public class UserPreferenceMemoryExample {
 /**
  * Agent that tracks user preferences using memory features.
  *
- * <p>This agent is automatically discovered by JenticRuntime through
+ * <p>This agent is automatically discovered by AgenorRuntime through
  * package scanning and configured with all required services including
  * the MemoryStore.
  *

@@ -6,7 +6,7 @@ import dev.agenor.core.hitl.ApprovalGate;
 import dev.agenor.core.hitl.ApprovalNotifier;
 import dev.agenor.core.hitl.ApprovalRequest;
 import dev.agenor.core.hitl.ApprovalTimeoutException;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanStatus;
 import dev.agenor.runtime.behavior.BaseBehavior;
@@ -69,7 +69,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
     private final String actionName;
     private final Duration timeout;
     private final Consumer<ApprovalDecision> decisionHandler;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     /**
      * Creates a new {@code HumanCheckpointBehavior}.
@@ -91,7 +91,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
             String actionName,
             Duration timeout,
             Consumer<ApprovalDecision> decisionHandler) {
-        this(behaviorId, gate, notifier, payload, actionName, timeout, decisionHandler, JenticTelemetry.noop());
+        this(behaviorId, gate, notifier, payload, actionName, timeout, decisionHandler, AgenorTelemetry.noop());
     }
 
     /**
@@ -116,7 +116,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
             String actionName,
             Duration timeout,
             Consumer<ApprovalDecision> decisionHandler,
-            JenticTelemetry telemetry) {
+            AgenorTelemetry telemetry) {
 
         super(behaviorId, BehaviorType.ONE_SHOT, null);
         this.gate = Objects.requireNonNull(gate, "gate must not be null");
@@ -125,7 +125,7 @@ public class HumanCheckpointBehavior<T> extends BaseBehavior {
         this.actionName = Objects.requireNonNull(actionName, "actionName must not be null");
         this.timeout = Objects.requireNonNull(timeout, "timeout must not be null");
         this.decisionHandler = Objects.requireNonNull(decisionHandler, "decisionHandler must not be null");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------

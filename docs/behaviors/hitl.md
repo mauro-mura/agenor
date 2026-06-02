@@ -63,7 +63,7 @@ agent.addBehavior(checkpoint);
 
 ## Annotation-based usage — @RequiresApproval
 
-Declare the checkpoint on a behavior class. `JenticRuntime` wraps it automatically
+Declare the checkpoint on a behavior class. `AgenorRuntime` wraps it automatically
 at registration time:
 
 ```java
@@ -88,7 +88,7 @@ notifiers that need parameters.
 
 ## Submitting decisions
 
-`JenticRuntime.getApprovalService()` exposes the decision API:
+`AgenorRuntime.getApprovalService()` exposes the decision API:
 
 ```java
 ApprovalService service = runtime.getApprovalService();

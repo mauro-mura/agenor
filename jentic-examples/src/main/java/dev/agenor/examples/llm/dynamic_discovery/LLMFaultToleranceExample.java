@@ -5,7 +5,7 @@ import dev.agenor.core.annotations.*;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.adapters.llm.openai.OpenAIProvider;
 
@@ -47,7 +47,7 @@ public class LLMFaultToleranceExample {
             .build();
 
         // Create runtime
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.llm.dynamic_discovery")
             .service(LLMProvider.class, llmProvider)
             .build();
@@ -91,7 +91,7 @@ public class LLMFaultToleranceExample {
         runtime.stop().join();
     }
 
-    private static void sendResearchRequest(JenticRuntime runtime, String coordinatorId, String topic) {
+    private static void sendResearchRequest(AgenorRuntime runtime, String coordinatorId, String topic) {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")

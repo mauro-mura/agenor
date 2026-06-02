@@ -8,7 +8,7 @@ import dev.agenor.core.directory.AgentResolver;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.Subscription;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
     private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     private final AgentResolver agentResolver;
-    private volatile JenticTelemetry telemetry;
+    private volatile AgenorTelemetry telemetry;
 
     // Key: topic name
     private final Map<String, List<MessageHandler>> topicSubscriptions = new ConcurrentHashMap<>();
@@ -62,7 +62,7 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
      * @param agentResolver resolver used to translate agent IDs to transport endpoints; must not be null
      */
     public InMemoryMessageDispatcher(AgentResolver agentResolver) {
-        this(agentResolver, JenticTelemetry.noop());
+        this(agentResolver, AgenorTelemetry.noop());
     }
 
     /**
@@ -71,9 +71,9 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
      * @param agentResolver resolver used to translate agent IDs to transport endpoints; must not be null
      * @param telemetry     telemetry instance for {@code message.send} spans; null treated as noop
      */
-    public InMemoryMessageDispatcher(AgentResolver agentResolver, JenticTelemetry telemetry) {
+    public InMemoryMessageDispatcher(AgentResolver agentResolver, AgenorTelemetry telemetry) {
         this.agentResolver = Objects.requireNonNull(agentResolver, "agentResolver");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /**
@@ -81,8 +81,8 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
      *
      * @param telemetry the telemetry instance; null treated as noop
      */
-    public void setTelemetry(JenticTelemetry telemetry) {
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+    public void setTelemetry(AgenorTelemetry telemetry) {
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 package dev.agenor.runtime.behavior;
 
 import dev.agenor.core.condition.Condition;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.ConditionalBehavior;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.core.telemetry.JenticTelemetry;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +27,7 @@ class ConditionalBehaviorTest {
     @BeforeEach
     void setUp() {
         agent = new TestAgent();
-        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop()));
+        agent.setMessageDispatcher(new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop()));
         agent.setAgentDirectory(new InMemoryAgentDirectory());
 
         scheduler = new SimpleBehaviorScheduler();

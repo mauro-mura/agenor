@@ -7,7 +7,7 @@ import dev.agenor.adapters.persistence.hitl.JdbcApprovalGate;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalRequest;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.CyclicBehavior;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ import java.util.concurrent.CountDownLatch;
  *       from any JVM sharing the same DB.</li>
  *   <li>The DB row persists across JVM restarts (use {@link JdbcApprovalGate#recoverExpired()}
  *       on startup to mark stale rows as EXPIRED).</li>
- *   <li>The {@link JenticRuntime} accepts the gate via {@code .approvalGate(gate)} —
+ *   <li>The {@link AgenorRuntime} accepts the gate via {@code .approvalGate(gate)} —
  *       no in-memory {@code InMemoryApprovalGate} is involved.</li>
  * </ul>
  *
@@ -59,7 +59,7 @@ public class PersistentHitlExample {
         var done = new CountDownLatch(1);
 
         // --- Build runtime wired with the JDBC gate ---
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
                 .withDefaultConfig()
                 .approvalGate(gate)
                 .build();

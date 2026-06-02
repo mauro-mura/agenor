@@ -4,13 +4,13 @@ import dev.agenor.core.BehaviorType;
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 
 public class ThrottledExample {
 
     public static void main(String[] args) throws InterruptedException {
-        var runtime = JenticRuntime.builder().build();
+        var runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(new APICallerAgent());
         runtime.start().join();
 

@@ -8,13 +8,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import dev.agenor.adapters.llm.openai.OpenAIProvider;
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.adapters.llm.LLMProviderFactory;
 import dev.agenor.core.Message;
 import dev.agenor.core.llm.LLMProvider;
-import dev.agenor.runtime.JenticRuntime;
 
 /**
  * Example demonstrating how to use the AIAssistantAgent in a Jentic application.
@@ -55,7 +55,7 @@ public class AIAssistantExample {
                 .build();
 
         // Create and configure Jentic runtime
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.llm.tools")
             .service(LLMProvider.class, llmProvider)
             .build();
@@ -80,7 +80,7 @@ public class AIAssistantExample {
         log.info("AI Assistant Example completed");
     }
 
-    private void runChatSession(JenticRuntime runtime) {
+    private void runChatSession(AgenorRuntime runtime) {
         System.out.println();
         System.out.println("=== AI Assistant Chat Demo ===");
         System.out.println("The AI Assistant has the following tools available:");
@@ -128,7 +128,7 @@ public class AIAssistantExample {
         scanner.close();
     }
 
-    private String sendChatRequest(JenticRuntime runtime, String userInput) throws Exception {
+    private String sendChatRequest(AgenorRuntime runtime, String userInput) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         StringBuilder response = new StringBuilder();
 
@@ -179,7 +179,7 @@ public class AIAssistantExample {
         log.info("Starting Tool Execution Demo");
 
         // Setup runtime
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         LLMProvider llmProvider = LLMProviderFactory.openai()
             .apiKey(System.getenv("OPENAI_API_KEY"))
@@ -224,7 +224,7 @@ public class AIAssistantExample {
         }
     }
 
-    private String executeToolDirectly(JenticRuntime runtime, String toolName, Map<String, Object> arguments)
+    private String executeToolDirectly(AgenorRuntime runtime, String toolName, Map<String, Object> arguments)
             throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         StringBuilder result = new StringBuilder();

@@ -4,7 +4,7 @@ import dev.agenor.adapters.persistence.JdbcHelper;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.directory.AgentRegistry;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,19 +55,19 @@ public class JdbcAgentRegistry implements AgentRegistry {
             "INSERT INTO jentic_agent_capabilities (agent_id, capability) VALUES (?, ?)";
 
     private final JdbcHelper helper;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     public JdbcAgentRegistry(JdbcHelper helper) {
-        this(helper, JenticTelemetry.noop());
+        this(helper, AgenorTelemetry.noop());
     }
 
     /**
      * @param helper    JDBC helper; must not be null
      * @param telemetry telemetry for registry spans; null treated as noop
      */
-    public JdbcAgentRegistry(JdbcHelper helper, JenticTelemetry telemetry) {
+    public JdbcAgentRegistry(JdbcHelper helper, AgenorTelemetry telemetry) {
         this.helper = Objects.requireNonNull(helper, "helper must not be null");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /**

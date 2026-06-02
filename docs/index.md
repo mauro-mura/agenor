@@ -59,7 +59,7 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 
 | Document                                      | Description                                                  |
 |-----------------------------------------------|--------------------------------------------------------------|
-| [Spring Boot Starter](spring-boot-starter.md) | zero-configuration auto-wiring of `JenticRuntime` into any Spring Boot 4.0.x application |
+| [Spring Boot Starter](spring-boot-starter.md) | zero-configuration auto-wiring of `AgenorRuntime` into any Spring Boot 4.0.x application |
 
 ## Examples
 

@@ -8,7 +8,7 @@ import dev.agenor.core.PageRequest;
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +59,7 @@ public class JdbcDirectoryExample {
 
         try (var jdbcDirectory = JdbcAgentDirectory.create(config)) {
 
-            JenticRuntime runtime = JenticRuntime.builder()
+            AgenorRuntime runtime = AgenorRuntime.builder()
                     .agentRegistry(jdbcDirectory.registry())
                     .agentDiscovery(jdbcDirectory.discovery())
                     .agentResolver(jdbcDirectory.resolver())

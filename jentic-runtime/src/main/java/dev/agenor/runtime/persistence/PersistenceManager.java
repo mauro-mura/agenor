@@ -117,7 +117,7 @@ public class PersistenceManager {
 
     /**
      * Register an agent for automatic persistence.
-     * Called automatically by JenticRuntime when agents are registered.
+     * Called automatically by AgenorRuntime when agents are registered.
      */
     public void registerAgent(Agent agent) {
         if (!(agent instanceof Stateful)) {
@@ -152,7 +152,7 @@ public class PersistenceManager {
 
     /**
      * Unregister an agent from automatic persistence.
-     * Called automatically by JenticRuntime when agents are unregistered.
+     * Called automatically by AgenorRuntime when agents are unregistered.
      */
     public void unregisterAgent(String agentId) {
         AgentPersistenceContext context = agentContexts.remove(agentId);

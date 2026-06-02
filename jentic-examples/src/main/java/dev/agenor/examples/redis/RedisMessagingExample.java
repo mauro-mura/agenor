@@ -5,7 +5,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,7 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
  * <p>{@link RedisMessagingFactory#messageDispatcher()} returns a
  * {@link dev.agenor.adapters.messaging.redis.RedisMessageDispatcher} that backs all
  * agent messaging with Redis Streams. Passing it to
- * {@code JenticRuntime.Builder.messageDispatcher(...)} replaces the default in-memory
+ * {@code AgenorRuntime.Builder.messageDispatcher(...)} replaces the default in-memory
  * bus without any changes to the runtime or to the agent code.
  *
  * <p><b>What this example demonstrates:</b>
@@ -68,7 +68,7 @@ public class RedisMessagingExample {
                 .consumerGroupPrefix("agenor-example")
                 .build()) {
 
-            JenticRuntime runtime = JenticRuntime.builder()
+            AgenorRuntime runtime = AgenorRuntime.builder()
                     .messageDispatcher(factory.messageDispatcher())
                     .build();
 

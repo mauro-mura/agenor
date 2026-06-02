@@ -5,7 +5,7 @@ import dev.agenor.core.annotations.*;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.adapters.llm.openai.OpenAIProvider;
 
@@ -40,7 +40,7 @@ public class LLMDirectMessagingExample {
             .maxTokens(1500)
             .build();
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         runtime.registerAgent(new CoordinatorAgent(llmProvider));
         runtime.registerAgent(new TechnicalResearcher(llmProvider));

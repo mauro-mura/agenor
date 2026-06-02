@@ -13,7 +13,7 @@ import java.util.Objects;
  * Facade that receives human decisions from external systems (HTTP handlers,
  * webhooks, tests) and forwards them to {@link InMemoryApprovalGate}.
  *
- * <p>Exposed as a singleton via {@code JenticRuntime.getApprovalService()} (T7).
+ * <p>Exposed as a singleton via {@code AgenorRuntime.getApprovalService()} (T7).
  * External callers use the convenience methods {@link #approve}, {@link #reject},
  * and {@link #modify}, or the generic {@link #submit} for arbitrary decisions.
  *

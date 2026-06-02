@@ -5,11 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import dev.agenor.core.exceptions.AgenorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Behavior;
-import dev.agenor.core.exceptions.JenticException;
 import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalGate;
 import dev.agenor.core.hitl.ApprovalNotifier;
@@ -24,10 +24,10 @@ import dev.agenor.runtime.behavior.advanced.HumanCheckpointBehavior;
  * with a {@link BaseAgent} and wraps each annotated behavior in a
  * {@link HumanCheckpointBehavior} at agent registration time.
  *
- * <p>Called by {@code JenticRuntime.registerAgent()} for every {@link BaseAgent}:
+ * <p>Called by {@code AgenorRuntime.registerAgent()} for every {@link BaseAgent}:
  *
  * <pre>{@code
- * // Inside JenticRuntime.registerAgent():
+ * // Inside AgenorRuntime.registerAgent():
  * if (agent instanceof BaseAgent baseAgent) {
  *     HitlAnnotationProcessor.process(baseAgent, approvalGate);
  * }
@@ -188,7 +188,7 @@ public final class HitlAnnotationProcessor {
      * Thrown when a behavior class listed in {@code @RequiresApproval} cannot be
      * wired at agent bootstrap time.
      */
-    public static class HitlWiringException extends JenticException {
+    public static class HitlWiringException extends AgenorException {
         private static final long serialVersionUID = -5557669097342903733L;
 
 		public HitlWiringException(String message, Throwable cause) {

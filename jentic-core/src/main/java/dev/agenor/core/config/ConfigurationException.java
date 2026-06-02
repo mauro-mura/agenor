@@ -1,8 +1,8 @@
 package dev.agenor.core.config;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
-public class ConfigurationException extends JenticException {
+public class ConfigurationException extends AgenorException {
         public ConfigurationException(String message) {
             super(message);
         }

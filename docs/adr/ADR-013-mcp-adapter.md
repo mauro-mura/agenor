@@ -79,7 +79,7 @@ jentic-core
 
 jentic-adapters
   └── dev.agenor.adapters.mcp
-        ├── JenticMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
+        ├── AgenorMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
         ├── McpToolMapper.java          (SDK types → Jentic records)
         ├── McpClientFactory.java       (factory: serverUrl → adapter)
         ├── McpToolRegistry.java        (cache TTL 60s + ToolListChanged)
@@ -89,7 +89,7 @@ jentic-adapters
 ### Bridge Pattern
 
 ```java
-// JenticMcpClientAdapter — async bridge over sync SDK
+// AgenorMcpClientAdapter — async bridge over sync SDK
 public CompletableFuture<List<McpTool>> listTools() {
     return CompletableFuture.supplyAsync(() ->
         sdkClient.listTools().tools().stream()
@@ -109,7 +109,7 @@ The transitive Reactor dependency is therefore confined to the adapters module.
 
 ## Consequences
 
-- `JenticMcpClientAdapter` requires a dedicated thread pool for `supplyAsync()` calls (default: `ForkJoinPool.commonPool()`; configurable)
+- `AgenorMcpClientAdapter` requires a dedicated thread pool for `supplyAsync()` calls (default: `ForkJoinPool.commonPool()`; configurable)
 - `McpClientFactory` performs the MCP handshake (`initialize()`) synchronously at construction time — callers should construct outside hot paths
 - `McpToolRegistry` must handle `ToolListChanged` notifications from the SDK to invalidate its cache immediately
 - **Supported transports (F2 scope): SSE + STDIO** — SSE via `HttpClientSseClientTransport` (remote servers), STDIO via `StdioClientTransport` (local processes, required by the `npx @modelcontextprotocol/server-filesystem` example in T6)

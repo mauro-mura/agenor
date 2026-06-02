@@ -4,7 +4,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.advanced.BatchBehavior;
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ public class BatchProcessingExample {
         log.info("Scenario: Log Aggregation and Database Batch Operations");
         log.info("=".repeat(80) + "\n");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         runtime.registerAgent(new EventGeneratorAgent());
         runtime.registerAgent(new LogAggregatorAgent());

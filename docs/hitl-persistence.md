@@ -55,7 +55,7 @@ var gate = new JdbcApprovalGate(dataSource, cfg.getJdbcUrl());
 gate.recoverExpired();  // mark stale rows EXPIRED on startup
 
 // Wire into the runtime
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .withDefaultConfig()
         .approvalGate(gate)
         .build();
@@ -75,7 +75,7 @@ jentic:
 ```
 
 When `jentic.hitl.provider=jdbc` and `jentic-adapters-persistence` is on the classpath,
-the auto-configuration creates the `JdbcApprovalGate` bean and wires it into `JenticRuntime`
+the auto-configuration creates the `JdbcApprovalGate` bean and wires it into `AgenorRuntime`
 automatically.
 
 If `jentic.hitl.jdbc.url` is not set, the auto-configuration falls back to

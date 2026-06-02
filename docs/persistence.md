@@ -24,7 +24,7 @@ jentic-core / dev.agenor.core.persistence
 
 jentic-runtime / dev.agenor.runtime.persistence
 ├── FilePersistenceService.java  # JSON file-based PersistenceService
-└── PersistenceManager.java      # Auto-save orchestrator, wired by JenticRuntime
+└── PersistenceManager.java      # Auto-save orchestrator, wired by AgenorRuntime
 ```
 
 ---
@@ -231,13 +231,13 @@ List<String> snapshots = service.listSnapshots(agentId).join();
 agents that implement `Stateful`, schedules periodic saves or snapshots, and flushes all states
 on shutdown.
 
-### Integration with JenticRuntime (recommended)
+### Integration with AgenorRuntime (recommended)
 
 ```java
 var persistence = new FilePersistenceService(Path.of("data/agents"));
 var manager     = new PersistenceManager(persistence);
 
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
     .scanPackage("com.example.agents")
     .service(PersistenceManager.class, manager)
     .build();

@@ -242,7 +242,7 @@ values (e.g., `"payment-agent-1"`, `"payment-agent-2"`) and discover by type via
   `"local"`, `"redis"`) and `endpoint_props` (JSON-serialised `Map<String,String>`).
   Reconstructed into an `AgentEndpoint` record on read. No JSONB-specific features are used
   so the schema works on Postgres, MySQL, and H2.
-- `node_id` is a UUID generated once at `JenticRuntime` startup. It identifies the owning JVM
+- `node_id` is a UUID generated once at `AgenorRuntime` startup. It identifies the owning JVM
   and is written into `AgentEndpoint.transportProps` for Redis-based point-to-point routing.
 - `jentic_agent_capabilities` is normalised (not a JSON array) to allow
   `findByCapability(String)` to use an index scan rather than a JSON path expression.
@@ -291,7 +291,7 @@ the PK and the upsert: whichever node registers last owns the routing entry for 
 
 ### Observability
 
-OTel spans emitted via `JenticTelemetry` (ADR-019):
+OTel spans emitted via `AgenorTelemetry` (ADR-019):
 
 | Operation | Span name | Key attributes |
 |-----------|-----------|----------------|

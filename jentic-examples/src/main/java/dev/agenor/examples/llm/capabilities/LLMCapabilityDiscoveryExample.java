@@ -7,7 +7,7 @@ import dev.agenor.core.annotations.*;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 
 import java.util.*;
@@ -43,7 +43,7 @@ public class LLMCapabilityDiscoveryExample {
             .logResponses(true)
             .build();
 
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.llm.capabilities")
             .service(LLMProvider.class, llmProvider)
             .build();
@@ -73,8 +73,8 @@ public class LLMCapabilityDiscoveryExample {
         runtime.stop().join();
     }
 
-    private static void sendResearchRequest(JenticRuntime runtime, String coordinatorId,
-                                             String topic, String analysisType) {
+    private static void sendResearchRequest(AgenorRuntime runtime, String coordinatorId,
+                                            String topic, String analysisType) {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")

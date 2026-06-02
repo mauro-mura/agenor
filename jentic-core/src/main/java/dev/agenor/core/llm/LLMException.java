@@ -1,6 +1,6 @@
 package dev.agenor.core.llm;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 /**
  * Exception thrown during LLM operations.
@@ -31,7 +31,7 @@ import dev.agenor.core.exceptions.JenticException;
  *
  * @since 0.3.0
  */
-public class LLMException extends JenticException {
+public class LLMException extends AgenorException {
 
     /**
      * Type of LLM error.

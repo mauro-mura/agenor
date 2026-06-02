@@ -2,7 +2,7 @@ package dev.agenor.tools.console;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.*;
 
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.*;
 class WebConsoleServerTest {
 
     private static WebConsoleServer console;
-    private static JenticRuntime runtime;
+    private static AgenorRuntime runtime;
     private static HttpClient httpClient;
     private static ObjectMapper objectMapper;
     private static final int TEST_PORT = 8888;
@@ -36,7 +36,7 @@ class WebConsoleServerTest {
     @BeforeAll
     static void setUp() throws Exception {
         // Create runtime
-        runtime = JenticRuntime.builder().build();
+        runtime = AgenorRuntime.builder().build();
 
         // Create and register test agents
         runtime.registerAgent(new TestAgent("test-agent-1", "Test Agent 1"));

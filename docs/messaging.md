@@ -26,10 +26,10 @@ interface MessageDispatcher extends TopicPublisher, TopicSubscriber, DirectMesse
 
 ## Getting the Dispatcher
 
-### Via JenticRuntime
+### Via AgenorRuntime
 
 ```java
-JenticRuntime runtime = JenticRuntime.builder().build();
+AgenorRuntime runtime = AgenorRuntime.builder().build();
 runtime.start().join();
 
 MessageDispatcher dispatcher = runtime.getMessageDispatcher();
@@ -37,7 +37,7 @@ MessageDispatcher dispatcher = runtime.getMessageDispatcher();
 
 ### Via Spring Boot
 
-`MessageDispatcher` is exposed as a Spring bean automatically by `JenticAutoConfiguration`:
+`MessageDispatcher` is exposed as a Spring bean automatically by `AgenorAutoConfiguration`:
 
 ```java
 @Service
@@ -187,7 +187,7 @@ Existing code that uses `MessageService` continues to compile without changes vi
 To plug in a custom messaging backend (Redis Streams, Kafka, etc.):
 
 1. Implement `MessageDispatcher` (and optionally `FilterableSubscriber`).
-2. Register it as a Spring bean or pass it to `JenticRuntime.Builder.messageDispatcher()`.
+2. Register it as a Spring bean or pass it to `AgenorRuntime.Builder.messageDispatcher()`.
 
 ```java
 // Custom Redis-backed dispatcher (example)

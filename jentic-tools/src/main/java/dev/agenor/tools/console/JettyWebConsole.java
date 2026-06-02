@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.console.WebConsole;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.agenor.tools.history.MessageHistoryService;
 import org.eclipse.jetty.server.Server;
@@ -33,7 +33,7 @@ public class JettyWebConsole implements WebConsole {
     private static final Logger logger = LoggerFactory.getLogger(JettyWebConsole.class);
 
     private final int port;
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final ObjectMapper objectMapper;
     private final MessageHistoryService messageHistory;
     private final int messageHistorySize;
@@ -158,7 +158,7 @@ public class JettyWebConsole implements WebConsole {
         return "http://localhost:" + port;
     }
 
-    public JenticRuntime getRuntime() {
+    public AgenorRuntime getRuntime() {
         return runtime;
     }
 
@@ -186,7 +186,7 @@ public class JettyWebConsole implements WebConsole {
 
     public static class Builder {
         private int port = 8080;
-        private JenticRuntime runtime;
+        private AgenorRuntime runtime;
         private int messageHistorySize = MessageHistoryService.DEFAULT_MAX_SIZE;
         private MessageHistoryService messageHistory;
 
@@ -198,7 +198,7 @@ public class JettyWebConsole implements WebConsole {
             return this;
         }
 
-        public Builder runtime(JenticRuntime runtime) {
+        public Builder runtime(AgenorRuntime runtime) {
             this.runtime = runtime;
             return this;
         }

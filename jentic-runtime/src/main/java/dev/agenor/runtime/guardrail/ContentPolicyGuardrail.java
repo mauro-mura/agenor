@@ -3,7 +3,7 @@ package dev.agenor.runtime.guardrail;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 import dev.agenor.core.guardrail.GuardrailContext;
 import dev.agenor.core.guardrail.GuardrailResult;
 import dev.agenor.core.guardrail.InputGuardrail;
@@ -231,7 +231,7 @@ public class ContentPolicyGuardrail implements InputGuardrail, OutputGuardrail {
     // -------------------------------------------------------------------------
 
     /** Thrown when the YAML policy file cannot be found or parsed. */
-    public static class ContentPolicyLoadException extends JenticException {
+    public static class ContentPolicyLoadException extends AgenorException {
 		private static final long serialVersionUID = -3037695906265543020L;
 		public ContentPolicyLoadException(String message) {
             super(message);

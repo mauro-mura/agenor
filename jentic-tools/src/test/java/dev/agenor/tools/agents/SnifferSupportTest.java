@@ -1,7 +1,7 @@
 package dev.agenor.tools.agents;
 
 import dev.agenor.core.filter.MessageFilter;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.filter.TopicFilter;
 import dev.agenor.tools.history.MessageHistoryService;
 import dev.agenor.tools.history.MessageHistoryService.StoredMessage;
@@ -16,11 +16,11 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("SnifferSupport")
 class SnifferSupportTest {
 
-    private JenticRuntime runtime;
+    private AgenorRuntime runtime;
 
     @BeforeEach
     void setUp() {
-        runtime = JenticRuntime.builder().build();
+        runtime = AgenorRuntime.builder().build();
     }
 
     // =========================================================================

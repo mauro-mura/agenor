@@ -6,7 +6,7 @@ import dev.agenor.core.PageRequest;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class PingPongExample {
     public static void main(String[] args) throws InterruptedException {
         log.info("=== Jentic Ping-Pong Example ===");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         runtime.registerAgent(new PingAgent());
         runtime.registerAgent(new PongAgent());

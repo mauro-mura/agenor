@@ -4,7 +4,7 @@ import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
 import dev.agenor.core.llm.StreamingChunk;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.Span;
 import dev.agenor.core.telemetry.SpanStatus;
 
@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  *   <li>{@code llm.chat.stream} — same attributes plus {@code llm.stream.chunks}</li>
  * </ul>
  *
- * <p>When telemetry is {@link JenticTelemetry#noop()}, this decorator adds no overhead
+ * <p>When telemetry is {@link AgenorTelemetry#noop()}, this decorator adds no overhead
  * beyond a single interface dispatch.
  *
  * @since 0.19.0
@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 public final class InstrumentedLLMProvider implements LLMProvider {
 
     private final LLMProvider delegate;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     /**
      * Creates an {@code InstrumentedLLMProvider}.
@@ -41,7 +41,7 @@ public final class InstrumentedLLMProvider implements LLMProvider {
      * @param delegate  the underlying provider; never {@code null}
      * @param telemetry the telemetry instance; never {@code null}
      */
-    public InstrumentedLLMProvider(LLMProvider delegate, JenticTelemetry telemetry) {
+    public InstrumentedLLMProvider(LLMProvider delegate, AgenorTelemetry telemetry) {
         this.delegate  = Objects.requireNonNull(delegate,  "delegate must not be null");
         this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }

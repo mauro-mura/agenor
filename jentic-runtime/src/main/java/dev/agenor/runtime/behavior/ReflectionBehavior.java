@@ -3,7 +3,7 @@ package dev.agenor.runtime.behavior;
 import dev.agenor.core.reflection.CritiqueResult;
 import dev.agenor.core.reflection.ReflectionConfig;
 import dev.agenor.core.reflection.ReflectionStrategy;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +60,7 @@ public class ReflectionBehavior extends OneShotBehavior {
     private final ReflectionStrategy strategy;
     private final ReflectionConfig config;
     private final Consumer<String> onResult;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     /** Stores the best output produced during the loop; readable after execution. */
     private final AtomicReference<String> result = new AtomicReference<>("");
@@ -73,7 +73,7 @@ public class ReflectionBehavior extends OneShotBehavior {
         this.strategy = builder.strategy;
         this.config = builder.config;
         this.onResult = builder.onResult;
-        this.telemetry = builder.telemetry != null ? builder.telemetry : JenticTelemetry.noop();
+        this.telemetry = builder.telemetry != null ? builder.telemetry : AgenorTelemetry.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -184,7 +184,7 @@ public class ReflectionBehavior extends OneShotBehavior {
         private ReflectionStrategy strategy;
         private ReflectionConfig config = ReflectionConfig.defaults();
         private Consumer<String> onResult;
-        private JenticTelemetry telemetry;
+        private AgenorTelemetry telemetry;
 
         private Builder(String behaviorId) {
             this.behaviorId = behaviorId;
@@ -237,7 +237,7 @@ public class ReflectionBehavior extends OneShotBehavior {
          * @return {@code this}
          * @since 0.19.0
          */
-        public Builder telemetry(JenticTelemetry telemetry) {
+        public Builder telemetry(AgenorTelemetry telemetry) {
             this.telemetry = telemetry;
             return this;
         }

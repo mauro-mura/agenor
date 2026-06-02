@@ -8,8 +8,8 @@ import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
-import dev.agenor.core.telemetry.JenticTelemetry;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.LLMAgent;
 import dev.agenor.runtime.guardrail.GuardrailChain;
 import org.slf4j.Logger;
@@ -23,16 +23,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Observability Example — demonstrates OpenTelemetry integration (ADR-019).
  *
  * <p>Shows how to enable distributed tracing by adding a single
- * {@link JenticTelemetry} instance to the runtime:
+ * {@link AgenorTelemetry} instance to the runtime:
  *
  * <pre>{@code
- * JenticTelemetry telemetry = OtelTelemetryFactory.builder()
+ * AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
  *     .serviceName("my-agent")
  *     .exporter("otlp-http")
  *     .endpoint("http://localhost:4318")
  *     .build();
  *
- * JenticRuntime runtime = JenticRuntime.builder()
+ * AgenorRuntime runtime = AgenorRuntime.builder()
  *     .telemetry(telemetry)
  *     .build();
  * }</pre>
@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * the runtime falls back to noop telemetry with zero overhead.
  *
  * @see OtelTelemetryFactory
- * @see JenticTelemetry
+ * @see AgenorTelemetry
  * @since 0.19.0
  */
 public class ObservabilityExample {
@@ -73,7 +73,7 @@ public class ObservabilityExample {
                                                            "http://localhost:4318");
         String serviceName  = System.getenv().getOrDefault("OTEL_SERVICE_NAME", "agenor-example");
 
-        JenticTelemetry telemetry = OtelTelemetryFactory.builder()
+        AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
                 .serviceName(serviceName)
                 .exporter(exporterType)
                 .endpoint(endpoint)
@@ -91,7 +91,7 @@ public class ObservabilityExample {
         //    InstrumentedLLMProvider is applied automatically when an LLMAgent
         //    is registered (via LLMAgent.installTelemetry()).
         // ------------------------------------------------------------------
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
                 .telemetry(telemetry)
                 .build();
 
@@ -123,7 +123,7 @@ public class ObservabilityExample {
         }
 
         // ------------------------------------------------------------------
-        // 6. Graceful shutdown — runtime.stop() closes OtelJenticTelemetry
+        // 6. Graceful shutdown — runtime.stop() closes OtelAgenorTelemetry
         //    which calls OpenTelemetrySdk.close(), forcing the BatchSpanProcessor
         //    to flush all buffered spans before the process exits.
         // ------------------------------------------------------------------

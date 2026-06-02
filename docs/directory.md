@@ -21,10 +21,10 @@ interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, A
 
 ## Getting the Directory
 
-### Via JenticRuntime
+### Via AgenorRuntime
 
 ```java
-JenticRuntime runtime = JenticRuntime.builder().build();
+AgenorRuntime runtime = AgenorRuntime.builder().build();
 runtime.
 
 start().
@@ -204,7 +204,7 @@ The old `dev.agenor.core.AgentDirectory` is deprecated in 0.20.0 and will be rem
 To plug in a custom directory backend (Redis, JDBC, etc.):
 
 1. Implement `dev.agenor.core.directory.AgentDirectory` (or individual capability interfaces).
-2. Register as a Spring bean or pass to `JenticRuntime.Builder`:
+2. Register as a Spring bean or pass to `AgenorRuntime.Builder`:
 
 ```java
 // Spring Boot
@@ -214,7 +214,7 @@ public AgentRegistry redisAgentRegistry(RedisTemplate<String, AgentDescriptor> t
 }
 
 // Programmatic
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
     .agentRegistry(new RedisAgentRegistry(template))
     .agentResolver(new RedisAgentRegistry(template))
     .agentDiscovery(new RedisAgentRegistry(template))

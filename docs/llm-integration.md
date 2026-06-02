@@ -432,7 +432,7 @@ ModelTokenLimits.register("my-fine-tuned-model", 16_384);
 
 ### Injecting LLMMemoryManager into the runtime
 
-Register it via `JenticRuntime.builder()` so that it is automatically injected into `LLMAgent` instances:
+Register it via `AgenorRuntime.builder()` so that it is automatically injected into `LLMAgent` instances:
 
 ```java
 var memory = new DefaultLLMMemoryManager(
@@ -441,7 +441,7 @@ var memory = new DefaultLLMMemoryManager(
     "shared-memory"
 );
 
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
     .scanPackage("com.example.agents")
     .llmMemoryManager(memory)
     .build();

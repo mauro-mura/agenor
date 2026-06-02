@@ -7,7 +7,7 @@ package dev.agenor.core.directory;
  * default implementation is {@code InMemoryAgentDirectory} in {@code agenor-runtime}.
  *
  * <p>For mix-and-match backends (e.g., JDBC registry + in-memory presence), wire the
- * individual capability interfaces via {@code JenticRuntime.Builder} rather than using
+ * individual capability interfaces via {@code AgenorRuntime.Builder} rather than using
  * this composite. The runtime assembles the right implementation per capability.
  *
  * @since 0.20.0

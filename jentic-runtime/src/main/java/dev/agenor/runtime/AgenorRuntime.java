@@ -1,0 +1,905 @@
+package dev.agenor.runtime;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
+import dev.agenor.core.*;
+import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.context.AgentContext;
+import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.core.hitl.ApprovalGate;
+import dev.agenor.runtime.hitl.ApprovalService;
+import dev.agenor.runtime.hitl.HitlAnnotationProcessor;
+import dev.agenor.runtime.hitl.InMemoryApprovalGate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.agenor.core.directory.AgentDiscovery;
+import dev.agenor.core.directory.AgentPresence;
+import dev.agenor.core.directory.AgentRegistry;
+import dev.agenor.core.directory.AgentResolver;
+import dev.agenor.core.messaging.MessageDispatcher;
+import dev.agenor.core.config.ConfigurationLoader;
+import dev.agenor.core.config.ConfigurationException;
+import dev.agenor.core.llm.LLMMemoryAware;
+import dev.agenor.core.memory.MemoryStore;
+import dev.agenor.core.memory.llm.LLMMemoryManager;
+import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.behavior.advanced.HumanCheckpointBehavior;
+import dev.agenor.runtime.config.DefaultConfigurationLoader;
+import dev.agenor.runtime.directory.CompositeAgentDirectory;
+import dev.agenor.runtime.directory.InMemoryAgentDirectory;
+import dev.agenor.runtime.discovery.AgentFactory;
+import dev.agenor.runtime.discovery.AgentScanner;
+import dev.agenor.runtime.discovery.AnnotationProcessor;
+import dev.agenor.runtime.guardrail.GuardrailAnnotationProcessor;
+import dev.agenor.runtime.lifecycle.LifecycleListener;
+import dev.agenor.runtime.lifecycle.LifecycleManager;
+import dev.agenor.runtime.memory.llm.DefaultLLMMemoryManager;
+import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
+import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
+
+/**
+ * Main runtime for the Jentic framework with automatic agent discovery.
+ * Manages agent lifecycle, service discovery, and annotation processing.
+ */
+public class AgenorRuntime {
+
+    private static final Logger log = LoggerFactory.getLogger(AgenorRuntime.class);
+
+    private final AgenorConfiguration configuration;
+    private final MessageDispatcher messageDispatcher;
+    private final AgentDirectory agentDirectory;
+    private final BehaviorScheduler behaviorScheduler;
+    private final MemoryStore memoryStore;
+    private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
+    private final AgenorTelemetry telemetry;
+
+    // HITL: singleton gate and service — shared across all agents
+    private final ApprovalGate approvalGate;
+    private final ApprovalService approvalService;
+
+    // Discovery components
+    private final AgentScanner agentScanner;
+    private final AgentFactory agentFactory;
+    private final AnnotationProcessor annotationProcessor;
+    private final LifecycleManager lifecycleManager;
+
+    // Configuration
+    private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
+
+    private final Map<String, dev.agenor.core.Agent> agents = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Object> serviceInstances = new ConcurrentHashMap<>();
+
+    private volatile boolean running = false;
+
+    private AgenorRuntime(Builder builder) {
+        // Configuration (from file or builder)
+        this.configuration = builder.configuration;
+
+        logConfigurationInfo();
+
+        // Initialize services
+        this.telemetry = builder.telemetry != null ? builder.telemetry : AgenorTelemetry.noop();
+
+        // Directory: composite from per-capability setters, or in-memory default
+        InMemoryAgentDirectory defaultDir = new InMemoryAgentDirectory(
+                java.util.UUID.randomUUID().toString(), this.telemetry);
+        if (builder.agentRegistry != null || builder.agentDiscovery != null
+                || builder.agentResolver != null || builder.agentPresence != null) {
+            this.agentDirectory = new CompositeAgentDirectory(
+                    builder.agentRegistry != null ? builder.agentRegistry : defaultDir,
+                    builder.agentDiscovery != null ? builder.agentDiscovery : defaultDir,
+                    builder.agentResolver != null ? builder.agentResolver : defaultDir,
+                    builder.agentPresence != null ? builder.agentPresence : defaultDir
+            );
+        } else {
+            this.agentDirectory = defaultDir;
+        }
+
+        // Dispatcher: prefer explicitly provided dispatcher; default to InMemoryMessageDispatcher
+        AgentResolver resolverForDispatcher = (this.agentDirectory instanceof AgentResolver ar)
+                ? ar : defaultDir;
+        this.messageDispatcher = builder.messageDispatcher != null
+                ? builder.messageDispatcher
+                : new InMemoryMessageDispatcher(resolverForDispatcher, this.telemetry);
+        this.behaviorScheduler = builder.behaviorScheduler != null ?
+                builder.behaviorScheduler : new SimpleBehaviorScheduler(4, this.telemetry);
+        this.memoryStore = builder.memoryStore; // optional
+
+        this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
+                builder.llmMemoryManagerFactory :
+                this.createDefaultLLMMemoryManagerFactory();
+
+        // HITL: use provided gate or default in-memory
+        this.approvalGate = builder.approvalGate != null
+                ? builder.approvalGate
+                : new InMemoryApprovalGate();
+        this.approvalService = new ApprovalService(this.approvalGate);
+
+        // Initialize discovery components
+        this.agentScanner = new AgentScanner();
+        this.agentFactory = new AgentFactory(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore);
+        this.annotationProcessor = new AnnotationProcessor(messageDispatcher);
+        this.lifecycleManager = new LifecycleManager();
+
+        // Add default lifecycle listener
+        this.lifecycleManager.addLifecycleListener(LifecycleListener.logging());
+
+        this.serviceInstances.putAll(builder.serviceInstances);
+
+        // Register additional services with the factory
+        for (Map.Entry<Class<?>, Object> entry : serviceInstances.entrySet()) {
+            registerServiceUnchecked(entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     *  Creates the default LLM memory manager factory.
+     * @return a factory function that creates LLMMemoryManager instances per agent
+     */
+    private Function<String,LLMMemoryManager> createDefaultLLMMemoryManagerFactory() {
+		if (memoryStore == null) return null;
+    	return agentId -> new DefaultLLMMemoryManager(
+		    memoryStore,
+		    new dev.agenor.runtime.memory.llm.SimpleTokenEstimator(),
+		    agentId
+		);
+	}
+
+    /**
+     * Start the runtime and all registered agents
+     */
+    public CompletableFuture<Void> start() {
+        if (running) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        log.info("Starting Jentic Runtime...");
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                // Start core services
+                behaviorScheduler.start().join();
+
+                // Discover and create agents
+                if (!configuration.agents().getAllScanPackages().isEmpty()) {
+                    discoverAndCreateAgents();
+                }
+
+                // Process annotations for all agents
+                processAgentAnnotations();
+
+                // Start all agents
+                startAllAgents();
+
+                running = true;
+                log.info("Jentic Runtime started successfully with {} agents", agents.size());
+
+                // Log agent summary
+                logAgentSummary();
+
+            } catch (Exception e) {
+                log.error("Failed to start Jentic Runtime", e);
+                throw new RuntimeException("Failed to start runtime", e);
+            }
+        });
+    }
+
+    /**
+     * Stop the runtime and all agents
+     */
+    public CompletableFuture<Void> stop() {
+        if (!running) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        log.info("Stopping Jentic Runtime...");
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                // Stop all agents
+                List<CompletableFuture<Void>> stopFutures = new ArrayList<>();
+                for (dev.agenor.core.Agent agent : agents.values()) {
+                    if (agent.isRunning()) {
+                        CompletableFuture<Void> stopFuture = lifecycleManager
+                                .stopAgent(agent, DEFAULT_SHUTDOWN_TIMEOUT)
+                                .thenCompose(v -> {
+                                    // Unregister from the directory after a successful stop
+                                    log.debug("Unregistering agent {} from directory", agent.getAgentId());
+                                    return agentDirectory.unregister(agent.getAgentId());
+                                })
+                                .exceptionally(throwable -> {
+                                    log.error("Failed to stop agent: {} - {}",
+                                            agent.getAgentId(), throwable.getMessage());
+                                    return null;
+                                });
+                        stopFutures.add(stopFuture);
+                    }
+                }
+
+                // Wait for all agents to stop
+                CompletableFuture.allOf(stopFutures.toArray(new CompletableFuture[0])).join();
+
+                // Stop core services
+                behaviorScheduler.stop().join();
+
+                // Flush and shut down telemetry (forces BatchSpanProcessor export)
+                if (telemetry instanceof AutoCloseable closeable) {
+                    try {
+                        closeable.close();
+                    } catch (Exception e) {
+                        log.warn("Error closing telemetry during shutdown", e);
+                    }
+                }
+
+                running = false;
+                log.info("Jentic Runtime stopped successfully");
+
+            } catch (Exception e) {
+                log.error("Error stopping Jentic Runtime", e);
+            }
+        });
+    }
+
+    /**
+     * Get an agent by ID
+     */
+    public Optional<dev.agenor.core.Agent> getAgent(String agentId) {
+        return Optional.ofNullable(agents.get(agentId));
+    }
+
+    /**
+     * Get all registered agents
+     */
+    public Collection<dev.agenor.core.Agent> getAgents() {
+        return Collections.unmodifiableCollection(agents.values());
+    }
+
+    /**
+     * Register a new agent instance
+     */
+    public void registerAgent(dev.agenor.core.Agent agent) {
+        Objects.requireNonNull(agent, "Agent cannot be null");
+        String agentId = agent.getAgentId();
+        if (agentId == null || agentId.isBlank()) {
+            agentId = java.util.UUID.randomUUID().toString();
+            log.warn("Agent ID not set. Generated random ID: {}", agentId);
+        }
+        agents.put(agentId, agent);
+
+        // Configure agent services
+        if (agent instanceof BaseAgent baseAgent) {
+            baseAgent.setMessageDispatcher(messageDispatcher);
+            baseAgent.setAgentDirectory(agentDirectory);
+            baseAgent.setBehaviorScheduler(behaviorScheduler);
+            if (memoryStore != null) {
+                baseAgent.setMemoryStore(memoryStore);
+            }
+        }
+        if (agent instanceof LLMMemoryAware llmAware && llmMemoryManagerFactory != null) {
+            llmAware.setLLMMemoryManager(llmMemoryManagerFactory.apply(agent.getAgentId()));
+        }
+
+        // Inject guardrail chain from @WithGuardrails annotation (LLMAgent only)
+        if (agent instanceof LLMAgent llmAgent) {
+            GuardrailAnnotationProcessor.process(llmAgent);
+            llmAgent.installTelemetry(telemetry);
+        }
+
+        // Wrap behaviors annotated with @RequiresApproval (BaseAgent and subclasses)
+        if (agent instanceof BaseAgent baseAgent) {
+            HitlAnnotationProcessor.process(baseAgent, approvalGate);
+        }
+
+        // Create a descriptor and register in a directory
+        AgentDescriptor descriptor = agentFactory.createDescriptor(
+                agent.getClass(),
+                agent
+        );
+
+        agentDirectory.register(descriptor)
+                .exceptionally(throwable -> {
+                    log.error("Failed to register agent {} in directory: {}",
+                            agent.getAgentId(), throwable.getMessage());
+                    return null;
+                });
+
+        log.info("Registered agent: {} ({}) in runtime and directory",
+                agent.getAgentName(), agent.getAgentId());
+    }
+
+    /**
+     * Create an agent from a class using annotation discovery
+     */
+    public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) {
+        try {
+            T agent = agentFactory.createAgent(agentClass);
+            Objects.requireNonNull(agent, "Factory returned null agent for class: " + agentClass.getName());
+
+            registerAgent(agent);
+
+            // Process annotations if runtime is already started
+            if (running) {
+                annotationProcessor.processAnnotations(agent);
+            }
+
+            return agent;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create agent: " + agentClass.getName(), e);
+        }
+    }
+
+    /**
+     * Get the agent directory
+     */
+    public AgentDirectory getAgentDirectory() {
+        return agentDirectory;
+    }
+
+    /**
+     * Returns the {@link MessageDispatcher} for this runtime.
+     *
+     * @return the message dispatcher; never null
+     * @since 0.20.0
+     */
+    public MessageDispatcher getMessageDispatcher() {
+        return messageDispatcher;
+    }
+
+    /**
+     * Get the behavior scheduler
+     */
+    public BehaviorScheduler getBehaviorScheduler() {
+        return behaviorScheduler;
+    }
+
+    /**
+     * Returns an {@link AgentContext} wrapping the core runtime services.
+     *
+     * <p>Useful when manually instantiating agents that implement {@link dev.agenor.core.Agent}
+     * directly (without extending {@code BaseAgent}) and need all services
+     * in a single object:
+     *
+     * <pre>{@code
+     * var agent = new MyDomainAgent(runtime.getAgentContext());
+     * runtime.registerAgent(agent);
+     * }</pre>
+     *
+     * <p>When agents are discovered via package scanning, {@code AgentFactory}
+     * builds and injects the context automatically — this method is only needed
+     * for manually registered agents.
+     *
+     * @return a new {@link AgentContext} built from the current runtime services
+     * @since 0.10.0
+     */
+    public AgentContext getAgentContext() {
+        return new AgentContext(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore);
+    }
+
+    /**
+     * Check if runtime is currently running
+     */
+    public boolean isRunning() {
+        return running;
+    }
+
+    /**
+     * Get the lifecycle manager
+     */
+    public LifecycleManager getLifecycleManager() {
+        return lifecycleManager;
+    }
+
+    /**
+     * Get the current configuration
+     */
+    public AgenorConfiguration getConfiguration() {
+        return configuration;
+    }
+    /**
+     * Get runtime statistics
+     */
+    public RuntimeStats getStats() {
+        long runningAgents = agents.values().stream().mapToLong(agent -> agent.isRunning() ? 1 : 0).sum();
+
+        return new RuntimeStats(
+                agents.size(),
+                (int) runningAgents,
+                configuration.agents().getAllScanPackages().size(),
+                serviceInstances.size()
+        );
+    }
+
+    /**
+     * Returns the {@link AgenorTelemetry} instance wired into this runtime.
+     *
+     * @return the telemetry instance; never {@code null} (falls back to noop)
+     * @since 0.19.0
+     */
+    public AgenorTelemetry getTelemetry() {
+        return telemetry;
+    }
+
+    /**
+     * Returns the singleton {@link ApprovalService} for this runtime.
+     *
+     * <p>External systems (HTTP handlers, tests, webhooks) call this service to
+     * submit human approval decisions for pending {@link HumanCheckpointBehavior}
+     * executions.
+     *
+     * @return the approval service; never {@code null}
+     * @since 0.13.0
+     */
+    public ApprovalService getApprovalService() {
+        return approvalService;
+    }
+
+    /**
+     * Helper method to register services with type erasure
+     */
+    @SuppressWarnings("unchecked")
+    private <T> void registerServiceUnchecked(Class<?> serviceClass, Object instance) {
+        agentFactory.addService((Class<T>) serviceClass, (T) instance);
+    }
+
+    // ========== PRIVATE METHODS ==========
+
+    /**
+     * Log configuration information
+     */
+    private void logConfigurationInfo() {
+        log.debug("Runtime Configuration:");
+        log.debug("  Name: {}", configuration.runtime().name());
+        log.debug("  Environment: {}", configuration.runtime().environment());
+
+        if (!configuration.runtime().properties().isEmpty()) {
+            log.debug("  Properties:");
+            configuration.runtime().properties().forEach((key, value) ->
+                    log.debug("    {}: {}", key, value)
+            );
+        }
+
+        log.debug("Agent Configuration:");
+        log.debug("  Auto Discovery: {}", configuration.agents().autoDiscovery());
+        log.debug("  Scan Packages: {}", configuration.agents().getAllScanPackages());
+
+        if (!configuration.agents().properties().isEmpty()) {
+            log.debug("  Properties:");
+            configuration.agents().properties().forEach((key, value) ->
+                    log.debug("    {}: {}", key, value)
+            );
+        }
+    }
+
+    /**
+     * Discover agents from configured packages and create instances
+     */
+    private void discoverAndCreateAgents() {
+        List<String> packages = configuration.agents().getAllScanPackages();
+        log.info("Starting agent discovery in {} packages", packages.size());
+
+        // Scan for agent classes
+        String[] packageArray = packages.toArray(new String[0]);
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = agentScanner.scanForAgents(packageArray);
+
+        if (agentClasses.isEmpty()) {
+            log.info("No agent classes found in scanned packages");
+            return;
+        }
+
+        // Create agent instances
+        Map<String, dev.agenor.core.Agent> discoveredAgents = agentFactory.createAgents(agentClasses);
+
+        // Register discovered agents
+        for (dev.agenor.core.Agent agent : discoveredAgents.values()) {
+            registerAgent(agent);
+        }
+
+        log.info("Agent discovery completed. Created {} agents from {} classes",
+                discoveredAgents.size(), agentClasses.size());
+    }
+
+    /**
+     * Process annotations for all registered agents
+     */
+    private void processAgentAnnotations() {
+        log.info("Processing annotations for {} agents", agents.size());
+
+        for (dev.agenor.core.Agent agent : agents.values()) {
+            try {
+                annotationProcessor.processAnnotations(agent);
+            } catch (Exception e) {
+                log.error("Failed to process annotations for agent: {}", agent.getAgentId(), e);
+            }
+        }
+
+        log.info("Annotation processing completed");
+    }
+
+    /**
+     * Start all registered agents
+     */
+    private void startAllAgents() {
+        List<CompletableFuture<Void>> startFutures = new ArrayList<>();
+
+        for (dev.agenor.core.Agent agent : agents.values()) {
+            // Check if the agent should auto-start
+            if (shouldAutoStart(agent)) {
+                // Use LifecycleManager for proper state tracking and timeout handling
+                CompletableFuture<Void> startFuture = lifecycleManager
+                        .startAgent(agent, DEFAULT_STARTUP_TIMEOUT)
+                        .thenCompose(v -> {
+                            // Update agent status in the directory after a successful start
+                            log.debug("Updating agent {} status to RUNNING in directory",
+                                    agent.getAgentId());
+                            return agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.RUNNING);
+                        })
+                        .exceptionally(throwable -> {
+                            log.error("Failed to start agent: {} - {}",
+                                    agent.getAgentId(), throwable.getMessage());
+                            // Update status to ERROR in the directory
+                            agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.ERROR)
+                                    .exceptionally(ex -> {
+                                        log.warn("Could not update error status for agent {}",
+                                                agent.getAgentId());
+                                        return null;
+                                    });
+                            // Don't fail the entire startup for one agent
+                            return null;
+                        });
+                startFutures.add(startFuture);
+            }
+        }
+
+        // Wait for all agents to start
+        CompletableFuture.allOf(startFutures.toArray(new CompletableFuture[0])).join();
+    }
+
+    /**
+     * Check if the agent should auto-start based on annotation
+     */
+    private boolean shouldAutoStart(dev.agenor.core.Agent agent) {
+        Agent annotation = agent.getClass().getAnnotation(Agent.class);
+        return annotation == null || annotation.autoStart();
+    }
+
+    /**
+     * Log summary of discovered and registered agents
+     */
+    private void logAgentSummary() {
+        if (agents.isEmpty()) {
+            log.info("No agents registered");
+            return;
+        }
+
+        log.info("Agent Summary:");
+        agents.values().forEach(agent -> {
+            Agent annotation = agent.getClass().getAnnotation(Agent.class);
+            String type = annotation != null ? annotation.type() : "unknown";
+            String[] capabilities = annotation != null ? annotation.capabilities() : new String[0];
+
+            log.info("  - {} ({}) - Type: {}, Capabilities: [{}], Running: {}",
+                    agent.getAgentName(),
+                    agent.getAgentId(),
+                    type.isEmpty() ? agent.getClass().getSimpleName() : type,
+                    String.join(", ", capabilities),
+                    agent.isRunning());
+        });
+    }
+
+    /**
+     * Unregister an agent from runtime and directory
+     */
+    public CompletableFuture<Void> unregisterAgent(String agentId) {
+        dev.agenor.core.Agent agent = agents.remove(agentId);
+
+        if (agent == null) {
+            log.warn("Attempted to unregister non-existent agent: {}", agentId);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        log.info("Unregistering agent: {} ({})", agent.getAgentName(), agentId);
+
+        // Stop if running
+        CompletableFuture<Void> stopFuture = agent.isRunning()
+                ? agent.stop()
+                : CompletableFuture.completedFuture(null);
+
+        // Then unregister from the directory
+        return stopFuture
+                .thenCompose(v -> agentDirectory.unregister(agentId))
+                .exceptionally(throwable -> {
+                    log.error("Error unregistering agent {}: {}",
+                            agentId, throwable.getMessage());
+                    return null;
+                });
+    }
+
+    // ========== BUILDER ==========
+
+    /**
+     * Create a new runtime builder
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private AgenorConfiguration configuration;
+        private MessageDispatcher messageDispatcher;
+        private AgentRegistry agentRegistry;
+        private AgentResolver agentResolver;
+        private AgentDiscovery agentDiscovery;
+        private AgentPresence agentPresence;
+        private BehaviorScheduler behaviorScheduler;
+        private MemoryStore memoryStore;
+        private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
+        private AgenorTelemetry telemetry;
+        private ApprovalGate approvalGate;
+        private final Set<String> scanPackages = new HashSet<>();
+        private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
+
+        /**
+         * Load configuration from the YAML / JSON file
+         *
+         * @param configPath path to a configuration file
+         * @return this builder
+         * @throws ConfigurationException if loading fails or the configuration is invalid
+         */
+        public Builder fromFilesystemConfig(String configPath) {
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
+            this.configuration = loader.loadFromFile(configPath);
+            loader.validate(this.configuration);
+            log.info("Loaded configuration from file: {}", configPath);
+            return this;
+        }
+
+        /**
+         * Load configuration from a classpath resource
+         *
+         * @param resourcePath classpath resource path
+         * @return this builder
+         * @throws ConfigurationException if loading fails
+         */
+        public Builder fromClasspathConfig(String resourcePath) {
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
+            this.configuration = loader.loadFromClasspath(resourcePath);
+            loader.validate(this.configuration);
+            log.info("Loaded configuration from classpath: {}", resourcePath);
+            return this;
+        }
+
+        /**
+         * Use the provided configuration object
+         *
+         * @param config the configuration to use
+         * @return this builder
+         * @throws ConfigurationException if the configuration is null or invalid
+         */
+        public Builder withConfiguration(AgenorConfiguration config) {
+            if (config == null) {
+                throw new ConfigurationException("Configuration cannot be null");
+            }
+            new DefaultConfigurationLoader().validate(config);
+            this.configuration = config;
+            log.info("Using provided configuration: {}", config.runtime().name());
+            return this;
+        }
+
+        /**
+         * Load the default configuration (agenor.yml from filesystem or classpath)
+         *
+         * @return this builder
+         * @throws ConfigurationException if loading fails or the configuration is invalid
+         */
+        public Builder withDefaultConfig() {
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
+            this.configuration = loader.loadDefault();
+            loader.validate(this.configuration);
+            log.info("Loaded default configuration");
+            return this;
+        }
+
+        /**
+         * Sets the message dispatcher.
+         *
+         * @param dispatcher the dispatcher to use; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder messageDispatcher(MessageDispatcher dispatcher) {
+            this.messageDispatcher = dispatcher;
+            return this;
+        }
+
+        /**
+         * Sets the agent registry capability.
+         *
+         * <p>When individual capability setters are used, the runtime assembles a composite
+         * directory from all provided capabilities.
+         *
+         * @param registry the registry implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentRegistry(AgentRegistry registry) {
+            this.agentRegistry = registry;
+            return this;
+        }
+
+        /**
+         * Sets the agent resolver capability.
+         *
+         * @param resolver the resolver implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentResolver(AgentResolver resolver) {
+            this.agentResolver = resolver;
+            return this;
+        }
+
+        /**
+         * Sets the agent discovery capability.
+         *
+         * @param discovery the discovery implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentDiscovery(AgentDiscovery discovery) {
+            this.agentDiscovery = discovery;
+            return this;
+        }
+
+        /**
+         * Sets the agent presence capability.
+         *
+         * @param presence the presence implementation; must not be null
+         * @return this builder
+         * @since 0.20.0
+         */
+        public Builder agentPresence(AgentPresence presence) {
+            this.agentPresence = presence;
+            return this;
+        }
+
+        public Builder behaviorScheduler(BehaviorScheduler behaviorScheduler) {
+            this.behaviorScheduler = behaviorScheduler;
+            return this;
+        }
+
+        public Builder memoryStore(MemoryStore memoryStore) {
+           this.memoryStore = memoryStore;
+           return this;
+        }
+
+        public Builder llmMemoryManagerFactory(Function<String, LLMMemoryManager> factory) {
+            this.llmMemoryManagerFactory = factory;
+            return this;
+        }
+
+        /**
+         * Sets the telemetry instance used to emit spans for LLM calls, guardrails,
+         * behavior execution, and HITL approvals.
+         *
+         * @param telemetry the telemetry instance; {@code null} uses noop
+         * @return {@code this}
+         * @since 0.19.0
+         */
+        public Builder telemetry(AgenorTelemetry telemetry) {
+            this.telemetry = telemetry;
+            return this;
+        }
+
+        /**
+         * Sets the approval gate used for HITL workflows.
+         *
+         * <p>Defaults to {@link InMemoryApprovalGate} when not set. Provide a
+         * persistent implementation (e.g. {@code JdbcApprovalGate}) to survive
+         * JVM restarts.
+         *
+         * @param gate the approval gate; must not be null
+         * @return {@code this}
+         * @since 0.23.0
+         */
+        public Builder approvalGate(ApprovalGate gate) {
+            this.approvalGate = gate;
+            return this;
+        }
+
+        public Builder scanPackage(String packageName) {
+            if (packageName != null && !packageName.trim().isEmpty()) {
+                this.scanPackages.add(packageName.trim());
+            }
+            return this;
+        }
+
+        public Builder scanPackages(String... packageNames) {
+            for (String packageName : packageNames) {
+                scanPackage(packageName);
+            }
+            return this;
+        }
+
+        public Builder scanPackages(Collection<String> packageNames) {
+            for (String packageName : packageNames) {
+                scanPackage(packageName);
+            }
+            return this;
+        }
+
+        public <T> Builder service(Class<T> serviceClass, T instance) {
+            if (serviceClass != null && instance != null) {
+                this.serviceInstances.put(serviceClass, instance);
+            }
+            return this;
+        }
+
+        public AgenorRuntime build() {
+            // Use default config if none provided
+            if (this.configuration == null) {
+                log.debug("No configuration provided, using defaults");
+                this.configuration = AgenorConfiguration.defaults();
+            }
+
+            // Merge builder scan packages with configuration
+            if (!scanPackages.isEmpty()) {
+                log.debug("Merging {} builder scan packages with configuration", scanPackages.size());
+
+                List<String> allPackages = new ArrayList<>(configuration.agents().getAllScanPackages());
+                allPackages.addAll(scanPackages);
+
+                AgenorConfiguration.AgentsConfig updatedAgentsConfig =
+                        new AgenorConfiguration.AgentsConfig(
+                                configuration.agents().autoDiscovery(),
+                                configuration.agents().basePackage(),
+                                configuration.agents().scanPaths(),
+                                allPackages,  // scanPackages
+                                configuration.agents().properties()
+                        );
+
+                this.configuration = new AgenorConfiguration(
+                        configuration.runtime(),
+                        updatedAgentsConfig,
+                        configuration.messaging(),
+                        configuration.directory(),
+                        configuration.scheduler()
+                );
+            }
+            return new AgenorRuntime(this);
+        }
+    }
+
+    // ========== RUNTIME STATS ==========
+
+    /**
+     * Runtime statistics record
+     */
+    public record RuntimeStats(
+            int totalAgents,
+            int runningAgents,
+            int scannedPackages,
+            int registeredServices
+    ) {
+        @Override
+        public String toString() {
+            return String.format("RuntimeStats[agents=%d/%d, packages=%d, services=%d]",
+                    runningAgents, totalAgents, scannedPackages, registeredServices);
+        }
+    }
+}

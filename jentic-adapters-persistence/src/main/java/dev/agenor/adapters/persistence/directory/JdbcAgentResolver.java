@@ -3,7 +3,7 @@ package dev.agenor.adapters.persistence.directory;
 import dev.agenor.adapters.persistence.JdbcHelper;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.directory.AgentResolver;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 
 import java.util.List;
@@ -25,19 +25,19 @@ public class JdbcAgentResolver implements AgentResolver {
             "FROM jentic_agents WHERE agent_id = ?";
 
     private final JdbcHelper helper;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     public JdbcAgentResolver(JdbcHelper helper) {
-        this(helper, JenticTelemetry.noop());
+        this(helper, AgenorTelemetry.noop());
     }
 
     /**
      * @param helper    JDBC helper; must not be null
      * @param telemetry telemetry for {@code directory.resolve} spans; null treated as noop
      */
-    public JdbcAgentResolver(JdbcHelper helper, JenticTelemetry telemetry) {
+    public JdbcAgentResolver(JdbcHelper helper, AgenorTelemetry telemetry) {
         this.helper = Objects.requireNonNull(helper, "helper must not be null");
-        this.telemetry = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     @Override

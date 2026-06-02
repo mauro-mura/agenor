@@ -3,7 +3,7 @@ package dev.agenor.examples.eval;
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.tools.eval.*;
 
@@ -20,7 +20,7 @@ public class QuickStartEvaluationExample {
 
     public static void main(String[] args) {
         // 1. Create runtime
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.start();
 
         // 2. Create runner

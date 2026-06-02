@@ -2,11 +2,11 @@ package dev.agenor.examples.cli;
 
 import java.util.concurrent.CountDownLatch;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.filter.MessageFilter;
-import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.tools.agents.MessageSnifferAgent;
 import dev.agenor.tools.console.JettyWebConsole;
 import dev.agenor.tools.history.MessageHistoryService;
@@ -28,7 +28,7 @@ import dev.agenor.tools.history.MessageHistoryService;
  * # 3. In Terminal 2, use the CLI:
  *
  * # List all agents
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="list"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="list"
  * +----------------+--------------------+---------+------------------------+
  * | ID             | NAME               | STATUS  | TYPE                   |
  * +----------------+--------------------+---------+------------------------+
@@ -39,7 +39,7 @@ import dev.agenor.tools.history.MessageHistoryService;
  * Total: 3 agent(s)
  *
  * # Check runtime status
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="status"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="status"
  * === Jentic Runtime Status ===
  *
  * Health:     ✓ UP
@@ -48,7 +48,7 @@ import dev.agenor.tools.history.MessageHistoryService;
  * Uptime:     45s
  *
  * # Check specific agent
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="status sensor-agent"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="status sensor-agent"
  * === Agent: Temperature Sensor ===
  *
  * ID:         sensor-agent
@@ -57,15 +57,15 @@ import dev.agenor.tools.history.MessageHistoryService;
  * Status:     RUNNING
  *
  * # Stop an agent
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="stop sensor-agent"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="stop sensor-agent"
  * ✓ Agent 'sensor-agent' stopped successfully
  *
  * # Start an agent
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="start sensor-agent"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="start sensor-agent"
  * ✓ Agent 'sensor-agent' started successfully
  *
  * # Health check
- * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args="health"
+ * mvn exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args="health"
  * === Health Check ===
  *
  * Status:     ✓ UP
@@ -77,7 +77,7 @@ import dev.agenor.tools.history.MessageHistoryService;
  * ✓ Runtime is healthy
  *
  * # Alternatively, create an alias for easier usage:
- * alias agenor='mvn -q exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.JenticCLI" -Dexec.args='
+ * alias agenor='mvn -q exec:java -pl agenor-tools -Dexec.mainClass="dev.agenor.tools.cli.AgenorCLI" -Dexec.args='
  * agenor "list"
  * agenor "status"
  * agenor "health"
@@ -100,7 +100,7 @@ public class CLIExample {
         );
 
         // Build runtime with sample agents
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
                 .scanPackages("dev.agenor.examples.cli")
                 .build();
 

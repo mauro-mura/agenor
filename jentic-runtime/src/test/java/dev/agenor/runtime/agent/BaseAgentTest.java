@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,6 @@ import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.memory.MemoryScope;
 import dev.agenor.core.memory.MemoryStats;
-import dev.agenor.core.telemetry.JenticTelemetry;
 import dev.agenor.runtime.behavior.OneShotBehavior;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.memory.InMemoryStore;
@@ -41,7 +41,7 @@ class BaseAgentTest {
     @BeforeEach
     void setUp() {
         agentDirectory = new InMemoryAgentDirectory();
-        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, AgenorTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
 

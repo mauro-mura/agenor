@@ -6,7 +6,7 @@
 
 ### Context
 
-The WebConsole in `jentic-tools` was tightly coupled to Jetty and directly dependent on `JenticRuntime`. We wanted to:
+The WebConsole in `jentic-tools` was tightly coupled to Jetty and directly dependent on `AgenorRuntime`. We wanted to:
 
 1. Allow alternative implementations (Spring Boot, Netty)
 2. Keep it simple to use
@@ -25,7 +25,7 @@ dev.agenor.core.console/
 ```
 
 We **do not** create `AgentInfoProvider` or `MetricsProvider` because:
-- `JenticRuntime` already has all necessary methods
+- `AgenorRuntime` already has all necessary methods
 - It would add complexity without immediate benefit
 - Can be added later if remote/multi-runtime consoles are needed
 
@@ -58,4 +58,4 @@ console.start().join();
 - Zero breaking changes (WebConsoleServer deprecated but still works)
 
 ### Negative
-- Console coupled to JenticRuntime (acceptable for now)
+- Console coupled to AgenorRuntime (acceptable for now)

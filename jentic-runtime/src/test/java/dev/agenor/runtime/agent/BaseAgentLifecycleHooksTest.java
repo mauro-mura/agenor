@@ -2,7 +2,7 @@ package dev.agenor.runtime.agent;
 
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.messaging.MessageDispatcher;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
@@ -28,7 +28,7 @@ class BaseAgentLifecycleHooksTest {
 
     @BeforeEach
     void setUp() {
-        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(new InMemoryAgentDirectory(), AgenorTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
 

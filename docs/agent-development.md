@@ -41,11 +41,11 @@ public class HelloAgent extends BaseAgent {
 ## Bootstrapping the Runtime
 
 ```java
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 public class App {
     public static void main(String[] args) {
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
                 .scanPackage("com.example.agents")
                 .build();
 
@@ -463,13 +463,13 @@ manager.restore(myAgent);        // restore @Persist fields
 ```
 
 ## Configuration
-- Minimal code-based configuration via `JenticRuntime.builder()`
+- Minimal code-based configuration via `AgenorRuntime.builder()`
 - Optional YAML support via `ConfigurationLoader` (see Configuration Reference)
 
 ## Testing
 - Use JUnit 5 and Mockito/AssertJ.
 - For unit tests, instantiate your agent and invoke behavior methods directly.
-- For integration-like tests, bootstrap a `JenticRuntime` with a small package and verify message exchanges.
+- For integration-like tests, bootstrap a `AgenorRuntime` with a small package and verify message exchanges.
 
 ## Examples
 See `jentic-examples`:

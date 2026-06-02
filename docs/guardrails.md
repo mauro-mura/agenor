@@ -50,7 +50,7 @@ Execution semantics:
 
 ## `@WithGuardrails` annotation
 
-Declare guardrails on the agent class. `JenticRuntime` instantiates them via their
+Declare guardrails on the agent class. `AgenorRuntime` instantiates them via their
 public no-arg constructor and injects the chain at registration time:
 
 ```java
@@ -211,7 +211,7 @@ passing contextual information from the agent to its guardrails.
 
 ## Handling `GuardrailViolationException`
 
-`GuardrailViolationException` extends `JenticException` (unchecked). Catch it
+`GuardrailViolationException` extends `AgenorException` (unchecked). Catch it
 explicitly when you need to react to policy violations:
 
 ```java

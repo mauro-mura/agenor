@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,6 @@ import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;
-import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 
 /**
@@ -28,7 +28,7 @@ public class TaskManagerExample {
     public static void main(String[] args) throws InterruptedException {
         log.info("=== Jentic Task Manager Example ===");
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
 
         // Register agents
         runtime.registerAgent(new TaskCreatorAgent());

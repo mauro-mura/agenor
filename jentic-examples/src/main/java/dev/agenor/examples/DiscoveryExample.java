@@ -1,9 +1,8 @@
 package dev.agenor.examples;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import dev.agenor.runtime.JenticRuntime;
 
 /**
  * Example demonstrating automatic agent discovery through package scanning.
@@ -16,7 +15,7 @@ public class DiscoveryExample {
         log.info("=== Jentic Agent Discovery Example ===");
 
         // Create runtime with package scanning
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackage("dev.agenor.examples.discovery") // Scan specific package
             .build();
 

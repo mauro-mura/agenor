@@ -1,13 +1,13 @@
 package dev.agenor.examples.a2a;
 
 import dev.agenor.adapters.a2a.A2AAdapterConfig;
-import dev.agenor.adapters.a2a.JenticA2AAdapter;
-import dev.agenor.adapters.a2a.JenticAgentExecutor;
+import dev.agenor.adapters.a2a.AgenorA2AAdapter;
+import dev.agenor.adapters.a2a.AgenorAgentExecutor;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.dialogue.DialogueCapability;
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
  * <p>This example demonstrates:
  * <ol>
  *   <li>Creating an A2AAdapterConfig for agent metadata</li>
- *   <li>Exposing a Jentic agent as an A2A server via JenticAgentExecutor</li>
- *   <li>Using JenticA2AAdapter for auto-routing (internal/external)</li>
+ *   <li>Exposing a Jentic agent as an A2A server via AgenorAgentExecutor</li>
+ *   <li>Using AgenorA2AAdapter for auto-routing (internal/external)</li>
  *   <li>Communicating with external A2A agents</li>
  * </ol>
  *
@@ -50,7 +50,7 @@ public class A2AIntegrationExample {
         // Create internal agent
         OrderProcessorAgent processor = new OrderProcessorAgent();
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(processor);
         runtime.start().join();
 
@@ -97,13 +97,13 @@ public class A2AIntegrationExample {
         System.out.println("└─────────────────────────────────────────────────────────┘");
 
         // Create executor for handling incoming A2A requests
-        AgentExecutor executor = new JenticAgentExecutor(
+        AgentExecutor executor = new AgenorAgentExecutor(
             processor.getAgentId(),
             runtime.getMessageDispatcher(),
             Duration.ofMinutes(5)
         );
 
-        System.out.println("[A2A Server] JenticAgentExecutor created");
+        System.out.println("[A2A Server] AgenorAgentExecutor created");
         System.out.println("             Routes A2A requests to: " + processor.getAgentId());
 
         // In production, this would be registered with an A2A server:
@@ -112,11 +112,11 @@ public class A2AIntegrationExample {
 
         // === Part 4: Client-side (A2AAdapter) ===
         System.out.println("\n┌─────────────────────────────────────────────────────────┐");
-        System.out.println("│ Part 4: A2A Client (JenticA2AAdapter)                   │");
+        System.out.println("│ Part 4: A2A Client (AgenorA2AAdapter)                   │");
         System.out.println("└─────────────────────────────────────────────────────────┘");
 
         // Create A2A adapter for sending messages
-        JenticA2AAdapter adapter = new JenticA2AAdapter(
+        AgenorA2AAdapter adapter = new AgenorA2AAdapter(
             runtime.getMessageDispatcher(),
             runtime.getAgentDirectory(),
             "client-agent",

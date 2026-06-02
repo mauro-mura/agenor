@@ -1,6 +1,6 @@
 package dev.agenor.tools.metrics;
 
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -25,14 +25,14 @@ import java.util.concurrent.atomic.*;
  */
 public class MetricsService {
 
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final Instant startTime;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
     private final Map<String, Gauge> gauges = new ConcurrentHashMap<>();
     private final Map<String, Timer> timers = new ConcurrentHashMap<>();
     private final Map<String, Histogram> histograms = new ConcurrentHashMap<>();
 
-    public MetricsService(JenticRuntime runtime) {
+    public MetricsService(AgenorRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "Runtime cannot be null");
         this.startTime = Instant.now();
         registerDefaultGauges();

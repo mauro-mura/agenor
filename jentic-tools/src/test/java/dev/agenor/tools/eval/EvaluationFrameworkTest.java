@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import dev.agenor.runtime.AgenorRuntime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.Message;
-import dev.agenor.runtime.JenticRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.tools.health.HealthCheckService.HealthReport;
 import dev.agenor.tools.health.HealthCheckService.HealthStatus;
@@ -267,11 +267,11 @@ class EvaluationFrameworkTest {
     class EvaluationContextTests {
 
         private EvaluationContext context;
-        private JenticRuntime mockRuntime;
+        private AgenorRuntime mockRuntime;
 
         @BeforeEach
         void setUp() {
-            mockRuntime = JenticRuntime.builder().build();
+            mockRuntime = AgenorRuntime.builder().build();
 
             MetricsSnapshot metrics = new MetricsSnapshot(
                 Map.of(

@@ -1,6 +1,6 @@
 package dev.agenor.core.guardrail;
 
-import dev.agenor.core.exceptions.JenticException;
+import dev.agenor.core.exceptions.AgenorException;
 
 import java.util.Objects;
 
@@ -8,7 +8,7 @@ import java.util.Objects;
  * Thrown when a guardrail in the chain returns {@link GuardrailResult.Blocked},
  * indicating that the content must not proceed through the pipeline.
  *
- * <p>Extends {@link JenticException} (unchecked) to be consistent with the Jentic
+ * <p>Extends {@link AgenorException} (unchecked) to be consistent with the Jentic
  * exception hierarchy (ADR-014). Callers may catch it explicitly when they need to
  * handle policy violations, but are not required to declare it.
  *
@@ -24,7 +24,7 @@ import java.util.Objects;
  *
  * @since 0.13.0
  */
-public class GuardrailViolationException extends JenticException {
+public class GuardrailViolationException extends AgenorException {
 
 	private static final long serialVersionUID = -2251140556509681723L;
 

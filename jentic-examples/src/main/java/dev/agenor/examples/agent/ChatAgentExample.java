@@ -2,7 +2,7 @@ package dev.agenor.examples.agent;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.messaging.MessageDispatcher;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.memory.InMemoryStore;
 
 import java.util.Scanner;
@@ -22,7 +22,7 @@ import java.util.concurrent.CountDownLatch;
  * </ul>
  *
  * <p><b>Key Feature:</b> LLMMemoryManager is automatically injected by
- * JenticRuntime when MemoryStore is configured - no manual setup needed!
+ * AgenorRuntime when MemoryStore is configured - no manual setup needed!
  *
  * <p><b>Usage:</b>
  * <pre>{@code
@@ -46,10 +46,10 @@ public class ChatAgentExample {
 
         // Create runtime with memory store
         // This automatically configures LLM memory for all agents!
-        JenticRuntime runtime = JenticRuntime.builder()
+        AgenorRuntime runtime = AgenorRuntime.builder()
             .memoryStore(new InMemoryStore())  // ← Enables LLM memory auto-injection
             .build();
-        System.out.println("   ✓ Created JenticRuntime with InMemoryStore");
+        System.out.println("   ✓ Created AgenorRuntime with InMemoryStore");
         System.out.println("   ✓ LLM memory will be auto-injected for all agents");
 
         // Create and register agent

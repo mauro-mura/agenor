@@ -1,6 +1,6 @@
 package dev.agenor.tools.health;
 
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -24,11 +24,11 @@ import java.util.concurrent.*;
  */
 public class HealthCheckService {
 
-    private final JenticRuntime runtime;
+    private final AgenorRuntime runtime;
     private final Map<String, HealthIndicator> indicators = new ConcurrentHashMap<>();
     private final Instant startTime;
 
-    public HealthCheckService(JenticRuntime runtime) {
+    public HealthCheckService(AgenorRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "Runtime cannot be null");
         this.startTime = Instant.now();
         registerDefaultIndicators();

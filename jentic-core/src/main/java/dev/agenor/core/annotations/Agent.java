@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 /**
  * Marks a class as a Jentic agent eligible for automatic discovery and registration.
  *
- * <p>When package scanning is enabled on {@code JenticRuntime}, all classes annotated
+ * <p>When package scanning is enabled on {@code AgenorRuntime}, all classes annotated
  * with {@code @Agent} are discovered, instantiated, and registered in the
  * {@link dev.agenor.core.AgentDirectory}. The runtime then calls {@code start()} on
  * each agent that has {@link #autoStart()} set to {@code true}.

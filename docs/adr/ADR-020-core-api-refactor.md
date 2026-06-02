@@ -70,7 +70,7 @@ Four capability interfaces in `dev.agenor.core.directory`:
 
 The composite facade `AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, AgentPresence`
 retains the original name and is implemented by `InMemoryAgentDirectory`. Backends declare which
-capabilities they implement; the runtime assembles mixed backends via `JenticRuntime.Builder`.
+capabilities they implement; the runtime assembles mixed backends via `AgenorRuntime.Builder`.
 
 `AgentQuery.customFilter(Predicate)` is removed immediately (see Migration below). `listAll()` is
 deprecated with a default-method bridge.
@@ -254,6 +254,6 @@ the new signatures; no additional migration is needed for code still on the lega
 
 All APIs listed in **Deprecated in 0.20.0, removed in 0.22.0** have been deleted from the
 codebase: `MessageService`, `InMemoryMessageService`, `LocalAgentDirectory`,
-`JenticRuntime.Builder.agentDirectory()`, `AgentDescriptor` 8-arg constructor, and
+`AgenorRuntime.Builder.agentDirectory()`, `AgentDescriptor` 8-arg constructor, and
 `AgentQuery.customFilter`. `dev.agenor.core.AgentDirectory` is now deprecated at 0.22.0
 (`@Deprecated(since="0.22.0", forRemoval=true)`) for removal in a future release.

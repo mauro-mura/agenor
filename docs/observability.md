@@ -1,6 +1,6 @@
 # Observability
 
-Jentic ships with a thin, dependency-free telemetry abstraction (`JenticTelemetry`) in
+Jentic ships with a thin, dependency-free telemetry abstraction (`AgenorTelemetry`) in
 `jentic-core`. By default, every instrumented component uses the built-in **no-op
 implementation**, which has zero overhead and introduces no external dependencies. The
 real OpenTelemetry SDK integration lives in `jentic-adapters` and is entirely **opt-in**.
@@ -39,7 +39,7 @@ Consumers who do **not** add these dependencies compile and run cleanly — no
 ### 2a — Spring Boot applications (auto-configuration)
 
 When `io.opentelemetry.api.OpenTelemetry` is on the classpath, the Spring Boot starter
-auto-configures `OtelJenticTelemetry` via `@ConditionalOnClass`. Add the following to
+auto-configures `OtelAgenorTelemetry` via `@ConditionalOnClass`. Add the following to
 `application.yml`:
 
 ```yaml
@@ -55,14 +55,14 @@ jentic:
 
 ```java
 import dev.agenor.adapters.telemetry.OtelTelemetryFactory;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 
-JenticTelemetry telemetry = OtelTelemetryFactory.builder()
+AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
         .serviceName("my-agent-service")
         .otlpHttpExporter("http://localhost:4318")
         .build();
 
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
         .telemetry(telemetry)
         .build();
 ```
@@ -82,7 +82,7 @@ The table below lists every span emitted by Jentic components. Spans marked
 | `guardrail.evaluate` | `GuardrailChain` | `guardrail.name`, `guardrail.direction` (`input`\|`output`), `guardrail.decision` (`passed`\|`blocked`) |
 | `hitl.approval` | `HumanCheckpointBehavior` | `hitl.request_id`, `hitl.action`, `hitl.decision`, `hitl.wait_ms` |
 | `behavior.execute` | `SimpleBehaviorScheduler` | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
-| `mcp.tool.call` | `JenticMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
+| `mcp.tool.call` | `AgenorMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
 | `reflection.iteration` | `ReflectionBehavior` | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
 | `message.send` | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
 | `directory.resolve` | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**) | `agent.id`, `endpoint.type` (`not-found` if missing) |
@@ -166,7 +166,7 @@ Parent-child relationships work in two steps:
 1. **Parent makes itself current** — instrumented components call `span.makeCurrent()`
    inside a `try-with-resources` block. This writes the span into `Context.current()` for
    the duration of the block.
-2. **Child captures the parent** — `OtelJenticTelemetry.spanBuilder()` reads
+2. **Child captures the parent** — `OtelAgenorTelemetry.spanBuilder()` reads
    `Context.current()` at call time and stores it as the parent context. Any span started
    from that builder is automatically linked to the active parent.
 
@@ -197,7 +197,7 @@ the caller already has the right parent in `Context.current()`.
 ## Zero-cost no-op (default)
 
 When OTel is absent (or `jentic.telemetry.enabled: false`), all instrumented components
-use `NoopJenticTelemetry`:
+use `NoopAgenorTelemetry`:
 
 - `spanBuilder(name)` returns the same singleton builder (no allocation).
 - `startSpan()` returns the same singleton noop span (no allocation).

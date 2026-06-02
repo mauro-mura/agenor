@@ -1,7 +1,7 @@
 package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.MessageHandler;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import io.lettuce.core.Consumer;
 import io.lettuce.core.StreamMessage;
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * failures the entry is moved to the dead-letter stream and acknowledged.
  *
  * <p>Each successfully decoded message dispatch emits a {@code message.receive} span
- * via the injected {@link JenticTelemetry}. The span carries:
+ * via the injected {@link AgenorTelemetry}. The span carries:
  * <ul>
  *   <li>{@code message.id} — message identifier</li>
  *   <li>{@code message.topic} — topic, or empty string for point-to-point messages</li>
@@ -45,7 +45,7 @@ final class ConsumerLoop {
     private final MessageHandler handler;
     private final RedisStreamClient client;
     private final RedisMessagingConfig config;
-    private final JenticTelemetry telemetry;
+    private final AgenorTelemetry telemetry;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile Thread loopThread;
@@ -57,19 +57,19 @@ final class ConsumerLoop {
 
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
                  MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config) {
-        this(streamKey, consumerGroup, consumerName, handler, client, config, JenticTelemetry.noop());
+        this(streamKey, consumerGroup, consumerName, handler, client, config, AgenorTelemetry.noop());
     }
 
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
                  MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config,
-                 JenticTelemetry telemetry) {
+                 AgenorTelemetry telemetry) {
         this.streamKey     = streamKey;
         this.consumerGroup = consumerGroup;
         this.consumer      = Consumer.from(consumerGroup, consumerName);
         this.handler       = handler;
         this.client        = client;
         this.config        = config;
-        this.telemetry     = telemetry != null ? telemetry : JenticTelemetry.noop();
+        this.telemetry     = telemetry != null ? telemetry : AgenorTelemetry.noop();
     }
 
     /**

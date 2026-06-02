@@ -109,7 +109,7 @@ class SimpleBehaviorSchedulerTelemetryTest {
     // Test doubles
     // -------------------------------------------------------------------------
 
-    static class RecordingTelemetry implements JenticTelemetry {
+    static class RecordingTelemetry implements AgenorTelemetry {
         final List<RecordingSpan> spans = new ArrayList<>();
 
         @Override

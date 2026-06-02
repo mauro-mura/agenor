@@ -1,6 +1,6 @@
 package dev.agenor.core.config;
 
-import dev.agenor.core.JenticConfiguration;
+import dev.agenor.core.AgenorConfiguration;
 
 import java.io.InputStream;
 
@@ -19,7 +19,7 @@ public interface ConfigurationLoader {
      * @return the loaded configuration
      * @throws ConfigurationException if the file is not found, not readable, or cannot be parsed
      */
-    JenticConfiguration loadFromFile(String path);
+    AgenorConfiguration loadFromFile(String path);
 
     /**
      * Loads configuration from a classpath resource.
@@ -30,7 +30,7 @@ public interface ConfigurationLoader {
      * @return the loaded configuration
      * @throws ConfigurationException if the resource is not found or cannot be parsed
      */
-    JenticConfiguration loadFromClasspath(String resourcePath);
+    AgenorConfiguration loadFromClasspath(String resourcePath);
 
     /**
      * Loads configuration from an {@link InputStream}.
@@ -41,19 +41,19 @@ public interface ConfigurationLoader {
      * @return the loaded configuration
      * @throws ConfigurationException if the stream is null or its content cannot be parsed
      */
-    JenticConfiguration loadFromStream(InputStream inputStream, String format);
+    AgenorConfiguration loadFromStream(InputStream inputStream, String format);
 
     /**
      * Loads configuration using the default lookup strategy:
      * <ol>
      *   <li>{@code agenor.yml} in the working directory</li>
      *   <li>{@code agenor.yml} on the classpath</li>
-     *   <li>Built-in defaults via {@link dev.agenor.core.JenticConfiguration#defaults()}</li>
+     *   <li>Built-in defaults via {@link AgenorConfiguration#defaults()}</li>
      * </ol>
      *
      * @return the loaded configuration, never null
      */
-    JenticConfiguration loadDefault();
+    AgenorConfiguration loadDefault();
 
     /**
      * Validates the given configuration, checking for required fields and well-formed values.
@@ -63,5 +63,5 @@ public interface ConfigurationLoader {
      * @throws ConfigurationException if {@code configuration} is null, {@code runtime.name} is
      *                                empty, or any scan-package name is invalid
      */
-    void validate(JenticConfiguration configuration);
+    void validate(AgenorConfiguration configuration);
 }

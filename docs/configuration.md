@@ -8,29 +8,29 @@ Jentic supports configuration via YAML files and programmatic builders. This pag
 
 ## Loading Configuration
 
-`ConfigurationLoader` is an interface in `jentic-core`. The default implementation is `DefaultConfigurationLoader` in `jentic-runtime`. The recommended way to load configuration is via the `JenticRuntime` builder:
+`ConfigurationLoader` is an interface in `jentic-core`. The default implementation is `DefaultConfigurationLoader` in `jentic-runtime`. The recommended way to load configuration is via the `AgenorRuntime` builder:
 
 ```java
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
 // Load from a filesystem path (throws ConfigurationException on invalid config)
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .fromFilesystemConfig("./agenor.yml")
         .build();
 
         // Load from classpath resource (throws ConfigurationException on invalid config)
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
                 .fromClasspathConfig("agenor-test.yml")
                 .build();
 
         // Load default (see discovery order below)
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
                 .withDefaultConfig()
                 .build();
 
         // Provide a pre-built configuration object
-        JenticConfiguration config = JenticConfiguration.defaults();
-        var runtime = JenticRuntime.builder()
+        AgenorConfiguration config = AgenorConfiguration.defaults();
+        var runtime = AgenorRuntime.builder()
                 .withConfiguration(config)
                 .build();
 
@@ -38,12 +38,12 @@ var runtime = JenticRuntime.builder()
 // if it is null or fails validation (e.g. blank runtime.name).
 ```
 
-If none of the config builder methods are called, `JenticRuntime` starts with built-in defaults.
+If none of the config builder methods are called, `AgenorRuntime` starts with built-in defaults.
 **Note:** All builder config methods throw `ConfigurationException` (unchecked) if the loaded or provided configuration fails validation. No checked exception handling is required at the call site.
 
 ### Direct loader usage
 
-If you need the `JenticConfiguration` object without building a runtime:
+If you need the `AgenorConfiguration` object without building a runtime:
 
 ```java
 import dev.agenor.runtime.config.DefaultConfigurationLoader;
@@ -105,7 +105,7 @@ jentic:
 ```
 
 Notes:
-- Keys map to `dev.agenor.core.JenticConfiguration` via `dev.agenor.runtime.config.JenticConfigurationWrapper`.
+- Keys map to `dev.agenor.core.AgenorConfiguration` via `dev.agenor.runtime.config.AgenorConfigurationWrapper`.
 - `basePackage` and `scanPaths` are merged into `scanPackages` at load time.
 - Unknown keys are ignored by the loader.
 
@@ -138,7 +138,7 @@ jentic:
 ```
 
 > **Note:** Setting `provider: redis` in `jentic.yml` only records the provider name and properties
-> in `JenticConfiguration`. The actual `RedisMessagingFactory` must be wired manually
+> in `AgenorConfiguration`. The actual `RedisMessagingFactory` must be wired manually
 > (see `jentic-adapters` documentation) or automatically via the **Spring Boot starter**,
 > which reads these keys and creates the adapter bean.
 > See [Spring Boot Starter](spring-boot-starter.md) for zero-wiring Redis setup.
@@ -169,7 +169,7 @@ jentic:
 ```
 
 > **Note:** In a non-Spring-Boot context, `provider: jdbc` only records the intent in
-> `JenticConfiguration`. `JdbcAgentDirectory` must be instantiated and passed to the runtime
+> `AgenorConfiguration`. `JdbcAgentDirectory` must be instantiated and passed to the runtime
 > manually. The **Spring Boot starter** handles this automatically when
 > `jentic-adapters-persistence` is on the classpath.
 > See [JDBC Agent Directory](adapters/jdbc-directory.md) and [Spring Boot Starter](spring-boot-starter.md).
@@ -183,9 +183,9 @@ Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` 
 You can configure the runtime entirely in code without a YAML file:
 
 ```java
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .scanPackage("dev.example.agents")   // add one package
         .scanPackages("dev.example.other")   // varargs variant
         .build();
@@ -198,17 +198,17 @@ start();
 For full control over configuration values:
 
 ```java
-import dev.agenor.core.JenticConfiguration;
+import dev.agenor.core.AgenorConfiguration;
 
-var config = new JenticConfiguration(
-        new JenticConfiguration.RuntimeConfig("my-system", "production", null),
-        new JenticConfiguration.AgentsConfig(true, null, null, List.of("dev.example"), null),
-        JenticConfiguration.MessagingConfig.defaults(),
-        JenticConfiguration.DirectoryConfig.defaults(),
-        JenticConfiguration.SchedulerConfig.defaults()
+var config = new AgenorConfiguration(
+        new AgenorConfiguration.RuntimeConfig("my-system", "production", null),
+        new AgenorConfiguration.AgentsConfig(true, null, null, List.of("dev.example"), null),
+        AgenorConfiguration.MessagingConfig.defaults(),
+        AgenorConfiguration.DirectoryConfig.defaults(),
+        AgenorConfiguration.SchedulerConfig.defaults()
 );
 
-var runtime = JenticRuntime.builder()
+var runtime = AgenorRuntime.builder()
         .withConfiguration(config)
         .build();
 ```

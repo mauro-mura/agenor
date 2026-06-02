@@ -115,7 +115,7 @@ public class HelloAgent extends BaseAgent {
 ```java
 public class HelloWorld {
     public static void main(String[] args) {
-        var runtime = JenticRuntime.builder()
+        var runtime = AgenorRuntime.builder()
                 .scanPackage("com.example.agents")
                 .build();
 
@@ -225,7 +225,7 @@ Web Console and CLI tools.
 
 ### jentic-spring-boot-starter
  
-Zero-configuration Spring Boot 4.0.x integration. Auto-wires `JenticRuntime` and
+Zero-configuration Spring Boot 4.0.x integration. Auto-wires `AgenorRuntime` and
 optionally an `LLMProvider` from `application.yml`. Includes Actuator health indicator.
  
 ```xml
@@ -246,7 +246,7 @@ jentic:
     api-key: ${OPENAI_API_KEY}
 ```
  
-That's it — `JenticRuntime` is started and stopped automatically by the Spring lifecycle.
+That's it — `AgenorRuntime` is started and stopped automatically by the Spring lifecycle.
 
 ## 🚀 Features
 

@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  * registry combined with in-memory presence:
  *
  * <pre>{@code
- * JenticRuntime.builder()
+ * AgenorRuntime.builder()
  *     .agentRegistry(jdbcRegistry)
  *     .agentDiscovery(jdbcDiscovery)
  *     .agentPresence(inMemoryPresence)

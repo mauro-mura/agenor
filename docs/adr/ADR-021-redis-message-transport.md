@@ -91,7 +91,7 @@ best-effort, loss-tolerant channel that does not need replay. It is not used for
 | Node stream | `jentic:node:<nodeId>` | `jentic:cg:node` (single group per node) | Point-to-point delivery |
 | Dead-letter | `<sourceStreamKey>:dlq` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
 
-`nodeId` is a UUID generated once at `JenticRuntime` startup and stored in each
+`nodeId` is a UUID generated once at `AgenorRuntime` startup and stored in each
 `AgentEndpoint` as `transportProps.get("nodeId")`. The resolver translates `agentId →
 AgentEndpoint → nodeId → jentic:node:<nodeId>`.
 
@@ -168,7 +168,7 @@ either use the in-memory dispatcher or apply filtering in the message handler.
 `RedisMessageDispatcher` is the primary entry point for application code and the Spring Boot
 starter. It composes `RedisTopicPublisher` (topic pub/sub), `RedisMessageTransport`
 (inter-node delivery), and `AgentResolver` (agentId → endpoint translation) into the single
-`MessageDispatcher` interface expected by `JenticRuntime.Builder.messageDispatcher(...)`.
+`MessageDispatcher` interface expected by `AgenorRuntime.Builder.messageDispatcher(...)`.
 `RedisMessagingFactory.messageDispatcher()` constructs and returns it; the individual
 `topicPublisher()` and `messageTransport()` accessors remain available for advanced use.
 
@@ -198,8 +198,8 @@ class RedisMessagingConfiguration { ... }
 
 The auto-configuration creates a `RedisMessagingFactory` bean, calls
 `factory.messageDispatcher()` to obtain a `RedisMessageDispatcher`, and exposes it as the
-`MessageDispatcher` bean. The `jenticRuntime` bean accepts this via `ObjectProvider<MessageDispatcher>`
-and injects it into `JenticRuntime.Builder.messageDispatcher(...)`. No changes to
+`MessageDispatcher` bean. The `agenorRuntime` bean accepts this via `ObjectProvider<MessageDispatcher>`
+and injects it into `AgenorRuntime.Builder.messageDispatcher(...)`. No changes to
 `InMemoryMessageDispatcher` or the runtime internals are required.
 
 YAML keys:
@@ -219,7 +219,7 @@ jentic:
 
 ### Observability
 
-OTel spans emitted via `JenticTelemetry` (ADR-019) for every:
+OTel spans emitted via `AgenorTelemetry` (ADR-019) for every:
 
 - `TopicPublisher.publish` → span `message.publish` (attr: `message.topic`, `message.id`)
 - `MessageTransport.send` → span `transport.send` (attr: `transport.type=redis`, `transport.endpoint`)

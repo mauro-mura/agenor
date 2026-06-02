@@ -26,15 +26,15 @@ consumers who don't want it and zero `ClassNotFoundException` risk when OTel is 
 
 Introduce a **two-layer telemetry architecture**:
 
-1. **Core abstraction** (`jentic-core`) — zero-dependency interfaces (`JenticTelemetry`,
-   `SpanBuilder`, `Span`, `SpanStatus`) plus a `NoopJenticTelemetry` singleton. Core code
+1. **Core abstraction** (`jentic-core`) — zero-dependency interfaces (`AgenorTelemetry`,
+   `SpanBuilder`, `Span`, `SpanStatus`) plus a `NoopAgenorTelemetry` singleton. Core code
    always codes against the abstraction, never against OTel.
 
-2. **OTel adapter** (`jentic-adapters`) — `OtelJenticTelemetry`, `OtelTelemetryFactory`
+2. **OTel adapter** (`jentic-adapters`) — `OtelAgenorTelemetry`, `OtelTelemetryFactory`
    declared with `<optional>true</optional>`. Only materialised when OTel is on the classpath.
 
-Runtime components accept `JenticTelemetry` via constructor injection (default: `noop()`).
-The Spring Boot starter auto-configures a `JenticTelemetry` bean when
+Runtime components accept `AgenorTelemetry` via constructor injection (default: `noop()`).
+The Spring Boot starter auto-configures a `AgenorTelemetry` bean when
 `io.opentelemetry.api.OpenTelemetry` is detected on the classpath.
 
 ---
@@ -43,7 +43,7 @@ The Spring Boot starter auto-configures a `JenticTelemetry` bean when
 
 ### Pros
 
-- **Zero overhead by default**: `NoopJenticTelemetry` returns shared singletons; no objects
+- **Zero overhead by default**: `NoopAgenorTelemetry` returns shared singletons; no objects
   allocated on the hot path when telemetry is disabled.
 - **Backward-compatible**: all existing constructors gain an overload that defaults to noop.
   No existing code needs to change.
@@ -58,7 +58,7 @@ The Spring Boot starter auto-configures a `JenticTelemetry` bean when
 
 - Two-layer abstraction adds one dispatch per span operation (interface call → OTel SDK call).
   Acceptable because span creation is not on the request-critical path for most operations.
-- Consumers using the `JenticTelemetry` abstraction cannot access OTel-specific APIs (baggage,
+- Consumers using the `AgenorTelemetry` abstraction cannot access OTel-specific APIs (baggage,
   metrics) without casting. Acceptable for the initial scope; metrics can be added later.
 
 ### Alternatives Considered
@@ -82,12 +82,12 @@ jentic-core
     SpanScope         ← interface (AutoCloseable, returned by Span.makeCurrent())
     SpanBuilder       ← interface
     SpanStatus        ← enum (OK, ERROR, UNSET)
-    JenticTelemetry   ← interface + noop() factory method
-    NoopJenticTelemetry ← package-private singleton
+    AgenorTelemetry   ← interface + noop() factory method
+    NoopAgenorTelemetry ← package-private singleton
 
 jentic-adapters
   dev.agenor.adapters.telemetry
-    OtelJenticTelemetry   ← wraps OpenTelemetry instance
+    OtelAgenorTelemetry   ← wraps OpenTelemetry instance
     OtelTelemetryFactory  ← builder + fromEnvironment()
 ```
 
@@ -100,7 +100,7 @@ jentic-adapters
 | `guardrail.evaluate`   | `GuardrailChain`                | `guardrail.direction` (input/output), `guardrail.decision` (passed/blocked), `guardrail.name` |
 | `hitl.approval`        | `HumanCheckpointBehavior`       | `hitl.request_id`, `hitl.action`, `hitl.decision`, `hitl.wait_ms` |
 | `behavior.execute`     | `SimpleBehaviorScheduler`       | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
-| `mcp.tool.call`        | `JenticMcpClientAdapter`        | `mcp.tool.name`, `mcp.transport` (sse/stdio) |
+| `mcp.tool.call`        | `AgenorMcpClientAdapter`        | `mcp.tool.name`, `mcp.transport` (sse/stdio) |
 | `reflection.iteration` | `ReflectionBehavior`            | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
 | `message.send`         | `InMemoryMessageDispatcher`     | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
 | `directory.resolve`    | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**, @since 0.22.0) | `agent.id`, `endpoint.type` (`not-found` if missing) |
@@ -118,7 +118,7 @@ Parent-child relationships require two cooperating steps:
    for the duration of the `try-with-resources` block. The returned `SpanScope` is
    `AutoCloseable`; `close()` pops the span from the context without ending it.
 
-2. **`OtelJenticTelemetry.spanBuilder()`** — captures `Context.current()` at call time and
+2. **`OtelAgenorTelemetry.spanBuilder()`** — captures `Context.current()` at call time and
    sets it as the parent. Any span started from that builder is automatically a child of
    whatever is currently in the context.
 
@@ -127,10 +127,10 @@ All non-async instrumentation points (`behavior.execute`, `reflection.iteration`
 `llm.chat.stream`) use `CompletableFuture.whenComplete` and cannot call `makeCurrent()`
 across thread boundaries; their parent is captured at `spanBuilder()` call time instead.
 
-### Wiring in JenticRuntime
+### Wiring in AgenorRuntime
 
 ```java
-JenticRuntime runtime = JenticRuntime.builder()
+AgenorRuntime runtime = AgenorRuntime.builder()
     .telemetry(OtelTelemetryFactory.builder()
         .serviceName("my-agent")
         .exporter("otlp-http")
@@ -182,7 +182,7 @@ Add to POM to activate:
 ### Neutral
 
 - OTel metrics (counters, histograms) are deferred; the abstraction only covers tracing today.
-  `JenticTelemetry` can be extended with a `meter()` accessor in a follow-up.
+  `AgenorTelemetry` can be extended with a `meter()` accessor in a follow-up.
 
 ---
 

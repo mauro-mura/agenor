@@ -13,7 +13,7 @@ import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalGate;
 import dev.agenor.core.hitl.ApprovalNotifier;
 import dev.agenor.core.hitl.RequiresApproval;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.BaseBehavior;
 import dev.agenor.runtime.behavior.CyclicBehavior;
@@ -23,7 +23,7 @@ import dev.agenor.runtime.hitl.LoggingApprovalNotifier;
 
 /**
  * Demonstrates the Human-in-the-Loop Checkpoint pattern (ADR-015) with real
- * Jentic agents registered in {@link JenticRuntime}.
+ * Jentic agents registered in {@link AgenorRuntime}.
  *
  * <p>A {@link TreasuryAgent} submits large wire transfers as
  * {@link HumanCheckpointBehavior}s. An {@link OperatorAgent} polls the shared
@@ -56,7 +56,7 @@ public class HitlExample {
         // Latch: 3 transfers, main thread waits for all completions
         CountDownLatch done = new CountDownLatch(3);
 
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(new TreasuryAgent(sharedGate, done));
         runtime.registerAgent(new OperatorAgent(sharedGate));
         runtime.start().join();
@@ -198,7 +198,7 @@ public class HitlExample {
 
     // =========================================================================
     // Annotation-based variant — for documentation purposes.
-    // After T7 patch, registering this behavior via JenticRuntime will cause
+    // After T7 patch, registering this behavior via AgenorRuntime will cause
     // HitlAnnotationProcessor to wrap it automatically in HumanCheckpointBehavior.
     // =========================================================================
 

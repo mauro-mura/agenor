@@ -1,7 +1,7 @@
 package dev.agenor.runtime.agent;
 
 import dev.agenor.core.*;
-import dev.agenor.core.telemetry.JenticTelemetry;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
@@ -28,7 +28,7 @@ class BaseAgentDirectMessagingTest {
     @BeforeEach
     void setUp() {
         agentDirectory = new InMemoryAgentDirectory();
-        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, JenticTelemetry.noop());
+        messageDispatcher = new InMemoryMessageDispatcher(agentDirectory, AgenorTelemetry.noop());
         behaviorScheduler = new SimpleBehaviorScheduler();
         behaviorScheduler.start().join();
     }

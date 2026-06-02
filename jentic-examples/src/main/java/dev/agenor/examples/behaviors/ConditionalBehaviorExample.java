@@ -4,7 +4,7 @@ import dev.agenor.core.BehaviorType;
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
-import dev.agenor.runtime.JenticRuntime;
+import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +21,7 @@ public class ConditionalBehaviorExample {
         log.info("=== Conditional Behavior Example ===");
 
         // Create runtime
-        var runtime = JenticRuntime.builder().build();
+        var runtime = AgenorRuntime.builder().build();
 
         // Register conditional agents
         runtime.registerAgent(new ResourceAwareAgent());
@@ -49,7 +49,7 @@ public class ConditionalBehaviorExample {
         log.info("=== Example completed ===");
     }
 
-    private static void printStatistics(JenticRuntime runtime) {
+    private static void printStatistics(AgenorRuntime runtime) {
         log.info("\n=== Execution Statistics ===");
         log.info("Agents are running with conditional behaviors");
     }

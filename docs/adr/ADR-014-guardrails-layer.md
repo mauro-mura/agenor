@@ -39,7 +39,7 @@ User input
 ```
 
 Configurable via fluent builder **or** the `@WithGuardrails` annotation,
-wired automatically by `JenticRuntime`.
+wired automatically by `AgenorRuntime`.
 
 ---
 
@@ -144,7 +144,7 @@ public String chat(String rawInput) {
 public class FinanceAgent extends LLMAgent { ... }
 ```
 
-`JenticRuntime` reads the annotation at agent registration time, instantiates guardrails via
+`AgenorRuntime` reads the annotation at agent registration time, instantiates guardrails via
 reflection (no-arg constructor), builds and injects a `GuardrailChain`.  
 Programmatic chain configuration and `@WithGuardrails` can be combined: the annotation-derived
 chain is **prepended** to the programmatic guardrails (annotation guardrails run first).
@@ -164,7 +164,7 @@ chain is **prepended** to the programmatic guardrails (annotation guardrails run
 - `@WithGuardrails` requires no-arg constructors — guardrails needing configuration must use the builder API
 
 ### Neutral
-- `GuardrailViolationException` extends `JenticException` (unchecked, consistent with the Jentic exception hierarchy); callers may catch it explicitly but are not required to declare it
+- `GuardrailViolationException` extends `AgenorException` (unchecked, consistent with the Jentic exception hierarchy); callers may catch it explicitly but are not required to declare it
 - `JsonSchemaOutputGuardrail` re-prompt logic interacts with the LLM indirectly via `Modified` content instructions, not direct LLM calls
 
 ## Compliance

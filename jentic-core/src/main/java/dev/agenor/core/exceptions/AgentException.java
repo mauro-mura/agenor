@@ -3,7 +3,7 @@ package dev.agenor.core.exceptions;
 /**
  * Exception thrown during agent operations
  */
-public class AgentException extends JenticException {
+public class AgentException extends AgenorException {
 
     private final String agentId;
 
