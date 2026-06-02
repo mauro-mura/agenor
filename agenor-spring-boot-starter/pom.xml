@@ -6,14 +6,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>dev.jentic</groupId>
-        <artifactId>jentic</artifactId>
+        <groupId>dev.agenor</groupId>
+        <artifactId>agenor</artifactId>
         <version>0.24.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <name>Jentic Spring Boot Starter</name>
-    <description>Spring Boot 4.0.x auto-configuration for Jentic - the enterprise-grade agent framework for the JVM</description>
+    <name>Agenor Spring Boot Starter</name>
+    <description>Spring Boot 4.0.x auto-configuration for agenor - the enterprise-grade agent framework for the JVM</description>
 
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->
@@ -36,22 +36,22 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Jentic runtime — mandatory -->
+        <!-- agenor runtime — mandatory -->
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>agenor-runtime</artifactId>
         </dependency>
 
-        <!-- Jentic adapters — optional; required only when agenor.llm.provider != none -->
+        <!-- agenor adapters — optional; required only when agenor.llm.provider != none -->
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>agenor-adapters</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Jentic adapters-persistence — optional; required only when agenor.directory.provider=jdbc -->
+        <!-- agenor adapters-persistence — optional; required only when agenor.directory.provider=jdbc -->
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>agenor-adapters-persistence</artifactId>
             <optional>true</optional>
         </dependency>

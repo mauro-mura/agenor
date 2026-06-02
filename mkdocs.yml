@@ -1,8 +1,8 @@
-site_name: Jentic Framework
-site_url: https://jentic.dev/docs
+site_name: Agenor Framework
+site_url: https://agenor.dev/docs
 site_description: Java meets Agentic — enterprise-grade agent framework for the JVM
-site_author: Jentic Team
-repo_url: https://github.com/mauro-mura/jentic
+site_author: Agenor Team
+repo_url: https://github.com/mauro-mura/Agenor
 repo_name: mauro-mura/agenor
 
 theme:

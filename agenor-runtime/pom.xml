@@ -6,18 +6,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>dev.jentic</groupId>
-        <artifactId>jentic</artifactId>
+        <groupId>dev.agenor</groupId>
+        <artifactId>agenor</artifactId>
         <version>0.24.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>agenor-runtime</artifactId>
-    <name>Jentic Runtime</name>
-    <description>Basic runtime implementations for Jentic framework</description>
+    <name>Agenor Runtime</name>
+    <description>Basic runtime implementations for Agenor Framework</description>
 
     <dependencies>
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>agenor-core</artifactId>
         </dependency>
 

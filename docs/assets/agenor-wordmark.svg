@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="56" viewBox="0 0 180 56" role="img" aria-label="agenor">
+  <style>
+    .wm        { fill: #0C447C; font-family: system-ui, -apple-system, sans-serif; font-size: 38px; font-weight: 500; letter-spacing: -1.5px; }
+    .a-fill    { fill: #185FA5; }
+    .a-halo    { fill: #185FA5; opacity: .18; }
+    .a-counter { fill: #E6F1FB; }
+    .a-dot     { fill: #0C447C; }
+    .a-sat-a   { fill: #185FA5; opacity: .65; }
+    .a-sat-b   { fill: #185FA5; opacity: .45; }
+    .a-edge    { stroke: #185FA5; fill: none; stroke-width: 1; opacity: .5; }
+    @media (prefers-color-scheme: dark) {
+      .wm        { fill: #B5D4F4; }
+      .a-fill    { fill: #378ADD; }
+      .a-halo    { fill: #378ADD; opacity: .22; }
+      .a-counter { fill: #042C53; }
+      .a-dot     { fill: #85B7EB; }
+      .a-sat-a   { fill: #378ADD; opacity: .7; }
+      .a-sat-b   { fill: #378ADD; opacity: .5; }
+      .a-edge    { stroke: #378ADD; }
+    }
+  </style>
+  <text class="wm" x="4" y="40">agen</text>
+  <text class="wm" x="114" y="40">r</text>
+  <!-- cluster cx=98 -->
+  <circle class="a-halo" cx="98" cy="30" r="13"/>
+  <circle class="a-fill" cx="98" cy="30" r="10"/>
+  <circle class="a-counter" cx="98" cy="30" r="5"/>
+  <circle class="a-dot"     cx="98" cy="30" r="2.5"/>
+  <circle class="a-sat-a" cx="114" cy="18" r="3"/>
+  <circle class="a-sat-b" cx="81"  cy="17" r="2.5"/>
+  <circle class="a-sat-b" cx="115" cy="41" r="2.5"/>
+  <line class="a-edge" x1="107" y1="24" x2="112" y2="20"/>
+  <line class="a-edge" x1="89"  y1="24" x2="83"  y2="19"/>
+  <line class="a-edge" x1="107" y1="36" x2="113" y2="40"/>
+</svg>

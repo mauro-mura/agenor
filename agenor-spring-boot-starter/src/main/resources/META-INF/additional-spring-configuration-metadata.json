@@ -1,144 +1,144 @@
 {
   "properties": [
     {
-      "name": "jentic.runtime.name",
+      "name": "agenor.runtime.name",
       "type": "java.lang.String",
-      "description": "Name of the Jentic runtime instance.",
-      "defaultValue": "jentic-runtime"
+      "description": "Name of the Agenor runtime instance.",
+      "defaultValue": "agenor-runtime"
     },
     {
-      "name": "jentic.runtime.environment",
+      "name": "agenor.runtime.environment",
       "type": "java.lang.String",
       "description": "Deployment environment label. Accepted values: development, staging, production, test.",
       "defaultValue": "development"
     },
     {
-      "name": "jentic.runtime.properties",
+      "name": "agenor.runtime.properties",
       "type": "java.util.Map<java.lang.String,java.lang.String>",
-      "description": "Arbitrary key/value pairs forwarded to JenticConfiguration.RuntimeConfig.properties."
+      "description": "Arbitrary key/value pairs forwarded to AgenorConfiguration.RuntimeConfig.properties."
     },
     {
-      "name": "jentic.agents.auto-discovery",
+      "name": "agenor.agents.auto-discovery",
       "type": "java.lang.Boolean",
-      "description": "Whether to automatically discover and register @JenticAgent classes at startup.",
+      "description": "Whether to automatically discover and register @AgenorAgent classes at startup.",
       "defaultValue": true
     },
     {
-      "name": "jentic.agents.base-package",
+      "name": "agenor.agents.base-package",
       "type": "java.lang.String",
-      "description": "Root package to scan for @JenticAgent classes. Merged with scan-packages."
+      "description": "Root package to scan for @AgenorAgent classes. Merged with scan-packages."
     },
     {
-      "name": "jentic.agents.scan-packages",
+      "name": "agenor.agents.scan-packages",
       "type": "java.util.List<java.lang.String>",
-      "description": "Additional packages to scan for @JenticAgent classes. Merged with base-package."
+      "description": "Additional packages to scan for @AgenorAgent classes. Merged with base-package."
     },
     {
-      "name": "jentic.agents.scan-paths",
+      "name": "agenor.agents.scan-paths",
       "type": "java.util.List<java.lang.String>",
-      "description": "Legacy alias for scan-packages, kept for compatibility with jentic.yml format. Merged with scan-packages and base-package."
+      "description": "Legacy alias for scan-packages, kept for compatibility with agenor.yml format. Merged with scan-packages and base-package."
     },
     {
-      "name": "jentic.scheduler.provider",
+      "name": "agenor.scheduler.provider",
       "type": "java.lang.String",
       "description": "Behavior scheduler implementation to use.",
       "defaultValue": "simple"
     },
     {
-      "name": "jentic.scheduler.thread-pool-size",
+      "name": "agenor.scheduler.thread-pool-size",
       "type": "java.lang.Integer",
       "description": "Number of threads in the behavior scheduler thread pool.",
       "defaultValue": 10
     },
     {
-      "name": "jentic.messaging.provider",
+      "name": "agenor.messaging.provider",
       "type": "java.lang.String",
       "description": "Message service implementation to use.",
       "defaultValue": "inmemory"
     },
     {
-      "name": "jentic.messaging.redis.uri",
+      "name": "agenor.messaging.redis.uri",
       "type": "java.lang.String",
       "description": "Redis connection URI. Supports redis://, rediss:// (TLS), and redis-sentinel:// schemes.",
       "defaultValue": "redis://localhost:6379"
     },
     {
-      "name": "jentic.messaging.redis.consumer-group-prefix",
+      "name": "agenor.messaging.redis.consumer-group-prefix",
       "type": "java.lang.String",
       "description": "Prefix for Redis stream keys and consumer group names.",
-      "defaultValue": "jentic"
+      "defaultValue": "Agenor"
     },
     {
-      "name": "jentic.messaging.redis.read-block-timeout-ms",
+      "name": "agenor.messaging.redis.read-block-timeout-ms",
       "type": "java.lang.Long",
       "description": "How long XREADGROUP BLOCK waits before returning an empty result (milliseconds).",
       "defaultValue": 2000
     },
     {
-      "name": "jentic.messaging.redis.max-stream-length",
+      "name": "agenor.messaging.redis.max-stream-length",
       "type": "java.lang.Integer",
       "description": "Maximum number of entries per Redis stream before approximate trimming is applied.",
       "defaultValue": 100000
     },
     {
-      "name": "jentic.messaging.redis.pending-entries-timeout-ms",
+      "name": "agenor.messaging.redis.pending-entries-timeout-ms",
       "type": "java.lang.Long",
       "description": "Idle time (milliseconds) before an unacknowledged pending entry is eligible for redelivery.",
       "defaultValue": 30000
     },
     {
-      "name": "jentic.messaging.redis.max-delivery-attempts",
+      "name": "agenor.messaging.redis.max-delivery-attempts",
       "type": "java.lang.Integer",
       "description": "Number of failed delivery attempts before a message is moved to the dead-letter queue.",
       "defaultValue": 3
     },
     {
-      "name": "jentic.directory.provider",
+      "name": "agenor.directory.provider",
       "type": "java.lang.String",
       "description": "Agent directory implementation to use.",
       "defaultValue": "local"
     },
     {
-      "name": "jentic.directory.jdbc.url",
+      "name": "agenor.directory.jdbc.url",
       "type": "java.lang.String",
-      "description": "JDBC connection URL. Required when jentic.directory.provider=jdbc."
+      "description": "JDBC connection URL. Required when agenor.directory.provider=jdbc."
     },
     {
-      "name": "jentic.directory.jdbc.username",
+      "name": "agenor.directory.jdbc.username",
       "type": "java.lang.String",
       "description": "Database username.",
       "defaultValue": ""
     },
     {
-      "name": "jentic.directory.jdbc.password",
+      "name": "agenor.directory.jdbc.password",
       "type": "java.lang.String",
       "description": "Database password.",
       "defaultValue": ""
     },
     {
-      "name": "jentic.directory.jdbc.pool-size",
+      "name": "agenor.directory.jdbc.pool-size",
       "type": "java.lang.Integer",
       "description": "HikariCP connection pool size.",
       "defaultValue": 10
     },
     {
-      "name": "jentic.llm.provider",
+      "name": "agenor.llm.provider",
       "type": "java.lang.String",
-      "description": "LLM provider to auto-configure. Requires jentic-adapters on the classpath for any value other than 'none'.",
+      "description": "LLM provider to auto-configure. Requires agenor-adapters on the classpath for any value other than 'none'.",
       "defaultValue": "none"
     },
     {
-      "name": "jentic.llm.api-key",
+      "name": "agenor.llm.api-key",
       "type": "java.lang.String",
       "description": "API key for the configured LLM provider. Required for openai and anthropic. Use ${OPENAI_API_KEY} or ${ANTHROPIC_API_KEY} to read from environment variables."
     },
     {
-      "name": "jentic.llm.model",
+      "name": "agenor.llm.model",
       "type": "java.lang.String",
       "description": "Model name to use. Defaults: openai=gpt-4o-mini, anthropic=claude-3-haiku-20240307, ollama=llama3.2."
     },
     {
-      "name": "jentic.llm.base-url",
+      "name": "agenor.llm.base-url",
       "type": "java.lang.String",
       "description": "Base URL for the LLM server. Used only by the ollama provider.",
       "defaultValue": "http://localhost:11434"
@@ -146,7 +146,7 @@
   ],
   "hints": [
     {
-      "name": "jentic.llm.provider",
+      "name": "agenor.llm.provider",
       "values": [
         {
           "value": "none",
@@ -154,20 +154,20 @@
         },
         {
           "value": "openai",
-          "description": "OpenAI provider. Requires jentic.llm.api-key and jentic-adapters on the classpath."
+          "description": "OpenAI provider. Requires agenor.llm.api-key and agenor-adapters on the classpath."
         },
         {
           "value": "anthropic",
-          "description": "Anthropic provider. Requires jentic.llm.api-key and jentic-adapters on the classpath."
+          "description": "Anthropic provider. Requires agenor.llm.api-key and agenor-adapters on the classpath."
         },
         {
           "value": "ollama",
-          "description": "Ollama local provider. No API key required. Requires jentic-adapters on the classpath."
+          "description": "Ollama local provider. No API key required. Requires agenor-adapters on the classpath."
         }
       ]
     },
     {
-      "name": "jentic.runtime.environment",
+      "name": "agenor.runtime.environment",
       "values": [
         { "value": "development" },
         { "value": "staging" },
@@ -176,22 +176,22 @@
       ]
     },
     {
-      "name": "jentic.messaging.provider",
+      "name": "agenor.messaging.provider",
       "values": [
         { "value": "inmemory", "description": "In-memory message bus (default, suitable for single-node)." },
-        { "value": "redis", "description": "Redis Streams adapter (distributed, at-least-once). Requires lettuce-core on the classpath and jentic.messaging.redis.uri to be set." }
+        { "value": "redis", "description": "Redis Streams adapter (distributed, at-least-once). Requires lettuce-core on the classpath and agenor.messaging.redis.uri to be set." }
       ]
     },
     {
-      "name": "jentic.directory.provider",
+      "name": "agenor.directory.provider",
       "values": [
         { "value": "local", "description": "Local in-memory agent directory (default)." },
         { "value": "inmemory", "description": "In-memory agent directory." },
-        { "value": "jdbc", "description": "JDBC-backed agent directory. Requires jentic-adapters-persistence on the classpath and jentic.directory.jdbc.url to be set." }
+        { "value": "jdbc", "description": "JDBC-backed agent directory. Requires agenor-adapters-persistence on the classpath and agenor.directory.jdbc.url to be set." }
       ]
     },
     {
-      "name": "jentic.scheduler.provider",
+      "name": "agenor.scheduler.provider",
       "values": [
         { "value": "simple", "description": "Simple thread-pool scheduler (default)." }
       ]

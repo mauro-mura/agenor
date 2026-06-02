@@ -251,7 +251,7 @@ class ConfigurationLoaderTest {
     @Test
     @DisplayName("Should handle leading slash in classpath resource")
     void shouldHandleLeadingSlashInClasspath() throws Exception {
-        AgenorConfiguration config = loader.loadFromClasspath("/jentic-test.yml");
+        AgenorConfiguration config = loader.loadFromClasspath("/agenor-test.yml");
 
         assertThat(config).isNotNull();
     }

@@ -1,4 +1,4 @@
-jentic:
+agenor:
   runtime:
     name: "test-runtime"
     environment: "test"

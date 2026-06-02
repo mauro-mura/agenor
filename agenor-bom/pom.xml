@@ -5,50 +5,50 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>agenor-bom</artifactId>
     <version>0.24.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Jentic BOM</name>
-    <description>Bill of Materials for Jentic Framework - manages dependency versions</description>
-    <url>https://jentic.dev</url>
+    <name>Agenor BOM</name>
+    <description>Bill of Materials for Agenor Framework - manages dependency versions</description>
+    <url>https://agenor.dev</url>
 
     <dependencyManagement>
         <dependencies>
             <!-- Agenor Core Modules -->
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-adapters</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-adapters-persistence</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-			    <groupId>dev.jentic</groupId>
+			    <groupId>dev.agenor</groupId>
 			    <artifactId>agenor-spring-boot-starter</artifactId>
 			    <version>${project.version}</version>
 			</dependency>

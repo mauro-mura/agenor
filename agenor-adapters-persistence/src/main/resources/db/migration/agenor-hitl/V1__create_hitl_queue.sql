@@ -1,6 +1,6 @@
 -- HITL approval queue schema — see ADR-024
 
-CREATE TABLE jentic_hitl_requests (
+CREATE TABLE agenor_hitl_requests (
     request_id      VARCHAR(255) NOT NULL,
     agent_id        VARCHAR(255) NOT NULL,
     action          VARCHAR(255) NOT NULL,
@@ -13,9 +13,9 @@ CREATE TABLE jentic_hitl_requests (
     decision_data   TEXT,
     decided_at      TIMESTAMP,
     decided_by      VARCHAR(255),
-    CONSTRAINT pk_jentic_hitl_requests PRIMARY KEY (request_id)
+    CONSTRAINT pk_agenor_hitl_requests PRIMARY KEY (request_id)
 );
 
-CREATE INDEX idx_jentic_hitl_status     ON jentic_hitl_requests(status);
-CREATE INDEX idx_jentic_hitl_agent      ON jentic_hitl_requests(agent_id);
-CREATE INDEX idx_jentic_hitl_expires_at ON jentic_hitl_requests(expires_at);
+CREATE INDEX idx_agenor_hitl_status     ON agenor_hitl_requests(status);
+CREATE INDEX idx_agenor_hitl_agent      ON agenor_hitl_requests(agent_id);
+CREATE INDEX idx_agenor_hitl_expires_at ON agenor_hitl_requests(expires_at);

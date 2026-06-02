@@ -1,4 +1,4 @@
-jentic:
+Agenor:
   runtime:
     name: "${RUNTIME_NAME:default-mixed-runtime}"
     environment: "${APP_ENV:development}"

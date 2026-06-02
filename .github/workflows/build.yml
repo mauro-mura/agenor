@@ -34,10 +34,10 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            jentic-core/target/site/jacoco/
-            jentic-runtime/target/site/jacoco/
-            jentic-adapters/target/site/jacoco/
-            jentic-tools/target/site/jacoco/
+            agenor-core/target/site/jacoco/
+            agenor-runtime/target/site/jacoco/
+            agenor-adapters/target/site/jacoco/
+            agenor-tools/target/site/jacoco/
           retention-days: 30
 
       - name: Build summary
@@ -45,7 +45,7 @@ jobs:
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for module in jentic-core jentic-runtime jentic-adapters jentic-tools; do
+          for module in agenor-core agenor-runtime agenor-adapters agenor-tools; do
             if [ -f "$module/target/site/jacoco/index.html" ]; then
               echo "✅ $module coverage report generated" >> $GITHUB_STEP_SUMMARY
             else
