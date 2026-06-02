@@ -1,4 +1,4 @@
-# Jentic Behaviors — Overview
+# Agenor Behaviors — Overview
 
 Behaviors are the primary mechanism for implementing agent logic. Every behavior belongs to exactly one agent and runs under the control of the `BehaviorScheduler`.
 

@@ -3,14 +3,14 @@
 **Status**: Accepted  
 **Date**: 2026-04-23  
 **Last Modified**: 2026-05-14  
-**Authors**: Jentic Team  
+**Authors**: Agenor Team  
 **References**: ADR-018 (Optional Adapter Dependencies Pattern)
 
 ---
 
 ## Context
 
-Jentic had zero distributed observability: no traces, no spans, no metrics. Enterprise adoption
+Agenor had zero distributed observability: no traces, no spans, no metrics. Enterprise adoption
 was blocked by the first question from platform teams — "does it emit traces?" — because without
 traces it is impossible to debug multi-agent interactions, measure LLM latency, or audit
 Human-in-the-Loop approvals in production.
@@ -142,7 +142,7 @@ AgenorRuntime runtime = AgenorRuntime.builder()
 ### Spring Boot auto-configuration
 
 ```yaml
-jentic:
+agenor:
   telemetry:
     enabled: true
     exporter: otlp-http

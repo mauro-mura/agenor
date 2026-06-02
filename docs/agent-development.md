@@ -1,6 +1,6 @@
 # Agent Development Guide
 
-This guide shows how to build agents, behaviors, and message handlers with Jentic.
+This guide shows how to build agents, behaviors, and message handlers with Agenor.
 
 ## Prerequisites
 - Java 21+
@@ -266,7 +266,7 @@ protected void onStart() {
 
 ## Rate Limiting
 
-Jentic provides two `RateLimiter` implementations in `dev.agenor.runtime.ratelimit`.
+Agenor provides two `RateLimiter` implementations in `dev.agenor.runtime.ratelimit`.
 
 ### SlidingWindowRateLimiter
 
@@ -312,7 +312,7 @@ addBehavior(throttled);
 
 ## Conditions
 
-Conditions are `Predicate<Agent>`-like objects (`dev.agenor.core.condition.Condition`) used to gate behavior execution at runtime. Jentic supplies three factory classes in `dev.agenor.runtime.condition`.
+Conditions are `Predicate<Agent>`-like objects (`dev.agenor.core.condition.Condition`) used to gate behavior execution at runtime. Agenor supplies three factory classes in `dev.agenor.runtime.condition`.
 
 ### AgentCondition — based on agent state
 
@@ -360,7 +360,7 @@ Conditions also compose with `and()`, `or()`, `negate()` (default methods on `Co
 
 ## Dialogue and Protocols
 
-Jentic supports structured agent communication through `DialogueCapability`. Attach it to any `BaseAgent` via composition and initialise it in `onStart()`.
+Agenor supports structured agent communication through `DialogueCapability`. Attach it to any `BaseAgent` via composition and initialise it in `onStart()`.
 
 ```java
 @Agent("coordinator")

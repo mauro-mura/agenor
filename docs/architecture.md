@@ -2,14 +2,14 @@
 
 > **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
-This document describes Jentic's architecture: an interface-first, Java 21+ multi-agent framework with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
+This document describes Agenor's architecture: an interface-first, Java 21+ multi-agent framework with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
 
-- **Audience**: developers evaluating or building on Jentic
+- **Audience**: developers evaluating or building on Agenor
 - **Scope**: high-level structure, core abstractions, runtime behavior, and extension points
 
 ## 1. Architectural Overview
 
-Jentic embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Adapters (LLM providers, A2A) live in agenor-adapters.
+Agenor embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Adapters (LLM providers, A2A) live in agenor-adapters.
 
 | agenor-core (interfaces) | agenor-runtime (in-memory impls) | agenor-adapters (integrations) |
 |--------------------------|----------------------------------|--------------------------------|
@@ -157,13 +157,13 @@ LLMProvider anthropic = LLMProviderFactory.create("anthropic", System.getenv("AN
 LLMProvider ollama    = LLMProviderFactory.create("ollama", null); // no key needed
 ```
 
-**ToolConversionUtils**: converts Jentic `FunctionDefinition` objects to the vendor-specific JSON schemas required by each provider.
+**ToolConversionUtils**: converts Agenor `FunctionDefinition` objects to the vendor-specific JSON schemas required by each provider.
 
 ### A2A Adapter
 
 Implements the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A):
 
-- **AgenorA2AAdapter**: exposes a Jentic agent as an A2A server, built from `A2AAdapterConfig`.
+- **AgenorA2AAdapter**: exposes a Agenor agent as an A2A server, built from `A2AAdapterConfig`.
 - **AgenorA2AClient**: sends A2A messages to remote agents.
 - **AgenorAgentExecutor**: handles incoming A2A tasks and routes them to a local agent.
 
@@ -173,7 +173,7 @@ For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 
 Implements `TopicPublisher`, `TopicSubscriber`, and `MessageTransport` on top of Redis Streams,
 providing at-least-once delivery and fan-out pub/sub across JVM nodes. Requires `lettuce-core`
-on the classpath per ADR-018 (opt-in). Activated via `jentic.messaging.provider=redis` in Spring Boot,
+on the classpath per ADR-018 (opt-in). Activated via `agenor.messaging.provider=redis` in Spring Boot,
 or directly via `RedisMessagingFactory`.
 
 Key classes in `dev.agenor.adapters.messaging.redis`:
@@ -199,7 +199,7 @@ Community adapters are welcome. See `CONTRIBUTING.md`.
 
 ## 6. Concurrency Model
 
-- Jentic targets Java 21 virtual threads (Project Loom) for lightweight concurrency.
+- Agenor targets Java 21 virtual threads (Project Loom) for lightweight concurrency.
 - Behaviors are executed in virtual threads by the scheduler when appropriate.
 - Blocking operations in behaviors do not monopolize platform threads, simplifying the programming model.
 - Message handlers should remain responsive; long‑running work can be delegated to behaviors or separate virtual threads.
@@ -229,11 +229,11 @@ See [Messaging Guide](messaging.md) for the complete API reference.
 ## 9. Configuration
 
 - Minimal configuration via code (builder) and/or YAML. Example keys:
-  - jentic.runtime.name
-  - jentic.agents.auto-discovery
-  - jentic.agents.base-package
-  - jentic.messaging.provider (in-memory)
-  - jentic.directory.provider (local)
+  - agenor.runtime.name
+  - agenor.agents.auto-discovery
+  - agenor.agents.base-package
+  - agenor.messaging.provider (in-memory)
+  - agenor.directory.provider (local)
 
 Implementations are selected by configuration while code depends only on core interfaces.
 

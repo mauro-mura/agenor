@@ -12,7 +12,7 @@
 
 ## Context
 
-The Jentic framework requires standardized agent communication. Analysis reveals two distinct domains:
+The Agenor framework requires standardized agent communication. Analysis reveals two distinct domains:
 
 1. **Intra-Runtime**: Agents within the same JVM communicating via `MessageDispatcher`
 2. **Extra-Runtime**: Agents communicating with external systems (other runtimes, LLM agents, third-party services)
@@ -54,7 +54,7 @@ Implement a **dual-domain architecture**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     JENTIC RUNTIME (JVM)                    │
+│                     AGENOR RUNTIME (JVM)                    │
 │                                                             │
 │   ┌─────────┐     MessageDispatcher    ┌─────────┐           │
 │   │ Agent A │◄───────────────────────►│ Agent B │           │
@@ -289,7 +289,7 @@ agenor-adapters/
 
 ## Comparison: What We Build vs What We Adopt
 
-| Component | Build (Jentic) | Adopt (External) |
+| Component | Build (Agenor) | Adopt (External) |
 |-----------|----------------|------------------|
 | Performatives | ✅ 10 core | - |
 | Conversation tracking | ✅ | - |

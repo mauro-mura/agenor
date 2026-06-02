@@ -6,11 +6,11 @@
 
 ### Context
 
-Jentic aims to modernize multi-agent systems from the JADE era. We need to choose a Java version that provides modern concurrency features while maintaining reasonable compatibility.
+Agenor aims to modernize multi-agent systems from the JADE era. We need to choose a Java version that provides modern concurrency features while maintaining reasonable compatibility.
 
 ### Decision
 
-We will use **Java 21 LTS with Virtual Threads (Project Loom)** as the baseline for Jentic.
+We will use **Java 21 LTS with Virtual Threads (Project Loom)** as the baseline for Agenor.
 
 ### Rationale
 

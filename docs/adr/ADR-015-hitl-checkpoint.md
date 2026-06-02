@@ -61,7 +61,7 @@ ApprovalDecision decision = gate.requestApproval(request).join();
 ```
 
 **Pros**:
-- Coherent with the existing codebase (`CompletableFuture` used throughout Jentic)
+- Coherent with the existing codebase (`CompletableFuture` used throughout Agenor)
 - Composable: callers can chain `.thenApply()`, `.whenComplete()`, set their own timeout
 - Virtual thread park/unpark is near-zero cost (Project Loom, ADR-001)
 - Timeout via `ScheduledExecutorService` — no additional dependency

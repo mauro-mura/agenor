@@ -7,7 +7,7 @@
 
 ### Context
 
-We want Jentic to be extensible and allow evolution from simple implementations to enterprise-grade solutions without breaking changes.
+We want Agenor to be extensible and allow evolution from simple implementations to enterprise-grade solutions without breaking changes.
 
 ### Decision
 

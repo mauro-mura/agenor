@@ -1,6 +1,6 @@
 # LLM Integration Guide
 
-This guide covers the complete integration of Large Language Models into Jentic agents: provider setup, the core API, function calling, LLM-aware agents, memory management, error handling, and testing patterns.
+This guide covers the complete integration of Large Language Models into Agenor agents: provider setup, the core API, function calling, LLM-aware agents, memory management, error handling, and testing patterns.
 
 The LLM subsystem spans three modules:
 

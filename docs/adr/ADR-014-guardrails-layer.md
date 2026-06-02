@@ -164,7 +164,7 @@ chain is **prepended** to the programmatic guardrails (annotation guardrails run
 - `@WithGuardrails` requires no-arg constructors — guardrails needing configuration must use the builder API
 
 ### Neutral
-- `GuardrailViolationException` extends `AgenorException` (unchecked, consistent with the Jentic exception hierarchy); callers may catch it explicitly but are not required to declare it
+- `GuardrailViolationException` extends `AgenorException` (unchecked, consistent with the Agenor exception hierarchy); callers may catch it explicitly but are not required to declare it
 - `JsonSchemaOutputGuardrail` re-prompt logic interacts with the LLM indirectly via `Modified` content instructions, not direct LLM calls
 
 ## Compliance

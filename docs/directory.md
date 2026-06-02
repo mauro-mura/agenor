@@ -1,6 +1,6 @@
 # Agent Directory
 
-This document describes Jentic's agent directory API introduced in **0.20.0**. It replaces the monolithic `AgentDirectory` with four focused capability interfaces designed to work with both in-memory and distributed backends.
+This document describes Agenor's agent directory API introduced in **0.20.0**. It replaces the monolithic `AgentDirectory` with four focused capability interfaces designed to work with both in-memory and distributed backends.
 
 ## Overview
 

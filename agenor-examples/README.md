@@ -1,6 +1,6 @@
-# Jentic Examples
+# Agenor Examples
 
-Runnable examples for the Jentic multi-agent framework, organized as a learning path
+Runnable examples for the Agenor multi-agent framework, organized as a learning path
 from the absolute basics to production-grade systems.
 
 ## Prerequisites
@@ -106,7 +106,7 @@ End-to-end examples that combine multiple patterns.
 
 | Example | Main class | Tool |
 |---------|-----------|------|
-| `CLIExample` | `dev.agenor.examples.cli.CLIExample` | Web console + CLI (`jentic list`, `jentic status`, `jentic logs -f`) |
+| `CLIExample` | `dev.agenor.examples.cli.CLIExample` | Web console + CLI (`agenor list`, `agenor status`, `agenor logs -f`) |
 | `WebConsoleExample` | `dev.agenor.examples.console.WebConsoleExample` | Embedded Jetty dashboard |
 | `A2AIntegrationExample` | `dev.agenor.examples.a2a.A2AIntegrationExample` | Agent-to-Agent HTTP protocol |
 | `UserPreferenceMemoryExample` | `dev.agenor.examples.memory.UserPreferenceMemoryExample` | Agent memory / persistence |

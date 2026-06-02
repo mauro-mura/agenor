@@ -2,11 +2,11 @@
 
 **Status**: Accepted  
 **Date**: 2026-04-23  
-**Authors**: Jentic Team  
+**Authors**: Agenor Team  
 
 ## Context
 
-As Jentic adds distributed-backend adapters (OpenTelemetry, Redis/Valkey messaging, JDBC
+As Agenor adds distributed-backend adapters (OpenTelemetry, Redis/Valkey messaging, JDBC
 directory, Kafka, Consul, pgvector, …) the question of *where* each adapter lives and *how* its
 dependencies reach the consumer recurs with every new backend. Without an explicit rule, each
 adapter reopens the same discussion and risks polluting the transitive classpath of consumers
@@ -130,7 +130,7 @@ Example consumer opt-in (OpenTelemetry):
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <dependency>
     <groupId>io.opentelemetry</groupId>
@@ -146,7 +146,7 @@ Example consumer opt-in (JDBC persistence):
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 ```
 

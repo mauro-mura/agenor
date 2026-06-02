@@ -12,7 +12,7 @@ The default `InMemoryApprovalGate` loses all pending approval requests when the 
 For production HITL workflows with human-scale timeouts (minutes, hours, days), this is
 unacceptable.
 
-`JdbcApprovalGate` persists every approval request in the `jentic_hitl_requests` table.
+`JdbcApprovalGate` persists every approval request in the `agenor_hitl_requests` table.
 It reuses the same `agenor-adapters-persistence` module used by the JDBC agent directory
 (ADR-023), so no new Maven dependency is required if you already have the module on your
 classpath.
@@ -43,7 +43,7 @@ classpath.
 ```java
 var cfg = new HikariConfig();
 cfg.setJdbcUrl("jdbc:postgresql://localhost:5432/mydb");
-cfg.setUsername("jentic");
+cfg.setUsername("agenor");
 cfg.setPassword("secret");
 var dataSource = new HikariDataSource(cfg);
 
@@ -64,22 +64,22 @@ var runtime = AgenorRuntime.builder()
 ### 3. Wire via Spring Boot
 
 ```yaml
-jentic:
+agenor:
   hitl:
     provider: jdbc
     jdbc:
       url: jdbc:postgresql://localhost:5432/mydb
-      username: jentic
+      username: agenor
       password: ${DB_PASSWORD}
       pool-size: 5   # default: 5
 ```
 
-When `jentic.hitl.provider=jdbc` and `agenor-adapters-persistence` is on the classpath,
+When `agenor.hitl.provider=jdbc` and `agenor-adapters-persistence` is on the classpath,
 the auto-configuration creates the `JdbcApprovalGate` bean and wires it into `AgenorRuntime`
 automatically.
 
-If `jentic.hitl.jdbc.url` is not set, the auto-configuration falls back to
-`jentic.directory.jdbc.url` (so both features can share a single connection pool config).
+If `agenor.hitl.jdbc.url` is not set, the auto-configuration falls back to
+`agenor.directory.jdbc.url` (so both features can share a single connection pool config).
 
 ---
 
@@ -88,7 +88,7 @@ If `jentic.hitl.jdbc.url` is not set, the auto-configuration falls back to
 The schema is managed by Flyway from location `classpath:db/migration/agenor-hitl`.
 
 ```sql
-CREATE TABLE jentic_hitl_requests (
+CREATE TABLE agenor_hitl_requests (
     request_id      VARCHAR(255) NOT NULL,
     agent_id        VARCHAR(255) NOT NULL,
     action          VARCHAR(255) NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE jentic_hitl_requests (
     decision_data   TEXT,           -- rejection reason or modified payload
     decided_at      TIMESTAMP,
     decided_by      VARCHAR(255),
-    CONSTRAINT pk_jentic_hitl_requests PRIMARY KEY (request_id)
+    CONSTRAINT pk_agenor_hitl_requests PRIMARY KEY (request_id)
 );
 ```
 
@@ -142,8 +142,8 @@ request and submit decisions.
 
 When the JDBC URL contains `postgresql`, `JdbcApprovalGate` activates
 `PostgresNotificationListener`. It opens a dedicated connection and listens on the
-`jentic_hitl` channel. When another JVM submits a decision, it emits
-`NOTIFY jentic_hitl, '<requestId>:<decisionJson>'`. The listener picks this up and completes
+`agenor_hitl` channel. When another JVM submits a decision, it emits
+`NOTIFY agenor_hitl, '<requestId>:<decisionJson>'`. The listener picks this up and completes
 the local future on the receiving JVM.
 
 This provides **push-based cross-node propagation** without polling.
@@ -177,11 +177,11 @@ an existing `requestId` after restart) is deferred to the Enterprise tier.
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `jentic.hitl.provider` | `inmemory` | HITL backend: `inmemory` or `jdbc` |
-| `jentic.hitl.jdbc.url` | — | JDBC URL (falls back to `jentic.directory.jdbc.url`) |
-| `jentic.hitl.jdbc.username` | `""` | Database username |
-| `jentic.hitl.jdbc.password` | `""` | Database password |
-| `jentic.hitl.jdbc.pool-size` | `5` | HikariCP pool size |
+| `agenor.hitl.provider` | `inmemory` | HITL backend: `inmemory` or `jdbc` |
+| `agenor.hitl.jdbc.url` | — | JDBC URL (falls back to `agenor.directory.jdbc.url`) |
+| `agenor.hitl.jdbc.username` | `""` | Database username |
+| `agenor.hitl.jdbc.password` | `""` | Database password |
+| `agenor.hitl.jdbc.pool-size` | `5` | HikariCP pool size |
 
 ---
 

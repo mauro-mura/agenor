@@ -1,6 +1,6 @@
-# Jentic BOM
+# Agenor BOM
 
-Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module versions consistently.
+Bill of Materials for Agenor Framework. Import this BOM to manage Agenor module versions consistently.
 
 ## Usage
 
@@ -53,7 +53,7 @@ dependencies {
 
 ## Benefits
 
-- **Consistent version management** - All Jentic modules use the same version
+- **Consistent version management** - All Agenor modules use the same version
 - **Simplified dependency declarations** - No need to specify versions for each module
 - **Guaranteed module compatibility** - Modules are tested together
 - **Easier upgrades** - Update one BOM version to upgrade all modules

@@ -16,7 +16,7 @@ We will use a **Maven Multi-Module structure** with clear module boundaries and 
 ### Module Structure
 
 ```
-jentic/
+agenor/
 ├── agenor-bom/                          # Bill of Materials — version management
 ├── agenor-core/                         # Core interfaces only
 ├── agenor-runtime/                      # In-memory implementations

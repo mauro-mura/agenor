@@ -2,7 +2,7 @@
 
 ## Overview
 
-**PipelineBehavior** is an advanced behavior pattern in the Jentic Framework that enables multi-stage sequential data processing with type-safe transformations, comprehensive error handling, and detailed monitoring capabilities.
+**PipelineBehavior** is an advanced behavior pattern in the Agenor Framework that enables multi-stage sequential data processing with type-safe transformations, comprehensive error handling, and detailed monitoring capabilities.
 
 ---
 
@@ -895,7 +895,7 @@ if (failedStages > 0) {
 
 ## Conclusion
 
-PipelineBehavior provides a powerful and flexible way to build complex data processing workflows in Jentic Framework. By following the patterns and best practices in this guide, you can create robust, maintainable, and efficient pipelines.
+PipelineBehavior provides a powerful and flexible way to build complex data processing workflows in Agenor Framework. By following the patterns and best practices in this guide, you can create robust, maintainable, and efficient pipelines.
 
 ### Quick Reference
 
@@ -920,5 +920,5 @@ PipelineBehavior.<I, O>builder("pipeline", I.class, O.class)
 
 **Version**: 1.0.0  
 **Last Updated**: November 2, 2025  
-**Framework**: Jentic v0.2.0  
+**Framework**: Agenor v0.2.0  
 **Status**: ✅ Production Ready

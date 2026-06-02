@@ -118,5 +118,5 @@ double rate     = behavior.getSatisfactionRate();     // successful / total, [0-
 
 ---
 
-**Since**: Jentic 0.3.0  
+**Since**: Agenor 0.3.0  
 **Status**: Production Ready ✅

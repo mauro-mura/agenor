@@ -50,7 +50,7 @@ declare by choice).
 
 ## Decision
 
-Introduce a new Maven module **`agenor-adapters-persistence`** under the parent `jentic`
+Introduce a new Maven module **`agenor-adapters-persistence`** under the parent `agenor`
 reactor, positioned after `agenor-adapters` in the `<modules>` list.
 
 **Scope of this module at 0.22.0:**
@@ -92,7 +92,7 @@ without specifying it explicitly.
 ### Maven structure
 
 ```
-jentic/
+agenor/
 ├── pom.xml                          ← add agenor-adapters-persistence to <modules>
 ├── agenor-bom/
 │   └── pom.xml                      ← add artifact to <dependencyManagement>
@@ -100,7 +100,7 @@ jentic/
     ├── pom.xml
     └── src/
         ├── main/
-        │   ├── java/dev/jentic/adapters/persistence/
+        │   ├── java/dev/agenor/adapters/persistence/
         │   │   ├── directory/
         │   │   │   ├── JdbcAgentRegistry.java
         │   │   │   ├── JdbcAgentDiscovery.java
@@ -111,7 +111,7 @@ jentic/
         │   └── resources/db/migration/agenor-directory/
         │       └── V1__create_agent_directory.sql
         └── test/
-            └── java/dev/jentic/adapters/persistence/
+            └── java/dev/agenor/adapters/persistence/
                 ├── directory/
                 │   ├── JdbcAgentRegistryTest.java
                 │   └── JdbcAgentDirectoryIT.java
@@ -134,14 +134,14 @@ jentic/
 
 ```java
 @ConditionalOnClass(JdbcAgentRegistry.class)
-@ConditionalOnProperty(prefix = "jentic.directory", name = "registry", havingValue = "jdbc")
+@ConditionalOnProperty(prefix = "agenor.directory", name = "registry", havingValue = "jdbc")
 class JdbcDirectoryAutoConfiguration { ... }
 ```
 
 YAML:
 
 ```yaml
-jentic:
+agenor:
   directory:
     registry:  jdbc        # "in-memory" (default) | "jdbc"
     discovery: jdbc
@@ -170,7 +170,7 @@ jentic:
 - `AgentPresence` is not implemented by this module. Operators who want multi-node liveness
   must combine this module with an in-memory presence backend (single-node only) or wait for
   a future dedicated presence backend (Redis TTL or Consul — Enterprise tier). This is
-  documented explicitly; attempting to configure `jentic.directory.presence: jdbc` yields a
+  documented explicitly; attempting to configure `agenor.directory.presence: jdbc` yields a
   clear startup error.
 - An additional module increases the Maven reactor build time marginally.
 

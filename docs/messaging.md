@@ -1,6 +1,6 @@
 # Messaging
 
-This document describes Jentic's messaging API introduced in **0.20.0**. It replaces the monolithic `MessageService` with a set of capability-sized interfaces designed to work with both in-memory and distributed backends.
+This document describes Agenor's messaging API introduced in **0.20.0**. It replaces the monolithic `MessageService` with a set of capability-sized interfaces designed to work with both in-memory and distributed backends.
 
 ## Overview
 

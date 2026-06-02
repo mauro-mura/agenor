@@ -3,7 +3,7 @@
 > This is the package README. For the complete LLM integration guide see
 > [`docs/llm-integration.md`](../../../../../../../../docs/llm-integration.md).
 
-Provider-agnostic LLM abstraction layer for Jentic agents. Defines interfaces and
+Provider-agnostic LLM abstraction layer for Agenor agents. Defines interfaces and
 value types only — no external dependencies beyond the Java standard library.
 Concrete provider implementations (OpenAI, Anthropic, Ollama) live in `agenor-adapters`.
 

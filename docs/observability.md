@@ -1,6 +1,6 @@
 # Observability
 
-Jentic ships with a thin, dependency-free telemetry abstraction (`AgenorTelemetry`) in
+Agenor ships with a thin, dependency-free telemetry abstraction (`AgenorTelemetry`) in
 `agenor-core`. By default, every instrumented component uses the built-in **no-op
 implementation**, which has zero overhead and introduces no external dependencies. The
 real OpenTelemetry SDK integration lives in `agenor-adapters` and is entirely **opt-in**.
@@ -43,7 +43,7 @@ auto-configures `OtelAgenorTelemetry` via `@ConditionalOnClass`. Add the followi
 `application.yml`:
 
 ```yaml
-jentic:
+agenor:
   telemetry:
     enabled: true
     service-name: my-agent-service
@@ -71,9 +71,9 @@ AgenorRuntime runtime = AgenorRuntime.builder()
 
 ## Span taxonomy
 
-The table below lists every span emitted by Jentic components. Spans marked
+The table below lists every span emitted by Agenor components. Spans marked
 **Redis adapter** are only emitted when the Redis messaging backend is active
-(`jentic.messaging.provider: redis`).
+(`agenor.messaging.provider: redis`).
 
 | Span name | Component | Key attributes |
 |-----------|-----------|----------------|
@@ -106,17 +106,17 @@ set by the publisher, enabling correlation between `message.publish` and
 ## Metrics reference
 
 Metrics are emitted via the OTel Meter API when OTel is active. All metric names are
-prefixed with `jentic.`.
+prefixed with `agenor.`.
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `jentic.llm.tokens` | Counter | `provider`, `model`, `direction` (`input`\|`output`) | Total tokens consumed |
-| `jentic.llm.requests` | Counter | `provider`, `model`, `outcome` (`success`\|`error`) | LLM call count |
-| `jentic.llm.latency` | Histogram | `provider`, `model` | End-to-end LLM call duration (ms) |
-| `jentic.guardrail.violations` | Counter | `guardrail_name` | Blocked guardrail evaluations |
-| `jentic.hitl.pending` | UpDownCounter | — | Inflight human approval requests |
-| `jentic.behavior.executions` | Counter | `behavior_type`, `outcome` (`success`\|`error`) | Behavior execution count |
-| `jentic.directory.resolve.latency` | Histogram | — | Endpoint resolution time (ms) |
+| `agenor.llm.tokens` | Counter | `provider`, `model`, `direction` (`input`\|`output`) | Total tokens consumed |
+| `agenor.llm.requests` | Counter | `provider`, `model`, `outcome` (`success`\|`error`) | LLM call count |
+| `agenor.llm.latency` | Histogram | `provider`, `model` | End-to-end LLM call duration (ms) |
+| `agenor.guardrail.violations` | Counter | `guardrail_name` | Blocked guardrail evaluations |
+| `agenor.hitl.pending` | UpDownCounter | — | Inflight human approval requests |
+| `agenor.behavior.executions` | Counter | `behavior_type`, `outcome` (`success`\|`error`) | Behavior execution count |
+| `agenor.directory.resolve.latency` | Histogram | — | Endpoint resolution time (ms) |
 
 ---
 
@@ -196,7 +196,7 @@ the caller already has the right parent in `Context.current()`.
 
 ## Zero-cost no-op (default)
 
-When OTel is absent (or `jentic.telemetry.enabled: false`), all instrumented components
+When OTel is absent (or `agenor.telemetry.enabled: false`), all instrumented components
 use `NoopAgenorTelemetry`:
 
 - `spanBuilder(name)` returns the same singleton builder (no allocation).

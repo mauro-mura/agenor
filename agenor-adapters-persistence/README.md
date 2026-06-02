@@ -1,6 +1,6 @@
 # agenor-adapters-persistence
 
-JDBC-backed persistence adapters for the Jentic multi-agent framework.
+JDBC-backed persistence adapters for the Agenor multi-agent framework.
 
 This module provides durable storage for agent directory data (registry, discovery,
 endpoint resolution) and HITL approval queues using a relational database
@@ -76,7 +76,7 @@ See `agenor-examples/.../hitl/PersistentHitlExample.java` for a runnable example
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <!-- Choose a JDBC driver -->
 <dependency>
@@ -94,30 +94,30 @@ See `agenor-examples/.../hitl/PersistentHitlExample.java` for a runnable example
 ### JDBC agent directory
 
 ```yaml
-jentic:
+agenor:
   directory:
     provider: jdbc
     jdbc:
       url: jdbc:postgresql://localhost:5432/mydb
-      username: jentic
+      username: agenor
       password: ${DB_PASSWORD}
 ```
 
 ### Persistent HITL approval queue
 
 ```yaml
-jentic:
+agenor:
   hitl:
     provider: jdbc
     jdbc:
       url: jdbc:postgresql://localhost:5432/mydb   # falls back to directory.jdbc.url
-      username: jentic
+      username: agenor
       password: ${DB_PASSWORD}
       pool-size: 5
 ```
 
-Both features can share a single `url` via `jentic.directory.jdbc.url` — the HITL
-configuration reads it as a fallback when `jentic.hitl.jdbc.url` is not set.
+Both features can share a single `url` via `agenor.directory.jdbc.url` — the HITL
+configuration reads it as a fallback when `agenor.hitl.jdbc.url` is not set.
 
 ---
 
@@ -127,8 +127,8 @@ Flyway manages all DDL via two migration locations:
 
 | Location | Tables | Feature |
 |---|---|---|
-| `classpath:db/migration/agenor-directory` | `jentic_agents`, `jentic_agent_capabilities` | Agent directory |
-| `classpath:db/migration/agenor-hitl`      | `jentic_hitl_requests` | HITL approval queue |
+| `classpath:db/migration/agenor-directory` | `agenor_agents`, `agenor_agent_capabilities` | Agent directory |
+| `classpath:db/migration/agenor-hitl`      | `agenor_hitl_requests` | HITL approval queue |
 
 Migrations run automatically on factory method / constructor invocation. They are idempotent.
 

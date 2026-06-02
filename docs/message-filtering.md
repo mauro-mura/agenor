@@ -1,6 +1,6 @@
 # Message Filtering & Rate Limiting Guide
 
-This guide covers the full message filtering API and both rate limiting implementations available in Jentic.
+This guide covers the full message filtering API and both rate limiting implementations available in Agenor.
 
 The filtering subsystem spans two packages:
 - **`agenor-core` / `dev.agenor.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`

@@ -1,6 +1,6 @@
-# Getting Started with Jentic
+# Getting Started with Agenor
 
-Get Jentic running in 5 minutes — no code to write yet.
+Get Agenor running in 5 minutes — no code to write yet.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ Get Jentic running in 5 minutes — no code to write yet.
 
 ```bash
 git clone https://github.com/mauro-mura/jentic.git
-cd jentic
+cd agenor
 mvn clean install -DskipTests
 ```
 
@@ -42,9 +42,9 @@ mvn exec:java -pl agenor-examples \
 
 The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
 
-## 4. Add Jentic to Your Project
+## 4. Add Agenor to Your Project
 
-> Until Jentic is published to Maven Central, run `mvn install` locally first (step 1 above).
+> Until Agenor is published to Maven Central, run `mvn install` locally first (step 1 above).
 
 ```xml
 <dependencyManagement>
@@ -75,4 +75,4 @@ The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
 | Understand the module structure | [Architecture Guide](architecture.md) |
 | Browse all behavior types | [Behaviors Overview](behaviors/README.md) |
 | Integrate an LLM provider | [LLM Integration Guide](llm-integration.md) |
-| Configure Jentic via YAML | [Configuration Guide](configuration.md) |
+| Configure Agenor via YAML | [Configuration Guide](configuration.md) |

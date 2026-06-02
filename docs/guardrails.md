@@ -99,7 +99,7 @@ Returns `Modified(redactedContent)` if at least one match is found, `Passed` oth
 Loads a YAML blocklist and blocks matching content.
 
 ```java
-new ContentPolicyGuardrail("/etc/jentic/policy.yaml")
+new ContentPolicyGuardrail("/etc/agenor/policy.yaml")
 new ContentPolicyGuardrail("classpath:guardrails/policy.yaml")
 ```
 

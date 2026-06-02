@@ -31,7 +31,7 @@ The JDBC implementation covers three of the four capabilities defined in ADR-020
 
 | Interface | Implemented | Rationale |
 |-----------|-------------|-----------|
-| `AgentRegistry` | Yes | upsert + `DELETE` on `jentic_agents` — low write frequency; see Registration semantics |
+| `AgentRegistry` | Yes | upsert + `DELETE` on `agenor_agents` — low write frequency; see Registration semantics |
 | `AgentDiscovery` | Yes | `SELECT` by capability, type, status — well-suited to relational indexes |
 | `AgentResolver` | Yes | Single-row `SELECT` by `agent_id` — hot path, covered by PK index |
 | `AgentPresence` | **No** | See below |
@@ -49,7 +49,7 @@ read/write capabilities, in-memory `AgentPresence` for single-node liveness, or 
 presence backend (deferred to Enterprise) for multi-node liveness. The capability split from
 ADR-020 makes this mix-and-match possible without any compromise in either implementation.
 
-Attempting to configure `jentic.directory.presence: jdbc` yields a clear startup error
+Attempting to configure `agenor.directory.presence: jdbc` yields a clear startup error
 (`UnsupportedCapabilityException`) rather than silent degradation.
 
 ### Data access strategy: pure JDBC
@@ -158,7 +158,7 @@ a future `HitlSchemaManager` runs only `agenor-hitl`.
 ```sql
 -- V1__create_agent_directory.sql
 
-CREATE TABLE jentic_agents (
+CREATE TABLE agenor_agents (
     agent_id                VARCHAR(255)  PRIMARY KEY,
     agent_name              VARCHAR(255)  NOT NULL,
     agent_type              VARCHAR(255)  NOT NULL,
@@ -171,15 +171,15 @@ CREATE TABLE jentic_agents (
     last_seen               TIMESTAMP     NOT NULL
 );
 
-CREATE TABLE jentic_agent_capabilities (
-    agent_id    VARCHAR(255)  NOT NULL REFERENCES jentic_agents(agent_id) ON DELETE CASCADE,
+CREATE TABLE agenor_agent_capabilities (
+    agent_id    VARCHAR(255)  NOT NULL REFERENCES agenor_agents(agent_id) ON DELETE CASCADE,
     capability  VARCHAR(255)  NOT NULL,
     PRIMARY KEY (agent_id, capability)
 );
 
-CREATE INDEX idx_jentic_agents_status ON jentic_agents(status);
-CREATE INDEX idx_jentic_agents_type   ON jentic_agents(agent_type);
-CREATE INDEX idx_jentic_agents_node   ON jentic_agents(node_id);
+CREATE INDEX idx_agenor_agents_status ON agenor_agents(status);
+CREATE INDEX idx_agenor_agents_type   ON agenor_agents(agent_type);
+CREATE INDEX idx_agenor_agents_node   ON agenor_agents(node_id);
 ```
 
 ### Registration semantics: upsert
@@ -195,7 +195,7 @@ A plain `INSERT` would fail with a PK violation on any restart of an already-reg
 
 ```sql
 -- Postgres
-INSERT INTO jentic_agents (agent_id, agent_name, agent_type, status, node_id,
+INSERT INTO agenor_agents (agent_id, agent_name, agent_type, status, node_id,
                            endpoint_transport_type, endpoint_props, metadata,
                            registered_at, last_seen)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -244,7 +244,7 @@ values (e.g., `"payment-agent-1"`, `"payment-agent-2"`) and discover by type via
   so the schema works on Postgres, MySQL, and H2.
 - `node_id` is a UUID generated once at `AgenorRuntime` startup. It identifies the owning JVM
   and is written into `AgentEndpoint.transportProps` for Redis-based point-to-point routing.
-- `jentic_agent_capabilities` is normalised (not a JSON array) to allow
+- `agenor_agent_capabilities` is normalised (not a JSON array) to allow
   `findByCapability(String)` to use an index scan rather than a JSON path expression.
 - `endpoint_props` and `metadata` use `TEXT` (not `JSONB`) to preserve cross-database
   compatibility. Postgres users who need JSON indexing on these columns can apply a

@@ -1,10 +1,10 @@
 # Configuration Guide
 
-> **This guide covers the native `jentic.yml` format** loaded by `DefaultConfigurationLoader`.
+> **This guide covers the native `agenor.yml` format** loaded by `DefaultConfigurationLoader`.
 > If you are using the Spring Boot starter, see [Spring Boot Starter](spring-boot-starter.md) —
 > the `application.yml` format differs in structure for provider-specific sections.
 
-Jentic supports configuration via YAML files and programmatic builders. This page documents the current configuration keys and formats.
+Agenor supports configuration via YAML files and programmatic builders. This page documents the current configuration keys and formats.
 
 ## Loading Configuration
 
@@ -58,8 +58,8 @@ var config = loader.loadFromClasspath("agenor-test.yml");
 
 ### Default discovery order (`loadDefault`)
 
-1. `jentic.yml` in the current working directory (filesystem)
-2. `jentic.yml` on the classpath
+1. `agenor.yml` in the current working directory (filesystem)
+2. `agenor.yml` on the classpath
 
 Built-in defaults are used if neither is found.
 
@@ -71,10 +71,10 @@ Built-in defaults are used if neither is found.
 
 ## YAML Structure
 
-The root element is `jentic:`. All sub-sections are optional and fall back to defaults if omitted.
+The root element is `agenor:`. All sub-sections are optional and fall back to defaults if omitted.
 
 ```yaml
-jentic:
+agenor:
   runtime:
     name: my-agent-system          # default: agenor-runtime
     environment: production        # default: development
@@ -125,7 +125,7 @@ Notes:
 Provider-specific keys go inside `messaging.properties` as string values:
 
 ```yaml
-jentic:
+agenor:
   messaging:
     provider: redis
     properties:
@@ -137,7 +137,7 @@ jentic:
       max-delivery-attempts: "3"           # default: 3
 ```
 
-> **Note:** Setting `provider: redis` in `jentic.yml` only records the provider name and properties
+> **Note:** Setting `provider: redis` in `agenor.yml` only records the provider name and properties
 > in `AgenorConfiguration`. The actual `RedisMessagingFactory` must be wired manually
 > (see `agenor-adapters` documentation) or automatically via the **Spring Boot starter**,
 > which reads these keys and creates the adapter bean.
@@ -158,7 +158,7 @@ jentic:
 Provider-specific keys go inside `directory.properties` as string values:
 
 ```yaml
-jentic:
+agenor:
   directory:
     provider: jdbc
     properties:

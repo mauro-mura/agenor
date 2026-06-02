@@ -1,6 +1,6 @@
 # Agent State Persistence Guide
 
-This guide covers Jentic's **agent state persistence** system: how to save and restore an agent's
+This guide covers Agenor's **agent state persistence** system: how to save and restore an agent's
 internal business fields across JVM restarts.
 
 > **This is not the memory system.** Key-value memory (`MemoryStore`, `rememberLong`, etc.) is a

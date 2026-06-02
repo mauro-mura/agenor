@@ -37,7 +37,7 @@ Consumers that want Redis messaging must add Lettuce explicitly:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>
@@ -130,7 +130,7 @@ try (var factory = RedisMessagingFactory.builder()
 | Node stream | `<prefix>:node:<nodeId>` | `<prefix>:cg:node` | Point-to-point delivery |
 | Dead-letter | `<sourceStreamKey>:dlq` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
 
-`<prefix>` defaults to `jentic`, configurable via `consumerGroupPrefix`.
+`<prefix>` defaults to `agenor`, configurable via `consumerGroupPrefix`.
 
 `nodeId` is a UUID generated once at `RedisMessagingFactory.build()`. In a multi-node
 deployment each JVM instance gets a different `nodeId` and therefore a different node stream.
@@ -151,7 +151,7 @@ topic each receive a copy even within the same JVM.
    with no Redis hop.
 2. **Remote path** — if an `AgentResolver` is configured, the dispatcher resolves
    `receiverId → AgentEndpoint → nodeId` and calls `RedisMessageTransport.send()`, which
-   writes to `jentic:node:<nodeId>`. The target node's consumer loop picks up the message
+   writes to `agenor:node:<nodeId>`. The target node's consumer loop picks up the message
    and routes it to the matching local handler via `receiverId`.
 
 `subscribeRecipient` also starts a node-stream consumer loop on the first call (lazy,
@@ -183,7 +183,7 @@ on the next claim pass.
 ### Maximum delivery attempts
 
 After `maxDeliveryAttempts` consecutive failures (default 3) the message is moved to the
-dead-letter stream (`<sourceStreamKey>:dlq`, e.g. `jentic:topic:orders.created:dlq`) and acknowledged from the source stream.
+dead-letter stream (`<sourceStreamKey>:dlq`, e.g. `agenor:topic:orders.created:dlq`) and acknowledged from the source stream.
 No further delivery is attempted.
 
 ### Dead-letter stream
@@ -191,8 +191,8 @@ No further delivery is attempted.
 The DLQ is a plain Redis stream. Monitor it with:
 
 ```bash
-xlen jentic:topic:orders.created:dlq   # entry count
-xrange jentic:topic:orders.created:dlq - +  # inspect entries
+xlen agenor:topic:orders.created:dlq   # entry count
+xrange agenor:topic:orders.created:dlq - +  # inspect entries
 ```
 
 To replay, copy entries back to the source stream or re-publish them via `publisher.publish()`.
@@ -231,16 +231,16 @@ implementations listed above.
 ## Configuration reference
 
 All properties are set via `RedisMessagingFactory.builder()` (standalone) or
-the `jentic.messaging.redis.*` sub-section (Spring Boot).
+the `agenor.messaging.redis.*` sub-section (Spring Boot).
 
 | Builder method | Spring Boot key | Default | Description |
 |----------------|-----------------|---------|-------------|
-| `uri(String)` | `jentic.messaging.redis.uri` | `redis://localhost:6379` | Redis connection URI. Supports `redis://`, `rediss://` (TLS), `redis-sentinel://` |
-| `consumerGroupPrefix(String)` | `jentic.messaging.redis.consumer-group-prefix` | `jentic` | Prefix for all stream keys and consumer group names |
-| `readBlockTimeoutMs(long)` | `jentic.messaging.redis.read-block-timeout-ms` | `2000` | How long `XREADGROUP BLOCK` waits before returning empty (ms) |
-| `maxStreamLength(int)` | `jentic.messaging.redis.max-stream-length` | `100000` | Approximate maximum entries per stream before trimming |
-| `pendingEntriesTimeoutMs(long)` | `jentic.messaging.redis.pending-entries-timeout-ms` | `30000` | Idle time before an unacknowledged pending entry is redelivered (ms) |
-| `maxDeliveryAttempts(int)` | `jentic.messaging.redis.max-delivery-attempts` | `3` | Delivery failures before the message is moved to the DLQ |
+| `uri(String)` | `agenor.messaging.redis.uri` | `redis://localhost:6379` | Redis connection URI. Supports `redis://`, `rediss://` (TLS), `redis-sentinel://` |
+| `consumerGroupPrefix(String)` | `agenor.messaging.redis.consumer-group-prefix` | `agenor` | Prefix for all stream keys and consumer group names |
+| `readBlockTimeoutMs(long)` | `agenor.messaging.redis.read-block-timeout-ms` | `2000` | How long `XREADGROUP BLOCK` waits before returning empty (ms) |
+| `maxStreamLength(int)` | `agenor.messaging.redis.max-stream-length` | `100000` | Approximate maximum entries per stream before trimming |
+| `pendingEntriesTimeoutMs(long)` | `agenor.messaging.redis.pending-entries-timeout-ms` | `30000` | Idle time before an unacknowledged pending entry is redelivered (ms) |
+| `maxDeliveryAttempts(int)` | `agenor.messaging.redis.max-delivery-attempts` | `3` | Delivery failures before the message is moved to the DLQ |
 
 ### URI schemes
 
@@ -260,7 +260,7 @@ Add the starter and Lettuce to your POM:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>
@@ -272,7 +272,7 @@ Add the starter and Lettuce to your POM:
 Then set the provider in `application.yml`:
 
 ```yaml
-jentic:
+agenor:
   messaging:
     provider: redis
     redis:
@@ -286,7 +286,7 @@ jentic:
 
 The auto-configuration activates only when **both** conditions are true:
 - `io.lettuce.core.RedisClient` is on the classpath, and
-- `jentic.messaging.provider=redis` is set.
+- `agenor.messaging.provider=redis` is set.
 
 If either condition is false the in-memory dispatcher remains active — no error is thrown.
 

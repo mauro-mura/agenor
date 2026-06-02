@@ -2,7 +2,7 @@
 
 `agenor-spring-boot-starter` provides zero-configuration auto-wiring of `AgenorRuntime`
 into any Spring Boot 4.0.x application. Add one dependency, configure `application.yml`,
-and Jentic starts with the Spring context.
+and Agenor starts with the Spring context.
 
 ## Dependency
 
@@ -21,7 +21,7 @@ transitive classpath of non-Spring consumers.
 
 `application.yml`:
 ```yaml
-jentic:
+agenor:
   agents:
     base-package: com.example.agents
 ```
@@ -31,9 +31,9 @@ Spring lifecycle. Agents in the configured package are discovered and registered
 
 ## Configuration Reference
 
-All keys are under the `jentic` prefix. Every key is optional and falls back to a default.
+All keys are under the `agenor` prefix. Every key is optional and falls back to a default.
 
-### `jentic.runtime`
+### `agenor.runtime`
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -41,31 +41,31 @@ All keys are under the `jentic` prefix. Every key is optional and falls back to 
 | `environment` | `development` | Environment label (`development`, `staging`, `production`, `test`) |
 | `properties` | `{}` | Arbitrary key/value pairs forwarded to `RuntimeConfig` |
 
-### `jentic.agents`
+### `agenor.agents`
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `auto-discovery` | `true` | Discover `@Agent` classes at startup |
 | `base-package` | — | Root package to scan |
 | `scan-packages` | `[]` | Additional packages to scan |
-| `scan-paths` | `[]` | Legacy alias for `scan-packages` (kept for compatibility with `jentic.yml`) |
+| `scan-paths` | `[]` | Legacy alias for `scan-packages` (kept for compatibility with `agenor.yml`) |
 
 `base-package` and `scan-packages` are merged — both are scanned.
 
-### `jentic.scheduler`
+### `agenor.scheduler`
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `provider` | `simple` | Scheduler implementation |
 | `thread-pool-size` | `10` | Thread pool size |
 
-### `jentic.messaging`
+### `agenor.messaging`
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `provider` | `inmemory` | Implementation: `inmemory`, `redis` |
 | `redis.uri` | `redis://localhost:6379` | Redis URI (only when `provider=redis`) |
-| `redis.consumer-group-prefix` | `jentic` | Prefix for stream keys and consumer groups |
+| `redis.consumer-group-prefix` | `agenor` | Prefix for stream keys and consumer groups |
 | `redis.read-block-timeout-ms` | `2000` | XREADGROUP BLOCK timeout (ms) |
 | `redis.max-stream-length` | `100000` | Max entries per stream before trimming |
 | `redis.pending-entries-timeout-ms` | `30000` | Idle time before redelivery of pending entries (ms) |
@@ -76,7 +76,7 @@ The `redis.*` sub-section is only read when `provider=redis` and `agenor-adapter
 
 Redis example:
 ```yaml
-jentic:
+agenor:
   messaging:
     provider: redis
     redis:
@@ -84,7 +84,7 @@ jentic:
       consumer-group-prefix: my-app
 ```
 
-### `jentic.directory`
+### `agenor.directory`
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -99,16 +99,16 @@ Flyway schema migration runs automatically on startup.
 
 JDBC example:
 ```yaml
-jentic:
+agenor:
   directory:
     provider: jdbc
     jdbc:
       url: jdbc:postgresql://localhost:5432/mydb
-      username: jentic
+      username: agenor
       password: ${DB_PASSWORD}
 ```
 
-### `jentic.llm`
+### `agenor.llm`
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -131,7 +131,7 @@ Provider defaults:
 
 ## LLM Provider Bean and Agent Injection
 
-When `jentic.llm.provider` is set, the auto-configuration creates a `LLMProvider` bean and
+When `agenor.llm.provider` is set, the auto-configuration creates a `LLMProvider` bean and
 registers it with the runtime. Agents that declare a `LLMProvider` constructor parameter
 receive it automatically via `AgentFactory` constructor injection:
 
@@ -190,7 +190,7 @@ curl http://localhost:8080/actuator/health
 {
   "status": "UP",
   "components": {
-    "jentic": {
+    "agenor": {
       "status": "UP",
       "details": {
         "runtime.name": "my-system",
@@ -215,7 +215,7 @@ public class MyAgenorConfig {
     @Bean(name = "agenorRuntime")
     public AgenorRuntime agenorRuntime() {
         return AgenorRuntime.builder()
-                .fromClasspathConfig("my-jentic.yml")   // use a custom YAML file
+                .fromClasspathConfig("my-agenor.yml")   // use a custom YAML file
                 .build();
     }
 
@@ -232,19 +232,19 @@ public class MyAgenorConfig {
 }
 ```
 
-## Relationship with `jentic.yml`
+## Relationship with `agenor.yml`
 
 The starter configures the runtime exclusively from `application.yml` via
-`@ConfigurationProperties`. It does **not** load `jentic.yml` from the classpath.
+`@ConfigurationProperties`. It does **not** load `agenor.yml` from the classpath.
 
-If you need to load from a `jentic.yml` file, declare your own `AgenorRuntime` bean
+If you need to load from a `agenor.yml` file, declare your own `AgenorRuntime` bean
 (which suppresses auto-configuration via `@ConditionalOnMissingBean`):
 
 ```java
 @Bean
 public AgenorRuntime agenorRuntime() {
     return AgenorRuntime.builder()
-            .fromClasspathConfig("jentic.yml")
+            .fromClasspathConfig("agenor.yml")
             .build();
 }
 ```
@@ -257,7 +257,7 @@ is stable across Spring Boot 4.x versions.
 
 ## See Also
 
-- [Configuration Guide](configuration.md) — native `jentic.yml` format and `AgenorRuntime` builder
+- [Configuration Guide](configuration.md) — native `agenor.yml` format and `AgenorRuntime` builder
 - [Agent Development Guide](agent-development.md) — `@Agent`, behaviors, lifecycle
 - [LLM Integration Guide](llm-integration.md) — `LLMProvider`, `LLMAgent`, providers
 - [Architecture Guide](architecture.md) — module overview

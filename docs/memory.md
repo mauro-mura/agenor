@@ -1,6 +1,6 @@
 # Memory Guide
 
-This guide covers Jentic's **key-value memory system**: `MemoryStore`, `MemoryScope`, `MemoryEntry`,
+This guide covers Agenor's **key-value memory system**: `MemoryStore`, `MemoryScope`, `MemoryEntry`,
 the `BaseAgent` helper API, shared memory for multi-agent coordination, and the `InMemoryStore`
 implementation.
 

@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-04-12  
-**Authors**: Jentic Team  
+**Authors**: Agenor Team  
 **Replaces**: Partial update to ADR-007 (LLMProvider as Core Interface)
 
 ---

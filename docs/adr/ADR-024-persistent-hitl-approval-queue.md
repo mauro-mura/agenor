@@ -30,7 +30,7 @@ dependency.
 A new class `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` implements `ApprovalGate`.
 
 **`requestApproval(ApprovalRequest request)`**:
-1. INSERT a row into `jentic_hitl_requests` with `status = PENDING`.
+1. INSERT a row into `agenor_hitl_requests` with `status = PENDING`.
 2. Register a `CompletableFuture<ApprovalDecision>` in an in-memory `ConcurrentHashMap` keyed
    by `requestId` — this future lives only in the JVM that submitted the request.
 3. Schedule a timeout callback (virtual thread, ADR-001) that marks the row `EXPIRED` and
@@ -41,7 +41,7 @@ A new class `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` implements `
 1. UPDATE the row: set `status`, `decision_type`, `decision_data`, `decided_at`.
 2. If a local future is registered: complete it with the decision.
 3. If Postgres is detected (JDBC URL contains `postgresql`): emit
-   `NOTIFY jentic_hitl, '<requestId>:<decisionJson>'` so other JVMs listening on this
+   `NOTIFY agenor_hitl, '<requestId>:<decisionJson>'` so other JVMs listening on this
    channel can complete their local futures.
 
 **`getPendingRequests()`**:
@@ -56,7 +56,7 @@ their `CompletableFuture` is gone, but the audit record is preserved.
 ### Schema
 
 ```sql
-CREATE TABLE jentic_hitl_requests (
+CREATE TABLE agenor_hitl_requests (
     request_id      VARCHAR(255) NOT NULL,
     agent_id        VARCHAR(255) NOT NULL,
     action          VARCHAR(255) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE jentic_hitl_requests (
     decision_data   TEXT,
     decided_at      TIMESTAMP,
     decided_by      VARCHAR(255),
-    CONSTRAINT pk_jentic_hitl_requests PRIMARY KEY (request_id)
+    CONSTRAINT pk_agenor_hitl_requests PRIMARY KEY (request_id)
 );
 ```
 
@@ -78,7 +78,7 @@ Managed by a new Flyway migration location: `classpath:db/migration/agenor-hitl`
 ### Cross-node propagation (Postgres-only, optional)
 
 `PostgresNotificationListener` opens a dedicated non-pooled `Connection`, executes
-`LISTEN jentic_hitl`, and runs a poll loop on a virtual thread. When a `NOTIFY` arrives,
+`LISTEN agenor_hitl`, and runs a poll loop on a virtual thread. When a `NOTIFY` arrives,
 it parses the payload as `requestId:decisionJson`, looks up the local future map, and
 completes the future if present. This is a best-effort delivery: if the originating JVM
 restarts before the decision is submitted by another node, the new JVM finds the row via
@@ -102,11 +102,11 @@ default (`InMemoryApprovalGate`) is used when no gate is provided.
 
 A new `JdbcHitlConfiguration` inner class in `AgenorAutoConfiguration` activates when:
 - `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` is on the classpath
-- `jentic.hitl.provider=jdbc` is set
+- `agenor.hitl.provider=jdbc` is set
 
 YAML:
 ```yaml
-jentic:
+agenor:
   hitl:
     provider: jdbc        # default: inmemory
     jdbc:

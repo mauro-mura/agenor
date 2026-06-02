@@ -159,5 +159,5 @@ behavior.resetRateLimiter();
 
 ---
 
-**Since**: Jentic 0.2.0  
+**Since**: Agenor 0.2.0  
 **Status**: Production Ready ✅

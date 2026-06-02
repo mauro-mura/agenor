@@ -43,7 +43,7 @@ or replay, and back-pressure is not supported. Consumer count is transparent to 
 Redis Streams (`XADD`, `XREAD`, `XREADGROUP`, `XACK`) are an append-only log with consumer
 groups. Unread messages are retained in the stream until explicitly trimmed. Consumers in
 the same group receive each message exactly once; multiple groups on the same stream each
-receive all messages (fan-out for topics). This maps cleanly to Jentic's semantics: topic
+receive all messages (fan-out for topics). This maps cleanly to Agenor's semantics: topic
 fan-out via multiple consumer groups (one per subscribing agent), point-to-point delivery via
 a dedicated per-node stream with a single consumer group.
 
@@ -87,20 +87,20 @@ best-effort, loss-tolerant channel that does not need replay. It is not used for
 
 | Stream | Key pattern | Consumer group | Usage |
 |--------|------------|----------------|-------|
-| Topic stream | `jentic:topic:<topicName>` | `jentic:cg:<agentId>` (one per subscriber) | Fan-out pub/sub |
-| Node stream | `jentic:node:<nodeId>` | `jentic:cg:node` (single group per node) | Point-to-point delivery |
+| Topic stream | `agenor:topic:<topicName>` | `agenor:cg:<agentId>` (one per subscriber) | Fan-out pub/sub |
+| Node stream | `agenor:node:<nodeId>` | `agenor:cg:node` (single group per node) | Point-to-point delivery |
 | Dead-letter | `<sourceStreamKey>:dlq` | — (written with `XADD`) | Messages that exceeded `maxDeliveryAttempts` |
 
 `nodeId` is a UUID generated once at `AgenorRuntime` startup and stored in each
 `AgentEndpoint` as `transportProps.get("nodeId")`. The resolver translates `agentId →
-AgentEndpoint → nodeId → jentic:node:<nodeId>`.
+AgentEndpoint → nodeId → agenor:node:<nodeId>`.
 
 ### Delivery flow — topic publish
 
 ```
 producer
-  → XADD jentic:topic:<topic> * [fields]
-  → each subscriber's consumer group reads via XREADGROUP GROUP jentic:cg:<agentId> ...
+  → XADD agenor:topic:<topic> * [fields]
+  → each subscriber's consumer group reads via XREADGROUP GROUP agenor:cg:<agentId> ...
   → handler invoked → XACK on success
 ```
 
@@ -111,15 +111,15 @@ sender
   → RedisMessageDispatcher.sendTo(msg)
   → AgentResolver.resolveEndpoint(recipientId)  →  AgentEndpoint{nodeId, "redis", props}
   → RedisMessageTransport.send(TransportEndpoint(nodeId), msg)
-  → XADD jentic:node:<nodeId> * [fields]
-  → recipient node: consumer loop reads via XREADGROUP GROUP jentic:cg:node ...
+  → XADD agenor:node:<nodeId> * [fields]
+  → recipient node: consumer loop reads via XREADGROUP GROUP agenor:cg:node ...
   → RedisMessageDispatcher routes locally: agentId → handler (internal map)
   → XACK on handler success
 ```
 
 `subscribeRecipient(agentId, handler)` registers the handler in an internal
 `agentId → MessageHandler` map and ensures the node-stream consumer loop is running.
-When a message arrives on `jentic:node:<nodeId>`, the dispatcher reads `receiverId`
+When a message arrives on `agenor:node:<nodeId>`, the dispatcher reads `receiverId`
 from the envelope and invokes the matching handler. No `InMemoryMessageDispatcher`
 is involved in the point-to-point path.
 
@@ -136,7 +136,7 @@ All `XREADGROUP` / `XREAD` blocking loops run on **virtual threads** (ADR-001). 
 subscriber spawns one virtual thread; the thread blocks on `XREADGROUP BLOCK <timeout>`.
 On handler failure the message is not `XACK`'d and will be redelivered after the
 `pending-entries-timeout` (configurable, default 30 s). Three consecutive delivery failures
-park the message in the dead-letter stream `<sourceStreamKey>:dlq` (e.g. `jentic:topic:orders.created:dlq`).
+park the message in the dead-letter stream `<sourceStreamKey>:dlq` (e.g. `agenor:topic:orders.created:dlq`).
 
 ### Stream trimming
 
@@ -205,7 +205,7 @@ and injects it into `AgenorRuntime.Builder.messageDispatcher(...)`. No changes t
 YAML keys:
 
 ```yaml
-jentic:
+agenor:
   messaging:
     provider: inmemory        # "inmemory" (default) | "redis"
     redis:

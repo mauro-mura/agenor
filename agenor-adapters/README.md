@@ -1,6 +1,6 @@
 # agenor-adapters
 
-This module provides concrete implementations of interfaces defined in `agenor-core`. It bridges Jentic agents to external systems: LLM APIs, the A2A interoperability protocol, MCP tool servers, and embedding providers.
+This module provides concrete implementations of interfaces defined in `agenor-core`. It bridges Agenor agents to external systems: LLM APIs, the A2A interoperability protocol, MCP tool servers, and embedding providers.
 
 ---
 
@@ -20,14 +20,14 @@ dev.agenor.adapters
 ├── a2a/
 │   ├── AgenorA2AAdapter.java        # Smart router: internal vs external A2A
 │   ├── AgenorA2AClient.java         # HTTP/JSON-RPC client for external A2A agents
-│   ├── AgenorAgentExecutor.java     # Expose a Jentic agent as A2A server
+│   ├── AgenorAgentExecutor.java     # Expose a Agenor agent as A2A server
 │   ├── A2AAdapterConfig.java        # Configuration + AgentCard builder
 │   └── DialogueA2AConverter.java   # DialogueMessage ↔ A2A Task/Message
 ├── mcp/
 │   ├── McpClientFactory.java        # Recommended entry point (SSE + STDIO transports)
 │   ├── AgenorMcpClientAdapter.java  # McpClient implementation wrapping the MCP SDK
 │   ├── McpToolRegistry.java         # Tool discovery and caching with TTL support
-│   └── McpFunctionAdapter.java      # Maps MCP tools to Jentic function-calling framework
+│   └── McpFunctionAdapter.java      # Maps MCP tools to Agenor function-calling framework
 └── knowledge/
     ├── EmbeddingProviderFactory.java     # Recommended entry point
     ├── openai/
@@ -44,7 +44,7 @@ dev.agenor.adapters
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 ```
 
@@ -73,7 +73,7 @@ Add the OTel SDK alongside `agenor-adapters` in your POM:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <dependency>
     <groupId>io.opentelemetry</groupId>
@@ -84,7 +84,7 @@ Add the OTel SDK alongside `agenor-adapters` in your POM:
 
 If you use the Spring Boot starter (`agenor-spring-boot-starter`), OTel auto-configuration
 activates automatically via `@ConditionalOnClass(OpenTelemetry.class)` — no extra YAML is
-needed beyond `jentic.telemetry.enabled: true`.
+needed beyond `agenor.telemetry.enabled: true`.
 
 ### Opting in — Redis messaging
 
@@ -92,7 +92,7 @@ needed beyond `jentic.telemetry.enabled: true`.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>
@@ -180,7 +180,7 @@ LLMProvider ollama = LLMProviderFactory.ollama()
 
 ### ToolConversionUtils
 
-Converts Jentic `FunctionDefinition` objects to the vendor-specific JSON schema format required by each provider. Called internally by all three providers when `LLMRequest.hasFunctions()` is true. You do not normally need to use this class directly.
+Converts Agenor `FunctionDefinition` objects to the vendor-specific JSON schema format required by each provider. Called internally by all three providers when `LLMRequest.hasFunctions()` is true. You do not normally need to use this class directly.
 
 ```java
 // Used internally:
@@ -213,13 +213,13 @@ The A2A adapter implements the [Google Agent-to-Agent (A2A) protocol](https://go
 ### Architecture
 
 ```
-External A2A Agent ←──────────────────────────────→ Jentic agent
+External A2A Agent ←──────────────────────────────→ Agenor agent
 (any framework)       AgenorA2AAdapter               (BaseAgent subclass)
                         │
                         ├── isInternalAgent()?  → MessageService (direct)
                         └── isExternalA2AUrl()? → AgenorA2AClient (HTTP/JSON-RPC)
 
-Incoming A2A request ──→ AgenorAgentExecutor ──→ MessageService ──→ Jentic agent
+Incoming A2A request ──→ AgenorAgentExecutor ──→ MessageService ──→ Agenor agent
                          (A2A server side)
 ```
 
@@ -284,14 +284,14 @@ AgentCard card = client.getAgentCard("https://external-agent.example.com").join(
 boolean isA2A = client.isA2AAgent("https://some-service.example.com").join();
 ```
 
-### AgenorAgentExecutor — expose Jentic agent as A2A server
+### AgenorAgentExecutor — expose Agenor agent as A2A server
 
-`AgenorAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Jentic `DialogueMessage` objects, dispatches them to the target agent via `MessageService`, and maps the reply back to an A2A task result.
+`AgenorAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Agenor `DialogueMessage` objects, dispatches them to the target agent via `MessageService`, and maps the reply back to an A2A task result.
 
 ```java
 // Standalone usage
 AgentExecutor executor = new AgenorAgentExecutor(
-    "target-agent-id",   // internal Jentic agent to route requests to
+    "target-agent-id",   // internal Agenor agent to route requests to
     messageService,
     Duration.ofMinutes(5)
 );
@@ -313,7 +313,7 @@ public class MyExecutorProducer {
 }
 ```
 
-Task states managed automatically: `SUBMITTED → WORKING → COMPLETED` (or `FAILED` if the Jentic agent replies with `Performative.FAILURE`/`REFUSE`). Cancellation is forwarded as `Performative.CANCEL`.
+Task states managed automatically: `SUBMITTED → WORKING → COMPLETED` (or `FAILED` if the Agenor agent replies with `Performative.FAILURE`/`REFUSE`). Cancellation is forwarded as `Performative.CANCEL`.
 
 ### A2AAdapterConfig — build an AgentCard
 

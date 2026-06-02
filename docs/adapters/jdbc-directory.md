@@ -21,9 +21,9 @@ Any JDBC-compatible database. Recommended:
 ```bash
 # PostgreSQL via Docker — recommended for production
 docker run -d -p 5432:5432 \
-  -e POSTGRES_DB=jentic \
-  -e POSTGRES_USER=jentic \
-  -e POSTGRES_PASSWORD=jentic_pass \
+  -e POSTGRES_DB=agenor \
+  -e POSTGRES_USER=agenor \
+  -e POSTGRES_PASSWORD=agenor_pass \
   postgres:16-alpine
 
 # or with docker compose (if compose.yml is present):
@@ -45,7 +45,7 @@ explicitly:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 <!-- Runtime JDBC driver — choose one -->
 <dependency>
@@ -68,8 +68,8 @@ Flyway manages the schema automatically. The first migration
 
 | Table | Primary key | Purpose |
 |---|---|---|
-| `jentic_agents` | `agent_id` | Stores agent registration, status, endpoint, and metadata |
-| `jentic_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
+| `agenor_agents` | `agent_id` | Stores agent registration, status, endpoint, and metadata |
+| `agenor_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
 
 The migration location defaults to `classpath:db/migration/agenor-directory` and runs
 on every `JdbcAgentDirectory.create()` call. Flyway's `baselineOnMigrate=true` makes
@@ -87,8 +87,8 @@ import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
 import dev.agenor.runtime.AgenorRuntime;
 
 var config = JdbcDirectoryConfig.of(
-        "jdbc:postgresql://localhost:5432/jentic",
-        "jentic", System.getenv("DB_PASSWORD"));
+        "jdbc:postgresql://localhost:5432/agenor",
+        "agenor", System.getenv("DB_PASSWORD"));
 
 try (var dir = JdbcAgentDirectory.create(config)) {
     var runtime = AgenorRuntime.builder()
@@ -105,16 +105,16 @@ try (var dir = JdbcAgentDirectory.create(config)) {
 
 ### Spring Boot auto-configuration
 
-Add the dependency and configure `jentic.directory.provider=jdbc`. Provider-specific
+Add the dependency and configure `agenor.directory.provider=jdbc`. Provider-specific
 properties go in the `properties` map:
 
 ```yaml
-jentic:
+agenor:
   directory:
     provider: jdbc
     jdbc:
-      url: jdbc:postgresql://localhost:5432/jentic
-      username: jentic
+      url: jdbc:postgresql://localhost:5432/agenor
+      username: agenor
       password: ${DB_PASSWORD}
       pool-size: 10
 ```
@@ -137,14 +137,14 @@ the exact conditions.
 | `maximumPoolSize` | `10` | HikariCP max pool size |
 | `migrationLocation` | `classpath:db/migration/agenor-directory` | Flyway migration classpath location |
 
-Spring Boot YAML keys (`jentic.directory.jdbc.*`):
+Spring Boot YAML keys (`agenor.directory.jdbc.*`):
 
 | Key | Default | Description |
 |---|---|---|
-| `jentic.directory.jdbc.url` | — (required when `provider=jdbc`) | JDBC URL |
-| `jentic.directory.jdbc.username` | — | Database username |
-| `jentic.directory.jdbc.password` | — | Database password |
-| `jentic.directory.jdbc.pool-size` | `10` | HikariCP max pool size |
+| `agenor.directory.jdbc.url` | — (required when `provider=jdbc`) | JDBC URL |
+| `agenor.directory.jdbc.username` | — | Database username |
+| `agenor.directory.jdbc.password` | — | Database password |
+| `agenor.directory.jdbc.pool-size` | `10` | HikariCP max pool size |
 
 ---
 

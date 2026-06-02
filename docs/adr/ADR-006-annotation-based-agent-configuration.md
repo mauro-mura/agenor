@@ -54,7 +54,7 @@ public class WeatherStationAgent extends BaseAgent {
 ### External Override Example
 
 ```yaml
-jentic:
+agenor:
   agents:
     weather-station:
       behaviors:

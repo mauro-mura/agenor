@@ -3,7 +3,7 @@
 **Status**: Accepted  
 **Date**: 2026-04-26  
 **Last Modified**: 2026-05-18  
-**Authors**: Jentic Team  
+**Authors**: Agenor Team  
 **References**: ADR-002 (Interface-First Architecture), ADR-004 (Progressive Complexity),
 ADR-018 (Optional Adapter Dependencies Pattern)
 
@@ -12,7 +12,7 @@ ADR-018 (Optional Adapter Dependencies Pattern)
 ## Context
 
 The `MessageService` and `AgentDirectory` interfaces were designed for single-JVM, in-memory
-operation. As Jentic moves toward distributed backends (Redis, Kafka, JDBC, Consul), these
+operation. As Agenor moves toward distributed backends (Redis, Kafka, JDBC, Consul), these
 interfaces expose several assumptions that cannot be satisfied outside a single JVM without
 unacceptable semantic compromises:
 

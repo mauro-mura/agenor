@@ -431,7 +431,7 @@ protected void onStart() {
 ## Examples Repository
 
 See complete working examples:
-- `/agenor-examples/src/main/java/dev/jentic/examples/batching/BatchProcessingExample.java`
+- `/agenor-examples/src/main/java/dev/agenor/examples/batching/BatchProcessingExample.java`
 - Log aggregation system
 - Database batch operations
 - Multi-agent batch coordination

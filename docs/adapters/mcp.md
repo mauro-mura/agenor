@@ -1,6 +1,6 @@
 # MCP Adapter
  
-Integrates [Model Context Protocol](https://modelcontextprotocol.io) servers into Jentic agents.
+Integrates [Model Context Protocol](https://modelcontextprotocol.io) servers into Agenor agents.
 MCP tools are exposed as `FunctionDefinition`s to any `LLMProvider`, enabling a full tool-call
 round-trip without writing provider-specific code.
  
@@ -12,7 +12,7 @@ round-trip without writing provider-specific code.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${jentic.version}</version>
+    <version>${agenor.version}</version>
 </dependency>
 ```
  

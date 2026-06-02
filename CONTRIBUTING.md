@@ -1,8 +1,8 @@
-# Contributing to Jentic
+# Contributing to Agenor
 
 > **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
-Thank you for your interest in contributing to Jentic. This document provides guidelines for contributors and explains how to propose changes, report issues, and get your work merged.
+Thank you for your interest in contributing to Agenor. This document provides guidelines for contributors and explains how to propose changes, report issues, and get your work merged.
 
 ## 🌟 Getting Started
 
@@ -370,4 +370,4 @@ discussions.
 - **Project Lead**: Mauro Mura
 - **Issues**: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
 
-Thank you for helping make Jentic better! 🚀
+Thank you for helping make Agenor better! 🚀

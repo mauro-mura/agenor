@@ -1,5 +1,5 @@
 
-![jentic](docs/assets/agenor-wordmark.svg)
+![agenor](docs/assets/agenor-wordmark.svg)
 
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9%2B-blue.svg)](https://maven.apache.org/)
@@ -8,11 +8,11 @@
 
 > **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
-Jentic is a contemporary multi-agent framework that modernizes the concepts pioneered by JADE, bringing them into the cloud-native era with Java 21, virtual threads, and a pragmatic approach to distributed systems.
+Agenor is a contemporary multi-agent framework that modernizes the concepts pioneered by JADE, bringing them into the cloud-native era with Java 21, virtual threads, and a pragmatic approach to distributed systems.
 
 ## 🚀 Vision
 
-Jentic reimagines multi-agent systems with modern Java practices:
+Agenor reimagines multi-agent systems with modern Java practices:
 
 - **Start Simple, Scale Smart**: Begin with in-memory implementations, evolve to enterprise solutions
 - **Interface-First Design**: Clean abstractions that enable seamless technology transitions
@@ -33,13 +33,13 @@ Jentic reimagines multi-agent systems with modern Java practices:
 
 ```bash
 git clone https://github.com/mauro-mura/jentic.git
-cd jentic
+cd agenor
 mvn clean install
 ```
 
 #### Option 2: Add as Maven Dependency (Recommended)
 
-Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
+Use the Agenor BOM (Bill of Materials) to manage module versions consistently:
 
 ```xml
 <dependencyManagement>
@@ -70,7 +70,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
 ```
 
 **Benefits of using the BOM:**
-- ✅ No need to specify versions for each Jentic module
+- ✅ No need to specify versions for each Agenor module
 - ✅ Guaranteed compatibility between modules
 - ✅ Simplified dependency management
 - ✅ Easy upgrades - change one version, update all modules
@@ -126,7 +126,7 @@ public class HelloWorld {
 
 ## 🏗️ Architecture
 
-Jentic follows a modular, interface-first architecture:
+Agenor follows a modular, interface-first architecture:
 
 For details, read the Architecture Guide at docs/architecture.md.
 
@@ -162,7 +162,7 @@ All components are interfaces — swap any implementation without changing agent
 Simple YAML configuration:
 
 ```yaml
-jentic:
+agenor:
   runtime:
     name: my-agent-system
 
@@ -238,7 +238,7 @@ optionally an `LLMProvider` from `application.yml`. Includes Actuator health ind
  
 `application.yml`:
 ```yaml
-jentic:
+agenor:
   agents:
     base-package: com.example.agents
   llm:
@@ -311,7 +311,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ```bash
 # Clone and setup
 git clone https://github.com/mauro-mura/jentic.git
-cd jentic
+cd agenor
 
 # Build and test
 mvn clean test
@@ -361,7 +361,7 @@ mvn exec:java -pl agenor-examples \
 
 See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 
-## 💡 Why Jentic?
+## 💡 Why Agenor?
 
 **vs. JADE:**
 - Modern Java (21 vs 8)

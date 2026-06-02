@@ -706,7 +706,7 @@ protected String executeAction() throws Exception {
 ---
 
 **Version**: 0.2.0  
-**Since**: Jentic 0.2.0  
+**Since**: Agenor 0.2.0  
 **Status**: Production Ready ✅
 
 === docs/behaviors/PipelineBehavior.md ===

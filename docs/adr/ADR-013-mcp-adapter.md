@@ -8,20 +8,20 @@
 
 ## Context
 
-Jentic agents need to consume tools exposed via the Model Context Protocol (MCP).  
+Agenor agents need to consume tools exposed via the Model Context Protocol (MCP).  
 MCP defines a JSON-RPC 2.0 protocol over multiple transports (SSE, Streamable-HTTP, STDIO).  
 We need to decide how to implement the client side of this protocol.
 
 Constraints:
 - `agenor-core` must remain free of external dependencies (ADR-002)
-- The adapter must integrate with Jentic's async model (`CompletableFuture`-based)
+- The adapter must integrate with Agenor's async model (`CompletableFuture`-based)
 - The Java MCP official SDK (`io.modelcontextprotocol.sdk:mcp:1.0.0`) was released February 2026 (MIT, Maven Central)
 
 ---
 
 ## Decision
 
-**Use the official Java MCP SDK** (`io.modelcontextprotocol.sdk:mcp:1.0.0`) wrapped in a Jentic adapter.
+**Use the official Java MCP SDK** (`io.modelcontextprotocol.sdk:mcp:1.0.0`) wrapped in a Agenor adapter.
 
 ---
 
@@ -29,10 +29,10 @@ Constraints:
 
 ### Option A — Official SDK `io.modelcontextprotocol.sdk:mcp:1.0.0` ✅ Chosen
 
-**Approach**: Wrap `McpSyncClient` (SDK) with `CompletableFuture.supplyAsync()` to bridge the sync SDK into Jentic's async model.
+**Approach**: Wrap `McpSyncClient` (SDK) with `CompletableFuture.supplyAsync()` to bridge the sync SDK into Agenor's async model.
 
 ```
-McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Jentic)
+McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Agenor)
 ```
 
 **Pros**:
@@ -80,7 +80,7 @@ agenor-core
 agenor-adapters
   └── dev.agenor.adapters.mcp
         ├── AgenorMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
-        ├── McpToolMapper.java          (SDK types → Jentic records)
+        ├── McpToolMapper.java          (SDK types → Agenor records)
         ├── McpClientFactory.java       (factory: serverUrl → adapter)
         ├── McpToolRegistry.java        (cache TTL 60s + ToolListChanged)
         └── McpFunctionAdapter.java     (McpTool → LLMFunction adapter)

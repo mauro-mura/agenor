@@ -14,7 +14,7 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        JENTIC CORE                          │
+│                        AGENOR CORE                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │ Performative│  │DialogueMsg  │  │ Conversation        │  │
 │  │ (enum)      │  │ (record)    │  │ (interface)         │  │
@@ -26,7 +26,7 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
-│                      JENTIC RUNTIME                         │
+│                      AGENOR RUNTIME                         │
 │  ┌────────────────────┐  ┌──────────────────┐               │
 │  │ DefaultConversation│  │ DefaultCommitment│               │
 │  │ Manager            │  │ Tracker          │               │
@@ -44,7 +44,7 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
-│                     JENTIC ADAPTERS                         │
+│                     AGENOR ADAPTERS                         │
 │  ┌──────────────────┐  ┌──────────────────┐                 │
 │  │ AgenorA2AAdapter │  │ AgenorA2AClient  │                 │
 │  │ (routing)        │  │ (HTTP client)    │                 │
@@ -252,7 +252,7 @@ public class A2AExample {
 }
 ```
 
-### Exposing Jentic Agent as A2A Server
+### Exposing Agenor Agent as A2A Server
 
 ```java
 public class A2AServerExample {
@@ -307,7 +307,7 @@ agenor-adapters/
 
 ## Examples
 
-See `agenor-examples/src/main/java/dev/jentic/examples/dialogue/`:
+See `agenor-examples/src/main/java/dev/agenor/examples/dialogue/`:
 
 - `RequestProtocolExample.java` - Request protocol (order processing)
 - `QueryProtocolExample.java` - Query protocol (knowledge base)

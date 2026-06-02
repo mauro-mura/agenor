@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for the Jentic project. ADRs are documents that capture important architectural decisions made during the development of the project, along with their context and consequences.
+This directory contains Architecture Decision Records (ADRs) for the Agenor project. ADRs are documents that capture important architectural decisions made during the development of the project, along with their context and consequences.
 
 ## ADR Index
 
@@ -208,5 +208,5 @@ graph TD
 
 ---
 
-> **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated.
+> **Note**: ADRs are living documents. As Agenor evolves, these decisions may be revisited and updated.
 > Always check the status and date of each ADR to ensure you're working with current architectural decisions.

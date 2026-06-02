@@ -3,18 +3,18 @@
 **Status**: Accepted  
 **Date**: 2026-03-26  
 **Updated**: 2026-04-15 — migrated to Spring Boot 4.0.5 (see Decision update below)  
-**Authors**: Jentic Team  
+**Authors**: Agenor Team  
   
 
 ## Context
 
-Integrating Jentic into a Spring Boot 3.x application currently requires explicit `@Configuration`
+Integrating Agenor into a Spring Boot 3.x application currently requires explicit `@Configuration`
 boilerplate: manually constructing `AgenorRuntime` via its builder, declaring lifecycle methods,
 and optionally wiring an `LLMProvider`. This friction conflicts with the progressive-complexity
 principle established in ADR-004 and discourages adoption in the Spring ecosystem.
 
 Spring Boot's auto-configuration mechanism provides a standard, well-understood contract for
-zero-configuration library integration. Adopting it for Jentic aligns with how every major
+zero-configuration library integration. Adopting it for Agenor aligns with how every major
 Spring ecosystem library (data, security, actuator, messaging) exposes itself to application
 developers.
 
@@ -54,7 +54,7 @@ Key constraints:
    always win.
 3. No new interfaces or abstractions introduced in `agenor-core` or `agenor-runtime`; the
    starter is a pure glue layer over the existing `AgenorRuntime.Builder` API.
-4. `jentic.llm.provider=none` (default) — no `LLMProvider` bean is created unless explicitly
+4. `agenor.llm.provider=none` (default) — no `LLMProvider` bean is created unless explicitly
    configured, avoiding a hard dependency on `agenor-adapters`.
 5. The `AutoConfiguration.imports` mechanism (introduced in Spring Boot 2.7, mandatory in 3.x)
    is also the correct mechanism in Spring Boot 4.x — no migration work required on this front.
@@ -97,7 +97,7 @@ Key constraints:
 ### Module location
 
 ```
-jentic/
+agenor/
 ├── agenor-core/
 ├── agenor-runtime/
 ├── agenor-adapters/
@@ -155,7 +155,7 @@ public class AgenorAutoConfiguration {
 
 `application.yml`:
 ```yaml
-jentic:
+agenor:
   agents:
     base-package: com.example.agents
 ```
@@ -172,7 +172,7 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 {
   "status": "UP",
   "components": {
-    "jentic": {
+    "agenor": {
       "status": "UP",
       "details": {
         "runtime.name": "my-system",
@@ -187,7 +187,7 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 ## Consequences
 
 ### Positive
-- Spring Boot 3.5.x developers can integrate Jentic with one dependency and one YAML property.
+- Spring Boot 3.5.x developers can integrate Agenor with one dependency and one YAML property.
 - Actuator health endpoint makes runtime status observable out of the box.
 - `@ConditionalOnMissingBean` ensures full override capability without exclusion lists.
 - Versioning always consistent with core — released together from the monorepo.
@@ -203,13 +203,13 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
   identical; the migration required the following changes:
   - BOM version updated to 4.0.5; redundant SnakeYAML version pin removed.
   - `isPauseable() { return false; }` added to the `SmartLifecycle` implementation (Spring
-    Framework 7 introduced context-pausing; the Jentic runtime has no pause/resume semantics).
+    Framework 7 introduced context-pausing; the Agenor runtime has no pause/resume semantics).
   - **Breaking change — actuator health package renamed**: `org.springframework.boot.actuate.health`
     → `org.springframework.boot.health.contributor`. Updated in `AgenorHealthIndicator`,
     `AgenorAutoConfiguration.ActuatorConfiguration` (`@ConditionalOnClass` guard + return type),
     and all test classes (`AgenorHealthIndicatorTest`, `AgenorStarterIntegrationTest`).
   - No `javax.*` → `jakarta.*` changes were needed — the starter already used only `jakarta.*`
-    namespaces. No Jentic core changes were required.
+    namespaces. No Agenor core changes were required.
 - GraalVM native image hints are deferred to a post-1.0.0 milestone.
 
 ## Compliance

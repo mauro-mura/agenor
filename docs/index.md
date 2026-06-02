@@ -1,10 +1,10 @@
-# Jentic Documentation
+# Agenor Documentation
 
 > **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
-Jentic lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments. Built on Java 21+ virtual threads, with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
+Agenor lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments. Built on Java 21+ virtual threads, with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
 
-New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
+New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
 
 ---
 
@@ -52,7 +52,7 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 
 | Document | Description |
 |----------|-------------|
-| [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Jentic agents |
+| [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Agenor agents |
 | [Redis Messaging Adapter](adapters/redis.md) | At-least-once distributed messaging via Redis Streams (since 0.21.0) |
 
 ## Integrations
