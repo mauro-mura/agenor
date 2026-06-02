@@ -19,7 +19,7 @@ Thank you for your interest in contributing to Jentic. This document provides gu
 ```bash
 # Fork the repo on GitHub first (via UI), then:
 git clone https://github.com/yourusername/jentic.git
-cd jentic
+cd agenor
 # Add upstream to keep your fork in sync
 git remote add upstream https://github.com/mauro-mura/jentic.git
 ```

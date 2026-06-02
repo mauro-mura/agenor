@@ -18,7 +18,7 @@
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->
         <spring-boot.version>4.0.5</spring-boot.version>
-        <!-- Must match jentic-adapters/pom.xml to avoid classpath split -->
+        <!-- Must match agenor-adapters/pom.xml to avoid classpath split -->
         <lettuce.version>7.5.1.RELEASE</lettuce.version>
     </properties>
 
@@ -42,14 +42,14 @@
             <artifactId>jentic-runtime</artifactId>
         </dependency>
 
-        <!-- Jentic adapters — optional; required only when jentic.llm.provider != none -->
+        <!-- Jentic adapters — optional; required only when agenor.llm.provider != none -->
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-adapters</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Jentic adapters-persistence — optional; required only when jentic.directory.provider=jdbc -->
+        <!-- Jentic adapters-persistence — optional; required only when agenor.directory.provider=jdbc -->
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-adapters-persistence</artifactId>
@@ -85,7 +85,7 @@
         </dependency>
         <!-- Lettuce in test scope: lets us verify Redis auto-wiring without the
              optional transitive dep being on the main classpath. Version must
-             match jentic-adapters to avoid a classpath split. -->
+             match agenor-adapters to avoid a classpath split. -->
         <dependency>
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
@@ -109,7 +109,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>dev.jentic.autoconfigure</Automatic-Module-Name>
+                            <Automatic-Module-Name>dev.agenor.autoconfigure</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>

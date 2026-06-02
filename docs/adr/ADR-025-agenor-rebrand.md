@@ -11,7 +11,7 @@ ADR-020 (Core API Refactor)
 
 ## Context
 
-The project was developed under the name **Jentic** with Maven groupId `dev.jentic`. Before
+The project was developed under the name **Jentic** with Maven groupId `dev.agenor`. Before
 the first public release on Maven Central, the decision was made to rebrand to **Agenor**
 (`dev.agenor`). The rename touches every layer of the stack: package declarations, class names,
 annotation names, Maven coordinates, Spring Boot auto-configuration keys, and documentation.
@@ -23,7 +23,7 @@ the migration executes:
 2. **Backward compatibility** — whether to provide a migration bridge for existing consumers.
 3. **Versioning** — how the rename maps to the public version sequence and what gates `1.0.0`.
 
-No artifact under `dev.jentic` has been published to Maven Central. There are no external
+No artifact under `dev.agenor` has been published to Maven Central. There are no external
 consumers to break.
 
 ---
@@ -72,7 +72,7 @@ the same compilation unit.
 No shim jar, no deprecated re-exports, no `@Deprecated`-annotated aliases are provided.
 Rationale:
 
-- No artifact under `dev.jentic` has been published to Maven Central; there are no external
+- No artifact under `dev.agenor` has been published to Maven Central; there are no external
   consumers.
 - A deprecation bridge would impose ongoing maintenance cost, pollute the public API surface,
   and signal instability to new adopters from day one.
@@ -80,7 +80,7 @@ Rationale:
   `v0.24.0` release notes.
 
 Consumer migration path (documented in the GitHub Release `v0.24.0`):
-- Update Maven coordinates: `dev.jentic:jentic-* → dev.agenor:agenor-*`
+- Update Maven coordinates: `dev.agenor:jentic-* → dev.agenor:agenor-*`
 - Update Spring Boot properties: `jentic.* → agenor.*`
 - Update imports and annotation names per the D1 table above.
 
@@ -88,7 +88,7 @@ Consumer migration path (documented in the GitHub Release `v0.24.0`):
 
 The rebrand **continues the existing version sequence**. The first public release under
 `dev.agenor` is **`0.24.0`**, immediately following `0.23.0` (the last release under
-`dev.jentic`).
+`dev.agenor`).
 
 Rationale: the version number carries a maturity signal. Restarting at `0.1.0` would
 discard the signal accumulated across 23 prior releases. Jumping to `1.0.0` at rebrand
@@ -122,7 +122,7 @@ Until these criteria are met, the project signals active development via the `0.
 
 ### Negative / trade-offs
 
-- Any internal early adopter of `dev.jentic` artifacts must update coordinates, imports, and
+- Any internal early adopter of `dev.agenor` artifacts must update coordinates, imports, and
   property keys. The `v0.24.0` release notes provide a complete migration table.
 - `@Agent` and `@Behavior` are short, generic names. In projects that import multiple
   frameworks, developers must verify there is no annotation shadowing at the import level.

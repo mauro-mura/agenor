@@ -194,7 +194,7 @@ public class ApprovalController {
 ## Running the example
 
 ```bash
-mvn exec:java -pl jentic-examples -Dexec.mainClass=dev.jentic.examples.HitlExample
+mvn exec:java -pl agenor-examples -Dexec.mainClass=dev.agenor.examples.HitlExample
 ```
 
 The example runs three scenarios: approval, rejection, and payload modification.

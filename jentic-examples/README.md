@@ -15,8 +15,8 @@ mvn clean install -DskipTests
 ## Running an example
 
 ```bash
-mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.<ClassName>"
+mvn exec:java -pl agenor-examples \
+  -Dexec.mainClass="dev.agenor.examples.<ClassName>"
 ```
 
 ---
@@ -29,9 +29,9 @@ Start here. Every example fits in a single file and introduces one concept.
 
 | Example | Main class | Concept |
 |---------|-----------|---------|
-| `PingPongExample` | `dev.jentic.examples.PingPongExample` | Two agents exchanging messages |
-| `WeatherStationExample` | `dev.jentic.examples.WeatherStationExample` | Cyclic behavior + topic pub/sub |
-| `TaskManagerExample` | `dev.jentic.examples.TaskManagerExample` | Agent state + task lifecycle |
+| `PingPongExample` | `dev.agenor.examples.PingPongExample` | Two agents exchanging messages |
+| `WeatherStationExample` | `dev.agenor.examples.WeatherStationExample` | Cyclic behavior + topic pub/sub |
+| `TaskManagerExample` | `dev.agenor.examples.TaskManagerExample` | Agent state + task lifecycle |
 
 ---
 
@@ -41,13 +41,13 @@ One behavior type per example, all self-contained.
 
 | Example | Main class | Behavior |
 |---------|-----------|---------|
-| `ThrottledExample` | `dev.jentic.examples.behaviors.ThrottledExample` | `@JenticBehavior(type = THROTTLED)` rate limiting |
-| `ConditionalBehaviorExample` | `dev.jentic.examples.behaviors.ConditionalBehaviorExample` | `CONDITIONAL` — runs only when a condition is true |
-| `RetryExample` | `dev.jentic.examples.behaviors.RetryExample` | `RetryBehavior` with exponential/linear/jitter/fixed backoff |
-| `CircuitBreakerExample` | `dev.jentic.examples.behaviors.CircuitBreakerExample` | `CIRCUIT_BREAKER` — open/half-open/closed state machine |
-| `BatchProcessingExample` | `dev.jentic.examples.behaviors.BatchProcessingExample` | `BATCH` — buffer → drain → write |
-| `ScheduledExample` | `dev.jentic.examples.behaviors.ScheduledExample` | `ScheduledBehavior` cron expressions + timezone |
-| `PipelineExample` | `dev.jentic.examples.behaviors.PipelineExample` | `PIPELINE` — sequential processing stages |
+| `ThrottledExample` | `dev.agenor.examples.behaviors.ThrottledExample` | `@JenticBehavior(type = THROTTLED)` rate limiting |
+| `ConditionalBehaviorExample` | `dev.agenor.examples.behaviors.ConditionalBehaviorExample` | `CONDITIONAL` — runs only when a condition is true |
+| `RetryExample` | `dev.agenor.examples.behaviors.RetryExample` | `RetryBehavior` with exponential/linear/jitter/fixed backoff |
+| `CircuitBreakerExample` | `dev.agenor.examples.behaviors.CircuitBreakerExample` | `CIRCUIT_BREAKER` — open/half-open/closed state machine |
+| `BatchProcessingExample` | `dev.agenor.examples.behaviors.BatchProcessingExample` | `BATCH` — buffer → drain → write |
+| `ScheduledExample` | `dev.agenor.examples.behaviors.ScheduledExample` | `ScheduledBehavior` cron expressions + timezone |
+| `PipelineExample` | `dev.agenor.examples.behaviors.PipelineExample` | `PIPELINE` — sequential processing stages |
 
 ---
 
@@ -55,10 +55,10 @@ One behavior type per example, all self-contained.
 
 | Example | Main class | Pattern |
 |---------|-----------|---------|
-| `MessageFilterExample` | `dev.jentic.examples.filtering.MessageFilterExample` | Topic wildcards, predicate filters |
-| `RequestProtocolExample` | `dev.jentic.examples.dialogue.RequestProtocolExample` | Request/reply |
-| `QueryProtocolExample` | `dev.jentic.examples.dialogue.QueryProtocolExample` | Query/inform |
-| `ContractNetExample` | `dev.jentic.examples.dialogue.ContractNetExample` | CFP → propose → accept |
+| `MessageFilterExample` | `dev.agenor.examples.filtering.MessageFilterExample` | Topic wildcards, predicate filters |
+| `RequestProtocolExample` | `dev.agenor.examples.dialogue.RequestProtocolExample` | Request/reply |
+| `QueryProtocolExample` | `dev.agenor.examples.dialogue.QueryProtocolExample` | Query/inform |
+| `ContractNetExample` | `dev.agenor.examples.dialogue.ContractNetExample` | CFP → propose → accept |
 
 ---
 
@@ -66,8 +66,8 @@ One behavior type per example, all self-contained.
 
 | Example | Main class | Mechanism |
 |---------|-----------|---------|
-| `DiscoveryExample` | `dev.jentic.examples.DiscoveryExample` | `scanPackages` auto-discovery |
-| `ChatAgentExample` | `dev.jentic.examples.agent.ChatAgentExample` | `AgentDirectory` queries + direct routing |
+| `DiscoveryExample` | `dev.agenor.examples.DiscoveryExample` | `scanPackages` auto-discovery |
+| `ChatAgentExample` | `dev.agenor.examples.agent.ChatAgentExample` | `AgentDirectory` queries + direct routing |
 
 ---
 
@@ -77,13 +77,13 @@ Requires `OPENAI_API_KEY` environment variable.
 
 | Example | Main class | Pattern |
 |---------|-----------|---------|
-| `OpenAIProviderExample` | `dev.jentic.examples.llm.OpenAIProviderExample` | Raw `LLMProvider` API |
-| `CustomerSupportExample` | `dev.jentic.examples.llm.CustomerSupportExample` | LLM-driven intent routing |
-| `AIAssistantExample` | `dev.jentic.examples.llm.tools.AIAssistantExample` | Function calling / tool use |
-| `LLMDirectMessagingExample` | `dev.jentic.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
-| `LLMCapabilityDiscoveryExample` | `dev.jentic.examples.llm.capabilities.LLMCapabilityDiscoveryExample` | `scanPackages` + `AgentDirectory` capability queries |
-| `LLMFaultToleranceExample` | `dev.jentic.examples.llm.dynamic_discovery.LLMFaultToleranceExample` | Dynamic discovery + fault tolerance (agent stops mid-run) |
-| `ReflectionExample` | `dev.jentic.examples.behaviors.ReflectionExample` | ReflectionBehavior — Generate → Critique → Revise loop |
+| `OpenAIProviderExample` | `dev.agenor.examples.llm.OpenAIProviderExample` | Raw `LLMProvider` API |
+| `CustomerSupportExample` | `dev.agenor.examples.llm.CustomerSupportExample` | LLM-driven intent routing |
+| `AIAssistantExample` | `dev.agenor.examples.llm.tools.AIAssistantExample` | Function calling / tool use |
+| `LLMDirectMessagingExample` | `dev.agenor.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
+| `LLMCapabilityDiscoveryExample` | `dev.agenor.examples.llm.capabilities.LLMCapabilityDiscoveryExample` | `scanPackages` + `AgentDirectory` capability queries |
+| `LLMFaultToleranceExample` | `dev.agenor.examples.llm.dynamic_discovery.LLMFaultToleranceExample` | Dynamic discovery + fault tolerance (agent stops mid-run) |
+| `ReflectionExample` | `dev.agenor.examples.behaviors.ReflectionExample` | ReflectionBehavior — Generate → Critique → Revise loop |
 
 The three `LLM*` examples use the same research-team domain intentionally — comparing
 them side by side shows how the same problem is solved with different discovery patterns.
@@ -96,9 +96,9 @@ End-to-end examples that combine multiple patterns.
 
 | Example | Main class | Demonstrates |
 |---------|-----------|-------------|
-| `ECommerceApplication` | `dev.jentic.examples.ecommerce.ECommerceApplication` | FSM order lifecycle + parallel validators + sequential fulfillment |
-| `SupportChatbotExample` | `dev.jentic.examples.support.SupportChatbotExample` | LLM + RAG + multi-agent synthesis + A2A protocol — [details](src/main/java/dev/jentic/examples/support/README.md) |
-| `EvaluationFrameworkExample` | `dev.jentic.examples.eval.EvaluationFrameworkExample` | Agent evaluation harness |
+| `ECommerceApplication` | `dev.agenor.examples.ecommerce.ECommerceApplication` | FSM order lifecycle + parallel validators + sequential fulfillment |
+| `SupportChatbotExample` | `dev.agenor.examples.support.SupportChatbotExample` | LLM + RAG + multi-agent synthesis + A2A protocol — [details](src/main/java/dev/agenor/examples/support/README.md) |
+| `EvaluationFrameworkExample` | `dev.agenor.examples.eval.EvaluationFrameworkExample` | Agent evaluation harness |
 
 ---
 
@@ -106,17 +106,17 @@ End-to-end examples that combine multiple patterns.
 
 | Example | Main class | Tool |
 |---------|-----------|------|
-| `CLIExample` | `dev.jentic.examples.cli.CLIExample` | Web console + CLI (`jentic list`, `jentic status`, `jentic logs -f`) |
-| `WebConsoleExample` | `dev.jentic.examples.console.WebConsoleExample` | Embedded Jetty dashboard |
-| `A2AIntegrationExample` | `dev.jentic.examples.a2a.A2AIntegrationExample` | Agent-to-Agent HTTP protocol |
-| `UserPreferenceMemoryExample` | `dev.jentic.examples.memory.UserPreferenceMemoryExample` | Agent memory / persistence |
+| `CLIExample` | `dev.agenor.examples.cli.CLIExample` | Web console + CLI (`jentic list`, `jentic status`, `jentic logs -f`) |
+| `WebConsoleExample` | `dev.agenor.examples.console.WebConsoleExample` | Embedded Jetty dashboard |
+| `A2AIntegrationExample` | `dev.agenor.examples.a2a.A2AIntegrationExample` | Agent-to-Agent HTTP protocol |
+| `UserPreferenceMemoryExample` | `dev.agenor.examples.memory.UserPreferenceMemoryExample` | Agent memory / persistence |
 
 ---
 
 ## Package map
 
 ```
-dev.jentic.examples
+dev.agenor.examples
 ├── PingPongExample            ← start here
 ├── WeatherStationExample
 ├── TaskManagerExample

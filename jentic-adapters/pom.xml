@@ -161,7 +161,7 @@
 	            <configuration>
 	                <archive>
 	                    <manifestEntries>
-	                        <Automatic-Module-Name>dev.jentic.adapters</Automatic-Module-Name>
+	                        <Automatic-Module-Name>dev.agenor.adapters</Automatic-Module-Name>
 	                    </manifestEntries>
 	                </archive>
 	            </configuration>

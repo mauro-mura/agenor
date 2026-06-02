@@ -17,7 +17,7 @@ explicitly pull it in your own `pom.xml`:
 <!-- Your application POM -->
 <dependencies>
     <dependency>
-        <groupId>dev.jentic</groupId>
+        <groupId>dev.agenor</groupId>
         <artifactId>jentic-adapters</artifactId>
     </dependency>
 
@@ -54,8 +54,8 @@ jentic:
 ### 2b — Manual wiring (no Spring)
 
 ```java
-import dev.jentic.adapters.telemetry.OtelTelemetryFactory;
-import dev.jentic.core.telemetry.JenticTelemetry;
+import dev.agenor.adapters.telemetry.OtelTelemetryFactory;
+import dev.agenor.core.telemetry.JenticTelemetry;
 
 JenticTelemetry telemetry = OtelTelemetryFactory.builder()
         .serviceName("my-agent-service")
@@ -150,7 +150,7 @@ cd jentic-examples/src/main/resources/observability && docker compose up -d
 
 # Run the example
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.observability.ObservabilityExample"
+  -Dexec.mainClass="dev.agenor.examples.observability.ObservabilityExample"
 ```
 
 Open `http://localhost:16686` and search for service `jentic-observability-example` to

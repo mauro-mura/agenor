@@ -3,11 +3,11 @@
 This guide covers the full message filtering API and both rate limiting implementations available in Jentic.
 
 The filtering subsystem spans two packages:
-- **`jentic-core` / `dev.jentic.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`
-- **`jentic-runtime` / `dev.jentic.runtime.filter`** — concrete filter implementations
-- **`jentic-core` / `dev.jentic.core.ratelimit`** — `RateLimit`, `RateLimiter`, `RateLimiterStats`
-- **`jentic-runtime` / `dev.jentic.runtime.ratelimit`** — `SlidingWindowRateLimiter`, `TokenBucketRateLimiter`
-- **`jentic-runtime` / `dev.jentic.runtime.behavior.advanced`** — `ThrottledBehavior`
+- **`jentic-core` / `dev.agenor.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`
+- **`jentic-runtime` / `dev.agenor.runtime.filter`** — concrete filter implementations
+- **`jentic-core` / `dev.agenor.core.ratelimit`** — `RateLimit`, `RateLimiter`, `RateLimiterStats`
+- **`jentic-runtime` / `dev.agenor.runtime.ratelimit`** — `SlidingWindowRateLimiter`, `TokenBucketRateLimiter`
+- **`jentic-runtime` / `dev.agenor.runtime.behavior.advanced`** — `ThrottledBehavior`
 
 ---
 
@@ -44,14 +44,14 @@ MessageFilter inverted = filterA.negate();           // logical NOT
 
 ## Concrete filter classes (jentic-runtime)
 
-All classes are in `dev.jentic.runtime.filter` and implement `MessageFilter`.
+All classes are in `dev.agenor.runtime.filter` and implement `MessageFilter`.
 
 ### TopicFilter
 
 Matches messages by topic pattern.
 
 ```java
-import dev.jentic.runtime.filter.TopicFilter;
+import dev.agenor.runtime.filter.TopicFilter;
 
 // Exact match
 TopicFilter.exact("orders.created");
@@ -75,7 +75,7 @@ TopicFilter.regex("orders\\.(created|updated)");
 Matches messages by header key/value.
 
 ```java
-import dev.jentic.runtime.filter.HeaderFilter;
+import dev.agenor.runtime.filter.HeaderFilter;
 
 // Header must exist (any value)
 HeaderFilter.exists("x-trace-id");
@@ -98,7 +98,7 @@ HeaderFilter.startsWith("content-type", "application/");
 Matches messages by payload content.
 
 ```java
-import dev.jentic.runtime.filter.ContentFilter;
+import dev.agenor.runtime.filter.ContentFilter;
 
 // Content must be of a specific type
 ContentFilter.ofType(OrderData.class);
@@ -117,7 +117,7 @@ ContentFilter.matching(obj ->
 Wraps any `Predicate<Message>` with an optional description for logging.
 
 ```java
-import dev.jentic.runtime.filter.PredicateFilter;
+import dev.agenor.runtime.filter.PredicateFilter;
 
 MessageFilter filter = new PredicateFilter(
     msg -> msg.senderId() != null && msg.senderId().startsWith("trusted-"),
@@ -137,9 +137,9 @@ System.out.println(filter);  // PredicateFilter[sender-trust-check]
 Combines multiple filters with AND, OR, or NOT logic.
 
 ```java
-import dev.jentic.runtime.filter.CompositeFilter;
-import dev.jentic.runtime.filter.TopicFilter;
-import dev.jentic.runtime.filter.HeaderFilter;
+import dev.agenor.runtime.filter.CompositeFilter;
+import dev.agenor.runtime.filter.TopicFilter;
+import dev.agenor.runtime.filter.HeaderFilter;
 
 MessageFilter topic  = TopicFilter.startsWith("orders.");
 MessageFilter urgent = HeaderFilter.equals("priority", "HIGH");
@@ -162,7 +162,7 @@ MessageFilter notInternal = CompositeFilter.not(TopicFilter.startsWith("internal
 `MessageFilterBuilder` (in `jentic-core`) provides a single chainable builder that produces an `AND`-combined `MessageFilter` by default.
 
 ```java
-import dev.jentic.core.filter.MessageFilter;
+import dev.agenor.core.filter.MessageFilter;
 
 MessageFilter filter = MessageFilter.builder()
     .topicStartsWith("orders.")          // topic prefix
@@ -182,7 +182,7 @@ MessageFilter filter = MessageFilter.builder()
 Switch to OR mode:
 
 ```java
-import dev.jentic.core.filter.FilterOperator;
+import dev.agenor.core.filter.FilterOperator;
 
 MessageFilter filter = MessageFilter.builder()
     .operator(FilterOperator.OR)
@@ -270,7 +270,7 @@ public void handleOrder(Message msg) {
 `RateLimit` is a record that defines the limit parameters. All three constructors are immutable.
 
 ```java
-import dev.jentic.core.ratelimit.RateLimit;
+import dev.agenor.core.ratelimit.RateLimit;
 
 // Factory methods
 RateLimit tenPerSecond   = RateLimit.perSecond(10);
@@ -298,7 +298,7 @@ RateLimit burst = RateLimit.perSecond(10).withBurst(30);  // 10 avg, burst of 30
 Tracks requests in a rolling time window. Provides smooth traffic shaping — the rate is always measured over the most recent `period` ms, so no request can benefit from being made at the start of a fixed window.
 
 ```java
-import dev.jentic.runtime.ratelimit.SlidingWindowRateLimiter;
+import dev.agenor.runtime.ratelimit.SlidingWindowRateLimiter;
 
 RateLimiter limiter = new SlidingWindowRateLimiter(RateLimit.perSecond(10));
 
@@ -332,7 +332,7 @@ limiter.reset();
 Implements the token bucket algorithm. Tokens are added to the bucket at a steady rate; each request consumes one token. The bucket has a `burstCapacity` ceiling, allowing temporary bursts above the average rate.
 
 ```java
-import dev.jentic.runtime.ratelimit.TokenBucketRateLimiter;
+import dev.agenor.runtime.ratelimit.TokenBucketRateLimiter;
 
 // 10 requests/second with burst of 30
 RateLimit limit   = RateLimit.perSecond(10).withBurst(30);
@@ -377,12 +377,12 @@ System.out.println("Last reset      : " + stats.lastReset());
 
 ## ThrottledBehavior — rate limiting for agent behaviors
 
-`ThrottledBehavior` (in `dev.jentic.runtime.behavior.advanced`) wraps any repeating action into a rate-limited behavior. Internally it uses `TokenBucketRateLimiter`.
+`ThrottledBehavior` (in `dev.agenor.runtime.behavior.advanced`) wraps any repeating action into a rate-limited behavior. Internally it uses `TokenBucketRateLimiter`.
 
 ### Waiting mode — blocks until permit available
 
 ```java
-import dev.jentic.runtime.behavior.advanced.ThrottledBehavior;
+import dev.agenor.runtime.behavior.advanced.ThrottledBehavior;
 
 Behavior apiBehavior = ThrottledBehavior.fromWaiting(
     RateLimit.perSecond(5),

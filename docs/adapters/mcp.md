@@ -10,7 +10,7 @@ round-trip without writing provider-specific code.
  
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -115,16 +115,16 @@ Requires Docker:
 ```bash
 # Tool listing + direct call
 mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass=dev.jentic.examples.McpExample
+    -Dexec.mainClass=dev.agenor.examples.McpExample
  
 # With LLM round-trip
 export ANTHROPIC_API_KEY=sk-ant-...
 mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass=dev.jentic.examples.McpExample
+    -Dexec.mainClass=dev.agenor.examples.McpExample
  
 # Custom root directory
 mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass=dev.jentic.examples.McpExample \
+    -Dexec.mainClass=dev.agenor.examples.McpExample \
     -Dmcp.root=/path/to/dir
 ```
  

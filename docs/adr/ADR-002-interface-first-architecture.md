@@ -28,7 +28,7 @@ We will use an **Interface-First Architecture** where all core components are de
 ### Implementation
 
 ```java
-// Core interfaces in jentic-core — each capability is its own interface
+// Core interfaces in agenor-core — each capability is its own interface
 public interface TopicPublisher {
     CompletableFuture<Void> publish(Message message);
 }
@@ -41,7 +41,7 @@ public interface DirectMessenger {
 public interface MessageDispatcher
         extends TopicPublisher, TopicSubscriber, DirectMessenger, DirectReceiver { }
 
-// Simple implementation in jentic-runtime
+// Simple implementation in agenor-runtime
 public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableSubscriber {
     // In-memory implementation using ConcurrentHashMap
 }

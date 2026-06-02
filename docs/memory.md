@@ -9,8 +9,8 @@ implementation.
 > The two systems are independent; this guide covers key-value memory only.
 
 The memory subsystem spans two modules:
-- **`jentic-core`** (`dev.jentic.core.memory`) — interfaces and records
-- **`jentic-runtime`** (`dev.jentic.runtime.memory`) — implementations
+- **`jentic-core`** (`dev.agenor.core.memory`) — interfaces and records
+- **`jentic-runtime`** (`dev.agenor.runtime.memory`) — implementations
 
 For LLM-specific memory (conversation history, context window strategies) see
 [LLM Integration](llm-integration.md).
@@ -20,7 +20,7 @@ For LLM-specific memory (conversation history, context window strategies) see
 ## Package Overview
 
 ```
-jentic-core / dev.jentic.core.memory
+jentic-core / dev.agenor.core.memory
 ├── MemoryStore.java       # Core storage interface
 ├── MemoryEntry.java       # Immutable entry record (builder)
 ├── MemoryQuery.java       # Search query record (builder)
@@ -28,11 +28,11 @@ jentic-core / dev.jentic.core.memory
 ├── MemoryStats.java       # Stats record
 └── MemoryException.java   # Typed error hierarchy
 
-jentic-runtime / dev.jentic.runtime.memory
+jentic-runtime / dev.agenor.runtime.memory
 └── InMemoryStore.java     # Default MemoryStore implementation
 ```
 
-Agent state persistence classes (`dev.jentic.core.persistence`, `dev.jentic.runtime.persistence`)
+Agent state persistence classes (`dev.agenor.core.persistence`, `dev.agenor.runtime.persistence`)
 are documented in [persistence.md](persistence.md).
 
 ---

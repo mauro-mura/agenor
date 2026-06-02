@@ -4,7 +4,7 @@
 
 `FSMBehavior` models agent logic as a **Finite State Machine**: each state maps to a child `Behavior`, and guarded transitions move the FSM from one state to the next based on runtime conditions.
 
-**Since**: v0.3.0 | **Type**: `BehaviorType.FSM` | **Package**: `dev.jentic.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
+**Since**: v0.3.0 | **Type**: `BehaviorType.FSM` | **Package**: `dev.agenor.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
 
 > **Scheduling note**: `FSMBehavior` has type `BehaviorType.FSM`, which is **not scheduled automatically** by the `SimpleBehaviorScheduler`. You must drive it explicitly — see [Basic Usage](#basic-usage) below.
 

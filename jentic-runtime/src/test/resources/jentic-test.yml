@@ -9,6 +9,6 @@ jentic:
   agents:
     autoDiscovery: true
     scanPackages:
-      - "dev.jentic.examples"
+      - "dev.agenor.examples"
     properties:
       maxConcurrent: "10"

@@ -12,6 +12,6 @@
     </root>
 
     <!-- Reduce noise from test framework -->
-    <logger name="dev.jentic" level="DEBUG" />
+    <logger name="dev.agenor" level="DEBUG" />
     <logger name="org.junit" level="WARN" />
 </configuration>

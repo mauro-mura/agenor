@@ -3,12 +3,12 @@ site_url: https://jentic.dev/docs
 site_description: Java meets Agentic — enterprise-grade agent framework for the JVM
 site_author: Jentic Team
 repo_url: https://github.com/mauro-mura/jentic
-repo_name: mauro-mura/jentic
+repo_name: mauro-mura/agenor
 
 theme:
   name: material
-  logo: assets/jentic-icon.svg
-  favicon: assets/jentic-icon.svg
+  logo: assets/agenor-icon.svg
+  favicon: assets/agenor-icon.svg
   palette:
     - scheme: default
       primary: indigo

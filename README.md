@@ -45,7 +45,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>jentic-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
@@ -57,13 +57,13 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
 <dependencies>
 <!-- Core + Runtime for basic agent applications -->
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-runtime</artifactId>
 </dependency>
 
 <!-- Optional: Add adapters for external integrations -->
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
 </dependency>
 </dependencies>
@@ -82,7 +82,7 @@ If you prefer explicit version management:
 ```xml
 <dependencies>
     <dependency>
-        <groupId>dev.jentic</groupId>
+        <groupId>dev.agenor</groupId>
         <artifactId>jentic-runtime</artifactId>
         <version>0.24.0-SNAPSHOT</version>
     </dependency>
@@ -184,7 +184,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-core</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
@@ -195,7 +195,7 @@ Basic implementations for getting started quickly.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-runtime</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
@@ -206,7 +206,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
@@ -217,7 +217,7 @@ Web Console and CLI tools.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-tools</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
@@ -230,7 +230,7 @@ optionally an `LLMProvider` from `application.yml`. Includes Actuator health ind
  
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
@@ -287,19 +287,19 @@ Quick-start examples to run immediately:
 ```bash
 # Level 0 — first agent exchange
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.PingPongExample"
+  -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 
 # Level 1 — retry behavior with backoff strategies
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.behaviors.RetryExample"
+  -Dexec.mainClass="dev.agenor.examples.behaviors.RetryExample"
 
 # Level 5 — e-commerce FSM + parallel validators
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.ecommerce.ECommerceApplication"
+  -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
 
 # Level 4 — LLM multi-agent (requires OPENAI_API_KEY)
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.llm.LLMDirectMessagingExample"
+  -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
 
 ## 🤝 Contributing
@@ -318,7 +318,7 @@ mvn clean test
 
 # Run examples
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.PingPongExample"
+  -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 ```
 
 ## 📖 Documentation

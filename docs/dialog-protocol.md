@@ -317,16 +317,16 @@ See `jentic-examples/src/main/java/dev/jentic/examples/dialogue/`:
 
 ```bash
 # Request Protocol
-mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass="dev.jentic.examples.dialogue.RequestProtocolExample"
+mvn exec:java -pl agenor-examples \
+    -Dexec.mainClass="dev.agenor.examples.dialogue.RequestProtocolExample"
 
 # Query Protocol
-mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass="dev.jentic.examples.dialogue.QueryProtocolExample"
+mvn exec:java -pl agenor-examples \
+    -Dexec.mainClass="dev.agenor.examples.dialogue.QueryProtocolExample"
 
 # Contract-Net Protocol
-mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass="dev.jentic.examples.dialogue.ContractNetExample"
+mvn exec:java -pl agenor-examples \
+    -Dexec.mainClass="dev.agenor.examples.dialogue.ContractNetExample"
 ```
 
 ## Best Practices

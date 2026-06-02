@@ -27,7 +27,7 @@ dependency.
 
 ### `JdbcApprovalGate`
 
-A new class `dev.jentic.adapters.persistence.hitl.JdbcApprovalGate` implements `ApprovalGate`.
+A new class `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` implements `ApprovalGate`.
 
 **`requestApproval(ApprovalRequest request)`**:
 1. INSERT a row into `jentic_hitl_requests` with `status = PENDING`.
@@ -90,7 +90,7 @@ explicit polling via `getPendingRequests()` + re-submission.
 ### Module placement
 
 `JdbcApprovalGate` lives in `jentic-adapters-persistence` (package
-`dev.jentic.adapters.persistence.hitl`), reusing the Hikari/Flyway/JDBC infrastructure
+`dev.agenor.adapters.persistence.hitl`), reusing the Hikari/Flyway/JDBC infrastructure
 already present. No pom.xml change is needed.
 
 ### `JenticRuntime` builder
@@ -101,7 +101,7 @@ default (`InMemoryApprovalGate`) is used when no gate is provided.
 ### Spring Boot starter
 
 A new `JdbcHitlConfiguration` inner class in `JenticAutoConfiguration` activates when:
-- `dev.jentic.adapters.persistence.hitl.JdbcApprovalGate` is on the classpath
+- `dev.agenor.adapters.persistence.hitl.JdbcApprovalGate` is on the classpath
 - `jentic.hitl.provider=jdbc` is set
 
 YAML:

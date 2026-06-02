@@ -69,7 +69,7 @@ No new Maven module is needed for persistent HITL; the persistence concern is al
 ### Module coordinates
 
 ```xml
-<groupId>dev.jentic</groupId>
+<groupId>dev.agenor</groupId>
 <artifactId>jentic-adapters-persistence</artifactId>
 <version>${project.version}</version>
 ```
@@ -79,11 +79,11 @@ without specifying it explicitly.
 
 ### Package root
 
-`dev.jentic.adapters.persistence`
+`dev.agenor.adapters.persistence`
 
 ### `Automatic-Module-Name`
 
-`dev.jentic.adapters.persistence`
+`dev.agenor.adapters.persistence`
 
 ---
 

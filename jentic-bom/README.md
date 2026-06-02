@@ -10,7 +10,7 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>jentic-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
@@ -22,12 +22,12 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
 <dependencies>
     <!-- No version needed - managed by BOM -->
     <dependency>
-        <groupId>dev.jentic</groupId>
+        <groupId>dev.agenor</groupId>
         <artifactId>jentic-core</artifactId>
     </dependency>
     
     <dependency>
-        <groupId>dev.jentic</groupId>
+        <groupId>dev.agenor</groupId>
         <artifactId>jentic-runtime</artifactId>
     </dependency>
 </dependencies>
@@ -37,9 +37,9 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
 
 ```groovy
 dependencies {
-    implementation platform('dev.jentic:jentic-bom:0.24.0-SNAPSHOT')
-    implementation 'dev.jentic:jentic-core'
-    implementation 'dev.jentic:jentic-runtime'
+    implementation platform('dev.agenor:jentic-bom:0.24.0-SNAPSHOT')
+    implementation 'dev.agenor:jentic-core'
+    implementation 'dev.agenor:jentic-runtime'
 }
 ```
 
@@ -80,7 +80,7 @@ dependencies {
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>dev.jentic</groupId>
+                <groupId>dev.agenor</groupId>
                 <artifactId>jentic-bom</artifactId>
                 <version>0.24.0-SNAPSHOT</version>
                 <type>pom</type>
@@ -91,7 +91,7 @@ dependencies {
     
     <dependencies>
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>jentic-runtime</artifactId>
         </dependency>
     </dependencies>

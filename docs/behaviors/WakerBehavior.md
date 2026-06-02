@@ -4,7 +4,7 @@
 
 `WakerBehavior` polls a `Supplier<Boolean>` condition at a configurable interval and calls `onWake()` as soon as the condition becomes `true`. It is the go-to choice for **delayed** or **trigger-based** one-shot actions.
 
-**Since**: v0.1.0 | **Type**: `BehaviorType.WAKER` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.1.0 | **Type**: `BehaviorType.WAKER` | **Package**: `dev.agenor.runtime.behavior`
 
 ---
 

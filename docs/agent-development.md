@@ -6,18 +6,19 @@ This guide shows how to build agents, behaviors, and message handlers with Jenti
 - Java 21+
 - Maven 3.9+
 - Add dependencies:
-  - `dev.jentic:jentic-core`
-  - `dev.jentic:jentic-runtime`
+  - `dev.agenor:jentic-core`
+  - `dev.agenor:jentic-runtime`
 
 ## Create Your First Agent
-```java
-import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticBehavior;
-import dev.jentic.core.annotations.JenticMessageHandler;
-import dev.jentic.core.Message;
-import dev.jentic.runtime.agent.BaseAgent;
 
-import static dev.jentic.core.BehaviorType.CYCLIC;
+```java
+import dev.agenor.core.annotations.JenticAgent;
+import dev.agenor.core.annotations.JenticBehavior;
+import dev.agenor.core.annotations.JenticMessageHandler;
+import dev.agenor.core.Message;
+import dev.agenor.runtime.agent.BaseAgent;
+
+import static dev.agenor.core.BehaviorType.CYCLIC;
 
 @JenticAgent("hello-agent")
 public class HelloAgent extends BaseAgent {
@@ -25,9 +26,9 @@ public class HelloAgent extends BaseAgent {
     @JenticBehavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
         getMessageDispatcher().publish(Message.builder()
-            .topic("greetings")
-            .content("Hello from " + getAgentId())
-            .build());
+                .topic("greetings")
+                .content("Hello from " + getAgentId())
+                .build());
     }
 
     @JenticMessageHandler("greetings")
@@ -38,14 +39,15 @@ public class HelloAgent extends BaseAgent {
 ```
 
 ## Bootstrapping the Runtime
+
 ```java
-import dev.jentic.runtime.JenticRuntime;
+import dev.agenor.runtime.JenticRuntime;
 
 public class App {
     public static void main(String[] args) {
         var runtime = JenticRuntime.builder()
-            .scanPackage("com.example.agents")
-            .build();
+                .scanPackage("com.example.agents")
+                .build();
 
         runtime.start();
     }
@@ -193,7 +195,7 @@ For the complete LLM guide see [`docs/llm-integration.md`](llm-integration.md).
 
 ## Message Filters
 
-Filters allow fine-grained control over which messages an agent or subscription receives. All filter classes are in `dev.jentic.runtime.filter` and implement `MessageFilter` (a `Predicate<Message>`).
+Filters allow fine-grained control over which messages an agent or subscription receives. All filter classes are in `dev.agenor.runtime.filter` and implement `MessageFilter` (a `Predicate<Message>`).
 
 ### TopicFilter — filter by topic pattern
 
@@ -264,7 +266,7 @@ protected void onStart() {
 
 ## Rate Limiting
 
-Jentic provides two `RateLimiter` implementations in `dev.jentic.runtime.ratelimit`.
+Jentic provides two `RateLimiter` implementations in `dev.agenor.runtime.ratelimit`.
 
 ### SlidingWindowRateLimiter
 
@@ -310,7 +312,7 @@ addBehavior(throttled);
 
 ## Conditions
 
-Conditions are `Predicate<Agent>`-like objects (`dev.jentic.core.condition.Condition`) used to gate behavior execution at runtime. Jentic supplies three factory classes in `dev.jentic.runtime.condition`.
+Conditions are `Predicate<Agent>`-like objects (`dev.agenor.core.condition.Condition`) used to gate behavior execution at runtime. Jentic supplies three factory classes in `dev.agenor.runtime.condition`.
 
 ### AgentCondition — based on agent state
 

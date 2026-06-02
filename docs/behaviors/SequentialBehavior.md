@@ -1,7 +1,7 @@
 # SequentialBehavior — Step-by-Step Execution
 
 **Since**: v0.3.0 | **Updated**: v0.14.0  
-**Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.jentic.runtime.behavior.composite`
+**Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.agenor.runtime.behavior.composite`
 
 ## Overview
 

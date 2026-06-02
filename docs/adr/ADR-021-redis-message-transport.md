@@ -172,12 +172,12 @@ starter. It composes `RedisTopicPublisher` (topic pub/sub), `RedisMessageTranspo
 `RedisMessagingFactory.messageDispatcher()` constructs and returns it; the individual
 `topicPublisher()` and `messageTransport()` accessors remain available for advanced use.
 
-Package root: `dev.jentic.adapters.messaging.redis`
+Package root: `dev.agenor.adapters.messaging.redis`
 
 ### Dependency — Lettuce (`optional=true`, per ADR-018)
 
 ```xml
-<!-- jentic-adapters/pom.xml -->
+<!-- agenor-adapters/pom.xml -->
 <dependency>
     <groupId>io.lettuce</groupId>
     <artifactId>lettuce-core</artifactId>
@@ -192,7 +192,7 @@ Consumers that do not declare it see only the in-memory dispatcher at runtime.
 
 ```java
 @ConditionalOnClass(io.lettuce.core.RedisClient.class)
-@ConditionalOnProperty(prefix = "jentic.messaging", name = "provider", havingValue = "redis")
+@ConditionalOnProperty(prefix = "agenor.messaging", name = "provider", havingValue = "redis")
 class RedisMessagingConfiguration { ... }
 ```
 
@@ -210,7 +210,7 @@ jentic:
     provider: inmemory        # "inmemory" (default) | "redis"
     redis:
       uri: redis://localhost:6379
-      consumer-group-prefix: jentic
+      consumer-group-prefix: agenor
       read-block-timeout-ms: 2000
       max-stream-length: 100000
       pending-entries-timeout-ms: 30000

@@ -38,7 +38,7 @@
 	            <configuration>
 	                <archive>
 	                    <manifestEntries>
-	                        <Automatic-Module-Name>dev.jentic.core</Automatic-Module-Name>
+	                        <Automatic-Module-Name>dev.agenor.core</Automatic-Module-Name>
 	                    </manifestEntries>
 	                </archive>
 	            </configuration>

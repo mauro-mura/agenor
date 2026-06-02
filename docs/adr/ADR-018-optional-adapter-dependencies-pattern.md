@@ -53,7 +53,7 @@ without a new or updated ADR.
 
 - The dependency is declared in `jentic-adapters/pom.xml` with `<optional>true</optional>`.
 - All classes that import the optional library are confined to a dedicated sub-package
-  (e.g. `dev.jentic.adapters.telemetry`, `dev.jentic.adapters.messaging.redis`).
+  (e.g. `dev.agenor.adapters.telemetry`, `dev.agenor.adapters.messaging.redis`).
 - The `jentic-runtime` module must **never** import these classes — it depends only on
   interfaces in `jentic-core`.
 - The Spring Boot starter guards auto-configured beans with `@ConditionalOnClass(OptionalLib.class)`.
@@ -128,7 +128,7 @@ Example consumer opt-in (OpenTelemetry):
 ```xml
 <!-- Consumer POM — must declare the optional lib explicitly -->
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -144,7 +144,7 @@ Example consumer opt-in (JDBC persistence):
 ```xml
 <!-- Consumer POM — declares the sub-module artifact directly -->
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>

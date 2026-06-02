@@ -43,7 +43,7 @@ explicitly:
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -82,9 +82,9 @@ the migration idempotent — safe to call repeatedly.
 ### Programmatic (any application)
 
 ```java
-import dev.jentic.adapters.persistence.directory.JdbcAgentDirectory;
-import dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig;
-import dev.jentic.runtime.JenticRuntime;
+import dev.agenor.adapters.persistence.directory.JdbcAgentDirectory;
+import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
+import dev.agenor.runtime.JenticRuntime;
 
 var config = JdbcDirectoryConfig.of(
         "jdbc:postgresql://localhost:5432/jentic",

@@ -19,7 +19,7 @@ The WebConsole in `jentic-tools` was tightly coupled to Jetty and directly depen
 ### Interfaces in jentic-core
 
 ```
-dev.jentic.core.console/
+dev.agenor.core.console/
 ├── WebConsole.java           # start/stop/isRunning/getPort
 └── ConsoleEventListener.java # Events for WebSocket
 ```
@@ -32,7 +32,7 @@ We **do not** create `AgentInfoProvider` or `MetricsProvider` because:
 ### Implementation in jentic-tools
 
 ```
-dev.jentic.tools.console/
+dev.agenor.tools.console/
 ├── JettyWebConsole.java      # Main implementation
 ├── RestAPIHandler.java       # REST API
 ├── WebSocketHandler.java    # WebSocket

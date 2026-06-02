@@ -11,28 +11,28 @@ Jentic supports configuration via YAML files and programmatic builders. This pag
 `ConfigurationLoader` is an interface in `jentic-core`. The default implementation is `DefaultConfigurationLoader` in `jentic-runtime`. The recommended way to load configuration is via the `JenticRuntime` builder:
 
 ```java
-import dev.jentic.runtime.JenticRuntime;
+import dev.agenor.runtime.JenticRuntime;
 
 // Load from a filesystem path (throws ConfigurationException on invalid config)
 var runtime = JenticRuntime.builder()
-    .fromFilesystemConfig("./jentic.yml")
-    .build();
+        .fromFilesystemConfig("./agenor.yml")
+        .build();
 
-// Load from classpath resource (throws ConfigurationException on invalid config)
-var runtime = JenticRuntime.builder()
-    .fromClasspathConfig("jentic-test.yml")
-    .build();
+        // Load from classpath resource (throws ConfigurationException on invalid config)
+        var runtime = JenticRuntime.builder()
+                .fromClasspathConfig("agenor-test.yml")
+                .build();
 
-// Load default (see discovery order below)
-var runtime = JenticRuntime.builder()
-    .withDefaultConfig()
-    .build();
+        // Load default (see discovery order below)
+        var runtime = JenticRuntime.builder()
+                .withDefaultConfig()
+                .build();
 
-// Provide a pre-built configuration object
-JenticConfiguration config = JenticConfiguration.defaults();
-var runtime = JenticRuntime.builder()
-    .withConfiguration(config)
-    .build();
+        // Provide a pre-built configuration object
+        JenticConfiguration config = JenticConfiguration.defaults();
+        var runtime = JenticRuntime.builder()
+                .withConfiguration(config)
+                .build();
 
 // withConfiguration validates the provided config and throws ConfigurationException
 // if it is null or fails validation (e.g. blank runtime.name).
@@ -46,14 +46,14 @@ If none of the config builder methods are called, `JenticRuntime` starts with bu
 If you need the `JenticConfiguration` object without building a runtime:
 
 ```java
-import dev.jentic.runtime.config.DefaultConfigurationLoader;
+import dev.agenor.runtime.config.DefaultConfigurationLoader;
 
 var loader = new DefaultConfigurationLoader();
 var config = loader.loadDefault();
 // or
-var config = loader.loadFromFile("./jentic.yml");
+var config = loader.loadFromFile("./agenor.yml");
 // or
-var config = loader.loadFromClasspath("jentic-test.yml");
+var config = loader.loadFromClasspath("agenor-test.yml");
 ```
 
 ### Default discovery order (`loadDefault`)
@@ -76,7 +76,7 @@ The root element is `jentic:`. All sub-sections are optional and fall back to de
 ```yaml
 jentic:
   runtime:
-    name: my-agent-system          # default: jentic-runtime
+    name: my-agent-system          # default: agenor-runtime
     environment: production        # default: development
     properties:                    # optional arbitrary key/value pairs
       custom-key: custom-value
@@ -105,7 +105,7 @@ jentic:
 ```
 
 Notes:
-- Keys map to `dev.jentic.core.JenticConfiguration` via `dev.jentic.runtime.config.JenticConfigurationWrapper`.
+- Keys map to `dev.agenor.core.JenticConfiguration` via `dev.agenor.runtime.config.JenticConfigurationWrapper`.
 - `basePackage` and `scanPaths` are merged into `scanPackages` at load time.
 - Unknown keys are ignored by the loader.
 
@@ -130,7 +130,7 @@ jentic:
     provider: redis
     properties:
       uri: redis://localhost:6379          # default: redis://localhost:6379
-      consumer-group-prefix: jentic        # default: jentic
+      consumer-group-prefix: agenor        # default: agenor
       read-block-timeout-ms: "2000"        # default: 2000
       max-stream-length: "100000"          # default: 100000
       pending-entries-timeout-ms: "30000"  # default: 30000
@@ -162,8 +162,8 @@ jentic:
   directory:
     provider: jdbc
     properties:
-      url: jdbc:postgresql://localhost:5432/jentic   # required
-      username: jentic                               # optional
+      url: jdbc:postgresql://localhost:5432/agenor   # required
+      username: agenor                               # optional
       password: ${DB_PASSWORD}                       # optional
       pool-size: "10"                               # default: 10; must be a string
 ```
@@ -183,32 +183,34 @@ Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` 
 You can configure the runtime entirely in code without a YAML file:
 
 ```java
-import dev.jentic.runtime.JenticRuntime;
+import dev.agenor.runtime.JenticRuntime;
 
 var runtime = JenticRuntime.builder()
-    .scanPackage("dev.example.agents")   // add one package
-    .scanPackages("dev.example.other")   // varargs variant
-    .build();
+        .scanPackage("dev.example.agents")   // add one package
+        .scanPackages("dev.example.other")   // varargs variant
+        .build();
 
-runtime.start();
+runtime.
+
+start();
 ```
 
 For full control over configuration values:
 
 ```java
-import dev.jentic.core.JenticConfiguration;
+import dev.agenor.core.JenticConfiguration;
 
 var config = new JenticConfiguration(
-    new JenticConfiguration.RuntimeConfig("my-system", "production", null),
-    new JenticConfiguration.AgentsConfig(true, null, null, List.of("dev.example"), null),
-    JenticConfiguration.MessagingConfig.defaults(),
-    JenticConfiguration.DirectoryConfig.defaults(),
-    JenticConfiguration.SchedulerConfig.defaults()
+        new JenticConfiguration.RuntimeConfig("my-system", "production", null),
+        new JenticConfiguration.AgentsConfig(true, null, null, List.of("dev.example"), null),
+        JenticConfiguration.MessagingConfig.defaults(),
+        JenticConfiguration.DirectoryConfig.defaults(),
+        JenticConfiguration.SchedulerConfig.defaults()
 );
 
 var runtime = JenticRuntime.builder()
-    .withConfiguration(config)
-    .build();
+        .withConfiguration(config)
+        .build();
 ```
 
 ---

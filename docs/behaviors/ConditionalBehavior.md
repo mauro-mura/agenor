@@ -4,7 +4,7 @@
 
 `ConditionalBehavior` wraps an action behind a `Condition` gate. On each execution, the condition is evaluated against the owning agent; if satisfied, `conditionalAction()` runs; otherwise the tick is skipped and `onConditionNotMet()` is called.
 
-**Since**: v0.3.0 | **Type**: `BehaviorType.CONDITIONAL` | **Package**: `dev.jentic.runtime.behavior.advanced`
+**Since**: v0.3.0 | **Type**: `BehaviorType.CONDITIONAL` | **Package**: `dev.agenor.runtime.behavior.advanced`
 
 ---
 

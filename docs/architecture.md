@@ -80,7 +80,7 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Agent Directory and Scheduler
 
-- **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.jentic.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
+- **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.agenor.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
 - **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
 - **AgentScanner + AnnotationProcessor**: Scans packages for annotated agents/handlers and wires runtime.
 - **JenticRuntime**: Entry point to bootstrap, start, and stop the agent system.
@@ -96,7 +96,7 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Message Filters
 
-All filters implement `MessageFilter` (package `dev.jentic.runtime.filter`). Used with `FilterableSubscriber.subscribeFiltered`:
+All filters implement `MessageFilter` (package `dev.agenor.runtime.filter`). Used with `FilterableSubscriber.subscribeFiltered`:
 
 - **TopicFilter**: `exact`, `startsWith`, `endsWith`, `wildcard`, `regex`
 - **HeaderFilter**: `exists`, `equals`, `matches`, `in`, `startsWith`
@@ -106,14 +106,14 @@ All filters implement `MessageFilter` (package `dev.jentic.runtime.filter`). Use
 
 ### Rate Limiters
 
-Package `dev.jentic.runtime.ratelimit`, both implement `RateLimiter`:
+Package `dev.agenor.runtime.ratelimit`, both implement `RateLimiter`:
 
 - **SlidingWindowRateLimiter**: tracks request timestamps in a rolling time window
 - **TokenBucketRateLimiter**: classic token-bucket with configurable refill rate
 
 ### Conditions
 
-Package `dev.jentic.runtime.condition`, all produce `Condition` instances:
+Package `dev.agenor.runtime.condition`, all produce `Condition` instances:
 
 - **AgentCondition**: `isRunning`, `hasStatus`, `idMatches`, `nameContains`
 - **SystemCondition**: `cpuBelow/Above`, `memoryBelow/Above`, `availableMemoryAbove`, `threadsBelow`, `systemHealthy`, `systemUnderLoad` — reads `SystemMetrics.current()`
@@ -122,7 +122,7 @@ Package `dev.jentic.runtime.condition`, all produce `Condition` instances:
 
 ### Dialogue
 
-Package `dev.jentic.runtime.dialogue`:
+Package `dev.agenor.runtime.dialogue`:
 
 - **DialogueCapability**: composable capability that adds full dialogue support to any `BaseAgent`. Provides `request()`, `query()`, `callForProposals()`, `reply()`, `agree()`, `refuse()`, `inform()`, `failure()`, `propose()`.
 - **DefaultConversation**: tracks a single conversation's state and message history.
@@ -131,7 +131,7 @@ Package `dev.jentic.runtime.dialogue`:
 
 ### Lifecycle
 
-Package `dev.jentic.runtime.lifecycle`:
+Package `dev.agenor.runtime.lifecycle`:
 
 - **LifecycleManager**: manages agent status transitions with timeout support (`startAgent`, `stopAgent`); notifies registered `LifecycleListener` implementations.
 - **LifecycleListener**: functional interface receiving `(agentId, oldStatus, newStatus)`.
@@ -176,7 +176,7 @@ providing at-least-once delivery and fan-out pub/sub across JVM nodes. Requires 
 on the classpath per ADR-018 (opt-in). Activated via `jentic.messaging.provider=redis` in Spring Boot,
 or directly via `RedisMessagingFactory`.
 
-Key classes in `dev.jentic.adapters.messaging.redis`:
+Key classes in `dev.agenor.adapters.messaging.redis`:
 
 - **RedisMessagingFactory**: builder; manages the shared Lettuce connection and lifecycle.
 - **RedisTopicPublisher**: implements `TopicPublisher` + `TopicSubscriber`; fan-out via per-subscription consumer groups.
@@ -191,7 +191,7 @@ All core contracts are interfaces. Custom implementations can be plugged in
 without changing agent code:
 
 - `MessageDispatcher` → Redis Streams, Kafka, JMS, or any custom transport
-- `dev.jentic.core.directory.AgentDirectory` → JDBC, Consul, etcd, or any registry
+- `dev.agenor.core.directory.AgentDirectory` → JDBC, Consul, etcd, or any registry
 - `BehaviorScheduler` → Quartz, cron, or any scheduler
 - `MemoryStore` → any SQL or NoSQL backend
 
@@ -241,7 +241,7 @@ Implementations are selected by configuration while code depends only on core in
 
 To integrate enterprise technologies, implement core contracts:
 - `MessageDispatcher` (or individual `TopicPublisher` / `DirectMessenger` capabilities): swap transport (Redis Streams, Kafka, JMS)
-- `dev.jentic.core.directory.AgentDirectory` (or individual `AgentRegistry` / `AgentDiscovery` / `AgentResolver` / `AgentPresence` capabilities): swap discovery (JDBC, Consul, etcd)
+- `dev.agenor.core.directory.AgentDirectory` (or individual `AgentRegistry` / `AgentDiscovery` / `AgentResolver` / `AgentPresence` capabilities): swap discovery (JDBC, Consul, etcd)
 - `BehaviorScheduler`: advanced scheduling (Quartz, cron, priority queues)
 - `LLMProvider`: add new model providers (implement the interface, register with factory)
 
@@ -268,7 +268,7 @@ User input
   → Consumer
 ```
 
-### Core types (`jentic-core` / `dev.jentic.core.guardrail`)
+### Core types (`jentic-core` / `dev.agenor.core.guardrail`)
 
 | Type | Role |
 |------|------|
@@ -279,7 +279,7 @@ User input
 | `GuardrailViolationException` | Unchecked, extends `JenticException` |
 | `@WithGuardrails` | Annotation for declarative chain wiring |
 
-### Implementations (`jentic-runtime` / `dev.jentic.runtime.guardrail`)
+### Implementations (`jentic-runtime` / `dev.agenor.runtime.guardrail`)
 
 | Class | Type |
 |-------|------|
@@ -318,11 +318,11 @@ Agent → HumanCheckpointBehavior → ApprovalGate (virtual thread parks)
 → resumes with ApprovalDecision (Approved | Rejected | Modified)
 ```
 
-Core types (jentic-core / dev.jentic.core.hitl):
+Core types (jentic-core / dev.agenor.core.hitl):
 ApprovalRequest, ApprovalDecision (sealed), ApprovalGate, ApprovalNotifier,
 ApprovalTimeoutException, @RequiresApproval
 
-Implementations (jentic-runtime / dev.jentic.runtime.hitl):
+Implementations (jentic-runtime / dev.agenor.runtime.hitl):
 InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
 LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
 
@@ -342,7 +342,7 @@ See the ADRs in `docs/adr/` (repository only) for rationale and decisions.
 public class Main {
     public static void main(String[] args) {
         var runtime = JenticRuntime.builder()
-            .scanPackage("dev.jentic.examples")
+            .scanPackage("dev.agenor.examples")
             .build();
 
         runtime.start();

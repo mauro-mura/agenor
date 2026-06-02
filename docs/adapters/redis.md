@@ -35,7 +35,7 @@ Consumers that want Redis messaging must add Lettuce explicitly:
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -258,7 +258,7 @@ Add the starter and Lettuce to your POM:
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -331,11 +331,11 @@ Requires a running Valkey or Redis server on `localhost:6379` (or set `REDIS_URI
 docker run -d -p 6379:6379 valkey/valkey:8
 
 mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass="dev.jentic.examples.redis.RedisMessagingExample"
+    -Dexec.mainClass="dev.agenor.examples.redis.RedisMessagingExample"
 
 # custom Redis URI
 REDIS_URI=redis://my-host:6379 mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass="dev.jentic.examples.redis.RedisMessagingExample"
+    -Dexec.mainClass="dev.agenor.examples.redis.RedisMessagingExample"
 ```
 
 Expected output (abridged):
@@ -370,7 +370,7 @@ Stopping runtime...
 | `RedisMessagingConfig` | — (record) | All configuration parameters; key/group name generation |
 | `MessageCodec` | — (internal) | `Message` ↔ Redis stream field map (Jackson) |
 
-Package: `dev.jentic.adapters.messaging.redis`
+Package: `dev.agenor.adapters.messaging.redis`
 
 ---
 

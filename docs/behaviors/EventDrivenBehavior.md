@@ -4,7 +4,7 @@
 
 `EventDrivenBehavior` reacts to **incoming messages** on a topic instead of running on a schedule. It implements `MessageHandler` and is invoked by the agent's `MessageDispatcher` when a message arrives on the subscribed topic.
 
-**Since**: v0.1.0 | **Type**: `BehaviorType.EVENT_DRIVEN` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.1.0 | **Type**: `BehaviorType.EVENT_DRIVEN` | **Package**: `dev.agenor.runtime.behavior`
 
 ---
 

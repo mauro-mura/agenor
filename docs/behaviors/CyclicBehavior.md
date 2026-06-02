@@ -4,7 +4,7 @@
 
 `CyclicBehavior` executes its action repeatedly at a **fixed interval**. The scheduler calls `execute()` each time the interval elapses.
 
-**Since**: v0.1.0 | **Type**: `BehaviorType.CYCLIC` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.1.0 | **Type**: `BehaviorType.CYCLIC` | **Package**: `dev.agenor.runtime.behavior`
 
 ---
 

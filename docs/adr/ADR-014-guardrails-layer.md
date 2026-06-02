@@ -87,7 +87,7 @@ public sealed interface GuardrailResult
 
 ```
 jentic-core
-  └── dev.jentic.core.guardrail
+  └── dev.agenor.core.guardrail
         ├── GuardrailResult.java          (sealed interface — no external deps)
         ├── InputGuardrail.java           (functional interface)
         ├── OutputGuardrail.java          (functional interface)
@@ -96,7 +96,7 @@ jentic-core
         └── WithGuardrails.java           (@interface annotation)
 
 jentic-adapters (or jentic-runtime)
-  └── dev.jentic.runtime.guardrail
+  └── dev.agenor.runtime.guardrail
         ├── GuardrailChain.java           (builder + sequential execution)
         ├── PiiRedactionGuardrail.java    (Input + Output)
         ├── ContentPolicyGuardrail.java   (Input + Output)
@@ -169,8 +169,8 @@ chain is **prepended** to the programmatic guardrails (annotation guardrails run
 
 ## Compliance
 
-- `jentic-core` package `dev.jentic.core.guardrail` must have zero external dependencies (verified by `mvn dependency:analyze`)
-- Coverage ≥ 80% on `dev.jentic.core.guardrail` and `dev.jentic.runtime.guardrail` (enforced by JaCoCo in `mvn verify`)
+- `jentic-core` package `dev.agenor.core.guardrail` must have zero external dependencies (verified by `mvn dependency:analyze`)
+- Coverage ≥ 80% on `dev.agenor.core.guardrail` and `dev.agenor.runtime.guardrail` (enforced by JaCoCo in `mvn verify`)
 - `LLMAgent` backward-compatibility verified by existing test suite passing unchanged
 
 ## Notes

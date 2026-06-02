@@ -19,7 +19,7 @@ mvn clean install -DskipTests
 
 ```bash
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.PingPongExample"
+  -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 ```
 
 You should see two agents exchanging messages in the console. That's the runtime up and running.
@@ -29,15 +29,15 @@ You should see two agents exchanging messages in the console. That's the runtime
 ```bash
 # Cyclic behavior + topic pub/sub
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.WeatherStationExample"
+  -Dexec.mainClass="dev.agenor.examples.WeatherStationExample"
 
 # FSM + parallel validators (production-style orchestration)
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.ecommerce.ECommerceApplication"
+  -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
 
 # LLM multi-agent (requires OPENAI_API_KEY env var)
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.llm.LLMDirectMessagingExample"
+  -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
 
 The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
@@ -50,7 +50,7 @@ The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>dev.jentic</groupId>
+            <groupId>dev.agenor</groupId>
             <artifactId>jentic-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
@@ -61,7 +61,7 @@ The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
 
 <dependencies>
     <dependency>
-        <groupId>dev.jentic</groupId>
+        <groupId>dev.agenor</groupId>
         <artifactId>jentic-runtime</artifactId>
     </dependency>
 </dependencies>

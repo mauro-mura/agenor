@@ -4,16 +4,16 @@ This guide covers the complete integration of Large Language Models into Jentic 
 
 The LLM subsystem spans three modules:
 
-- **`jentic-core`** (`dev.jentic.core.llm`, `dev.jentic.core.memory.llm`) — provider-agnostic interfaces and records
-- **`jentic-adapters`** (`dev.jentic.adapters.llm`) — concrete provider implementations
-- **`jentic-runtime`** (`dev.jentic.runtime.agent.LLMAgent`, `dev.jentic.runtime.memory.llm`) — LLM-aware base agent and memory management
+- **`jentic-core`** (`dev.agenor.core.llm`, `dev.agenor.core.memory.llm`) — provider-agnostic interfaces and records
+- **`jentic-adapters`** (`dev.agenor.adapters.llm`) — concrete provider implementations
+- **`jentic-runtime`** (`dev.agenor.runtime.agent.LLMAgent`, `dev.agenor.runtime.memory.llm`) — LLM-aware base agent and memory management
 
 ---
 
 ## Package Overview
 
 ```
-jentic-core / dev.jentic.core.llm
+jentic-core / dev.agenor.core.llm
 ├── LLMProvider.java             # Core interface
 ├── LLMRequest.java              # Immutable request (builder)
 ├── LLMResponse.java             # Response with content + usage
@@ -24,22 +24,22 @@ jentic-core / dev.jentic.core.llm
 ├── LLMMemoryAware.java          # Injection marker interface (since 0.10.0)
 └── LLMException.java            # Typed error hierarchy
 
-jentic-core / dev.jentic.core.memory.llm
+jentic-core / dev.agenor.core.memory.llm
 ├── LLMMemoryManager.java        # Interface for memory management
 ├── ContextWindowStrategy.java   # Strategy interface
 └── TokenEstimator.java          # Token counting interface
 
-jentic-adapters / dev.jentic.adapters.llm
+jentic-adapters / dev.agenor.adapters.llm
 ├── LLMProviderFactory.java      # Factory (recommended entry point)
 ├── openai/OpenAIProvider.java
 ├── anthropic/AnthropicProvider.java
 ├── ollama/OllamaProvider.java
 └── ToolConversionUtils.java     # FunctionDefinition → vendor schema
 
-jentic-runtime / dev.jentic.runtime.agent
+jentic-runtime / dev.agenor.runtime.agent
 └── LLMAgent.java                # LLM-powered base agent
 
-jentic-runtime / dev.jentic.runtime.memory.llm
+jentic-runtime / dev.agenor.runtime.memory.llm
 ├── DefaultLLMMemoryManager.java
 ├── ContextWindowStrategies.java # FIXED, SLIDING, SUMMARIZED constants
 ├── FixedWindowStrategy.java
@@ -252,7 +252,7 @@ provider.chat(request).thenAccept(response -> {
 
 `LLMAgent` (in `jentic-runtime`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
 
-If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.jentic.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
+If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.agenor.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
 
 ```java
 @JenticAgent("my-domain-agent")

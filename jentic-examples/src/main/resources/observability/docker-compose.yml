@@ -8,10 +8,10 @@ version: "3.9"
 #
 # Then run ObservabilityExample with:
 #   OTEL_EXPORTER_TYPE=otlp-http mvn exec:java \
-#       -pl jentic-examples \
-#       -Dexec.mainClass="dev.jentic.examples.observability.ObservabilityExample"
+#       -pl agenor-examples \
+#       -Dexec.mainClass="dev.agenor.examples.observability.ObservabilityExample"
 #
-# Open http://localhost:16686 → select service "jentic-example" → Find Traces.
+# Open http://localhost:16686 → select service "agenor-example" → Find Traces.
 
 services:
   jaeger:

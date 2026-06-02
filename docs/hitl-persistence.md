@@ -25,7 +25,7 @@ classpath.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters-persistence</artifactId>
     <version>0.23.0</version>
 </dependency>
@@ -189,7 +189,7 @@ an existing `requestId` after restart) is deferred to the Enterprise tier.
 
 ```bash
 mvn exec:java -pl jentic-examples \
-  -Dexec.mainClass="dev.jentic.examples.hitl.PersistentHitlExample"
+  -Dexec.mainClass="dev.agenor.examples.hitl.PersistentHitlExample"
 ```
 
 The example uses an in-process H2 database — no Docker or external database required.

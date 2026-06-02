@@ -59,7 +59,7 @@ Added to `AgentDescriptor` as a nullable field. `InMemoryAgentDirectory` populat
 
 ### `AgentDirectory` split
 
-Four capability interfaces in `dev.jentic.core.directory`:
+Four capability interfaces in `dev.agenor.core.directory`:
 
 | Interface | Responsibility |
 |-----------|---------------|
@@ -77,7 +77,7 @@ deprecated with a default-method bridge.
 
 ### `MessageService` split
 
-Six capability interfaces in `dev.jentic.core.messaging`:
+Six capability interfaces in `dev.agenor.core.messaging`:
 
 | Interface | Responsibility |
 |-----------|---------------|
@@ -255,5 +255,5 @@ the new signatures; no additional migration is needed for code still on the lega
 All APIs listed in **Deprecated in 0.20.0, removed in 0.22.0** have been deleted from the
 codebase: `MessageService`, `InMemoryMessageService`, `LocalAgentDirectory`,
 `JenticRuntime.Builder.agentDirectory()`, `AgentDescriptor` 8-arg constructor, and
-`AgentQuery.customFilter`. `dev.jentic.core.AgentDirectory` is now deprecated at 0.22.0
+`AgentQuery.customFilter`. `dev.agenor.core.AgentDirectory` is now deprecated at 0.22.0
 (`@Deprecated(since="0.22.0", forRemoval=true)`) for removal in a future release.

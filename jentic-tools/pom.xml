@@ -87,10 +87,10 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>dev.jentic.tools.cli.JenticCLI</mainClass>
+                            <mainClass>dev.agenor.tools.cli.JenticCLI</mainClass>
                         </manifest>
                         <manifestEntries>
-	                        <Automatic-Module-Name>dev.jentic.tools</Automatic-Module-Name>
+	                        <Automatic-Module-Name>dev.agenor.tools</Automatic-Module-Name>
 	                    </manifestEntries>
                     </archive>
                 </configuration>

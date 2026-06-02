@@ -7,12 +7,12 @@
 
     <!-- Jetty a WARN -->
     <logger name="org.eclipse.jetty" level="WARN"/>
-    
+
     <!-- WebSocket a WARN -->
     <logger name="org.eclipse.jetty.websocket" level="WARN"/>
-    
+
     <!-- Jentic a INFO -->
-    <logger name="dev.jentic" level="DEBUG"/>
+    <logger name="dev.agenor" level="DEBUG"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

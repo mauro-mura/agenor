@@ -8,7 +8,7 @@ and Jentic starts with the Spring context.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-spring-boot-starter</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>

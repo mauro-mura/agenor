@@ -7,7 +7,7 @@ After each output is produced, a `ReflectionStrategy` evaluates its quality and
 decides whether a revision cycle is needed. The loop stops when the score meets the
 configured threshold or `maxIterations` is reached.
 
-**Since**: v0.12.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.12.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.agenor.runtime.behavior`
 
 ---
 
@@ -143,7 +143,7 @@ ReflectionBehavior.builder()                    // auto-generated ID
 
 - [OneShotBehavior](OneShotBehavior.md) - Single execution without reflection
 - [Behavior Overview](README.md)
-- `dev.jentic.core.reflection.ReflectionStrategy`
-- `dev.jentic.core.reflection.ReflectionConfig`
-- `dev.jentic.runtime.reflection.DefaultReflectionStrategy`
+- `dev.agenor.core.reflection.ReflectionStrategy`
+- `dev.agenor.core.reflection.ReflectionConfig`
+- `dev.agenor.runtime.reflection.DefaultReflectionStrategy`
 - `docs/adr/ADR-012-reflection-behavior.md`

@@ -150,7 +150,7 @@ timeout callback to prevent memory leaks.
 
 ```
 jentic-core
-  └── dev.jentic.core.hitl
+  └── dev.agenor.core.hitl
         ├── ApprovalRequest.java          (record — UUID, agentId, action, payload, expiresAt, metadata)
         ├── ApprovalDecision.java         (sealed interface — Approved | Rejected | Modified)
         ├── ApprovalGate.java             (interface — requestApproval returns CompletableFuture)
@@ -159,7 +159,7 @@ jentic-core
         └── RequiresApproval.java         (@interface annotation — timeout, notifier class)
 
 jentic-runtime
-  └── dev.jentic.runtime.hitl
+  └── dev.agenor.runtime.hitl
         ├── InMemoryApprovalGate.java     (ConcurrentHashMap + ScheduledExecutorService)
         ├── ApprovalService.java          (facade — approve / reject / modify / getPendingRequests)
         ├── HumanCheckpointBehavior.java  (wraps a critical action, parks on gate future)
@@ -202,8 +202,8 @@ the external decision submission interface and a `getPendingRequests()` snapshot
 
 ## Compliance
 
-- `jentic-core` package `dev.jentic.core.hitl` must have zero external dependencies (verified by `mvn dependency:analyze`)
-- Coverage ≥ 80% on `dev.jentic.core.hitl` and `dev.jentic.runtime.hitl` (enforced by JaCoCo in `mvn verify`)
+- `jentic-core` package `dev.agenor.core.hitl` must have zero external dependencies (verified by `mvn dependency:analyze`)
+- Coverage ≥ 80% on `dev.agenor.core.hitl` and `dev.agenor.runtime.hitl` (enforced by JaCoCo in `mvn verify`)
 - Agents without `@RequiresApproval` verified unaffected by existing test suite passing unchanged
 
 ## Notes

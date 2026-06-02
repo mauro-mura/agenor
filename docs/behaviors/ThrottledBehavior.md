@@ -4,7 +4,7 @@
 
 `ThrottledBehavior` enforces a maximum execution rate using a **token bucket** algorithm. It prevents an agent from overwhelming downstream services, APIs, or resources.
 
-**Since**: v0.2.0 | **Type**: `BehaviorType.THROTTLED` | **Package**: `dev.jentic.runtime.behavior.advanced`
+**Since**: v0.2.0 | **Type**: `BehaviorType.THROTTLED` | **Package**: `dev.agenor.runtime.behavior.advanced`
 
 ---
 

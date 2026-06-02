@@ -33,9 +33,9 @@ heavyweight infrastructure that should not reach the default classpath — see A
 ## Quick start — Agent directory
 
 ```java
-import dev.jentic.adapters.persistence.directory.JdbcAgentDirectory;
-import dev.jentic.adapters.persistence.directory.JdbcDirectoryConfig;
-import dev.jentic.runtime.JenticRuntime;
+import dev.agenor.adapters.persistence.directory.JdbcAgentDirectory;
+import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
+import dev.agenor.runtime.JenticRuntime;
 
 var dir = JdbcAgentDirectory.create(
         JdbcDirectoryConfig.of("jdbc:postgresql://localhost:5432/mydb", user, pass));
@@ -52,8 +52,8 @@ See `jentic-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
 ## Quick start — Persistent HITL
 
 ```java
-import dev.jentic.adapters.persistence.hitl.HitlSchemaManager;
-import dev.jentic.adapters.persistence.hitl.JdbcApprovalGate;
+import dev.agenor.adapters.persistence.hitl.HitlSchemaManager;
+import dev.agenor.adapters.persistence.hitl.JdbcApprovalGate;
 
 new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate();
 
@@ -74,7 +74,7 @@ See `jentic-examples/.../hitl/PersistentHitlExample.java` for a runnable example
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>

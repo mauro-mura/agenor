@@ -1,7 +1,7 @@
 # ParallelBehavior — Concurrent Child Execution
 
 **Since**: v0.3.0 | **Updated**: v0.14.0  
-**Type**: `BehaviorType.PARALLEL` | **Package**: `dev.jentic.runtime.behavior.composite`
+**Type**: `BehaviorType.PARALLEL` | **Package**: `dev.agenor.runtime.behavior.composite`
 
 ## Overview
 

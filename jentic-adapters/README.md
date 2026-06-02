@@ -7,7 +7,7 @@ This module provides concrete implementations of interfaces defined in `jentic-c
 ## Contents
 
 ```
-dev.jentic.adapters
+dev.agenor.adapters
 ├── llm/
 │   ├── LLMProviderFactory.java      # Recommended entry point
 │   ├── ToolConversionUtils.java     # FunctionDefinition → vendor JSON schema
@@ -42,7 +42,7 @@ dev.jentic.adapters
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -71,7 +71,7 @@ Add the OTel SDK alongside `jentic-adapters` in your POM:
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -90,7 +90,7 @@ needed beyond `jentic.telemetry.enabled: true`.
 
 ```xml
 <dependency>
-    <groupId>dev.jentic</groupId>
+    <groupId>dev.agenor</groupId>
     <artifactId>jentic-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
@@ -120,8 +120,8 @@ No `ClassNotFoundException` is thrown; no configuration is required.
 ### LLMProviderFactory — recommended entry point
 
 ```java
-import dev.jentic.adapters.llm.LLMProviderFactory;
-import dev.jentic.core.llm.LLMProvider;
+import dev.agenor.adapters.llm.LLMProviderFactory;
+import dev.agenor.core.llm.LLMProvider;
 
 // OpenAI
 LLMProvider openai = LLMProviderFactory.openai()

@@ -15,7 +15,7 @@
       .i-edge     { stroke: #378ADD; }
     }
   </style>
-  <!-- Wordmark: "jentic" lowercase -->
+  <!-- Wordmark: "agenor" lowercase -->
   <text class="wordmark" x="4" y="40">jentic</text>
   <!-- i-dot cluster (positioned over the dot of "i", approx x=108, y=8) -->
   <circle class="i-halo" cx="108" cy="8"  r="7"/>

@@ -384,26 +384,26 @@ Allows custom implementations while providing sensible defaults.
 ### Key Classes
 
 ```
-dev.jentic.core.memory.llm/
+dev.agenor.core.memory.llm/
 ├── LLMMemoryManager.java          (interface)
 ├── TokenEstimator.java            (interface)
 ├── ContextWindowStrategy.java     (interface)
 └── MemoryQuery.java               (search query)
 
-dev.jentic.core.llm/
+dev.agenor.core.llm/
 ├── LLMMessage.java                (message record)
 └── LLMMemoryAware.java            (injection marker interface)
 
-dev.jentic.runtime.memory.llm/
+dev.agenor.runtime.memory.llm/
 ├── DefaultLLMMemoryManager.java   (implementation)
 ├── SimpleTokenEstimator.java      (implementation)
 └── ContextWindowStrategies.java   (strategy implementations)
 
-dev.jentic.runtime.agent/
+dev.agenor.runtime.agent/
 ├── BaseAgent.java                 (clean, no LLM)
 └── LLMAgent.java                  (complete LLM features)
 
-dev.jentic.runtime/
+dev.agenor.runtime/
 └── JenticRuntime.java             (auto-injection)
 ```
 

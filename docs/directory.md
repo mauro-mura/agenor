@@ -13,7 +13,7 @@ The directory API is split into four interfaces, each representing a single resp
 | `AgentDiscovery` | Query and search agents | `findById`, `findByCapability`, `findByType`, `findAgents` |
 | `AgentPresence` | Heartbeat and status | `heartbeat`, `getStatus` |
 
-`dev.jentic.core.directory.AgentDirectory` is the composite interface:
+`dev.agenor.core.directory.AgentDirectory` is the composite interface:
 
 ```java
 interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, AgentPresence {}
@@ -25,9 +25,13 @@ interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDiscovery, A
 
 ```java
 JenticRuntime runtime = JenticRuntime.builder().build();
-runtime.start().join();
+runtime.
 
-dev.jentic.core.directory.AgentDirectory directory = runtime.getAgentDirectory();
+start().
+
+join();
+
+dev.agenor.core.directory.AgentDirectory directory = runtime.getAgentDirectory();
 ```
 
 ### Via Spring Boot
@@ -185,13 +189,13 @@ Fields:
 
 ## Migration from AgentDirectory (0.19.x → 0.20.0)
 
-The old `dev.jentic.core.AgentDirectory` is deprecated in 0.20.0 and will be removed in 0.22.0.
+The old `dev.agenor.core.AgentDirectory` is deprecated in 0.20.0 and will be removed in 0.22.0.
 
 | Old API | New API |
 |---------|---------|
 | `directory.listAll()` | `directory.findAgents(AgentQuery.all(), PageRequest.first(n))` |
 | `directory.findAgents(query)` | `directory.findAgents(query, PageRequest.first(n))` |
-| `AgentDirectory` (injection point) | `dev.jentic.core.directory.AgentDirectory` |
+| `AgentDirectory` (injection point) | `dev.agenor.core.directory.AgentDirectory` |
 
 `InMemoryAgentDirectory` implements both interfaces, so existing code compiles without changes. Migrate at your own pace before 0.22.0.
 
@@ -199,7 +203,7 @@ The old `dev.jentic.core.AgentDirectory` is deprecated in 0.20.0 and will be rem
 
 To plug in a custom directory backend (Redis, JDBC, etc.):
 
-1. Implement `dev.jentic.core.directory.AgentDirectory` (or individual capability interfaces).
+1. Implement `dev.agenor.core.directory.AgentDirectory` (or individual capability interfaces).
 2. Register as a Spring bean or pass to `JenticRuntime.Builder`:
 
 ```java

@@ -32,7 +32,7 @@ Build a chain programmatically when guardrails need constructor parameters:
 GuardrailChain chain = GuardrailChain.builder()
     .addInput(new PiiRedactionGuardrail())
     .addInput(new MaxTokensInputGuardrail(2048))
-    .addOutput(new ContentPolicyGuardrail("/etc/jentic/policy.yaml"))
+    .addOutput(new ContentPolicyGuardrail("/etc/agenor/policy.yaml"))
     .build();
 
 agent.setGuardrailChain(chain);
@@ -228,8 +228,8 @@ try {
 ## Running the example
 
 ```bash
-mvn exec:java -pl jentic-examples \
-    -Dexec.mainClass=dev.jentic.examples.GuardrailsExample
+mvn exec:java -pl agenor-examples \
+    -Dexec.mainClass=dev.agenor.examples.GuardrailsExample
 ```
 
 No API key required — the example uses a stub LLM provider.

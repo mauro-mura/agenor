@@ -52,20 +52,20 @@ This mirrors the `LLMProvider` (ADR-007) and `KnowledgeStore` (ADR-011) patterns
 
 ```
 jentic-core
-  dev.jentic.core.reflection
+  dev.agenor.core.reflection
     ReflectionStrategy      (functional interface)
     CritiqueResult          (record: feedback, shouldRevise, score)
     ReflectionConfig        (record: maxIterations, scoreThreshold, critiquePrompt)
 
 jentic-runtime
-  dev.jentic.runtime.behavior          (existing package)
+  dev.agenor.runtime.behavior          (existing package)
     ReflectionBehavior                 (behavior wrapper — lives with its peers)
 
-  dev.jentic.runtime.reflection        (new package)
+  dev.agenor.runtime.reflection        (new package)
     DefaultReflectionStrategy          (LLMProvider-backed implementation)
 ```
 
-`ReflectionBehavior` is placed in `dev.jentic.runtime.behavior` because it is a
+`ReflectionBehavior` is placed in `dev.agenor.runtime.behavior` because it is a
 first-class behavior (wraps `OneShotBehavior`) and developers expect to find all
 behaviors in that package. `DefaultReflectionStrategy` belongs in the `reflection`
 package as it is infrastructure, not a behavior.

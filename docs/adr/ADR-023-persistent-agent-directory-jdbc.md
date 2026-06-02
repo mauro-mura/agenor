@@ -267,7 +267,7 @@ values (e.g., `"payment-agent-1"`, `"payment-agent-2"`) and discover by type via
 | `DirectorySchemaManager` | — | Runs Flyway on the `jentic-directory` location at startup |
 | `JdbcHelper` | — | `PreparedStatement` execution, result mapping, shared by all three adapters |
 
-Package root: `dev.jentic.adapters.persistence.directory`
+Package root: `dev.agenor.adapters.persistence.directory`
 
 ### `JdbcHelper`
 

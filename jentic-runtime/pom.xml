@@ -47,7 +47,7 @@
 	            <configuration>
 	                <archive>
 	                    <manifestEntries>
-	                        <Automatic-Module-Name>dev.jentic.runtime</Automatic-Module-Name>
+	                        <Automatic-Module-Name>dev.agenor.runtime</Automatic-Module-Name>
 	                    </manifestEntries>
 	                </archive>
 	            </configuration>

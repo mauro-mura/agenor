@@ -4,7 +4,7 @@
 
 `OneShotBehavior` executes its action **once** and then automatically stops. After execution, `isActive()` returns `false` and the behavior is removed from the scheduler.
 
-**Since**: v0.1.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.1.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.agenor.runtime.behavior`
 
 ---
 

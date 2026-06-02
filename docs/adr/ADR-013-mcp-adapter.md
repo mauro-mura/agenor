@@ -72,13 +72,13 @@ McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Jentic)
 
 ```
 jentic-core
-  └── dev.jentic.core.mcp
+  └── dev.agenor.core.mcp
         ├── McpTool.java          (record — no SDK dependency)
         ├── McpToolResult.java    (record — no SDK dependency)
         └── McpClient.java        (interface — CompletableFuture + core types only)
 
 jentic-adapters
-  └── dev.jentic.adapters.mcp
+  └── dev.agenor.adapters.mcp
         ├── JenticMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
         ├── McpToolMapper.java          (SDK types → Jentic records)
         ├── McpClientFactory.java       (factory: serverUrl → adapter)

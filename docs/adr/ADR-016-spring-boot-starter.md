@@ -115,7 +115,7 @@ src/main/resources/META-INF/spring/
 
 Content:
 ```
-dev.jentic.autoconfigure.JenticAutoConfiguration
+dev.agenor.autoconfigure.JenticAutoConfiguration
 ```
 
 ### Core beans
@@ -138,7 +138,7 @@ public class JenticAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "jentic.llm", name = "provider",
+    @ConditionalOnProperty(prefix = "agenor.llm", name = "provider",
                            havingValue = "openai")
     public LLMProvider openAiLlmProvider(JenticProperties props) {
         return LLMProviderFactory.openai()

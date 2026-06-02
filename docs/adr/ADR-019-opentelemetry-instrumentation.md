@@ -49,7 +49,7 @@ The Spring Boot starter auto-configures a `JenticTelemetry` bean when
   No existing code needs to change.
 - **Classpath-safe**: OTel classes are only referenced in `jentic-adapters`. A consumer that
   never adds OTel to their POM will never see `ClassNotFoundException`.
-- **Automatic in Spring Boot**: `@ConditionalOnClass(name="dev.jentic.adapters.telemetry.OtelTelemetryFactory")`
+- **Automatic in Spring Boot**: `@ConditionalOnClass(name="dev.agenor.adapters.telemetry.OtelTelemetryFactory")`
   ensures the telemetry bean appears only when the adapter is present.
 - **Standard signals**: spans follow OTel semantic conventions where applicable, so they work
   out-of-the-box with Jaeger, Tempo, Datadog, Honeycomb, and any OTLP-compatible backend.
@@ -77,7 +77,7 @@ The Spring Boot starter auto-configures a `JenticTelemetry` bean when
 
 ```
 jentic-core
-  dev.jentic.core.telemetry
+  dev.agenor.core.telemetry
     Span              ← interface
     SpanScope         ← interface (AutoCloseable, returned by Span.makeCurrent())
     SpanBuilder       ← interface
@@ -86,7 +86,7 @@ jentic-core
     NoopJenticTelemetry ← package-private singleton
 
 jentic-adapters
-  dev.jentic.adapters.telemetry
+  dev.agenor.adapters.telemetry
     OtelJenticTelemetry   ← wraps OpenTelemetry instance
     OtelTelemetryFactory  ← builder + fromEnvironment()
 ```

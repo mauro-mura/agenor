@@ -9,8 +9,8 @@ jentic:
   agents:
     autoDiscovery: true
     scanPackages:
-      - "${BASE_PACKAGE:dev.jentic.examples}.agents"
-      - "${BASE_PACKAGE:dev.jentic.examples}.workers"
+      - "${BASE_PACKAGE:dev.agenor.examples}.agents"
+      - "${BASE_PACKAGE:dev.agenor.examples}.workers"
     properties:
       timeout: "${AGENT_TIMEOUT:30s}"
       maxRetries: "${MAX_RETRIES:3}"
