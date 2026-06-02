@@ -1,5 +1,5 @@
 
-![jentic](docs/assets/jentic-wordmark.svg)
+![jentic](docs/assets/agenor-wordmark.svg)
 
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9%2B-blue.svg)](https://maven.apache.org/)
@@ -46,7 +46,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
     <dependencies>
         <dependency>
             <groupId>dev.agenor</groupId>
-            <artifactId>jentic-bom</artifactId>
+            <artifactId>agenor-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
@@ -58,13 +58,13 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
 <!-- Core + Runtime for basic agent applications -->
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-runtime</artifactId>
+    <artifactId>agenor-runtime</artifactId>
 </dependency>
 
 <!-- Optional: Add adapters for external integrations -->
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
 </dependency>
 </dependencies>
 ```
@@ -83,7 +83,7 @@ If you prefer explicit version management:
 <dependencies>
     <dependency>
         <groupId>dev.agenor</groupId>
-        <artifactId>jentic-runtime</artifactId>
+        <artifactId>agenor-runtime</artifactId>
         <version>0.24.0-SNAPSHOT</version>
     </dependency>
 </dependencies>
@@ -132,7 +132,7 @@ For details, read the Architecture Guide at docs/architecture.md.
 
 ```
 ┌──────────────────┬─────────────────┬──────────────────────┐
-│   jentic-core    │ jentic-runtime  │  jentic-adapters     │
+│   agenor-core    │ agenor-runtime  │  agenor-adapters     │
 │   (interfaces)   │ (basic impls)   │  (integrations)      │
 ├──────────────────┼─────────────────┼──────────────────────┤
 │ Agent            │ BaseAgent       │ OpenAIProvider       │
@@ -179,51 +179,51 @@ jentic:
 
 ## 📦 Modules
 
-### jentic-core
+### agenor-core
 Core interfaces and abstractions. No implementations, just contracts.
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-core</artifactId>
+    <artifactId>agenor-core</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### jentic-runtime
+### agenor-runtime
 Basic implementations for getting started quickly.
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-runtime</artifactId>
+    <artifactId>agenor-runtime</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### jentic-adapters
+### agenor-adapters
 Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### jentic-tools
+### agenor-tools
 Web Console and CLI tools.
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-tools</artifactId>
+    <artifactId>agenor-tools</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### jentic-spring-boot-starter
+### agenor-spring-boot-starter
  
 Zero-configuration Spring Boot 4.0.x integration. Auto-wires `AgenorRuntime` and
 optionally an `LLMProvider` from `application.yml`. Includes Actuator health indicator.
@@ -231,7 +231,7 @@ optionally an `LLMProvider` from `application.yml`. Includes Actuator health ind
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-spring-boot-starter</artifactId>
+    <artifactId>agenor-spring-boot-starter</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
@@ -273,32 +273,32 @@ That's it — `AgenorRuntime` is started and stopped automatically by the Spring
 - [x] Human-in-the-Loop Checkpoint
 - [x] Guardrail layer
 - [x] MCP adapter
-- [x] Spring Boot 4.0.x autoconfiguration (jentic-spring-boot-starter)
+- [x] Spring Boot 4.0.x autoconfiguration (agenor-spring-boot-starter)
 
 
 ## 📚 Examples
 
-The `jentic-examples` module contains a structured **learning path** from first steps to
-production systems. See **[jentic-examples/README.md](jentic-examples/README.md)** for the
+The `agenor-examples` module contains a structured **learning path** from first steps to
+production systems. See **[agenor-examples/README.md](agenor-examples/README.md)** for the
 full guide.
 
 Quick-start examples to run immediately:
 
 ```bash
 # Level 0 — first agent exchange
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 
 # Level 1 — retry behavior with backoff strategies
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.behaviors.RetryExample"
 
 # Level 5 — e-commerce FSM + parallel validators
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
 
 # Level 4 — LLM multi-agent (requires OPENAI_API_KEY)
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
 
@@ -317,7 +317,7 @@ cd jentic
 mvn clean test
 
 # Run examples
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 ```
 

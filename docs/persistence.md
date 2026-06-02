@@ -8,21 +8,21 @@ internal business fields across JVM restarts.
 > not share storage.
 
 The persistence subsystem spans two modules:
-- **`jentic-core`** (`dev.agenor.core.persistence`) — interfaces and records
-- **`jentic-runtime`** (`dev.agenor.runtime.persistence`) — implementations
+- **`agenor-core`** (`dev.agenor.core.persistence`) — interfaces and records
+- **`agenor-runtime`** (`dev.agenor.runtime.persistence`) — implementations
 
 ---
 
 ## Package Overview
 
 ```
-jentic-core / dev.agenor.core.persistence
+agenor-core / dev.agenor.core.persistence
 ├── Stateful.java             # Mixin interface: agents with persistent state
 ├── AgentState.java           # Serializable state snapshot (builder)
 ├── PersistenceService.java   # Save/load interface
 └── PersistenceStrategy.java  # When to auto-save (enum)
 
-jentic-runtime / dev.agenor.runtime.persistence
+agenor-runtime / dev.agenor.runtime.persistence
 ├── FilePersistenceService.java  # JSON file-based PersistenceService
 └── PersistenceManager.java      # Auto-save orchestrator, wired by AgenorRuntime
 ```

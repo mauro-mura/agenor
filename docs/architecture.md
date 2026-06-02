@@ -9,9 +9,9 @@ This document describes Jentic's architecture: an interface-first, Java 21+ mult
 
 ## 1. Architectural Overview
 
-Jentic embraces an interface‑first, modular architecture. Core contracts live in jentic-core, while minimal, ready‑to‑use implementations live in jentic-runtime. Adapters (LLM providers, A2A) live in jentic-adapters.
+Jentic embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Adapters (LLM providers, A2A) live in agenor-adapters.
 
-| jentic-core (interfaces) | jentic-runtime (in-memory impls) | jentic-adapters (integrations) |
+| agenor-core (interfaces) | agenor-runtime (in-memory impls) | agenor-adapters (integrations) |
 |--------------------------|----------------------------------|--------------------------------|
 | Agent                    | BaseAgent                        | OpenAIProvider                 |
 | Message                  | LLMAgent                         | AnthropicProvider              |
@@ -34,12 +34,12 @@ Design goals:
 
 ## 2. Modules
 
-- jentic-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
-- jentic-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
-- jentic-adapters: LLM providers and A2A adapter.
-- jentic-examples: Demonstrates usage patterns and best practices.
+- agenor-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
+- agenor-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
+- agenor-adapters: LLM providers and A2A adapter.
+- agenor-examples: Demonstrates usage patterns and best practices.
 
-## 3. Core Abstractions (jentic-core)
+## 3. Core Abstractions (agenor-core)
 
 - Agent: Lifecycle contract for autonomous entities; exposes id, status, and context.
 - Behavior: Unit of work associated with an Agent. Types include CYCLIC, ONE_SHOT, EVENT_DRIVEN, WAKER.
@@ -55,7 +55,7 @@ Design goals:
 
 These are deliberately small to keep adapters swappable without breaking user code.
 
-## 4. Runtime Implementations (jentic-runtime)
+## 4. Runtime Implementations (agenor-runtime)
 
 ### Agent Base Classes
 
@@ -137,13 +137,13 @@ Package `dev.agenor.runtime.lifecycle`:
 - **LifecycleListener**: functional interface receiving `(agentId, oldStatus, newStatus)`.
 - **LoggingLifecycleListener**: built-in listener that logs every status change at INFO level via SLF4J.
 
-## 5. Adapters (jentic-adapters)
+## 5. Adapters (agenor-adapters)
 
-The `jentic-adapters` module provides concrete implementations of core interfaces that integrate external services.
+The `agenor-adapters` module provides concrete implementations of core interfaces that integrate external services.
 
 ### LLM Providers
 
-All three providers implement `LLMProvider` from `jentic-core`:
+All three providers implement `LLMProvider` from `agenor-core`:
 
 - **OpenAIProvider**: OpenAI REST API (GPT-4, GPT-3.5, etc.). Supports streaming and function calling.
 - **AnthropicProvider**: Anthropic API (Claude 3 Opus, Sonnet, Haiku). Supports streaming.
@@ -246,7 +246,7 @@ To integrate enterprise technologies, implement core contracts:
 - `LLMProvider`: add new model providers (implement the interface, register with factory)
 
 Guidelines:
-- Keep adapters dependency‑isolated within jentic-adapters submodules.
+- Keep adapters dependency‑isolated within agenor-adapters submodules.
 - Avoid leaking implementation types into user code; rely on core interfaces.
 
 ## 11. Error Handling & Observability
@@ -268,7 +268,7 @@ User input
   → Consumer
 ```
 
-### Core types (`jentic-core` / `dev.agenor.core.guardrail`)
+### Core types (`agenor-core` / `dev.agenor.core.guardrail`)
 
 | Type | Role |
 |------|------|
@@ -279,7 +279,7 @@ User input
 | `GuardrailViolationException` | Unchecked, extends `AgenorException` |
 | `@WithGuardrails` | Annotation for declarative chain wiring |
 
-### Implementations (`jentic-runtime` / `dev.agenor.runtime.guardrail`)
+### Implementations (`agenor-runtime` / `dev.agenor.runtime.guardrail`)
 
 | Class | Type |
 |-------|------|
@@ -318,11 +318,11 @@ Agent → HumanCheckpointBehavior → ApprovalGate (virtual thread parks)
 → resumes with ApprovalDecision (Approved | Rejected | Modified)
 ```
 
-Core types (jentic-core / dev.agenor.core.hitl):
+Core types (agenor-core / dev.agenor.core.hitl):
 ApprovalRequest, ApprovalDecision (sealed), ApprovalGate, ApprovalNotifier,
 ApprovalTimeoutException, @RequiresApproval
 
-Implementations (jentic-runtime / dev.agenor.runtime.hitl):
+Implementations (agenor-runtime / dev.agenor.runtime.hitl):
 InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
 LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
 

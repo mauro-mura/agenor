@@ -11,7 +11,7 @@ round-trip without writing provider-specific code.
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 ```
@@ -82,13 +82,13 @@ var mcpClient = McpClientFactory.fromStdio(
  
 | Class | Module | Responsibility |
 |-------|--------|---------------|
-| `McpTool` | `jentic-core` | Record: `name`, `description`, `inputSchema` |
-| `McpToolResult` | `jentic-core` | Record: `content`, `isError` |
-| `McpClient` | `jentic-core` | Interface: `listTools()`, `callTool()`, `close()` |
-| `AgenorMcpClientAdapter` | `jentic-adapters` | Wraps `McpSyncClient` via `supplyAsync()` |
-| `McpClientFactory` | `jentic-adapters` | Creates adapters for SSE and STDIO transports |
-| `McpToolRegistry` | `jentic-adapters` | Thread-safe cache (TTL 60s, `invalidate()`) |
-| `McpFunctionAdapter` | `jentic-adapters` | `McpTool` → `FunctionDefinition`; `FunctionCall` → `LLMMessage` |
+| `McpTool` | `agenor-core` | Record: `name`, `description`, `inputSchema` |
+| `McpToolResult` | `agenor-core` | Record: `content`, `isError` |
+| `McpClient` | `agenor-core` | Interface: `listTools()`, `callTool()`, `close()` |
+| `AgenorMcpClientAdapter` | `agenor-adapters` | Wraps `McpSyncClient` via `supplyAsync()` |
+| `McpClientFactory` | `agenor-adapters` | Creates adapters for SSE and STDIO transports |
+| `McpToolRegistry` | `agenor-adapters` | Thread-safe cache (TTL 60s, `invalidate()`) |
+| `McpFunctionAdapter` | `agenor-adapters` | `McpTool` → `FunctionDefinition`; `FunctionCall` → `LLMMessage` |
  
 ---
  
@@ -114,16 +114,16 @@ Requires Docker:
  
 ```bash
 # Tool listing + direct call
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
     -Dexec.mainClass=dev.agenor.examples.McpExample
  
 # With LLM round-trip
 export ANTHROPIC_API_KEY=sk-ant-...
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
     -Dexec.mainClass=dev.agenor.examples.McpExample
  
 # Custom root directory
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
     -Dexec.mainClass=dev.agenor.examples.McpExample \
     -Dmcp.root=/path/to/dir
 ```

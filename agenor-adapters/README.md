@@ -1,6 +1,6 @@
-# jentic-adapters
+# agenor-adapters
 
-This module provides concrete implementations of interfaces defined in `jentic-core`. It bridges Jentic agents to external systems: LLM APIs, the A2A interoperability protocol, MCP tool servers, and embedding providers.
+This module provides concrete implementations of interfaces defined in `agenor-core`. It bridges Jentic agents to external systems: LLM APIs, the A2A interoperability protocol, MCP tool servers, and embedding providers.
 
 ---
 
@@ -43,12 +43,12 @@ dev.agenor.adapters
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 ```
 
-This module depends on `jentic-core` and brings in `langchain4j` (LLM transport), the `io.a2a`
+This module depends on `agenor-core` and brings in `langchain4j` (LLM transport), the `io.a2a`
 Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
 
 ---
@@ -56,8 +56,8 @@ Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
 ## Optional adapter dependencies
 
 Some backends in this module are declared `optional=true` in the POM. They are available at
-compile time when you build against `jentic-adapters`, but they are **not** included on the
-transitive classpath of consumers that declare `jentic-adapters` without also declaring the
+compile time when you build against `agenor-adapters`, but they are **not** included on the
+transitive classpath of consumers that declare `agenor-adapters` without also declaring the
 optional library explicitly. This follows **[ADR-018 — Optional Adapter Dependencies Pattern](../docs/adr/ADR-018-optional-adapter-dependencies-pattern.md)**.
 
 | Backend | Optional library | When to add it |
@@ -67,12 +67,12 @@ optional library explicitly. This follows **[ADR-018 — Optional Adapter Depend
 
 ### Opting in — OpenTelemetry
 
-Add the OTel SDK alongside `jentic-adapters` in your POM:
+Add the OTel SDK alongside `agenor-adapters` in your POM:
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <dependency>
@@ -82,7 +82,7 @@ Add the OTel SDK alongside `jentic-adapters` in your POM:
 </dependency>
 ```
 
-If you use the Spring Boot starter (`jentic-spring-boot-starter`), OTel auto-configuration
+If you use the Spring Boot starter (`agenor-spring-boot-starter`), OTel auto-configuration
 activates automatically via `@ConditionalOnClass(OpenTelemetry.class)` — no extra YAML is
 needed beyond `jentic.telemetry.enabled: true`.
 
@@ -91,7 +91,7 @@ needed beyond `jentic.telemetry.enabled: true`.
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <dependency>
@@ -109,7 +109,7 @@ classpath even if you don't use the backend.
 
 ### Default behaviour (no optional libs declared)
 
-If you declare only `jentic-adapters` with no optional libraries, the runtime automatically
+If you declare only `agenor-adapters` with no optional libraries, the runtime automatically
 falls back to the in-memory implementations (`NoopAgenorTelemetry`, `InMemoryMessageDispatcher`).
 No `ClassNotFoundException` is thrown; no configuration is required.
 
@@ -347,4 +347,4 @@ For a detailed guide to the A2A protocol and dialogue patterns see **[`docs/dial
 - [`docs/llm-integration.md`](../docs/llm-integration.md) — complete LLM integration guide
 - [`docs/dialog-protocol.md`](../docs/dialog-protocol.md) — dialogue protocol and A2A details
 - [`docs/architecture.md`](../docs/architecture.md) — module overview
-- [`jentic-examples/README.md`](../jentic-examples/README.md) — runnable examples
+- [`agenor-examples/README.md`](../agenor-examples/README.md) — runnable examples

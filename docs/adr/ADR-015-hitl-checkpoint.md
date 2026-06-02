@@ -15,7 +15,7 @@ The current runtime provides no mechanism to suspend execution, request human ap
 or abort based on the decision received.
 
 Constraints:
-- `jentic-core` must remain free of external dependencies (ADR-002)
+- `agenor-core` must remain free of external dependencies (ADR-002)
 - Agents without checkpoints must behave identically to current behavior (backward compat)
 - Suspension must not consume an OS thread while waiting — virtual threads (ADR-001) make this cheap
 - The decision type must be exhaustive and compiler-enforced, consistent with `GuardrailResult` (ADR-014)
@@ -90,8 +90,8 @@ ApprovalDecision decision = gate.requestApproval(request).join();
 - Idiomatic for reactive codebases
 
 **Cons**:
-- Introduces Project Reactor as a dependency in `jentic-runtime` — unacceptable overhead
-- Breaks the zero-external-dep rule for `jentic-core`
+- Introduces Project Reactor as a dependency in `agenor-runtime` — unacceptable overhead
+- Breaks the zero-external-dep rule for `agenor-core`
 - Mismatched abstraction for a primarily imperative/virtual-thread runtime
 
 ---
@@ -149,7 +149,7 @@ timeout callback to prevent memory leaks.
 ### Module Boundary
 
 ```
-jentic-core
+agenor-core
   └── dev.agenor.core.hitl
         ├── ApprovalRequest.java          (record — UUID, agentId, action, payload, expiresAt, metadata)
         ├── ApprovalDecision.java         (sealed interface — Approved | Rejected | Modified)
@@ -158,7 +158,7 @@ jentic-core
         ├── ApprovalTimeoutException.java (unchecked, extends AgenorException)
         └── RequiresApproval.java         (@interface annotation — timeout, notifier class)
 
-jentic-runtime
+agenor-runtime
   └── dev.agenor.runtime.hitl
         ├── InMemoryApprovalGate.java     (ConcurrentHashMap + ScheduledExecutorService)
         ├── ApprovalService.java          (facade — approve / reject / modify / getPendingRequests)
@@ -202,7 +202,7 @@ the external decision submission interface and a `getPendingRequests()` snapshot
 
 ## Compliance
 
-- `jentic-core` package `dev.agenor.core.hitl` must have zero external dependencies (verified by `mvn dependency:analyze`)
+- `agenor-core` package `dev.agenor.core.hitl` must have zero external dependencies (verified by `mvn dependency:analyze`)
 - Coverage ≥ 80% on `dev.agenor.core.hitl` and `dev.agenor.runtime.hitl` (enforced by JaCoCo in `mvn verify`)
 - Agents without `@RequiresApproval` verified unaffected by existing test suite passing unchanged
 

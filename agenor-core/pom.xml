@@ -11,7 +11,7 @@
         <version>0.24.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>jentic-core</artifactId>
+    <artifactId>agenor-core</artifactId>
     <name>Jentic Core</name>
     <description>Core interfaces and abstractions for Jentic framework</description>
 

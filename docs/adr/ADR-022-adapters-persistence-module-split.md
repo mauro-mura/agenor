@@ -1,4 +1,4 @@
-# ADR-022: `jentic-adapters-persistence` Module Split
+# ADR-022: `agenor-adapters-persistence` Module Split
 
 **Status**: Accepted  
 **Date**: 2026-05-17  
@@ -24,8 +24,8 @@ ADR-018 establishes the placement rule for new adapters:
 
 | Condition | Placement |
 |-----------|-----------|
-| Lightweight library | `jentic-adapters`, `compile` scope |
-| Heavy but universally useful (OTel, Lettuce) | `jentic-adapters`, `optional=true` |
+| Lightweight library | `agenor-adapters`, `compile` scope |
+| Heavy but universally useful (OTel, Lettuce) | `agenor-adapters`, `optional=true` |
 | Heavyweight infrastructure, mutually exclusive alternatives | Dedicated sub-module |
 | Commercial / Enterprise | Separate Enterprise module |
 
@@ -37,7 +37,7 @@ The JDBC persistence stack falls unambiguously into the third row:
    module would force all alternatives onto every consumer's classpath.
 3. **Operationally distinct**: Flyway performs DDL at startup; HikariCP manages a connection
    pool with health-check threads. These are infrastructure concerns orthogonal to the agentic
-   toolkit (`LLMProvider`, MCP, A2A) that `jentic-adapters` delivers.
+   toolkit (`LLMProvider`, MCP, A2A) that `agenor-adapters` delivers.
 4. **`optional=true` is insufficient**: marking Flyway `optional=true` would still bundle
    migration SQL files as classpath resources, leave HikariCP startup hooks reachable, and
    make classpath isolation impossible to verify cleanly.
@@ -50,8 +50,8 @@ declare by choice).
 
 ## Decision
 
-Introduce a new Maven module **`jentic-adapters-persistence`** under the parent `jentic`
-reactor, positioned after `jentic-adapters` in the `<modules>` list.
+Introduce a new Maven module **`agenor-adapters-persistence`** under the parent `jentic`
+reactor, positioned after `agenor-adapters` in the `<modules>` list.
 
 **Scope of this module at 0.22.0:**
 
@@ -70,11 +70,11 @@ No new Maven module is needed for persistent HITL; the persistence concern is al
 
 ```xml
 <groupId>dev.agenor</groupId>
-<artifactId>jentic-adapters-persistence</artifactId>
+<artifactId>agenor-adapters-persistence</artifactId>
 <version>${project.version}</version>
 ```
 
-Added to `jentic-bom/pom.xml` `<dependencyManagement>` so consumers get version management
+Added to `agenor-bom/pom.xml` `<dependencyManagement>` so consumers get version management
 without specifying it explicitly.
 
 ### Package root
@@ -93,10 +93,10 @@ without specifying it explicitly.
 
 ```
 jentic/
-├── pom.xml                          ← add jentic-adapters-persistence to <modules>
-├── jentic-bom/
+├── pom.xml                          ← add agenor-adapters-persistence to <modules>
+├── agenor-bom/
 │   └── pom.xml                      ← add artifact to <dependencyManagement>
-└── jentic-adapters-persistence/
+└── agenor-adapters-persistence/
     ├── pom.xml
     └── src/
         ├── main/
@@ -108,7 +108,7 @@ jentic/
         │   │   │   ├── JdbcDirectoryConfig.java
         │   │   │   └── DirectorySchemaManager.java
         │   │   └── JdbcHelper.java
-        │   └── resources/db/migration/jentic-directory/
+        │   └── resources/db/migration/agenor-directory/
         │       └── V1__create_agent_directory.sql
         └── test/
             └── java/dev/jentic/adapters/persistence/
@@ -118,11 +118,11 @@ jentic/
                 └── contract/        ← reuse contract suites from ADR-020
 ```
 
-### Dependencies in `jentic-adapters-persistence/pom.xml`
+### Dependencies in `agenor-adapters-persistence/pom.xml`
 
 | Dependency | Scope | Rationale |
 |------------|-------|-----------|
-| `jentic-core` | `compile` | Interfaces being implemented |
+| `agenor-core` | `compile` | Interfaces being implemented |
 | `com.zaxxer:HikariCP` | `compile` | Connection pooling |
 | `org.flywaydb:flyway-core` | `compile` | Schema migration |
 | `org.postgresql:postgresql` | `runtime` | Primary driver; not required at compile time |
@@ -155,9 +155,9 @@ jentic:
 
 **Positive:**
 
-- `jentic-adapters` transitive classpath is not widened by HikariCP, Flyway, or JDBC drivers;
+- `agenor-adapters` transitive classpath is not widened by HikariCP, Flyway, or JDBC drivers;
   verified with `mvn dependency:tree`.
-- Consumers pay the JDBC stack only when they declare `jentic-adapters-persistence`
+- Consumers pay the JDBC stack only when they declare `agenor-adapters-persistence`
   explicitly, consistent with ADR-004.
 - The module boundary makes the capability split (ADR-020) tangible: JDBC implements exactly
   `AgentRegistry`, `AgentDiscovery`, `AgentResolver` — the interfaces that map to relational
@@ -178,7 +178,7 @@ jentic:
 
 ## Alternatives Considered
 
-**Keep everything in `jentic-adapters` with `optional=true`.**  
+**Keep everything in `agenor-adapters` with `optional=true`.**  
 Rejected per ADR-018: Flyway would still bundle migration SQL files on the default classpath;
 HikariCP startup hooks would be reachable regardless of the `optional` flag at the Maven
 level. Classpath isolation cannot be verified reliably. The `optional=true` pattern is
@@ -190,7 +190,7 @@ startup code runs.
 ## Related ADRs
 
 - ADR-002: Interface-first architecture — module implements only the capability subset it supports
-- ADR-003: Maven Multi-Module Structure — updated to include `jentic-adapters-persistence`
+- ADR-003: Maven Multi-Module Structure — updated to include `agenor-adapters-persistence`
 - ADR-004: Progressive complexity — heavier backend is an explicit opt-in artifact
 - ADR-018: Optional adapter dependencies pattern — this module is the "dedicated sub-module" case
 - ADR-020: Core API refactor — `AgentRegistry`, `AgentDiscovery`, `AgentResolver` are the

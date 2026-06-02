@@ -4,7 +4,7 @@
 **Date**: 2026-05-22  
 **Authors**: Project Team  
 **References**: ADR-001 (Virtual Threads), ADR-004 (Progressive Complexity),
-ADR-015 (Human-In-The-Loop Checkpoint), ADR-022 (`jentic-adapters-persistence` Module Split),
+ADR-015 (Human-In-The-Loop Checkpoint), ADR-022 (`agenor-adapters-persistence` Module Split),
 ADR-023 (Persistent Agent Directory with JDBC)
 
 ---
@@ -16,7 +16,7 @@ workflows with human-scale timeouts (minutes, hours, days), this is unacceptable
 mid-approval silently discards the pending request and the submitting agent either blocks
 forever or times out without a trace.
 
-The `jentic-adapters-persistence` module introduced for ADR-023 already provides Hikari,
+The `agenor-adapters-persistence` module introduced for ADR-023 already provides Hikari,
 Flyway, and a Postgres/H2-compatible JDBC stack. Extending this module with a persistent
 `ApprovalGate` implementation requires no new Maven artifact and no new infrastructure
 dependency.
@@ -73,7 +73,7 @@ CREATE TABLE jentic_hitl_requests (
 );
 ```
 
-Managed by a new Flyway migration location: `classpath:db/migration/jentic-hitl`.
+Managed by a new Flyway migration location: `classpath:db/migration/agenor-hitl`.
 
 ### Cross-node propagation (Postgres-only, optional)
 
@@ -89,7 +89,7 @@ explicit polling via `getPendingRequests()` + re-submission.
 
 ### Module placement
 
-`JdbcApprovalGate` lives in `jentic-adapters-persistence` (package
+`JdbcApprovalGate` lives in `agenor-adapters-persistence` (package
 `dev.agenor.adapters.persistence.hitl`), reusing the Hikari/Flyway/JDBC infrastructure
 already present. No pom.xml change is needed.
 

@@ -11,7 +11,7 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
     <dependencies>
         <dependency>
             <groupId>dev.agenor</groupId>
-            <artifactId>jentic-bom</artifactId>
+            <artifactId>agenor-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
@@ -23,12 +23,12 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
     <!-- No version needed - managed by BOM -->
     <dependency>
         <groupId>dev.agenor</groupId>
-        <artifactId>jentic-core</artifactId>
+        <artifactId>agenor-core</artifactId>
     </dependency>
     
     <dependency>
         <groupId>dev.agenor</groupId>
-        <artifactId>jentic-runtime</artifactId>
+        <artifactId>agenor-runtime</artifactId>
     </dependency>
 </dependencies>
 ```
@@ -37,19 +37,19 @@ Bill of Materials for Jentic Framework. Import this BOM to manage Jentic module 
 
 ```groovy
 dependencies {
-    implementation platform('dev.agenor:jentic-bom:0.24.0-SNAPSHOT')
-    implementation 'dev.agenor:jentic-core'
-    implementation 'dev.agenor:jentic-runtime'
+    implementation platform('dev.agenor:agenor-bom:0.24.0-SNAPSHOT')
+    implementation 'dev.agenor:agenor-core'
+    implementation 'dev.agenor:agenor-runtime'
 }
 ```
 
 ## Modules Managed
 
-- `jentic-core` - Core interfaces and abstractions
-- `jentic-runtime` - Runtime implementations
-- `jentic-adapters` - External system adapters
-- `jentic-spring-boot-starter` - Spring Boot 3.5.x auto-configuration
-- `jentic-tools` - CLI tools and utilities
+- `agenor-core` - Core interfaces and abstractions
+- `agenor-runtime` - Runtime implementations
+- `agenor-adapters` - External system adapters
+- `agenor-spring-boot-starter` - Spring Boot 3.5.x auto-configuration
+- `agenor-tools` - CLI tools and utilities
 
 ## Benefits
 
@@ -81,7 +81,7 @@ dependencies {
         <dependencies>
             <dependency>
                 <groupId>dev.agenor</groupId>
-                <artifactId>jentic-bom</artifactId>
+                <artifactId>agenor-bom</artifactId>
                 <version>0.24.0-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
@@ -92,7 +92,7 @@ dependencies {
     <dependencies>
         <dependency>
             <groupId>dev.agenor</groupId>
-            <artifactId>jentic-runtime</artifactId>
+            <artifactId>agenor-runtime</artifactId>
         </dependency>
     </dependencies>
 </project>

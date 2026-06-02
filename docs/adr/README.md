@@ -27,7 +27,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-019](ADR-019-opentelemetry-instrumentation.md)                 | OpenTelemetry Instrumentation            | Accepted | 2026-04-23 |
 | [ADR-020](ADR-020-core-api-refactor.md)                             | Core API Refactor for Distributed Backends | Accepted | 2026-04-26 |
 | [ADR-021](ADR-021-redis-message-transport.md)                       | Redis MessageTransport — Pub/Sub vs Streams | Accepted | 2026-05-10 |
-| [ADR-022](ADR-022-adapters-persistence-module-split.md)             | `jentic-adapters-persistence` Module Split  | Accepted | 2026-05-17 |
+| [ADR-022](ADR-022-adapters-persistence-module-split.md)             | `agenor-adapters-persistence` Module Split  | Accepted | 2026-05-17 |
 | [ADR-023](ADR-023-persistent-agent-directory-jdbc.md)               | Persistent Agent Directory with JDBC        | Accepted | 2026-05-17 |
 | [ADR-024](ADR-024-persistent-hitl-approval-queue.md)               | Persistent HITL Approval Queue (JDBC)       | Accepted | 2026-05-22 |
 | [ADR-025](ADR-025-agenor-rebrand.md)                                | Agenor Rebrand — Naming, Compat, Versioning | Accepted | 2026-05-28 |
@@ -176,7 +176,7 @@ graph TD
 - **ADR-019** (OTel Instrumentation) builds on ADR-002, ADR-003, ADR-018
 - **ADR-020** (Core API Refactor) builds on ADR-002, ADR-004; prerequisite for ADR-021, ADR-022, ADR-023
 - **ADR-021** (Redis MessageTransport) builds on ADR-001, ADR-018, ADR-020
-- **ADR-022** (`jentic-adapters-persistence` Module Split) builds on ADR-003, ADR-004, ADR-018, ADR-020; prerequisite for ADR-023, ADR-024
+- **ADR-022** (`agenor-adapters-persistence` Module Split) builds on ADR-003, ADR-004, ADR-018, ADR-020; prerequisite for ADR-023, ADR-024
 - **ADR-023** (Persistent Agent Directory with JDBC) builds on ADR-001, ADR-002, ADR-019, ADR-020, ADR-022
 - **ADR-024** (Persistent HITL Approval Queue) builds on ADR-001, ADR-004, ADR-015, ADR-022, ADR-023
 - **ADR-025** (Agenor Rebrand) builds on ADR-002, ADR-003, ADR-006, ADR-016, ADR-020 — affects naming and Maven coordinates for the entire project

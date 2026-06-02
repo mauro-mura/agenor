@@ -1,15 +1,15 @@
 # Observability
 
 Jentic ships with a thin, dependency-free telemetry abstraction (`AgenorTelemetry`) in
-`jentic-core`. By default, every instrumented component uses the built-in **no-op
+`agenor-core`. By default, every instrumented component uses the built-in **no-op
 implementation**, which has zero overhead and introduces no external dependencies. The
-real OpenTelemetry SDK integration lives in `jentic-adapters` and is entirely **opt-in**.
+real OpenTelemetry SDK integration lives in `agenor-adapters` and is entirely **opt-in**.
 
 ## Opting in to OpenTelemetry
 
 ### 1 — Add the OTel dependency
 
-`jentic-adapters` declares `opentelemetry-sdk` as an **optional** dependency (per
+`agenor-adapters` declares `opentelemetry-sdk` as an **optional** dependency (per
 `ADR-018`). You must
 explicitly pull it in your own `pom.xml`:
 
@@ -18,7 +18,7 @@ explicitly pull it in your own `pom.xml`:
 <dependencies>
     <dependency>
         <groupId>dev.agenor</groupId>
-        <artifactId>jentic-adapters</artifactId>
+        <artifactId>agenor-adapters</artifactId>
     </dependency>
 
     <!-- Opt-in: OTel SDK + OTLP exporter -->
@@ -124,11 +124,11 @@ prefixed with `jentic.`.
 
 ### Local development (Jaeger all-in-one via Docker Compose)
 
-The `jentic-examples` module ships a ready-made
-`jentic-examples/src/main/resources/observability/docker-compose.yml`:
+The `agenor-examples` module ships a ready-made
+`agenor-examples/src/main/resources/observability/docker-compose.yml`:
 
 ```bash
-cd jentic-examples/src/main/resources/observability
+cd agenor-examples/src/main/resources/observability
 docker compose up -d
 ```
 
@@ -146,14 +146,14 @@ Point your application at `http://localhost:4318` (OTLP/HTTP) or `http://localho
 
 ```bash
 # Start the collector stack first
-cd jentic-examples/src/main/resources/observability && docker compose up -d
+cd agenor-examples/src/main/resources/observability && docker compose up -d
 
 # Run the example
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.observability.ObservabilityExample"
 ```
 
-Open `http://localhost:16686` and search for service `jentic-observability-example` to
+Open `http://localhost:16686` and search for service `agenor-observability-example` to
 see the complete trace.
 
 ---
@@ -204,15 +204,15 @@ use `NoopAgenorTelemetry`:
 - `makeCurrent()` returns the same singleton noop scope (no allocation).
 - All methods are no-ops that return `this` or the singleton immediately.
 
-This is verified by `TelemetryClasspathIsolationTest` in `jentic-core`, which asserts
+This is verified by `TelemetryClasspathIsolationTest` in `agenor-core`, which asserts
 that `io.opentelemetry.api.OpenTelemetry` is **not** on the core classpath.
 
 ---
 
-## Verifying no OTel leakage in jentic-core
+## Verifying no OTel leakage in agenor-core
 
 ```bash
-mvn dependency:analyze -pl jentic-core
+mvn dependency:analyze -pl agenor-core
 ```
 
 The output must not list any `io.opentelemetry` artifact — confirmed by the CI quality

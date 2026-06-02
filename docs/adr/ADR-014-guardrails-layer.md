@@ -17,7 +17,7 @@ nor outputs before they reach the consumer. This creates risks:
 - No declarative way to attach validation rules to an agent class
 
 Constraints:
-- `jentic-core` must remain free of external dependencies (ADR-002)
+- `agenor-core` must remain free of external dependencies (ADR-002)
 - `LLMAgent` without guardrails must behave identically to current behaviour (backward compat)
 - Must be composable: multiple guardrails chained together
 - Must integrate with the existing annotation-based configuration pattern (ADR-006)
@@ -86,7 +86,7 @@ public sealed interface GuardrailResult
 ### Module Boundary
 
 ```
-jentic-core
+agenor-core
   └── dev.agenor.core.guardrail
         ├── GuardrailResult.java          (sealed interface — no external deps)
         ├── InputGuardrail.java           (functional interface)
@@ -95,7 +95,7 @@ jentic-core
         ├── GuardrailViolationException.java
         └── WithGuardrails.java           (@interface annotation)
 
-jentic-adapters (or jentic-runtime)
+agenor-adapters (or agenor-runtime)
   └── dev.agenor.runtime.guardrail
         ├── GuardrailChain.java           (builder + sequential execution)
         ├── PiiRedactionGuardrail.java    (Input + Output)
@@ -169,7 +169,7 @@ chain is **prepended** to the programmatic guardrails (annotation guardrails run
 
 ## Compliance
 
-- `jentic-core` package `dev.agenor.core.guardrail` must have zero external dependencies (verified by `mvn dependency:analyze`)
+- `agenor-core` package `dev.agenor.core.guardrail` must have zero external dependencies (verified by `mvn dependency:analyze`)
 - Coverage ≥ 80% on `dev.agenor.core.guardrail` and `dev.agenor.runtime.guardrail` (enforced by JaCoCo in `mvn verify`)
 - `LLMAgent` backward-compatibility verified by existing test suite passing unchanged
 

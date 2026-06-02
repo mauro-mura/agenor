@@ -5,7 +5,7 @@
 **Authors**: Project Team  
 **References**: ADR-001 (Virtual Threads), ADR-002 (Interface-First Architecture),
 ADR-004 (Progressive Complexity), ADR-019 (OpenTelemetry Instrumentation),
-ADR-020 (Core API Refactor for Distributed Backends), ADR-022 (`jentic-adapters-persistence` Module Split)
+ADR-020 (Core API Refactor for Distributed Backends), ADR-022 (`agenor-adapters-persistence` Module Split)
 
 ---
 
@@ -79,7 +79,7 @@ module (verified in code review and enforced by a SpotBugs rule).
 
 ### Decision: Flyway
 
-Flyway manages schema versioning for `jentic-adapters-persistence`.
+Flyway manages schema versioning for `agenor-adapters-persistence`.
 
 ### Candidates evaluated
 
@@ -137,17 +137,17 @@ Each logical concern has its own Flyway configuration instance, with migrations 
 dedicated classpath location:
 
 ```
-jentic-adapters-persistence/
+agenor-adapters-persistence/
 └── src/main/resources/db/migration/
-    ├── jentic-directory/         ← agent directory schema
+    ├── agenor-directory/         ← agent directory schema
     │   └── V1__create_agent_directory.sql
-    └── jentic-hitl/              ← HITL schema (added with persistent HITL support)
+    └── agenor-hitl/              ← HITL schema (added with persistent HITL support)
         └── V1__create_hitl_requests.sql
 ```
 
 Independent configuration instances allow directory and HITL migrations to be applied and
-disabled selectively. `DirectorySchemaManager` runs only the `jentic-directory` location;
-a future `HitlSchemaManager` runs only `jentic-hitl`.
+disabled selectively. `DirectorySchemaManager` runs only the `agenor-directory` location;
+a future `HitlSchemaManager` runs only `agenor-hitl`.
 
 ---
 
@@ -264,7 +264,7 @@ values (e.g., `"payment-agent-1"`, `"payment-agent-2"`) and discover by type via
 | `JdbcAgentDiscovery` | `AgentDiscovery` | `findById`, `findByCapability`, `findByType`, `findAgents` |
 | `JdbcAgentResolver` | `AgentResolver` | `resolveEndpoint` — single-row PK lookup |
 | `JdbcDirectoryConfig` | — (record) | DataSource URL, pool size, schema location |
-| `DirectorySchemaManager` | — | Runs Flyway on the `jentic-directory` location at startup |
+| `DirectorySchemaManager` | — | Runs Flyway on the `agenor-directory` location at startup |
 | `JdbcHelper` | — | `PreparedStatement` execution, result mapping, shared by all three adapters |
 
 Package root: `dev.agenor.adapters.persistence.directory`
@@ -309,7 +309,7 @@ OTel spans emitted via `AgenorTelemetry` (ADR-019):
 | Integration | Full Postgres behaviour, multi-node scenario | Testcontainers Postgres |
 | Integration | MySQL cross-DB compatibility | Testcontainers MySQL |
 | Contract | Reuse `AgentRegistry`, `AgentDiscovery`, `AgentResolver` contract suites from ADR-020 | — |
-| Classpath | Consumer without `jentic-adapters-persistence` builds and uses `InMemoryAgentDirectory` | Maven Invoker plugin |
+| Classpath | Consumer without `agenor-adapters-persistence` builds and uses `InMemoryAgentDirectory` | Maven Invoker plugin |
 
 Integration tests are gated by `-Dintegration.tests.enabled=true`, consistent with the
 Redis adapter convention established in ADR-021.
@@ -380,4 +380,4 @@ accidental coupling.
 - ADR-019: OpenTelemetry instrumentation — span taxonomy for directory operations
 - ADR-020: Core API refactor — `AgentRegistry`, `AgentDiscovery`, `AgentResolver`, `AgentPresence`
   are the interfaces this ADR reasons about; contract test suites are reused from ADR-020
-- ADR-022: Module split — placement rationale for `jentic-adapters-persistence`
+- ADR-022: Module split — placement rationale for `agenor-adapters-persistence`

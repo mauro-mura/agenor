@@ -32,14 +32,14 @@
     </properties>
 
     <modules>
-		<module>jentic-bom</module>
-        <module>jentic-core</module>
-        <module>jentic-runtime</module>
-        <module>jentic-adapters</module>
-        <module>jentic-adapters-persistence</module>
-        <module>jentic-spring-boot-starter</module>
-        <module>jentic-examples</module>
-        <module>jentic-tools</module>
+		<module>agenor-bom</module>
+        <module>agenor-core</module>
+        <module>agenor-runtime</module>
+        <module>agenor-adapters</module>
+        <module>agenor-adapters-persistence</module>
+        <module>agenor-spring-boot-starter</module>
+        <module>agenor-examples</module>
+        <module>agenor-tools</module>
     </modules>
 
     <dependencyManagement>
@@ -47,7 +47,7 @@
         	<!-- Import Jentic BOM FIRST -->
 	        <dependency>
 	            <groupId>dev.jentic</groupId>
-	            <artifactId>jentic-bom</artifactId>
+	            <artifactId>agenor-bom</artifactId>
 	            <version>${project.version}</version>
 	            <type>pom</type>
 	            <scope>import</scope>

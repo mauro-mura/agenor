@@ -14,9 +14,9 @@ who never asked for that infrastructure.
 
 Three placement strategies exist in the current codebase:
 
-1. **Compile-scope dep inside `jentic-adapters`** — used by LangChain4j, the A2A SDK, and the
-   MCP SDK. The library is always on the classpath when `jentic-adapters` is declared.
-2. **`optional=true` dep inside `jentic-adapters`** — declared in the Spring Boot starter
+1. **Compile-scope dep inside `agenor-adapters`** — used by LangChain4j, the A2A SDK, and the
+   MCP SDK. The library is always on the classpath when `agenor-adapters` is declared.
+2. **`optional=true` dep inside `agenor-adapters`** — declared in the Spring Boot starter
    (ADR-016) for Spring Boot itself. The library is available at compile time but absent from
    the transitive classpath; consumers must declare it explicitly if they want it.
 3. **Dedicated Maven sub-module** — not yet used; introduced conceptually in ADR-003 as a
@@ -44,32 +44,32 @@ without a new or updated ADR.
 
 | Condition | Placement |
 |-----------|-----------|
-| Adapter uses only lightweight libraries already common in Java services (`java.net.http`, small JSON libs, SLF4J) | `jentic-adapters`, regular `compile` scope |
-| Adapter pulls a heavy but generally useful library (OTel SDK, Lettuce/Redis client) that multiple consumers may want independently | `jentic-adapters`, `<optional>true</optional>` |
-| Adapter pulls heavyweight *infrastructure* with mutually exclusive alternatives (JDBC + Flyway + connection pool, Consul client, etcd client) or that requires schema/migration management | Dedicated Maven sub-module `jentic-adapters-<concern>` |
+| Adapter uses only lightweight libraries already common in Java services (`java.net.http`, small JSON libs, SLF4J) | `agenor-adapters`, regular `compile` scope |
+| Adapter pulls a heavy but generally useful library (OTel SDK, Lettuce/Redis client) that multiple consumers may want independently | `agenor-adapters`, `<optional>true</optional>` |
+| Adapter pulls heavyweight *infrastructure* with mutually exclusive alternatives (JDBC + Flyway + connection pool, Consul client, etcd client) or that requires schema/migration management | Dedicated Maven sub-module `agenor-adapters-<concern>` |
 | Adapter is commercial / Enterprise-tier | Separate Enterprise module, not in OSS BOM |
 
 **Contract for `optional=true` deps**:
 
-- The dependency is declared in `jentic-adapters/pom.xml` with `<optional>true</optional>`.
+- The dependency is declared in `agenor-adapters/pom.xml` with `<optional>true</optional>`.
 - All classes that import the optional library are confined to a dedicated sub-package
   (e.g. `dev.agenor.adapters.telemetry`, `dev.agenor.adapters.messaging.redis`).
-- The `jentic-runtime` module must **never** import these classes — it depends only on
-  interfaces in `jentic-core`.
+- The `agenor-runtime` module must **never** import these classes — it depends only on
+  interfaces in `agenor-core`.
 - The Spring Boot starter guards auto-configured beans with `@ConditionalOnClass(OptionalLib.class)`.
 - CI includes a *classpath isolation test*: a minimal consumer that declares only
-  `jentic-adapters` (without the optional library) must compile and run without
+  `agenor-adapters` (without the optional library) must compile and run without
   `ClassNotFoundException`.
 
 **Contract for dedicated sub-modules**:
 
-- Module name follows the pattern `jentic-adapters-<concern>` (e.g. `jentic-adapters-persistence`).
-- Added to the parent POM `<modules>` list and to `jentic-bom`.
-- Depends on `jentic-core` (compile scope) and `jentic-runtime` (provided/test scope only).
+- Module name follows the pattern `agenor-adapters-<concern>` (e.g. `agenor-adapters-persistence`).
+- Added to the parent POM `<modules>` list and to `agenor-bom`.
+- Depends on `agenor-core` (compile scope) and `agenor-runtime` (provided/test scope only).
 - The Spring Boot starter references the sub-module with `<optional>true</optional>` — the
   same classpath isolation guarantee holds.
 - The sub-module ships its own `README.md` explaining its scope, and why it is separate from
-  `jentic-adapters`.
+  `agenor-adapters`.
 
 ## Rationale
 
@@ -77,7 +77,7 @@ without a new or updated ADR.
 
 - Single reference point: future adapters (Kafka, Consul, NATS, pgvector, …) can be classified
   without re-opening the design discussion.
-- Lightweight consumers (`jentic-adapters` without optional libs) pay zero classpath cost for
+- Lightweight consumers (`agenor-adapters` without optional libs) pay zero classpath cost for
   infrastructure they don't use.
 - `@ConditionalOnClass` activation in the Spring Boot starter works correctly for both
   `optional=true` and sub-module strategies — the class is either present or absent at runtime.
@@ -106,15 +106,15 @@ realised when the corresponding item is implemented:
 
 | Planned release | Adapter | Strategy |
 |-----------------|---------|----------|
-| 0.19.0 | OpenTelemetry SDK | `optional=true` in `jentic-adapters` |
-| 0.21.0 | Lettuce (Redis/Valkey) | `optional=true` in `jentic-adapters` |
-| 0.22.0 | HikariCP + Flyway + JDBC drivers | Dedicated `jentic-adapters-persistence` sub-module |
-| 0.22.0 | JDBC HITL queue | Same `jentic-adapters-persistence` sub-module (extended) |
+| 0.19.0 | OpenTelemetry SDK | `optional=true` in `agenor-adapters` |
+| 0.21.0 | Lettuce (Redis/Valkey) | `optional=true` in `agenor-adapters` |
+| 0.22.0 | HikariCP + Flyway + JDBC drivers | Dedicated `agenor-adapters-persistence` sub-module |
+| 0.22.0 | JDBC HITL queue | Same `agenor-adapters-persistence` sub-module (extended) |
 
 Example `pom.xml` snippet for an `optional=true` dep:
 
 ```xml
-<!-- jentic-adapters/pom.xml -->
+<!-- agenor-adapters/pom.xml -->
 <dependency>
     <groupId>io.opentelemetry</groupId>
     <artifactId>opentelemetry-sdk</artifactId>
@@ -129,7 +129,7 @@ Example consumer opt-in (OpenTelemetry):
 <!-- Consumer POM — must declare the optional lib explicitly -->
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <dependency>
@@ -145,7 +145,7 @@ Example consumer opt-in (JDBC persistence):
 <!-- Consumer POM — declares the sub-module artifact directly -->
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters-persistence</artifactId>
+    <artifactId>agenor-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 ```
@@ -154,7 +154,7 @@ Example consumer opt-in (JDBC persistence):
 
 ### Positive
 
-- Default `jentic-adapters` classpath stays agent-focused: LLM providers, MCP, A2A — no
+- Default `agenor-adapters` classpath stays agent-focused: LLM providers, MCP, A2A — no
   database drivers, no telemetry SDK, no Redis client unless explicitly requested.
 - Every new distributed backend has a clear, pre-decided home; architectural reviews can focus
   on design rather than placement.
@@ -165,16 +165,16 @@ Example consumer opt-in (JDBC persistence):
 - Contributors must consult this ADR before adding a new backend dependency.
 - Gradle users who expect transitive optional deps to be excluded need explicit action
   (Gradle's `implementation` scope does not skip optional deps by default — documented in
-  `jentic-adapters/README.md`).
+  `agenor-adapters/README.md`).
 
 ### Neutral
 
-- `jentic-bom` grows by one entry per new sub-module; at the projected pace (one module per
+- `agenor-bom` grows by one entry per new sub-module; at the projected pace (one module per
   minor release) this is manageable.
 
 ## Compliance
 
-- Maven Enforcer rule (already present) verifies that `jentic-core` and `jentic-runtime` have
+- Maven Enforcer rule (already present) verifies that `agenor-core` and `agenor-runtime` have
   no transitive deps outside the approved set.
 - A new CI step (`classpath-isolation` matrix job) runs a minimal consumer project against each
   `optional=true` adapter to confirm `ClassNotFoundException` does not occur at runtime when the
@@ -188,4 +188,4 @@ Example consumer opt-in (JDBC persistence):
   ADR-004 (progressive complexity), ADR-016 (Spring Boot starter — first use of `optional=true`
   in this project).
 - Future ADRs for each planned adapter (OpenTelemetry, Redis messaging,
-  `jentic-adapters-persistence`) will reference this ADR as the governing rule.
+  `agenor-adapters-persistence`) will reference this ADR as the governing rule.

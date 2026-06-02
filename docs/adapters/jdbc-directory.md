@@ -31,20 +31,20 @@ docker compose up postgres
 ```
 
 For development/testing without external infrastructure, H2 in-process mode is fully
-supported (see the example below and `JdbcDirectoryExample` in `jentic-examples`).
+supported (see the example below and `JdbcDirectoryExample` in `agenor-examples`).
 
 ---
 
 ## Maven dependency (opt-in)
 
-`jentic-adapters-persistence` is a dedicated Maven module per ADR-022 (Optional Adapter
+`agenor-adapters-persistence` is a dedicated Maven module per ADR-022 (Optional Adapter
 Dependencies Pattern). Consumers that want a JDBC-backed directory must declare it
 explicitly:
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters-persistence</artifactId>
+    <artifactId>agenor-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <!-- Runtime JDBC driver — choose one -->
@@ -56,7 +56,7 @@ explicitly:
 </dependency>
 ```
 
-Consumers that declare only `jentic-runtime` continue to use `InMemoryAgentDirectory` —
+Consumers that declare only `agenor-runtime` continue to use `InMemoryAgentDirectory` —
 no configuration required, no classpath impact.
 
 ---
@@ -71,7 +71,7 @@ Flyway manages the schema automatically. The first migration
 | `jentic_agents` | `agent_id` | Stores agent registration, status, endpoint, and metadata |
 | `jentic_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
 
-The migration location defaults to `classpath:db/migration/jentic-directory` and runs
+The migration location defaults to `classpath:db/migration/agenor-directory` and runs
 on every `JdbcAgentDirectory.create()` call. Flyway's `baselineOnMigrate=true` makes
 the migration idempotent — safe to call repeatedly.
 
@@ -135,7 +135,7 @@ the exact conditions.
 | `username` | — | Database username |
 | `password` | — | Database password |
 | `maximumPoolSize` | `10` | HikariCP max pool size |
-| `migrationLocation` | `classpath:db/migration/jentic-directory` | Flyway migration classpath location |
+| `migrationLocation` | `classpath:db/migration/agenor-directory` | Flyway migration classpath location |
 
 Spring Boot YAML keys (`jentic.directory.jdbc.*`):
 
@@ -215,11 +215,11 @@ backend is used.
 Testcontainers-based PostgreSQL integration tests are in `JdbcAgentDirectoryIT`:
 
 ```bash
-mvn verify -pl jentic-adapters-persistence -Dintegration.tests.enabled=true
+mvn verify -pl agenor-adapters-persistence -Dintegration.tests.enabled=true
 ```
 
 Unit tests against an embedded H2 database run as part of `mvn test` (no flag required):
 
 ```bash
-mvn test -pl jentic-adapters-persistence
+mvn test -pl agenor-adapters-persistence
 ```

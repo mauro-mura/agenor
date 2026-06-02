@@ -243,8 +243,8 @@ the new signatures; no additional migration is needed for code still on the lega
 
 ### Consequences
 
-- All ~55 call sites across `jentic-core`, `jentic-runtime`, `jentic-adapters`, and
-  `jentic-examples` updated in the same commit.
+- All ~55 call sites across `agenor-core`, `agenor-runtime`, `agenor-adapters`, and
+  `agenor-examples` updated in the same commit.
 - `CHANGELOG.md` `[Unreleased]` section documents this as a breaking change with migration guide.
 - No behavioural change — routing was already done on message fields in the implementation.
 

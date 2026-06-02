@@ -18,7 +18,7 @@ mvn clean install -DskipTests
 ## 2. Run Your First Example
 
 ```bash
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 ```
 
@@ -28,19 +28,19 @@ You should see two agents exchanging messages in the console. That's the runtime
 
 ```bash
 # Cyclic behavior + topic pub/sub
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.WeatherStationExample"
 
 # FSM + parallel validators (production-style orchestration)
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
 
 # LLM multi-agent (requires OPENAI_API_KEY env var)
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
 
-The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
+The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
 
 ## 4. Add Jentic to Your Project
 
@@ -51,7 +51,7 @@ The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
     <dependencies>
         <dependency>
             <groupId>dev.agenor</groupId>
-            <artifactId>jentic-bom</artifactId>
+            <artifactId>agenor-bom</artifactId>
             <version>0.24.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
@@ -62,7 +62,7 @@ The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
 <dependencies>
     <dependency>
         <groupId>dev.agenor</groupId>
-        <artifactId>jentic-runtime</artifactId>
+        <artifactId>agenor-runtime</artifactId>
     </dependency>
 </dependencies>
 ```

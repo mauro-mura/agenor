@@ -7,8 +7,8 @@ Accepted
 Integration of Agentic AI capabilities requires LLM provider abstraction.
 
 ## Decision
-LLMProvider will be a core interface in jentic-core with implementations
-in jentic-adapters, following the same pattern as MessageService and
+LLMProvider will be a core interface in agenor-core with implementations
+in agenor-adapters, following the same pattern as MessageService and
 AgentDirectory.
 
 ## Consequences

@@ -125,7 +125,7 @@ is involved in the point-to-point path.
 
 ### Message encoding
 
-Messages are serialised as JSON (Jackson, already a `jentic-core` dependency) and stored as
+Messages are serialised as JSON (Jackson, already a `agenor-core` dependency) and stored as
 a single `payload` field in the stream entry. The envelope fields (`id`, `topic`,
 `receiverId`, `senderId`, `correlationId`, `timestamp`) are stored as separate stream fields
 for server-side inspection without deserialising the payload.
@@ -158,12 +158,12 @@ either use the in-memory dispatcher or apply filtering in the message handler.
 
 | Class | Interface(s) | Location |
 |-------|--------------|----------|
-| `RedisMessageDispatcher` | `MessageDispatcher` | `jentic-adapters` |
-| `RedisTopicPublisher` | `TopicPublisher`, `TopicSubscriber` | `jentic-adapters` |
-| `RedisMessageTransport` | `MessageTransport` | `jentic-adapters` |
-| `RedisMessagingConfig` | — (record) | `jentic-adapters` |
-| `RedisMessagingFactory` | — (builder, exposes `messageDispatcher()`) | `jentic-adapters` |
-| `RedisStreamClient` | — (internal helper) | `jentic-adapters` |
+| `RedisMessageDispatcher` | `MessageDispatcher` | `agenor-adapters` |
+| `RedisTopicPublisher` | `TopicPublisher`, `TopicSubscriber` | `agenor-adapters` |
+| `RedisMessageTransport` | `MessageTransport` | `agenor-adapters` |
+| `RedisMessagingConfig` | — (record) | `agenor-adapters` |
+| `RedisMessagingFactory` | — (builder, exposes `messageDispatcher()`) | `agenor-adapters` |
+| `RedisStreamClient` | — (internal helper) | `agenor-adapters` |
 
 `RedisMessageDispatcher` is the primary entry point for application code and the Spring Boot
 starter. It composes `RedisTopicPublisher` (topic pub/sub), `RedisMessageTransport`
@@ -273,7 +273,7 @@ Same asymmetry problem as above, inverted. Rejected for the same reason.
 **Kafka instead of Redis/Valkey.**  
 Kafka offers stronger ordering and retention guarantees but introduces ZooKeeper/KRaft,
 a different protocol (not RESP), and a substantially larger operational footprint. Deferred
-to the Enterprise tier (`jentic-enterprise-distributed`). The capability interfaces from
+to the Enterprise tier (`agenor-enterprise-distributed`). The capability interfaces from
 ADR-020 ensure a Kafka adapter can slot in without code changes in the rest of the framework.
 
 **Use Redis Lists (`LPUSH`/`BRPOP`) instead of Streams.**  

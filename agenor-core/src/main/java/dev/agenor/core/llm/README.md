@@ -5,7 +5,7 @@
 
 Provider-agnostic LLM abstraction layer for Jentic agents. Defines interfaces and
 value types only — no external dependencies beyond the Java standard library.
-Concrete provider implementations (OpenAI, Anthropic, Ollama) live in `jentic-adapters`.
+Concrete provider implementations (OpenAI, Anthropic, Ollama) live in `agenor-adapters`.
 
 ## Package contents
 
@@ -23,4 +23,4 @@ Concrete provider implementations (OpenAI, Anthropic, Ollama) live in `jentic-ad
 ## See Also
 
 - [`docs/llm-integration.md`](../../../../../../../../docs/llm-integration.md) — full guide: providers, requests, streaming, function calling, `LLMAgent`, memory strategies, error handling, testing
-- [`jentic-adapters/README.md`](../../../../../../../../jentic-adapters/README.md) — `LLMProviderFactory` and provider configuration
+- [`agenor-adapters/README.md`](../../../../../../../../agenor-adapters/README.md) — `LLMProviderFactory` and provider configuration

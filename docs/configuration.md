@@ -8,7 +8,7 @@ Jentic supports configuration via YAML files and programmatic builders. This pag
 
 ## Loading Configuration
 
-`ConfigurationLoader` is an interface in `jentic-core`. The default implementation is `DefaultConfigurationLoader` in `jentic-runtime`. The recommended way to load configuration is via the `AgenorRuntime` builder:
+`ConfigurationLoader` is an interface in `agenor-core`. The default implementation is `DefaultConfigurationLoader` in `agenor-runtime`. The recommended way to load configuration is via the `AgenorRuntime` builder:
 
 ```java
 import dev.agenor.runtime.AgenorRuntime;
@@ -117,8 +117,8 @@ Notes:
 
 | Value | Module required | Notes |
 |---|---|---|
-| `inmemory` | `jentic-runtime` (built-in) | Default; single JVM only |
-| `redis` | `jentic-adapters` | Durable, multi-node; requires Lettuce on classpath |
+| `inmemory` | `agenor-runtime` (built-in) | Default; single JVM only |
+| `redis` | `agenor-adapters` | Durable, multi-node; requires Lettuce on classpath |
 
 #### Redis messaging (`provider: redis`)
 
@@ -139,7 +139,7 @@ jentic:
 
 > **Note:** Setting `provider: redis` in `jentic.yml` only records the provider name and properties
 > in `AgenorConfiguration`. The actual `RedisMessagingFactory` must be wired manually
-> (see `jentic-adapters` documentation) or automatically via the **Spring Boot starter**,
+> (see `agenor-adapters` documentation) or automatically via the **Spring Boot starter**,
 > which reads these keys and creates the adapter bean.
 > See [Spring Boot Starter](spring-boot-starter.md) for zero-wiring Redis setup.
 
@@ -149,9 +149,9 @@ jentic:
 
 | Value | Module required | Notes |
 |---|---|---|
-| `local` | `jentic-runtime` (built-in) | Default; single JVM, survives restarts via in-memory state |
-| `inmemory` | `jentic-runtime` (built-in) | Alias for `local` |
-| `jdbc` | `jentic-adapters-persistence` | Durable, multi-node; requires a JDBC driver on classpath |
+| `local` | `agenor-runtime` (built-in) | Default; single JVM, survives restarts via in-memory state |
+| `inmemory` | `agenor-runtime` (built-in) | Alias for `local` |
+| `jdbc` | `agenor-adapters-persistence` | Durable, multi-node; requires a JDBC driver on classpath |
 
 #### JDBC directory (`provider: jdbc`)
 
@@ -171,7 +171,7 @@ jentic:
 > **Note:** In a non-Spring-Boot context, `provider: jdbc` only records the intent in
 > `AgenorConfiguration`. `JdbcAgentDirectory` must be instantiated and passed to the runtime
 > manually. The **Spring Boot starter** handles this automatically when
-> `jentic-adapters-persistence` is on the classpath.
+> `agenor-adapters-persistence` is on the classpath.
 > See [JDBC Agent Directory](adapters/jdbc-directory.md) and [Spring Boot Starter](spring-boot-starter.md).
 
 Supported JDBC URLs: `jdbc:postgresql://…`, `jdbc:mysql://…`, `jdbc:h2:…` (H2 for dev/test).
@@ -217,7 +217,7 @@ var runtime = AgenorRuntime.builder()
 
 ## Persistence
 
-`jentic-runtime` provides a file-based persistence service suitable for development/testing. Persistence is enabled programmatically via `PersistenceManager`.
+`agenor-runtime` provides a file-based persistence service suitable for development/testing. Persistence is enabled programmatically via `PersistenceManager`.
 
 ---
 
@@ -229,4 +229,4 @@ Logging uses SLF4J. In tests/examples, Logback is included; provide your own `lo
 
 ## Example File
 
-See `jentic-runtime/src/test/resources/jentic-test.yml` for a working example.
+See `agenor-runtime/src/test/resources/agenor-test.yml` for a working example.

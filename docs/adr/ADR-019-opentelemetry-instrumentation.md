@@ -16,7 +16,7 @@ traces it is impossible to debug multi-agent interactions, measure LLM latency, 
 Human-in-the-Loop approvals in production.
 
 OpenTelemetry (OTel) is the industry standard for distributed tracing and metrics. However,
-pulling the full OTel SDK into `jentic-core` would violate ADR-002 (zero external deps in core)
+pulling the full OTel SDK into `agenor-core` would violate ADR-002 (zero external deps in core)
 and ADR-018 (optional adapter deps). The challenge is adding observability with zero overhead for
 consumers who don't want it and zero `ClassNotFoundException` risk when OTel is absent.
 
@@ -26,11 +26,11 @@ consumers who don't want it and zero `ClassNotFoundException` risk when OTel is 
 
 Introduce a **two-layer telemetry architecture**:
 
-1. **Core abstraction** (`jentic-core`) — zero-dependency interfaces (`AgenorTelemetry`,
+1. **Core abstraction** (`agenor-core`) — zero-dependency interfaces (`AgenorTelemetry`,
    `SpanBuilder`, `Span`, `SpanStatus`) plus a `NoopAgenorTelemetry` singleton. Core code
    always codes against the abstraction, never against OTel.
 
-2. **OTel adapter** (`jentic-adapters`) — `OtelAgenorTelemetry`, `OtelTelemetryFactory`
+2. **OTel adapter** (`agenor-adapters`) — `OtelAgenorTelemetry`, `OtelTelemetryFactory`
    declared with `<optional>true</optional>`. Only materialised when OTel is on the classpath.
 
 Runtime components accept `AgenorTelemetry` via constructor injection (default: `noop()`).
@@ -47,7 +47,7 @@ The Spring Boot starter auto-configures a `AgenorTelemetry` bean when
   allocated on the hot path when telemetry is disabled.
 - **Backward-compatible**: all existing constructors gain an overload that defaults to noop.
   No existing code needs to change.
-- **Classpath-safe**: OTel classes are only referenced in `jentic-adapters`. A consumer that
+- **Classpath-safe**: OTel classes are only referenced in `agenor-adapters`. A consumer that
   never adds OTel to their POM will never see `ClassNotFoundException`.
 - **Automatic in Spring Boot**: `@ConditionalOnClass(name="dev.agenor.adapters.telemetry.OtelTelemetryFactory")`
   ensures the telemetry bean appears only when the adapter is present.
@@ -64,7 +64,7 @@ The Spring Boot starter auto-configures a `AgenorTelemetry` bean when
 ### Alternatives Considered
 
 - **Micrometer Observation API**: more established in Spring ecosystem but heavier, adds
-  Micrometer as a required dep in `jentic-core`, and is less ubiquitous outside Spring.
+  Micrometer as a required dep in `agenor-core`, and is less ubiquitous outside Spring.
 - **Direct OTel in core**: simpler but violates ADR-002 and ADR-018; rejected.
 - **No telemetry abstraction (OTel directly in runtime)**: ties runtime to OTel, breaks
   classpath isolation; rejected.
@@ -76,7 +76,7 @@ The Spring Boot starter auto-configures a `AgenorTelemetry` bean when
 ### Package layout
 
 ```
-jentic-core
+agenor-core
   dev.agenor.core.telemetry
     Span              ← interface
     SpanScope         ← interface (AutoCloseable, returned by Span.makeCurrent())
@@ -85,7 +85,7 @@ jentic-core
     AgenorTelemetry   ← interface + noop() factory method
     NoopAgenorTelemetry ← package-private singleton
 
-jentic-adapters
+agenor-adapters
   dev.agenor.adapters.telemetry
     OtelAgenorTelemetry   ← wraps OpenTelemetry instance
     OtelTelemetryFactory  ← builder + fromEnvironment()
@@ -188,6 +188,6 @@ Add to POM to activate:
 
 ## Compliance
 
-- `jentic-core` must never import `io.opentelemetry.*` — enforced by `maven-dependency-plugin:analyze`.
+- `agenor-core` must never import `io.opentelemetry.*` — enforced by `maven-dependency-plugin:analyze`.
 - Classpath isolation verified by a CI test that boots the runtime without OTel on the classpath.
 - Span attribute naming must follow the inventory table above; deviations require an ADR update.

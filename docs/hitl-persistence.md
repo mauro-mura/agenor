@@ -2,7 +2,7 @@
 
 > **Reference ADR**: ADR-024 — Persistent HITL Approval Queue (JDBC) (`docs/adr/`)  
 > **Since**: 0.23.0  
-> **Module**: `jentic-adapters-persistence`
+> **Module**: `agenor-adapters-persistence`
 
 ---
 
@@ -13,7 +13,7 @@ For production HITL workflows with human-scale timeouts (minutes, hours, days), 
 unacceptable.
 
 `JdbcApprovalGate` persists every approval request in the `jentic_hitl_requests` table.
-It reuses the same `jentic-adapters-persistence` module used by the JDBC agent directory
+It reuses the same `agenor-adapters-persistence` module used by the JDBC agent directory
 (ADR-023), so no new Maven dependency is required if you already have the module on your
 classpath.
 
@@ -26,7 +26,7 @@ classpath.
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters-persistence</artifactId>
+    <artifactId>agenor-adapters-persistence</artifactId>
     <version>0.23.0</version>
 </dependency>
 <!-- PostgreSQL driver (or H2 for testing) -->
@@ -48,7 +48,7 @@ cfg.setPassword("secret");
 var dataSource = new HikariDataSource(cfg);
 
 // Run the Flyway migration (idempotent)
-new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate();
+new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
 
 // Create and initialise the gate
 var gate = new JdbcApprovalGate(dataSource, cfg.getJdbcUrl());
@@ -74,7 +74,7 @@ jentic:
       pool-size: 5   # default: 5
 ```
 
-When `jentic.hitl.provider=jdbc` and `jentic-adapters-persistence` is on the classpath,
+When `jentic.hitl.provider=jdbc` and `agenor-adapters-persistence` is on the classpath,
 the auto-configuration creates the `JdbcApprovalGate` bean and wires it into `AgenorRuntime`
 automatically.
 
@@ -85,7 +85,7 @@ If `jentic.hitl.jdbc.url` is not set, the auto-configuration falls back to
 
 ## Schema
 
-The schema is managed by Flyway from location `classpath:db/migration/jentic-hitl`.
+The schema is managed by Flyway from location `classpath:db/migration/agenor-hitl`.
 
 ```sql
 CREATE TABLE jentic_hitl_requests (
@@ -188,7 +188,7 @@ an existing `requestId` after restart) is deferred to the Enterprise tier.
 ## Running the example
 
 ```bash
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.hitl.PersistentHitlExample"
 ```
 

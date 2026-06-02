@@ -13,7 +13,7 @@ MCP defines a JSON-RPC 2.0 protocol over multiple transports (SSE, Streamable-HT
 We need to decide how to implement the client side of this protocol.
 
 Constraints:
-- `jentic-core` must remain free of external dependencies (ADR-002)
+- `agenor-core` must remain free of external dependencies (ADR-002)
 - The adapter must integrate with Jentic's async model (`CompletableFuture`-based)
 - The Java MCP official SDK (`io.modelcontextprotocol.sdk:mcp:1.0.0`) was released February 2026 (MIT, Maven Central)
 
@@ -46,7 +46,7 @@ McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Jentic)
 - Transitive dependency on Project Reactor (via SDK internals)
 - `McpSyncClient` blocking calls require thread pool sizing attention
 
-**Mitigation**: Reactor dependency stays confined to `jentic-adapters` module; it does not leak into `jentic-core` or `jentic-runtime` (ADR-002 respected).
+**Mitigation**: Reactor dependency stays confined to `agenor-adapters` module; it does not leak into `agenor-core` or `agenor-runtime` (ADR-002 respected).
 
 ---
 
@@ -71,13 +71,13 @@ McpSyncClient (SDK sync) ──supplyAsync()──► CompletableFuture (Jentic)
 ### Module Boundary
 
 ```
-jentic-core
+agenor-core
   └── dev.agenor.core.mcp
         ├── McpTool.java          (record — no SDK dependency)
         ├── McpToolResult.java    (record — no SDK dependency)
         └── McpClient.java        (interface — CompletableFuture + core types only)
 
-jentic-adapters
+agenor-adapters
   └── dev.agenor.adapters.mcp
         ├── AgenorMcpClientAdapter.java (wraps McpSyncClient, implements McpClient)
         ├── McpToolMapper.java          (SDK types → Jentic records)
@@ -101,8 +101,8 @@ public CompletableFuture<List<McpTool>> listTools() {
 
 ### ADR-002 Compliance
 
-`jentic-core` declares **no dependency** on `io.modelcontextprotocol.sdk`.  
-The SDK dependency is scoped exclusively to `jentic-adapters/pom.xml`.  
+`agenor-core` declares **no dependency** on `io.modelcontextprotocol.sdk`.  
+The SDK dependency is scoped exclusively to `agenor-adapters/pom.xml`.  
 The transitive Reactor dependency is therefore confined to the adapters module.
 
 ---

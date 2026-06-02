@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.jentic</groupId>
-    <artifactId>jentic-bom</artifactId>
+    <artifactId>agenor-bom</artifactId>
     <version>0.24.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -16,40 +16,40 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Jentic Core Modules -->
+            <!-- Agenor Core Modules -->
             <dependency>
                 <groupId>dev.jentic</groupId>
-                <artifactId>jentic-core</artifactId>
+                <artifactId>agenor-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>dev.jentic</groupId>
-                <artifactId>jentic-runtime</artifactId>
+                <artifactId>agenor-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>dev.jentic</groupId>
-                <artifactId>jentic-adapters</artifactId>
+                <artifactId>agenor-adapters</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>dev.jentic</groupId>
-                <artifactId>jentic-adapters-persistence</artifactId>
+                <artifactId>agenor-adapters-persistence</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>dev.jentic</groupId>
-                <artifactId>jentic-tools</artifactId>
+                <artifactId>agenor-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
 			    <groupId>dev.jentic</groupId>
-			    <artifactId>jentic-spring-boot-starter</artifactId>
+			    <artifactId>agenor-spring-boot-starter</artifactId>
 			    <version>${project.version}</version>
 			</dependency>
 

@@ -268,7 +268,7 @@ public class A2AServerExample {
 ## Package Structure
 
 ```
-jentic-core/
+agenor-core/
 └── dialogue/
     ├── Performative.java           # Enum (10 values)
     ├── DialogueMessage.java        # Record wrapping Message
@@ -282,7 +282,7 @@ jentic-core/
         ├── Protocol.java           # Interface
         └── ProtocolState.java      # Enum
 
-jentic-runtime/
+agenor-runtime/
 └── dialogue/
     ├── DefaultConversation.java
     ├── DefaultConversationManager.java
@@ -296,7 +296,7 @@ jentic-runtime/
         ├── ContractNetProtocol.java
         └── ProtocolRegistry.java
 
-jentic-adapters/
+agenor-adapters/
 └── a2a/
     ├── AgenorA2AAdapter.java       # Main routing
     ├── AgenorA2AClient.java        # External client
@@ -307,7 +307,7 @@ jentic-adapters/
 
 ## Examples
 
-See `jentic-examples/src/main/java/dev/jentic/examples/dialogue/`:
+See `agenor-examples/src/main/java/dev/jentic/examples/dialogue/`:
 
 - `RequestProtocolExample.java` - Request protocol (order processing)
 - `QueryProtocolExample.java` - Query protocol (knowledge base)

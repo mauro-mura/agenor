@@ -9,8 +9,8 @@ implementation.
 > The two systems are independent; this guide covers key-value memory only.
 
 The memory subsystem spans two modules:
-- **`jentic-core`** (`dev.agenor.core.memory`) — interfaces and records
-- **`jentic-runtime`** (`dev.agenor.runtime.memory`) — implementations
+- **`agenor-core`** (`dev.agenor.core.memory`) — interfaces and records
+- **`agenor-runtime`** (`dev.agenor.runtime.memory`) — implementations
 
 For LLM-specific memory (conversation history, context window strategies) see
 [LLM Integration](llm-integration.md).
@@ -20,7 +20,7 @@ For LLM-specific memory (conversation history, context window strategies) see
 ## Package Overview
 
 ```
-jentic-core / dev.agenor.core.memory
+agenor-core / dev.agenor.core.memory
 ├── MemoryStore.java       # Core storage interface
 ├── MemoryEntry.java       # Immutable entry record (builder)
 ├── MemoryQuery.java       # Search query record (builder)
@@ -28,7 +28,7 @@ jentic-core / dev.agenor.core.memory
 ├── MemoryStats.java       # Stats record
 └── MemoryException.java   # Typed error hierarchy
 
-jentic-runtime / dev.agenor.runtime.memory
+agenor-runtime / dev.agenor.runtime.memory
 └── InMemoryStore.java     # Default MemoryStore implementation
 ```
 
@@ -189,7 +189,7 @@ store.delete("pref:user:theme", MemoryScope.LONG_TERM).join();
 
 ## InMemoryStore
 
-`InMemoryStore` is the default `MemoryStore` implementation in `jentic-runtime`. It stores entries in thread-safe `ConcurrentHashMap` instances, automatically removes expired entries on retrieval and via a background cleanup task, and does **not** persist to disk.
+`InMemoryStore` is the default `MemoryStore` implementation in `agenor-runtime`. It stores entries in thread-safe `ConcurrentHashMap` instances, automatically removes expired entries on retrieval and via a background cleanup task, and does **not** persist to disk.
 
 ```java
 // Default: max 10 000 entries per scope, 60 s cleanup interval

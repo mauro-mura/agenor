@@ -11,14 +11,14 @@
         <version>0.24.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>jentic-runtime</artifactId>
+    <artifactId>agenor-runtime</artifactId>
     <name>Jentic Runtime</name>
     <description>Basic runtime implementations for Jentic framework</description>
 
     <dependencies>
         <dependency>
             <groupId>dev.jentic</groupId>
-            <artifactId>jentic-core</artifactId>
+            <artifactId>agenor-core</artifactId>
         </dependency>
 
         <!-- Configuration -->

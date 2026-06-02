@@ -52,9 +52,9 @@ public class CustomTopicPublisher implements TopicPublisher { ... }
 
 ### Implementation Strategy
 
-1. **Phase 1**: Define interfaces in `jentic-core`
-2. **Phase 2**: Implement basic versions in `jentic-runtime`
-3. **Phase 3**: Add enterprise implementations in `jentic-adapters`
+1. **Phase 1**: Define interfaces in `agenor-core`
+2. **Phase 2**: Implement basic versions in `agenor-runtime`
+3. **Phase 3**: Add enterprise implementations in `agenor-adapters`
 4. **Phase 4**: Allow custom implementations via SPI
 
 ### Consequences

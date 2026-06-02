@@ -13,35 +13,35 @@ before being returned to the caller. A Generate → Critique → Revise loop
 
 The question is where to place the `ReflectionStrategy` abstraction:
 
-1. **`jentic-core` only** — pure interface, maximum reusability.
-2. **`jentic-runtime` only** — closer to `LLMAgent`, simpler module graph.
-3. **`jentic-core` interface + `jentic-runtime` implementation** — mirrors the
+1. **`agenor-core` only** — pure interface, maximum reusability.
+2. **`agenor-runtime` only** — closer to `LLMAgent`, simpler module graph.
+3. **`agenor-core` interface + `agenor-runtime` implementation** — mirrors the
    established `LLMProvider` and `KnowledgeStore` patterns.
 
 ## Decision
 
-Place `ReflectionStrategy`, `CritiqueResult`, and `ReflectionConfig` in **`jentic-core`**
+Place `ReflectionStrategy`, `CritiqueResult`, and `ReflectionConfig` in **`agenor-core`**
 as pure interfaces/records with zero external dependencies.
 
-Place `DefaultReflectionStrategy` and `ReflectionBehavior` in **`jentic-runtime`**
+Place `DefaultReflectionStrategy` and `ReflectionBehavior` in **`agenor-runtime`**
 as concrete implementations that depend on `LLMProvider`.
 
 This mirrors the `LLMProvider` (ADR-007) and `KnowledgeStore` (ADR-011) patterns exactly.
 
 ## Alternatives Considered
 
-- **`jentic-runtime` only**: Simpler module graph but prevents external modules from
+- **`agenor-runtime` only**: Simpler module graph but prevents external modules from
   depending on the reflection abstraction without pulling in runtime. Rejected —
   conflicts with ADR-002 (interface-first) and ADR-004 (progressive complexity).
-- **`jentic-core` with default implementation**: Avoids a second module but forces
-  `jentic-core` to depend on `LLMProvider` (or duplicate it). Rejected — breaks the
-  zero-external-dependency invariant of `jentic-core`.
+- **`agenor-core` with default implementation**: Avoids a second module but forces
+  `agenor-core` to depend on `LLMProvider` (or duplicate it). Rejected — breaks the
+  zero-external-dependency invariant of `agenor-core`.
 
 ## Consequences
 
 - **Positive**: `ReflectionStrategy` is composable by any module depending only on
-  `jentic-core`, consistent with `LLMProvider` and `KnowledgeStore`.
-- **Positive**: `DefaultReflectionStrategy` in `jentic-runtime` reuses the existing
+  `agenor-core`, consistent with `LLMProvider` and `KnowledgeStore`.
+- **Positive**: `DefaultReflectionStrategy` in `agenor-runtime` reuses the existing
   `LLMProvider` abstraction without new dependencies.
 - **Positive**: `ReflectionBehavior` wraps `OneShotBehavior` — no breaking changes
   to existing `LLMAgent` usage.
@@ -51,13 +51,13 @@ This mirrors the `LLMProvider` (ADR-007) and `KnowledgeStore` (ADR-011) patterns
 ## Module Layout
 
 ```
-jentic-core
+agenor-core
   dev.agenor.core.reflection
     ReflectionStrategy      (functional interface)
     CritiqueResult          (record: feedback, shouldRevise, score)
     ReflectionConfig        (record: maxIterations, scoreThreshold, critiquePrompt)
 
-jentic-runtime
+agenor-runtime
   dev.agenor.runtime.behavior          (existing package)
     ReflectionBehavior                 (behavior wrapper — lives with its peers)
 

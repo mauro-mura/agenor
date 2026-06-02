@@ -63,4 +63,4 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 
 ## Examples
 
-Runnable examples with a structured learning path are in `jentic-examples/README.md`.
+Runnable examples with a structured learning path are in `agenor-examples/README.md`.

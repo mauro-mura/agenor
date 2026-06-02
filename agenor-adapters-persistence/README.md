@@ -1,4 +1,4 @@
-# jentic-adapters-persistence
+# agenor-adapters-persistence
 
 JDBC-backed persistence adapters for the Jentic multi-agent framework.
 
@@ -6,7 +6,7 @@ This module provides durable storage for agent directory data (registry, discove
 endpoint resolution) and HITL approval queues using a relational database
 (PostgreSQL, MySQL, H2) via plain JDBC.
 It is a dedicated Maven module rather than an `optional=true` dependency in
-`jentic-adapters` because the persistence stack (HikariCP, Flyway, JDBC drivers) is
+`agenor-adapters` because the persistence stack (HikariCP, Flyway, JDBC drivers) is
 heavyweight infrastructure that should not reach the default classpath — see ADR-022.
 
 ---
@@ -47,7 +47,7 @@ var runtime = AgenorRuntime.builder()
         .build();
 ```
 
-See `jentic-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
+See `agenor-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
 
 ## Quick start — Persistent HITL
 
@@ -55,7 +55,7 @@ See `jentic-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
 import dev.agenor.adapters.persistence.hitl.HitlSchemaManager;
 import dev.agenor.adapters.persistence.hitl.JdbcApprovalGate;
 
-new HitlSchemaManager(dataSource, "classpath:db/migration/jentic-hitl").migrate();
+new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
 
 var gate = new JdbcApprovalGate(dataSource, jdbcUrl);
 gate.recoverExpired();   // mark stale rows EXPIRED on startup
@@ -66,7 +66,7 @@ var runtime = AgenorRuntime.builder()
         .build();
 ```
 
-See `jentic-examples/.../hitl/PersistentHitlExample.java` for a runnable example.
+See `agenor-examples/.../hitl/PersistentHitlExample.java` for a runnable example.
 
 ---
 
@@ -75,7 +75,7 @@ See `jentic-examples/.../hitl/PersistentHitlExample.java` for a runnable example
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters-persistence</artifactId>
+    <artifactId>agenor-adapters-persistence</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <!-- Choose a JDBC driver -->
@@ -127,8 +127,8 @@ Flyway manages all DDL via two migration locations:
 
 | Location | Tables | Feature |
 |---|---|---|
-| `classpath:db/migration/jentic-directory` | `jentic_agents`, `jentic_agent_capabilities` | Agent directory |
-| `classpath:db/migration/jentic-hitl`      | `jentic_hitl_requests` | HITL approval queue |
+| `classpath:db/migration/agenor-directory` | `jentic_agents`, `jentic_agent_capabilities` | Agent directory |
+| `classpath:db/migration/agenor-hitl`      | `jentic_hitl_requests` | HITL approval queue |
 
 Migrations run automatically on factory method / constructor invocation. They are idempotent.
 
@@ -141,16 +141,16 @@ Supported databases: **PostgreSQL** (primary), **MySQL / MariaDB** (optional dri
 
 ```bash
 # Unit tests (H2 in-process — no external infrastructure required)
-mvn test -pl jentic-adapters-persistence
+mvn test -pl agenor-adapters-persistence
 
 # Integration tests (Testcontainers PostgreSQL)
-mvn verify -pl jentic-adapters-persistence -Dintegration.tests.enabled=true
+mvn verify -pl agenor-adapters-persistence -Dintegration.tests.enabled=true
 ```
 
 ---
 
 ## ADRs
 
-- **ADR-022** — `jentic-adapters-persistence` module split (rationale for dedicated module vs `optional=true`)
+- **ADR-022** — `agenor-adapters-persistence` module split (rationale for dedicated module vs `optional=true`)
 - **ADR-023** — Persistent agent directory with JDBC (schema design, upsert semantics, presence trade-off)
 - **ADR-024** — Persistent HITL approval queue (JDBC) (recovery semantics, cross-node LISTEN/NOTIFY)

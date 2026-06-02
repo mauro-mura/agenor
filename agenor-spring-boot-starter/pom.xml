@@ -11,7 +11,7 @@
         <version>0.24.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>jentic-spring-boot-starter</artifactId>
+    <artifactId>agenor-spring-boot-starter</artifactId>
     <name>Jentic Spring Boot Starter</name>
     <description>Spring Boot 4.0.x auto-configuration for Jentic - the enterprise-grade agent framework for the JVM</description>
 
@@ -39,20 +39,20 @@
         <!-- Jentic runtime — mandatory -->
         <dependency>
             <groupId>dev.jentic</groupId>
-            <artifactId>jentic-runtime</artifactId>
+            <artifactId>agenor-runtime</artifactId>
         </dependency>
 
         <!-- Jentic adapters — optional; required only when agenor.llm.provider != none -->
         <dependency>
             <groupId>dev.jentic</groupId>
-            <artifactId>jentic-adapters</artifactId>
+            <artifactId>agenor-adapters</artifactId>
             <optional>true</optional>
         </dependency>
 
         <!-- Jentic adapters-persistence — optional; required only when agenor.directory.provider=jdbc -->
         <dependency>
             <groupId>dev.jentic</groupId>
-            <artifactId>jentic-adapters-persistence</artifactId>
+            <artifactId>agenor-adapters-persistence</artifactId>
             <optional>true</optional>
         </dependency>
 

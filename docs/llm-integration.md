@@ -4,16 +4,16 @@ This guide covers the complete integration of Large Language Models into Jentic 
 
 The LLM subsystem spans three modules:
 
-- **`jentic-core`** (`dev.agenor.core.llm`, `dev.agenor.core.memory.llm`) — provider-agnostic interfaces and records
-- **`jentic-adapters`** (`dev.agenor.adapters.llm`) — concrete provider implementations
-- **`jentic-runtime`** (`dev.agenor.runtime.agent.LLMAgent`, `dev.agenor.runtime.memory.llm`) — LLM-aware base agent and memory management
+- **`agenor-core`** (`dev.agenor.core.llm`, `dev.agenor.core.memory.llm`) — provider-agnostic interfaces and records
+- **`agenor-adapters`** (`dev.agenor.adapters.llm`) — concrete provider implementations
+- **`agenor-runtime`** (`dev.agenor.runtime.agent.LLMAgent`, `dev.agenor.runtime.memory.llm`) — LLM-aware base agent and memory management
 
 ---
 
 ## Package Overview
 
 ```
-jentic-core / dev.agenor.core.llm
+agenor-core / dev.agenor.core.llm
 ├── LLMProvider.java             # Core interface
 ├── LLMRequest.java              # Immutable request (builder)
 ├── LLMResponse.java             # Response with content + usage
@@ -24,22 +24,22 @@ jentic-core / dev.agenor.core.llm
 ├── LLMMemoryAware.java          # Injection marker interface (since 0.10.0)
 └── LLMException.java            # Typed error hierarchy
 
-jentic-core / dev.agenor.core.memory.llm
+agenor-core / dev.agenor.core.memory.llm
 ├── LLMMemoryManager.java        # Interface for memory management
 ├── ContextWindowStrategy.java   # Strategy interface
 └── TokenEstimator.java          # Token counting interface
 
-jentic-adapters / dev.agenor.adapters.llm
+agenor-adapters / dev.agenor.adapters.llm
 ├── LLMProviderFactory.java      # Factory (recommended entry point)
 ├── openai/OpenAIProvider.java
 ├── anthropic/AnthropicProvider.java
 ├── ollama/OllamaProvider.java
 └── ToolConversionUtils.java     # FunctionDefinition → vendor schema
 
-jentic-runtime / dev.agenor.runtime.agent
+agenor-runtime / dev.agenor.runtime.agent
 └── LLMAgent.java                # LLM-powered base agent
 
-jentic-runtime / dev.agenor.runtime.memory.llm
+agenor-runtime / dev.agenor.runtime.memory.llm
 ├── DefaultLLMMemoryManager.java
 ├── ContextWindowStrategies.java # FIXED, SLIDING, SUMMARIZED constants
 ├── FixedWindowStrategy.java
@@ -250,7 +250,7 @@ provider.chat(request).thenAccept(response -> {
 
 ## LLMAgent — Agents Based on LLM
 
-`LLMAgent` (in `jentic-runtime`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
+`LLMAgent` (in `agenor-runtime`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
 
 If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.agenor.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
 
@@ -358,7 +358,7 @@ public class SupportAgent extends LLMAgent {
 
 ### DefaultLLMMemoryManager
 
-`DefaultLLMMemoryManager` is the `LLMMemoryManager` implementation provided by `jentic-runtime`. It wires together a `MemoryStore` (for persistence), a `TokenEstimator`, and an in-memory conversation list.
+`DefaultLLMMemoryManager` is the `LLMMemoryManager` implementation provided by `agenor-runtime`. It wires together a `MemoryStore` (for persistence), a `TokenEstimator`, and an in-memory conversation list.
 
 ```java
 MemoryStore store         = new InMemoryStore();
@@ -383,7 +383,7 @@ List<MemoryEntry> facts = memory.retrieveRelevantContext("user preferences", 500
 
 ### Context Window Strategies
 
-`ContextWindowStrategies` (in `jentic-runtime`) exposes three pre-built strategy constants:
+`ContextWindowStrategies` (in `agenor-runtime`) exposes three pre-built strategy constants:
 
 | Constant | Algorithm | Requires LLM | Best For |
 |----------|-----------|--------------|---------|
@@ -608,4 +608,4 @@ void agentRespondsToUserMessage() {
 - [Agent Development Guide](agent-development.md) — LLMAgent lifecycle and behaviors
 - [Architecture Guide](architecture.md) — module overview and concurrency model
 - [Dialogue Protocol](dialog-protocol.md) — A2A and structured agent communication
-- `jentic-examples/README.md` — runnable LLM examples
+- `agenor-examples/README.md` — runnable LLM examples

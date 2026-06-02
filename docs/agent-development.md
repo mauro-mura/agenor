@@ -6,8 +6,8 @@ This guide shows how to build agents, behaviors, and message handlers with Jenti
 - Java 21+
 - Maven 3.9+
 - Add dependencies:
-  - `dev.agenor:jentic-core`
-  - `dev.agenor:jentic-runtime`
+  - `dev.agenor:agenor-core`
+  - `dev.agenor:agenor-runtime`
 
 ## Create Your First Agent
 
@@ -101,7 +101,7 @@ lifecycleManager.addLifecycleListener(new LoggingLifecycleListener());
 
 ## Behaviors
 
-Supported behavior types (see `jentic-runtime` implementations):
+Supported behavior types (see `agenor-runtime` implementations):
 - Cyclic: run at a fixed interval
 - One-shot: run once and complete
 - Event-driven: react to incoming messages
@@ -472,7 +472,7 @@ manager.restore(myAgent);        // restore @Persist fields
 - For integration-like tests, bootstrap a `AgenorRuntime` with a small package and verify message exchanges.
 
 ## Examples
-See `jentic-examples`:
+See `agenor-examples`:
 - Ping/Pong basic messaging
 - Weather Station cyclic producer
 - Task Manager event-driven processing

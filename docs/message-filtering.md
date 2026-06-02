@@ -3,11 +3,11 @@
 This guide covers the full message filtering API and both rate limiting implementations available in Jentic.
 
 The filtering subsystem spans two packages:
-- **`jentic-core` / `dev.agenor.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`
-- **`jentic-runtime` / `dev.agenor.runtime.filter`** — concrete filter implementations
-- **`jentic-core` / `dev.agenor.core.ratelimit`** — `RateLimit`, `RateLimiter`, `RateLimiterStats`
-- **`jentic-runtime` / `dev.agenor.runtime.ratelimit`** — `SlidingWindowRateLimiter`, `TokenBucketRateLimiter`
-- **`jentic-runtime` / `dev.agenor.runtime.behavior.advanced`** — `ThrottledBehavior`
+- **`agenor-core` / `dev.agenor.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`
+- **`agenor-runtime` / `dev.agenor.runtime.filter`** — concrete filter implementations
+- **`agenor-core` / `dev.agenor.core.ratelimit`** — `RateLimit`, `RateLimiter`, `RateLimiterStats`
+- **`agenor-runtime` / `dev.agenor.runtime.ratelimit`** — `SlidingWindowRateLimiter`, `TokenBucketRateLimiter`
+- **`agenor-runtime` / `dev.agenor.runtime.behavior.advanced`** — `ThrottledBehavior`
 
 ---
 
@@ -42,7 +42,7 @@ MessageFilter inverted = filterA.negate();           // logical NOT
 
 ---
 
-## Concrete filter classes (jentic-runtime)
+## Concrete filter classes (agenor-runtime)
 
 All classes are in `dev.agenor.runtime.filter` and implement `MessageFilter`.
 
@@ -159,7 +159,7 @@ MessageFilter notInternal = CompositeFilter.not(TopicFilter.startsWith("internal
 
 ## MessageFilterBuilder (fluent API)
 
-`MessageFilterBuilder` (in `jentic-core`) provides a single chainable builder that produces an `AND`-combined `MessageFilter` by default.
+`MessageFilterBuilder` (in `agenor-core`) provides a single chainable builder that produces an `AND`-combined `MessageFilter` by default.
 
 ```java
 import dev.agenor.core.filter.MessageFilter;

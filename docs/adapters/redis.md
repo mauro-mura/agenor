@@ -30,13 +30,13 @@ docker compose up valkey
 
 ## Maven dependency (opt-in)
 
-`jentic-adapters` declares Lettuce as `optional=true` per ADR-018 (Optional Adapter Dependencies Pattern).
+`agenor-adapters` declares Lettuce as `optional=true` per ADR-018 (Optional Adapter Dependencies Pattern).
 Consumers that want Redis messaging must add Lettuce explicitly:
 
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-adapters</artifactId>
+    <artifactId>agenor-adapters</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <dependency>
@@ -46,7 +46,7 @@ Consumers that want Redis messaging must add Lettuce explicitly:
 </dependency>
 ```
 
-Consumers that declare only `jentic-adapters` continue to use the in-memory dispatcher —
+Consumers that declare only `agenor-adapters` continue to use the in-memory dispatcher —
 no `ClassNotFoundException`, no configuration required.
 
 ### Dependency convergence note
@@ -259,7 +259,7 @@ Add the starter and Lettuce to your POM:
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-spring-boot-starter</artifactId>
+    <artifactId>agenor-spring-boot-starter</artifactId>
     <version>${jentic.version}</version>
 </dependency>
 <dependency>
@@ -319,7 +319,7 @@ single-node deployments that need `subscribeFiltered`.
 
 ## Running the example
 
-`RedisMessagingExample` in `jentic-examples` demonstrates both messaging patterns with two
+`RedisMessagingExample` in `agenor-examples` demonstrates both messaging patterns with two
 real `AgenorRuntime` agents:
 
 - **`OrderAgent`** (CYCLIC, 4 s) — publishes orders to `orders.created` and logs fulfillment ACKs received via `onDirectMessage`.
@@ -330,11 +330,11 @@ Requires a running Valkey or Redis server on `localhost:6379` (or set `REDIS_URI
 ```bash
 docker run -d -p 6379:6379 valkey/valkey:8
 
-mvn exec:java -pl jentic-examples \
+mvn exec:java -pl agenor-examples \
     -Dexec.mainClass="dev.agenor.examples.redis.RedisMessagingExample"
 
 # custom Redis URI
-REDIS_URI=redis://my-host:6379 mvn exec:java -pl jentic-examples \
+REDIS_URI=redis://my-host:6379 mvn exec:java -pl agenor-examples \
     -Dexec.mainClass="dev.agenor.examples.redis.RedisMessagingExample"
 ```
 

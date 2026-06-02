@@ -38,7 +38,7 @@ Forces in tension:
 
 ## Decision
 
-Add a `jentic-spring-boot-starter` Maven module to the monorepo that provides automatic
+Add a `agenor-spring-boot-starter` Maven module to the monorepo that provides automatic
 wiring of `AgenorRuntime` (and optionally an `LLMProvider`) into any Spring Boot **4.0.x**
 application via Spring Boot's standard auto-configuration mechanism.
 
@@ -52,10 +52,10 @@ Key constraints:
    classpath of non-Spring consumers.
 2. Every auto-configured bean guarded by `@ConditionalOnMissingBean` — user-declared beans
    always win.
-3. No new interfaces or abstractions introduced in `jentic-core` or `jentic-runtime`; the
+3. No new interfaces or abstractions introduced in `agenor-core` or `agenor-runtime`; the
    starter is a pure glue layer over the existing `AgenorRuntime.Builder` API.
 4. `jentic.llm.provider=none` (default) — no `LLMProvider` bean is created unless explicitly
-   configured, avoiding a hard dependency on `jentic-adapters`.
+   configured, avoiding a hard dependency on `agenor-adapters`.
 5. The `AutoConfiguration.imports` mechanism (introduced in Spring Boot 2.7, mandatory in 3.x)
    is also the correct mechanism in Spring Boot 4.x — no migration work required on this front.
 
@@ -89,7 +89,7 @@ Key constraints:
   would require constant coordination (ADR-003 rationale).
 - **Spring XML / legacy `spring.factories`**: rejected — deprecated since Spring Boot 2.7,
   removed in 3.x; `AutoConfiguration.imports` is the correct mechanism.
-- **Auto-configure inside `jentic-runtime`**: rejected — would force Spring Boot onto all
+- **Auto-configure inside `agenor-runtime`**: rejected — would force Spring Boot onto all
   runtime consumers, violating the optional-dependency rule.
 
 ## Implementation
@@ -98,12 +98,12 @@ Key constraints:
 
 ```
 jentic/
-├── jentic-core/
-├── jentic-runtime/
-├── jentic-adapters/
-├── jentic-spring-boot-starter/   ← new
-├── jentic-examples/
-└── jentic-tools/
+├── agenor-core/
+├── agenor-runtime/
+├── agenor-adapters/
+├── agenor-spring-boot-starter/   ← new
+├── agenor-examples/
+└── agenor-tools/
 ```
 
 ### Auto-configuration registration
@@ -198,7 +198,7 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 - Spring Boot 2.x users are excluded (EOL — acceptable).
 
 ### Neutral
-- `jentic-examples` may add a new Spring Boot 3.5.x example sub-module demonstrating the starter.
+- `agenor-examples` may add a new Spring Boot 3.5.x example sub-module demonstrating the starter.
 - **Spring Boot 4.x migration (completed 2026-04-15)**: the auto-configuration mechanism was
   identical; the migration required the following changes:
   - BOM version updated to 4.0.5; redundant SnakeYAML version pin removed.
@@ -214,10 +214,10 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 
 ## Compliance
 
-- CI build includes `jentic-spring-boot-starter` — compilation and test failures block merges.
+- CI build includes `agenor-spring-boot-starter` — compilation and test failures block merges.
 - `@ConditionalOnMissingBean` usage reviewed in code review to ensure no bean bypasses the pattern.
 - Dependency `optional=true` enforced via Maven Enforcer plugin rule (no Spring Boot on
-  transitive classpath of `jentic-runtime` consumers).
+  transitive classpath of `agenor-runtime` consumers).
 
 ## Notes
 

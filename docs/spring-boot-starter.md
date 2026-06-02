@@ -1,6 +1,6 @@
 # Spring Boot Starter
 
-`jentic-spring-boot-starter` provides zero-configuration auto-wiring of `AgenorRuntime`
+`agenor-spring-boot-starter` provides zero-configuration auto-wiring of `AgenorRuntime`
 into any Spring Boot 4.0.x application. Add one dependency, configure `application.yml`,
 and Jentic starts with the Spring context.
 
@@ -9,7 +9,7 @@ and Jentic starts with the Spring context.
 ```xml
 <dependency>
     <groupId>dev.agenor</groupId>
-    <artifactId>jentic-spring-boot-starter</artifactId>
+    <artifactId>agenor-spring-boot-starter</artifactId>
     <version>0.24.0-SNAPSHOT</version>
 </dependency>
 ```
@@ -37,7 +37,7 @@ All keys are under the `jentic` prefix. Every key is optional and falls back to 
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `name` | `jentic-runtime` | Runtime instance name |
+| `name` | `agenor-runtime` | Runtime instance name |
 | `environment` | `development` | Environment label (`development`, `staging`, `production`, `test`) |
 | `properties` | `{}` | Arbitrary key/value pairs forwarded to `RuntimeConfig` |
 
@@ -71,7 +71,7 @@ All keys are under the `jentic` prefix. Every key is optional and falls back to 
 | `redis.pending-entries-timeout-ms` | `30000` | Idle time before redelivery of pending entries (ms) |
 | `redis.max-delivery-attempts` | `3` | Attempts before moving to dead-letter |
 
-The `redis.*` sub-section is only read when `provider=redis` and `jentic-adapters` is on the classpath.
+The `redis.*` sub-section is only read when `provider=redis` and `agenor-adapters` is on the classpath.
 `@ConditionalOnMissingBean` allows providing a custom `RedisMessagingFactory` bean to override all defaults.
 
 Redis example:
@@ -94,7 +94,7 @@ jentic:
 | `jdbc.password` | `""` | Database password |
 | `jdbc.pool-size` | `10` | HikariCP connection pool size |
 
-The `jdbc.*` sub-section is only read when `provider=jdbc` and `jentic-adapters-persistence` is on the classpath.
+The `jdbc.*` sub-section is only read when `provider=jdbc` and `agenor-adapters-persistence` is on the classpath.
 Flyway schema migration runs automatically on startup.
 
 JDBC example:
@@ -118,7 +118,7 @@ jentic:
 | `base-url` | `http://localhost:11434` | Base URL (used by `ollama` only) |
 
 When `provider=none` (default), no `LLMProvider` bean is created. When a non-`none` provider
-is set, `jentic-adapters` must be on the classpath — the starter will fail fast with a clear
+is set, `agenor-adapters` must be on the classpath — the starter will fail fast with a clear
 error message otherwise.
 
 Provider defaults:

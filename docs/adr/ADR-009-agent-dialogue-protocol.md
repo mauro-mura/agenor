@@ -66,7 +66,7 @@ Implement a **dual-domain architecture**:
 │                         │                                   │
 │                         ▼                                   │
 │              ┌───────────────────┐                          │
-│              │    A2A Bridge     │  (jentic-adapters)       │
+│              │    A2A Bridge     │  (agenor-adapters)       │
 │              └─────────┬─────────┘                          │
 └────────────────────────┼────────────────────────────────────┘
                          │ HTTP/SSE
@@ -158,7 +158,7 @@ public interface CommitmentTracker {
 
 **Decision**: Use the official `a2a-java-sdk` for external communication.
 
-**Dependencies** (in jentic-adapters):
+**Dependencies** (in agenor-adapters):
 ```xml
 <dependency>
     <groupId>io.github.a2asdk</groupId>
@@ -232,7 +232,7 @@ public class AgenorA2AClient {
 #### 5. Package Structure
 
 ```
-jentic-core/
+agenor-core/
 └── dialogue/
     ├── Performative.java           # Enum (10 values)
     ├── DialogueMessage.java        # Record wrapping Message
@@ -245,7 +245,7 @@ jentic-core/
         ├── Protocol.java           # Interface
         └── ProtocolState.java      # Enum
 
-jentic-runtime/
+agenor-runtime/
 └── dialogue/
     ├── DefaultConversationManager.java
     ├── DefaultCommitmentTracker.java
@@ -254,7 +254,7 @@ jentic-runtime/
         ├── QueryProtocol.java
         └── ContractNetProtocol.java
 
-jentic-adapters/
+agenor-adapters/
 └── a2a/
     ├── AgenorA2AAdapter.java         # Coordination/configuration
     ├── AgenorAgentExecutor.java      # Implements AgentExecutor (SDK)
