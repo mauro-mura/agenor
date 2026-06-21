@@ -8,7 +8,7 @@ import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Example demonstrating OpenAI provider usage in Agenor framework.
+ * Example demonstrating OpenAI provider usage in an Agenor framework.
  *
  * Features:
  * - Basic chat

@@ -32,7 +32,7 @@ import dev.agenor.runtime.agent.BaseAgent;
  * - Uses @Agent annotation
  * - Implements message-driven interaction
  * - Follows dependency injection patterns
- * - Includes comprehensive tool registry
+ * - Includes a comprehensive tool registry
  *
  * @since 0.4.0
  */
@@ -298,7 +298,7 @@ public class AIAssistantAgent extends BaseAgent {
     }
 
     /**
-     * Register weather tool with mock implementation.
+     * Register a weather tool with a mock implementation.
      */
     private void registerWeatherTool() {
         toolRegistry.registerTool("get_weather", args -> {
@@ -327,7 +327,7 @@ public class AIAssistantAgent extends BaseAgent {
     }
 
     /**
-     * Register calculator tool with expression evaluation.
+     * Register a calculator tool with expression evaluation.
      */
     private void registerCalculatorTool() {
         toolRegistry.registerTool("calculate", args -> {
@@ -343,7 +343,7 @@ public class AIAssistantAgent extends BaseAgent {
     }
 
     /**
-     * Register time tool for date/time information.
+     * Register a time tool for date/time information.
      */
     private void registerTimeTool() {
         toolRegistry.registerTool("get_time", args -> {
@@ -364,7 +364,7 @@ public class AIAssistantAgent extends BaseAgent {
     }
 
     /**
-     * Register database tool for query simulation.
+     * Register a database tool for query simulation.
      */
     private void registerDatabaseTool() {
         toolRegistry.registerTool("query_database", args -> {

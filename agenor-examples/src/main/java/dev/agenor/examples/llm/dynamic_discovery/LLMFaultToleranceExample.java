@@ -65,8 +65,8 @@ public class LLMFaultToleranceExample {
         // Wait for agents to register
         Thread.sleep(2000);
 
-        // Get coordinator from runtime (it was auto-discovered)
-        dev.agenor.core.Agent coordinator = runtime.getAgent("dynamic-coordinator")
+        // Verify coordinator is present (auto-discovered)
+        runtime.getAgent("dynamic-coordinator")
             .orElseThrow(() -> new RuntimeException("Coordinator not found!"));
         // Get market researcher from runtime (it was auto-discovered)
         dev.agenor.core.Agent marketResearcher = runtime.getAgent("dynamic-market-researcher")
@@ -74,7 +74,7 @@ public class LLMFaultToleranceExample {
 
         // Example 1: Standard research with all specialists
         System.out.println("=== Example 1: Full Research Team ===");
-        sendResearchRequest(runtime, coordinator.getAgentId(), "Artificial General Intelligence - Path to 2030");
+        sendResearchRequest(runtime, "Artificial General Intelligence - Path to 2030");
         Thread.sleep(20000);
 
         // Example 2: Simulate specialist going offline
@@ -83,7 +83,7 @@ public class LLMFaultToleranceExample {
         marketResearcher.stop().join();
         Thread.sleep(2000);
 
-        sendResearchRequest(runtime, coordinator.getAgentId(), "Neural Network Hardware Acceleration");
+        sendResearchRequest(runtime, "Neural Network Hardware Acceleration");
         Thread.sleep(20000);
 
         // Shutdown
@@ -91,11 +91,10 @@ public class LLMFaultToleranceExample {
         runtime.stop().join();
     }
 
-    private static void sendResearchRequest(AgenorRuntime runtime, String coordinatorId, String topic) {
+    private static void sendResearchRequest(AgenorRuntime runtime, String topic) {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")
-            .receiverId(coordinatorId)
             .content(Map.of(
                 "topic", topic,
                 "priority", "high",
@@ -103,7 +102,7 @@ public class LLMFaultToleranceExample {
             ))
             .build();
 
-        runtime.getMessageDispatcher().sendTo(request);
+        runtime.getMessageDispatcher().publish(request);
     }
 }
 
@@ -184,7 +183,7 @@ class DynamicCoordinator extends BaseAgent {
                 return;
             }
 
-            // Map capabilities to required analysis
+            // Map capabilities required analysis
             Map<String, String> capabilityToAnalysis = Map.of(
                 "technical-analysis", "research.task.technical",
                 "market-analysis", "research.task.market",

@@ -17,7 +17,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.llm.LLMProvider;
 
 /**
- * Example demonstrating how to use the AIAssistantAgent in a Agenor application.
+ * Example demonstrating how to use the AIAssistantAgent in an Agenor application.
  *
  * This example shows:
  * - Proper Agenor runtime setup
@@ -173,7 +173,7 @@ public class AIAssistantExample {
     }
 
     /**
-     * Demonstrate programmatic tool execution without chat interface.
+     * Demonstrate programmatic tool execution without a chat interface.
      */
     public void demonstrateToolExecution() throws Exception {
         log.info("Starting Tool Execution Demo");

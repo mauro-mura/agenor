@@ -58,11 +58,10 @@ public class LLMDirectMessagingExample {
         Message request = Message.builder()
             .topic("research.request")
             .senderId("user")
-            .receiverId("coordinator")
             .content(Map.of("topic", researchTopic, "priority", "high"))
             .build();
 
-        runtime.getMessageDispatcher().sendTo(request);
+        runtime.getMessageDispatcher().publish(request);
 
         Thread.sleep(60000);
 
