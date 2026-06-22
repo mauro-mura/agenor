@@ -46,7 +46,7 @@ import dev.agenor.runtime.knowledge.QueryExpander;
  *
  * LLM support:
  * - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL env var
- * - Falls back to template-based responses if no LLM configured
+ * - Falls back to template-based responses if no LLM is configured
  *
  * Run modes:
  * - Interactive: mvn exec:java (default, simple routing)

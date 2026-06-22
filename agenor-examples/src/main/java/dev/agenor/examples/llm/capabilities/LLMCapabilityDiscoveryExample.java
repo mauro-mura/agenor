@@ -85,7 +85,7 @@ public class LLMCapabilityDiscoveryExample {
             ))
             .build();
 
-        runtime.getMessageDispatcher().sendTo(request);
+        runtime.getMessageDispatcher().publish(request);
     }
 }
 
@@ -273,7 +273,7 @@ class CapabilityCoordinator extends BaseAgent {
                 ))
                 .build();
 
-            getMessageDispatcher().sendTo(taskMsg);
+            getMessageDispatcher().publish(taskMsg);
             log.info("📤 Delegated {} to: {} (ID: {})",
                     capability, selectedAgent.agentName(), selectedAgent.agentId());
         });
@@ -438,7 +438,7 @@ class CapabilityTechSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            getMessageDispatcher().sendTo(reply);
+            getMessageDispatcher().publish(reply);
         });
     }
 }
@@ -492,7 +492,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            getMessageDispatcher().sendTo(reply);
+            getMessageDispatcher().publish(reply);
         });
     }
 
@@ -524,7 +524,7 @@ class CapabilityMarketSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            getMessageDispatcher().sendTo(reply);
+            getMessageDispatcher().publish(reply);
         });
     }
 }
@@ -578,7 +578,7 @@ class CapabilityCompetitorSpecialist extends BaseAgent {
                 .content(Map.of("requestId", requestId, "findings", response.content()))
                 .build();
 
-            getMessageDispatcher().sendTo(reply);
+            getMessageDispatcher().publish(reply);
         });
     }
 }

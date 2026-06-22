@@ -1,5 +1,5 @@
 /**
- * Main application JavaScript for Jentic Web Console.
+ * Main application JavaScript for Agenor Web Console.
  */
 
 // API base URL
@@ -17,7 +17,7 @@ async function fetchAPI(endpoint) {
     try {
         const response = await fetch(`${API_BASE}${endpoint}`);
         const result = await response.json();
-        
+
         if (result.success) {
             return result.data;
         } else {
@@ -41,7 +41,7 @@ async function postAPI(endpoint) {
             }
         });
         const result = await response.json();
-        
+
         if (result.success) {
             return result.data;
         } else {
@@ -94,12 +94,12 @@ async function loadHealth() {
  */
 function renderAgents() {
     const container = document.getElementById('agents-list');
-    
+
     if (!agents || agents.length === 0) {
         container.innerHTML = '<div class="loading">No agents found</div>';
         return;
     }
-    
+
     container.innerHTML = agents.map(agent => `
         <div class="agent-card" data-agent-id="${agent.id}">
             <div class="agent-info">
@@ -114,7 +114,7 @@ function renderAgents() {
                 </div>
             </div>
             <div class="agent-actions">
-                ${agent.running 
+                ${agent.running
                     ? `<button class="btn btn-danger" onclick="stopAgent('${agent.id}')">Stop</button>`
                     : `<button class="btn btn-success" onclick="startAgent('${agent.id}')">Start</button>`
                 }
@@ -128,15 +128,15 @@ function renderAgents() {
  */
 function renderStats() {
     if (!stats) return;
-    
+
     document.getElementById('total-agents').textContent = stats.totalAgents || 0;
     document.getElementById('active-agents').textContent = stats.activeAgents || 0;
-    
+
     if (stats.runtime) {
         const memoryPercent = Math.round(
             (stats.runtime.usedMemoryMB / stats.runtime.totalMemoryMB) * 100
         );
-        document.getElementById('memory-usage').textContent = 
+        document.getElementById('memory-usage').textContent =
             `${stats.runtime.usedMemoryMB}MB (${memoryPercent}%)`;
     }
 }
@@ -184,12 +184,12 @@ async function stopAgent(agentId) {
 function addEvent(type, message) {
     const timestamp = new Date().toLocaleTimeString();
     eventLog.unshift({ type, message, timestamp });
-    
+
     // Keep only last 50 events
     if (eventLog.length > 50) {
         eventLog = eventLog.slice(0, 50);
     }
-    
+
     renderEvents();
 }
 
@@ -198,12 +198,12 @@ function addEvent(type, message) {
  */
 function renderEvents() {
     const container = document.getElementById('events-log');
-    
+
     if (eventLog.length === 0) {
         container.innerHTML = '<div class="event">No events yet</div>';
         return;
     }
-    
+
     container.innerHTML = eventLog.map(event => `
         <div class="event ${event.type}">
             <span class="event-time">${event.timestamp}</span>
@@ -242,19 +242,19 @@ function clearEvents() {
 document.addEventListener('DOMContentLoaded', () => {
     // Initial load
     refreshAll();
-    
+
     // Refresh button
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshAll);
     }
-    
+
     // Clear events button
     const clearEventsBtn = document.getElementById('clear-events-btn');
     if (clearEventsBtn) {
         clearEventsBtn.addEventListener('click', clearEvents);
     }
-    
+
     // Auto-refresh every 10 seconds
     setInterval(() => {
         loadStats();
