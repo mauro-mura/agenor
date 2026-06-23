@@ -81,32 +81,49 @@ Implement a **dual-domain architecture**:
 
 #### 1. Dialogue as Semantic Layer (not Transport)
 
-**Decision**: `DialogueMessage` wraps existing `Message`, adding performative semantics. No new transport.
+**Decision**: `DialogueMessage` is a flat record that encodes dialogue metadata as `Message` headers. No new transport.
 
 ```java
 public record DialogueMessage(
-    Message message,
-    Performative performative,
+    String id,
     String conversationId,
-    String inReplyTo
+    String senderId,
+    String receiverId,
+    Performative performative,
+    Object content,
+    String protocol,
+    String inReplyTo,       // ID of the message this replies to; null if not a reply
+    Instant timestamp,
+    Map<String, Object> metadata
 ) {
     public Message toMessage() {
-        // Encode dialogue metadata in headers
+        // Encode dialogue metadata in Message headers (no prefix)
         return Message.builder()
-            .from(message)
-            .header("dialogue.performative", performative.name())
-            .header("dialogue.conversationId", conversationId)
-            .header("dialogue.inReplyTo", inReplyTo)
+            .id(id)
+            .senderId(senderId)
+            .receiverId(receiverId)
+            .correlationId(inReplyTo)   // inReplyTo travels as correlationId
+            .content(content)
+            .header("conversationId", conversationId)
+            .header("performative", performative.name())
+            .header("protocol", protocol)   // omitted when null
             .build();
     }
-    
+
     public static DialogueMessage fromMessage(Message msg) {
-        // Parse from headers
+        // conversationId ← header "conversationId" (random UUID if absent)
+        // performative  ← header "performative"  (defaults to INFORM if absent/unknown)
+        // inReplyTo     ← msg.correlationId()
     }
 }
 ```
 
-**Rationale**: 
+**Note — `inReplyTo` chaining**: both `AGREE` and `INFORM` set `inReplyTo = REQUEST.id`
+(i.e., both reply directly to the original REQUEST, not chained AGREE → INFORM).
+This means `ConversationManager.request()` resolves on the **first** reply received
+(typically AGREE), not on the final INFORM. See *Known Limitations* below.
+
+**Rationale**:
 - Zero new infrastructure for intra-runtime
 - Microsecond latency (in-memory)
 - Leverages battle-tested `MessageDispatcher`
@@ -281,6 +298,23 @@ agenor-adapters/
 1. **A2A SDK dependency**: Additional dependency for external communication
 2. **Two mental models**: Dialogue (internal) vs A2A (external)
 3. **Conversion overhead**: DialogueMessage ↔ A2A Message at boundary
+
+### Known Limitations
+
+**REQUEST two-phase response**: The FIPA REQUEST protocol defines a two-step reply sequence:
+`REQUEST → AGREE → INFORM`. The current implementation of `ConversationManager.request()`
+and `AgenorA2AAdapter.send()` resolves the returned `CompletableFuture` on the **first**
+reply received (AGREE), because both `AGREE` and `INFORM` set `inReplyTo = REQUEST.id` and
+the pending-response map is keyed on `inReplyTo`. The INFORM message arrives after the
+future is already resolved and is silently discarded.
+
+Callers that need the final result should either:
+- Use `sendWithStreaming()` to receive status updates including the INFORM
+- Have the responder send only one reply (collapse AGREE + INFORM into a single INFORM)
+
+A future ADR will decide whether to formalize fire-and-first-reply as the canonical
+contract, or to introduce a chained `inReplyTo` (INFORM.inReplyTo = AGREE.id) that
+allows `ConversationManager` to track the full sequence.
 
 ### Neutral
 

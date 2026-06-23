@@ -79,8 +79,14 @@ public class AgenorA2AAdapter {
     /**
      * Sends a message, auto-routing to internal or external agent.
      *
+     * <p><b>Reply semantics</b>: the returned future resolves on the <em>first</em> reply
+     * received (typically {@code AGREE}), not on the final result ({@code INFORM}).
+     * In a two-phase REQUEST exchange the responder sends AGREE immediately and INFORM
+     * later; callers that need the final result should use {@link #sendWithStreaming} or
+     * have the responder collapse both into a single INFORM reply.
+     *
      * @param message the DialogueMessage to send
-     * @return CompletableFuture with the response
+     * @return future that completes with the first reply received within the configured timeout
      */
     public CompletableFuture<DialogueMessage> send(DialogueMessage message) {
         String targetId = message.receiverId();
@@ -106,6 +112,11 @@ public class AgenorA2AAdapter {
 
     /**
      * Sends a message to an internal agent via MessageDispatcher.
+     *
+     * <p>Registers a temporary {@code subscribeRecipient} for the sender ID, sends the
+     * message, and resolves on the <em>first</em> reply delivered to that subscription.
+     * The subscription is cancelled immediately after the first reply, so any subsequent
+     * messages (e.g. a follow-up INFORM after an AGREE) are not captured.
      */
     public CompletableFuture<DialogueMessage> sendInternal(DialogueMessage message) {
         CompletableFuture<Message> replyFuture = new CompletableFuture<>();

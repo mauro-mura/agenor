@@ -121,28 +121,41 @@ public class DialogueCapability {
     // =========================================================================
 
     /**
-     * Sends a REQUEST to another agent and waits for response.
+     * Sends a REQUEST to another agent and waits for the first reply.
+     *
+     * <p><b>First-reply semantics</b>: the future resolves on the first reply whose
+     * {@code inReplyTo} matches the REQUEST id — typically {@code AGREE}. In a two-phase
+     * exchange the final {@code INFORM} arrives after the future is already resolved and
+     * is not captured. Collapse AGREE + INFORM into a single INFORM reply if you need
+     * the result directly, or use streaming for intermediate status updates.
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content) {
         return request(targetAgentId, content, DEFAULT_TIMEOUT);
     }
 
     /**
-     * Sends a REQUEST to another agent and waits for response.
+     * Sends a REQUEST to another agent and waits for the first reply.
+     *
+     * @see #request(String, Object)
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {
         return conversationManager.request(targetAgentId, content, timeout);
     }
 
     /**
-     * Sends a QUERY to another agent and waits for response.
+     * Sends a QUERY to another agent and waits for the first reply.
+     *
+     * <p>QUERY expects a single {@code INFORM} reply; unlike REQUEST it does not
+     * produce an intermediate AGREE, so the future typically resolves with the result.
      */
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query) {
         return query(targetAgentId, query, DEFAULT_TIMEOUT);
     }
 
     /**
-     * Sends a QUERY to another agent and waits for response.
+     * Sends a QUERY to another agent and waits for the first reply.
+     *
+     * @see #query(String, Object)
      */
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query, Duration timeout) {
         return conversationManager.query(targetAgentId, query, timeout);

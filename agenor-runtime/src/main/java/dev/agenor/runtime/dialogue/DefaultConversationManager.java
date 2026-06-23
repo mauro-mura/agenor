@@ -52,6 +52,11 @@ public class DefaultConversationManager implements ConversationManager {
         this.commitmentTracker = commitmentTracker;
     }
 
+    /**
+     * Sends a REQUEST and resolves on the <em>first</em> reply whose {@code inReplyTo}
+     * matches the REQUEST id — typically {@code AGREE}. A subsequent {@code INFORM} is
+     * tracked by the conversation but does not update the returned future.
+     */
     @Override
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {
         return initiateConversation(
@@ -63,6 +68,11 @@ public class DefaultConversationManager implements ConversationManager {
         );
     }
 
+    /**
+     * Sends a QUERY and resolves on the first reply. QUERY expects a single
+     * {@code INFORM} reply without a preceding AGREE, so the future typically
+     * resolves with the result directly.
+     */
     @Override
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query, Duration timeout) {
         return initiateConversation(
