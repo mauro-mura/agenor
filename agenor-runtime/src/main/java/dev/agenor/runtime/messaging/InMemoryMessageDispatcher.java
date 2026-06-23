@@ -152,6 +152,25 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
         return agentResolver.resolveEndpoint(recipientAgentId)
                 .thenCompose(opt -> {
                     if (opt.isEmpty()) {
+                        // Fall back to a local receiver subscription registered via subscribeRecipient().
+                        // This covers ephemeral callers (e.g. AgenorA2AAdapter.sendInternal) that
+                        // register a temporary subscriber without being a registered agent.
+                        if (receiverSubscriptions.containsKey(recipientAgentId)) {
+                            return CompletableFuture.runAsync(() -> {
+                                try {
+                                    log.debug("Delivering direct message to ephemeral receiver '{}': {}",
+                                            recipientAgentId, msg.id());
+                                    deliverToReceiver(recipientAgentId, msg);
+                                    deliverToPredicates(msg);
+                                    span.setStatus(SpanStatus.OK);
+                                } catch (Exception e) {
+                                    span.recordException(e).setStatus(SpanStatus.ERROR);
+                                    throw e;
+                                } finally {
+                                    span.end();
+                                }
+                            }, VIRTUAL_EXECUTOR);
+                        }
                         var ex = new AgentNotFoundException(recipientAgentId);
                         span.recordException(ex).setStatus(SpanStatus.ERROR);
                         span.end();

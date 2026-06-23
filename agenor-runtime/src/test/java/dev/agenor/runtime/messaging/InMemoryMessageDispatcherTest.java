@@ -212,6 +212,32 @@ class InMemoryMessageDispatcherTest {
         }
 
         @Test
+        @DisplayName("sendTo delivers to ephemeral subscribeRecipient even if not in agent directory")
+        void sendToEphemeralReceiverWithoutDirectoryEntry() throws Exception {
+            // "client-agent" is NOT registered in the directory (mirrors AgenorA2AAdapter.sendInternal
+            // which registers a temporary subscriber to collect the reply without being a real agent).
+            var latch = new CountDownLatch(1);
+            var received = new AtomicReference<Message>();
+
+            dispatcher.subscribeRecipient("client-agent", msg -> {
+                received.set(msg);
+                latch.countDown();
+                return CompletableFuture.completedFuture(null);
+            });
+
+            var msg = Message.builder()
+                    .receiverId("client-agent")
+                    .topic("direct")
+                    .content("reply-payload")
+                    .build();
+
+            dispatcher.sendTo(msg).join();
+
+            assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+            assertThat(received.get().content()).isEqualTo("reply-payload");
+        }
+
+        @Test
         @DisplayName("Unsubscribed recipient does not receive further messages")
         void unsubscribedRecipientNoDelivery() throws Exception {
             var descriptor = dev.agenor.core.AgentDescriptor.builder("agent-y")
