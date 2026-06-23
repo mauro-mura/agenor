@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * <p>This example demonstrates:
  * <ol>
  *   <li>Creating an A2AAdapterConfig for agent metadata</li>
- *   <li>Exposing a Agenor agent as an A2A server via AgenorAgentExecutor</li>
+ *   <li>Exposing an Agenor agent as an A2A server via AgenorAgentExecutor</li>
  *   <li>Using AgenorA2AAdapter for auto-routing (internal/external)</li>
  *   <li>Communicating with external A2A agents</li>
  * </ol>

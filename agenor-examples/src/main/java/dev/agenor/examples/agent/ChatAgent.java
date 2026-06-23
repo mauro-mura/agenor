@@ -116,10 +116,7 @@ public class ChatAgent extends LLMAgent {
                     // Extract facts from user message
                     return extractAndStoreFacts(userInput);
                 })
-                .thenCompose(v -> {
-                    // Build prompt with conversation and relevant facts via LLMAgent API
-                    return buildLLMPrompt(userInput, 2500, extractSearchKeyword(userInput));
-                })
+                .thenCompose(v -> buildChatPrompt(userInput, 2500))
                 .thenApply(prompt -> {
                     // Simulate LLM response (in real app, call actual LLM)
                     String response = simulateLLMResponse(prompt, userInput);
@@ -302,13 +299,13 @@ public class ChatAgent extends LLMAgent {
         if (lower.contains("my name is ")) {
             int start = lower.indexOf("my name is ") + "my name is ".length();
             String rest = text.substring(start).trim();
-            return rest.split("[,\\.\\s]")[0];
+            return validExtract(rest.split("[,.\\s]")[0]);
         }
 
         if (lower.contains("i'm ")) {
             int start = lower.indexOf("i'm ") + "i'm ".length();
             String rest = text.substring(start).trim();
-            return rest.split("[,\\.\\s]")[0];
+            return validExtract(rest.split("[,.\\s]")[0]);
         }
 
         return null;
@@ -323,13 +320,13 @@ public class ChatAgent extends LLMAgent {
         if (lower.contains("from ")) {
             int start = lower.indexOf("from ") + "from ".length();
             String rest = text.substring(start).trim();
-            return rest.split("[,\\.\\s]")[0];
+            return validExtract(rest.split("[,.\\s]")[0]);
         }
 
         if (lower.contains("live in ")) {
             int start = lower.indexOf("live in ") + "live in ".length();
             String rest = text.substring(start).trim();
-            return rest.split("[,\\.\\s]")[0];
+            return validExtract(rest.split("[,.\\s]")[0]);
         }
 
         return null;
@@ -354,11 +351,15 @@ public class ChatAgent extends LLMAgent {
                         break;
                     }
                 }
-                return rest.substring(0, end).trim();
+                return validExtract(rest.substring(0, end).trim());
             }
         }
 
         return null;
+    }
+
+    private String validExtract(String s) {
+        return (s != null && s.chars().anyMatch(Character::isLetter)) ? s : null;
     }
 
     /**
@@ -415,40 +416,6 @@ public class ChatAgent extends LLMAgent {
                         "I can remember facts you tell me and retrieve them later.",
                 userInput.substring(0, Math.min(50, userInput.length())),
                 prompt.size());
-    }
-
-    /**
-     * Extract search keyword from user input for better context retrieval.
-     * Converts questions into searchable keywords.
-     *
-     * @param userInput the user's input
-     * @return search keyword or null for no search
-     */
-    private String extractSearchKeyword(String userInput) {
-        String lower = userInput.toLowerCase();
-
-        // Name queries
-        if (lower.contains("name")) {
-            return "name";  // Will match "Alice" in content or "user-name" in metadata
-        }
-
-        // Location queries
-        if (lower.contains("from") || lower.contains("location") || lower.contains("where") || lower.contains("live")) {
-            return "location";  // Will match location-related facts
-        }
-
-        // Preference queries
-        if (lower.contains("like") || lower.contains("prefer") || lower.contains("favorite") || lower.contains("love")) {
-            return "prefer";  // Will match preferences
-        }
-
-        // Work/job queries
-        if (lower.contains("work") || lower.contains("job") || lower.contains("profession")) {
-            return "work";
-        }
-
-        // For other queries, use the full text (might not match well)
-        return userInput;
     }
 
     /**
