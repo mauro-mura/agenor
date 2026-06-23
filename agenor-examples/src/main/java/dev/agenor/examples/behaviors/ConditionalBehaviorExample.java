@@ -56,7 +56,7 @@ public class ConditionalBehaviorExample {
 }
 
 /**
- * Agent that performs resource-intensive tasks only when system load is low.
+ * Agent that performs resource-intensive tasks only when the system load is low.
  */
 @Agent("resource-aware-agent")
 class ResourceAwareAgent extends BaseAgent {
@@ -153,7 +153,7 @@ class AdaptiveAgent extends BaseAgent {
     }
 
     /**
-     * High priority task that runs when system is healthy
+     * High-priority task that runs when the system is healthy
      * Executes every 2 seconds when condition is met
      */
     @Behavior(
@@ -166,7 +166,7 @@ class AdaptiveAgent extends BaseAgent {
     }
 
     /**
-     * Low priority task that runs only when system is VERY idle
+     * Low-priority task that runs only when the system is VERY idle
      * Executes every 4 seconds when CPU < 30% AND Memory < 50%
      */
     @Behavior(
@@ -179,7 +179,7 @@ class AdaptiveAgent extends BaseAgent {
     }
 
     /**
-     * Emergency monitoring that runs when system is under load
+     * Emergency monitoring that runs when the system is under load
      * Executes every 6 seconds when condition is met
      */
     @Behavior(

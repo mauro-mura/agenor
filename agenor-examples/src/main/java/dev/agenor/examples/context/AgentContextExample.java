@@ -37,7 +37,7 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
  * </ul>
  *
  * <p>When agents are discovered via package scanning, {@code AgentFactory} injects
- * {@code AgentContext} automatically. In this example the agent is manually registered
+ * {@code AgentContext} automatically. In this example the agent is manually registered,
  * so we build the context from the runtime getters.
  *
  * @since 0.10.0
@@ -57,7 +57,7 @@ public class AgentContextExample {
         runtime.registerAgent(new OrderSubmitterAgent());
 
         // Plain Agent implementor — AgentContext injected automatically by AgentFactory during
-        // package scanning. When registering manually we use the runtime helper.
+        // package scanning. When registering manually, we use the runtime helper.
         runtime.registerAgent(new OrderProcessorAgent(runtime.getAgentContext()));
 
         runtime.start().join();

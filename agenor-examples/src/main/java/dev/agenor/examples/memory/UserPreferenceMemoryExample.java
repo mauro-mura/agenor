@@ -44,7 +44,7 @@ public class UserPreferenceMemoryExample {
     public static void main(String[] args) throws Exception {
         System.out.println("=== Agenor Memory Management with Runtime ===\n");
 
-        // 1. Create memory store
+        // 1. Create a memory store
         InMemoryStore memoryStore = new InMemoryStore();
 
         // 2. Create runtime with automatic discovery and memory support
@@ -175,7 +175,7 @@ public class UserPreferenceMemoryExample {
  * Agent that tracks user preferences using memory features.
  *
  * <p>This agent is automatically discovered by AgenorRuntime through
- * package scanning and configured with all required services including
+ * package scanning and configured with all required services, including
  * the MemoryStore.
  *
  * <p><b>Key features:</b>
@@ -347,7 +347,7 @@ class UserPreferenceAgent extends BaseAgent {
     /**
      * Periodically logs memory statistics.
      *
-     * NOTE: Disabled (autoStart=false) to avoid noise in example output.
+     * NOTE: Disabled (autoStart=false) to avoid noise in the example output.
      * Enable by setting autoStart=true to see periodic stats.
      */
     @Behavior(
