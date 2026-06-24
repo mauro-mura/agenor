@@ -1,6 +1,7 @@
 package dev.agenor.examples.mcp;
 
 import dev.agenor.adapters.llm.LLMProviderFactory;
+import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.adapters.mcp.McpClientFactory;
 import dev.agenor.adapters.mcp.McpFunctionAdapter;
 import dev.agenor.adapters.mcp.McpToolRegistry;
@@ -38,7 +39,7 @@ import java.util.Map;
  */
 public class McpExample {
 
-    private static final String MODEL   = "claude-haiku-4-5";
+    private static final String MODEL   = OpenAIProvider.Models.GPT_4_1_MINI.toString();
     private static final String ROOT    = System.getProperty("mcp.root", "/tmp");
     private static final String IMAGE   = "node:22-alpine";
     private static final String PACKAGE = "@modelcontextprotocol/server-filesystem";
@@ -77,11 +78,11 @@ public class McpExample {
             }
 
             // 3 — optional LLM round-trip
-            String apiKey = System.getenv("ANTHROPIC_API_KEY");
+            String apiKey = System.getenv("OPENAI_API_KEY");
             if (apiKey != null && !apiKey.isBlank()) {
                 llmRoundTrip(adapter, apiKey);
             } else {
-                System.out.println("\n(Set ANTHROPIC_API_KEY to enable the LLM round-trip demo)");
+                System.out.println("\n(Set OPENAI_API_KEY to enable the LLM round-trip demo)");
             }
 
         } finally {
@@ -96,7 +97,7 @@ public class McpExample {
     private static void llmRoundTrip(McpFunctionAdapter adapter, String apiKey) throws Exception {
         System.out.println("\n--- LLM round-trip (" + MODEL + ") ---");
 
-        var provider  = LLMProviderFactory.anthropic()
+        var provider  = LLMProviderFactory.openai()
                 .apiKey(apiKey)
                 .modelName(MODEL)
                 .maxTokens(512)
