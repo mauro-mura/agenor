@@ -11,7 +11,7 @@ ADR-020 (Core API Refactor)
 
 ## Context
 
-The project was developed under the name **Jentic** with Maven groupId `dev.agenor`. Before
+The project was developed under the name **Jentic** with Maven groupId `dev.jentic`. Before
 the first public release on Maven Central, the decision was made to rebrand to **Agenor**
 (`dev.agenor`). The rename touches every layer of the stack: package declarations, class names,
 annotation names, Maven coordinates, Spring Boot auto-configuration keys, and documentation.
@@ -23,7 +23,7 @@ the migration executes:
 2. **Backward compatibility** — whether to provide a migration bridge for existing consumers.
 3. **Versioning** — how the rename maps to the public version sequence and what gates `1.0.0`.
 
-No artifact under `dev.agenor` has been published to Maven Central. There are no external
+No artifact under `dev.jentic` has been published to Maven Central. There are no external
 consumers to break.
 
 ---
@@ -88,7 +88,7 @@ Consumer migration path (documented in the GitHub Release `v0.24.0`):
 
 The rebrand **continues the existing version sequence**. The first public release under
 `dev.agenor` is **`0.24.0`**, immediately following `0.23.0` (the last release under
-`dev.agenor`).
+`dev.jentic`).
 
 Rationale: the version number carries a maturity signal. Restarting at `0.1.0` would
 discard the signal accumulated across 23 prior releases. Jumping to `1.0.0` at rebrand
