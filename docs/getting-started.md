@@ -10,7 +10,7 @@ Get Agenor running in 5 minutes — no code to write yet.
 ## 1. Clone and Build
 
 ```bash
-git clone https://github.com/mauro-mura/jentic.git
+git clone https://github.com/mauro-mura/agenor.git
 cd agenor
 mvn clean install -DskipTests
 ```

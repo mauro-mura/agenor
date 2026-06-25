@@ -4,7 +4,7 @@
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9%2B-blue.svg)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Build Status](https://github.com/mauro-mura/jentic/actions/workflows/build.yml/badge.svg)](https://github.com/mauro-mura/jentic/actions/workflows/build.yml)
+[![Build Status](https://github.com/mauro-mura/agenor/actions/workflows/build.yml/badge.svg)](https://github.com/mauro-mura/agenor/actions/workflows/build.yml)
 
 > **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
 
@@ -32,7 +32,7 @@ Agenor reimagines multi-agent systems with modern Java practices:
 #### Option 1: Clone and Build from Source
 
 ```bash
-git clone https://github.com/mauro-mura/jentic.git
+git clone https://github.com/mauro-mura/agenor.git
 cd agenor
 mvn clean install
 ```
@@ -310,7 +310,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ```bash
 # Clone and setup
-git clone https://github.com/mauro-mura/jentic.git
+git clone https://github.com/mauro-mura/agenor.git
 cd agenor
 
 # Build and test
@@ -382,7 +382,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🙋 Support
 
-- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/agenor/issues)
 
 ## 🤖 Development
 

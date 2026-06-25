@@ -18,10 +18,10 @@ Thank you for your interest in contributing to Agenor. This document provides gu
 1. **Fork and Clone**
 ```bash
 # Fork the repo on GitHub first (via UI), then:
-git clone https://github.com/yourusername/jentic.git
+git clone https://github.com/yourusername/agenor.git
 cd agenor
 # Add upstream to keep your fork in sync
-git remote add upstream https://github.com/mauro-mura/jentic.git
+git remote add upstream https://github.com/mauro-mura/agenor.git
 ```
 
 2. **Build and Verify**
@@ -368,6 +368,6 @@ discussions.
 ## 📧 Contact
 
 - **Project Lead**: Mauro Mura
-- **Issues**: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
+- **Issues**: [GitHub Issues](https://github.com/mauro-mura/agenor/issues)
 
 Thank you for helping make Agenor better! 🚀

@@ -11,7 +11,7 @@
 
 **Do not report security vulnerabilities through public GitHub issues.**
 
-Email: **info@jentic.dev**
+Email: **info@agenor.dev**
 
 Include:
 - Issue type and description
