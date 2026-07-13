@@ -8,7 +8,7 @@
     <parent>
         <groupId>dev.agenor</groupId>
         <artifactId>agenor</artifactId>
-        <version>0.24.0-SNAPSHOT</version>
+        <version>0.24.0</version>
     </parent>
 
     <artifactId>agenor-adapters-persistence</artifactId>

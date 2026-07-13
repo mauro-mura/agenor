@@ -12,7 +12,7 @@ Bill of Materials for Agenor Framework. Import this BOM to manage Agenor module 
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.24.0-SNAPSHOT</version>
+            <version>0.24.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -37,7 +37,7 @@ Bill of Materials for Agenor Framework. Import this BOM to manage Agenor module 
 
 ```groovy
 dependencies {
-    implementation platform('dev.agenor:agenor-bom:0.24.0-SNAPSHOT')
+    implementation platform('dev.agenor:agenor-bom:0.24.0')
     implementation 'dev.agenor:agenor-core'
     implementation 'dev.agenor:agenor-runtime'
 }
@@ -82,7 +82,7 @@ dependencies {
             <dependency>
                 <groupId>dev.agenor</groupId>
                 <artifactId>agenor-bom</artifactId>
-                <version>0.24.0-SNAPSHOT</version>
+                <version>0.24.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

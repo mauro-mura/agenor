@@ -47,7 +47,7 @@ Use the Agenor BOM (Bill of Materials) to manage module versions consistently:
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.24.0-SNAPSHOT</version>
+            <version>0.24.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -84,7 +84,7 @@ If you prefer explicit version management:
     <dependency>
         <groupId>dev.agenor</groupId>
         <artifactId>agenor-runtime</artifactId>
-        <version>0.24.0-SNAPSHOT</version>
+        <version>0.24.0</version>
     </dependency>
 </dependencies>
 ```
@@ -186,7 +186,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-core</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
 
@@ -197,7 +197,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
 
@@ -208,7 +208,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
 
@@ -219,7 +219,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-tools</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
 
@@ -232,7 +232,7 @@ optionally an `LLMProvider` from `application.yml`. Includes Actuator health ind
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
  

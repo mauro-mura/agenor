@@ -10,7 +10,7 @@ and Agenor starts with the Spring context.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>0.24.0</version>
 </dependency>
 ```
 

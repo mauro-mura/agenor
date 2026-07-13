@@ -7,17 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-07-13
+
 ### Changed
 
-- **BREAKING — Project rebranded from Jentic to Agenor** (target: `0.24.0`). Maven coordinates
+- **BREAKING — Project rebranded from Jentic to Agenor**. Maven coordinates
   move from `dev.jentic:jentic-*` to `dev.agenor:agenor-*`; Spring Boot properties from
   `jentic.*` to `agenor.*`; structural annotations drop their prefix (`@JenticAgent` →
   `@Agent`, `@JenticBehavior` → `@Behavior`, `@JenticPersist` → `@Persist`,
   `@JenticPersistenceConfig` → `@PersistenceConfig`); `@JenticMessageHandler` is renamed to
   `@AgenorMessageHandler` to avoid collision with Spring's `@MessageMapping`. No backward
   compatibility shim is provided (clean cut — no consumers on Maven Central yet). Full
-  migration table and rationale in [ADR-025](docs/adr/ADR-025-agenor-rebrand.md);
-  step-by-step execution plan in `MIGRATION_PLAN_AGENOR_V2.md`.
+  migration table and rationale in [ADR-025](docs/adr/ADR-025-agenor-rebrand.md).
 
 ### Fixed
 
@@ -768,7 +769,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/mauro-mura/agenor/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/mauro-mura/jentic/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/mauro-mura/jentic/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/mauro-mura/jentic/compare/v0.20.0...v0.21.0
