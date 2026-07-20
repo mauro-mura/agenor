@@ -72,7 +72,7 @@ the same compilation unit.
 No shim jar, no deprecated re-exports, no `@Deprecated`-annotated aliases are provided.
 Rationale:
 
-- No artifact under `dev.agenor` has been published to Maven Central; there are no external
+- No artifact under `dev.jentic` has been published to Maven Central; there are no external
   consumers.
 - A deprecation bridge would impose ongoing maintenance cost, pollute the public API surface,
   and signal instability to new adopters from day one.
@@ -80,7 +80,7 @@ Rationale:
   `v0.24.0` release notes.
 
 Consumer migration path (documented in the GitHub Release `v0.24.0`):
-- Update Maven coordinates: `dev.agenor:jentic-* → dev.agenor:agenor-*`
+- Update Maven coordinates: `dev.jentic:jentic-* → dev.agenor:agenor-*`
 - Update Spring Boot properties: `jentic.* → agenor.*`
 - Update imports and annotation names per the D1 table above.
 
