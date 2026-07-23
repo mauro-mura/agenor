@@ -167,6 +167,166 @@ class DefaultConversationManagerTest {
     }
 
     @Test
+    void shouldNotCompleteResponseFutureOnIntermediateAgree() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+
+        var conv = manager.getActiveConversations().get(0);
+        var requestMsg = conv.getHistory().get(0);
+
+        var agree = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.AGREE)
+            .content("agreed")
+            .inReplyTo(requestMsg.id())
+            .build();
+
+        manager.handleIncoming(agree);
+
+        assertThat(future).isNotDone();
+    }
+
+    @Test
+    void shouldCompleteResponseFutureOnInformAfterAgree() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+
+        var conv = manager.getActiveConversations().get(0);
+        var requestMsg = conv.getHistory().get(0);
+
+        var agree = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.AGREE)
+            .content("agreed")
+            .inReplyTo(requestMsg.id())
+            .build();
+        manager.handleIncoming(agree);
+
+        var inform = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.INFORM)
+            .content("result")
+            .inReplyTo(requestMsg.id())
+            .build();
+        manager.handleIncoming(inform);
+
+        assertThat(future).isCompletedWithValueMatching(
+            msg -> msg.performative() == Performative.INFORM
+        );
+    }
+
+    @Test
+    void shouldCompleteResponseFutureOnFailureAfterAgree() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+
+        var conv = manager.getActiveConversations().get(0);
+        var requestMsg = conv.getHistory().get(0);
+
+        var agree = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.AGREE)
+            .content("agreed")
+            .inReplyTo(requestMsg.id())
+            .build();
+        manager.handleIncoming(agree);
+
+        var failure = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.FAILURE)
+            .content("could not do it")
+            .inReplyTo(requestMsg.id())
+            .build();
+        manager.handleIncoming(failure);
+
+        assertThat(future).isCompletedWithValueMatching(
+            msg -> msg.performative() == Performative.FAILURE
+        );
+    }
+
+    @Test
+    void shouldCompleteResponseFutureImmediatelyOnRefuse() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+
+        var conv = manager.getActiveConversations().get(0);
+        var requestMsg = conv.getHistory().get(0);
+
+        var refuse = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.REFUSE)
+            .content("can't do it")
+            .inReplyTo(requestMsg.id())
+            .build();
+
+        manager.handleIncoming(refuse);
+
+        assertThat(future).isCompletedWithValueMatching(
+            msg -> msg.performative() == Performative.REFUSE
+        );
+    }
+
+    @Test
+    void shouldStillResolveCallForProposalsOnFirstProposeReply() {
+        var future = manager.callForProposals(
+            java.util.List.of("bidder-1"), "task-spec", Duration.ofSeconds(5));
+
+        var conv = manager.getConversationsWith("bidder-1").get(0);
+        var cfpMsg = conv.getHistory().get(0);
+
+        var propose = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("bidder-1")
+            .receiverId("local-agent")
+            .performative(Performative.PROPOSE)
+            .content("my bid")
+            .inReplyTo(cfpMsg.id())
+            .protocol("contract-net")
+            .build();
+
+        manager.handleIncoming(propose);
+
+        assertThat(future).isCompletedWithValueMatching(
+            responses -> responses.size() == 1
+                && responses.get(0).performative() == Performative.PROPOSE
+        );
+    }
+
+    @Test
+    void shouldNotifyOnMessageHandlerForAgreeWithoutCompletingFuture() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+
+        var conv = manager.getActiveConversations().get(0);
+        var requestMsg = conv.getHistory().get(0);
+
+        var received = new AtomicReference<DialogueMessage>();
+        manager.onMessage(conv.getId(), received::set);
+
+        var agree = DialogueMessage.builder()
+            .conversationId(conv.getId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.AGREE)
+            .content("agreed")
+            .inReplyTo(requestMsg.id())
+            .build();
+
+        manager.handleIncoming(agree);
+
+        assertThat(received.get()).isNotNull();
+        assertThat(received.get().performative()).isEqualTo(Performative.AGREE);
+        assertThat(future).isNotDone();
+    }
+
+    @Test
     void shouldTrackCommitments() {
         var incoming = DialogueMessage.builder()
             .conversationId("conv-1")

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * Manages dialogue conversations for an agent.
@@ -107,4 +108,14 @@ public interface ConversationManager {
      * @param conversationId the conversation to cancel
      */
     void cancel(String conversationId);
+
+    /**
+     * Registers a handler invoked for every message received in a specific conversation,
+     * including intermediate replies (e.g. {@code AGREE}) that do not resolve the future
+     * returned by {@link #request(String, Object, Duration)}.
+     *
+     * @param conversationId the conversation to observe
+     * @param handler callback invoked for each incoming message in that conversation
+     */
+    void onMessage(String conversationId, Consumer<DialogueMessage> handler);
 }

@@ -316,6 +316,9 @@ A future ADR will decide whether to formalize fire-and-first-reply as the canoni
 contract, or to introduce a chained `inReplyTo` (INFORM.inReplyTo = AGREE.id) that
 allows `ConversationManager` to track the full sequence.
 
+> **Resolved by ADR-026** (2026-07-23): adopts fire-and-final semantics via a targeted gate
+> on the existing `Protocol` FSM. See ADR-026 for the decision and rationale.
+
 ### Neutral
 
 1. **No custom wire protocol**: Delegates to A2A SDK (intentional)

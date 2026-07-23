@@ -312,17 +312,55 @@ class AgenorA2AAdapterTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void sendInternal_shouldDelegateToMessageService() throws Exception {
-        // Given
-        Message responseMsg = Message.builder()
-                .id("r-1")
+    void sendInternal_shouldResolveOnFinalInformAfterAgree() throws Exception {
+        // Given - responder sends an intermediate AGREE, then the final INFORM
+        Message agreeMsg = Message.builder()
+                .id("agree-1")
                 .senderId("agent-a")
                 .receiverId("local-agent")
                 .header("conversationId", "c-1")
                 .header("performative", "AGREE")
                 .build();
+        Message informMsg = Message.builder()
+                .id("inform-1")
+                .senderId("agent-a")
+                .receiverId("local-agent")
+                .content("done")
+                .header("conversationId", "c-1")
+                .header("performative", "INFORM")
+                .build();
 
-        stubDispatcherToReplyImmediately(responseMsg);
+        stubDispatcherToReplyImmediately(agreeMsg, informMsg);
+
+        DialogueMessage request = DialogueMessage.builder()
+                .conversationId("c-1")
+                .senderId("local-agent")
+                .receiverId("agent-a")
+                .performative(Performative.REQUEST)
+                .build();
+
+        // When
+        DialogueMessage response = adapter.sendInternal(request).get(5, TimeUnit.SECONDS);
+
+        // Then - the future resolves on the final INFORM, not the intermediate AGREE
+        assertThat(response.performative()).isEqualTo(Performative.INFORM);
+        assertThat(response.content()).isEqualTo("done");
+        verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
+        verify(messageDispatcher).sendTo(argThat(msg -> "agent-a".equals(msg.receiverId())));
+    }
+
+    @Test
+    void sendInternal_shouldResolveImmediatelyOnRefuse() throws Exception {
+        // Given - non-regression: a direct REFUSE (no AGREE) still resolves immediately
+        Message refuseMsg = Message.builder()
+                .id("refuse-1")
+                .senderId("agent-a")
+                .receiverId("local-agent")
+                .header("conversationId", "c-1")
+                .header("performative", "REFUSE")
+                .build();
+
+        stubDispatcherToReplyImmediately(refuseMsg);
 
         DialogueMessage request = DialogueMessage.builder()
                 .conversationId("c-1")
@@ -335,9 +373,7 @@ class AgenorA2AAdapterTest {
         DialogueMessage response = adapter.sendInternal(request).get(5, TimeUnit.SECONDS);
 
         // Then
-        assertThat(response.performative()).isEqualTo(Performative.AGREE);
-        verify(messageDispatcher).subscribeRecipient(eq("local-agent"), any());
-        verify(messageDispatcher).sendTo(argThat(msg -> "agent-a".equals(msg.receiverId())));
+        assertThat(response.performative()).isEqualTo(Performative.REFUSE);
     }
 
     // -----------------------------------------------------------------------
@@ -346,13 +382,16 @@ class AgenorA2AAdapterTest {
 
     /**
      * Stubs the dispatcher to immediately invoke the MessageHandler registered via
-     * subscribeRecipient, simulating synchronous message delivery for test purposes.
+     * subscribeRecipient with each given message in order, simulating synchronous message
+     * delivery for test purposes (e.g. an intermediate AGREE followed by the final INFORM).
      */
-    private void stubDispatcherToReplyImmediately(Message replyMsg) throws Exception {
+    private void stubDispatcherToReplyImmediately(Message... replyMsgs) throws Exception {
         Subscription mockSub = mock(Subscription.class);
         Answer<Subscription> triggerHandler = invocation -> {
             MessageHandler handler = invocation.getArgument(1);
-            handler.handle(replyMsg);
+            for (Message replyMsg : replyMsgs) {
+                handler.handle(replyMsg);
+            }
             return mockSub;
         };
         when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))

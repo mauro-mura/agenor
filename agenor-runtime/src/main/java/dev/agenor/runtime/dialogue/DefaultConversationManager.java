@@ -53,9 +53,10 @@ public class DefaultConversationManager implements ConversationManager {
     }
 
     /**
-     * Sends a REQUEST and resolves on the <em>first</em> reply whose {@code inReplyTo}
-     * matches the REQUEST id — typically {@code AGREE}. A subsequent {@code INFORM} is
-     * tracked by the conversation but does not update the returned future.
+     * Sends a REQUEST and resolves on the final outcome ({@code INFORM}/{@code FAILURE}, or
+     * an immediate {@code REFUSE}). An intermediate {@code AGREE} does not resolve the
+     * returned future; observe it via {@link #onMessage(String, Consumer)} on the
+     * conversation ID if needed. See ADR-026.
      */
     @Override
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {
@@ -163,10 +164,12 @@ public class DefaultConversationManager implements ConversationManager {
                 .ifPresent(commitmentId ->
                     commitmentTracker.updateFromResponse(commitmentId, message));
 
-            // Complete pending future if waiting for response
-            var pending = pendingResponses.remove(message.inReplyTo());
-            if (pending != null) {
-                pending.complete(message);
+            // Complete pending future if waiting for response and this is the final reply
+            if (shouldResolvePendingResponse(conversation, message)) {
+                var pending = pendingResponses.remove(message.inReplyTo());
+                if (pending != null) {
+                    pending.complete(message);
+                }
             }
         }
 
@@ -236,9 +239,7 @@ public class DefaultConversationManager implements ConversationManager {
         }
     }
 
-    /**
-     * Registers a handler for messages in a specific conversation.
-     */
+    @Override
     public void onMessage(String conversationId, Consumer<DialogueMessage> handler) {
         messageHandlers.put(conversationId, handler);
     }
@@ -248,6 +249,23 @@ public class DefaultConversationManager implements ConversationManager {
      */
     public DefaultCommitmentTracker getCommitmentTracker() {
         return commitmentTracker;
+    }
+
+    /**
+     * Decides whether an incoming reply should resolve the pending-response future.
+     *
+     * <p>Resolves on any reply except an intermediate {@code AGREE} for which the
+     * conversation's protocol still expects a subsequent {@code INFORM}/{@code FAILURE}
+     * (e.g. the REQUEST protocol). See ADR-026.
+     */
+    private boolean shouldResolvePendingResponse(DefaultConversation conversation, DialogueMessage message) {
+        if (message.performative() != Performative.AGREE) {
+            return true;
+        }
+        return conversation.getProtocol()
+            .map(protocol -> protocol.allowedPerformatives(conversation.getState(), false).stream()
+                .noneMatch(p -> p == Performative.INFORM || p == Performative.FAILURE))
+            .orElse(true);
     }
 
     private CompletableFuture<DialogueMessage> initiateConversation(

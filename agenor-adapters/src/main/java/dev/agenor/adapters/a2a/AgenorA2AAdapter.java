@@ -1,9 +1,9 @@
 package dev.agenor.adapters.a2a;
 
 import dev.agenor.core.AgentDirectory;
-import dev.agenor.core.Message;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.dialogue.DialogueMessage;
+import dev.agenor.core.dialogue.Performative;
 import io.a2a.spec.AgentCard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,14 +79,13 @@ public class AgenorA2AAdapter {
     /**
      * Sends a message, auto-routing to internal or external agent.
      *
-     * <p><b>Reply semantics</b>: the returned future resolves on the <em>first</em> reply
-     * received (typically {@code AGREE}), not on the final result ({@code INFORM}).
-     * In a two-phase REQUEST exchange the responder sends AGREE immediately and INFORM
-     * later; callers that need the final result should use {@link #sendWithStreaming} or
-     * have the responder collapse both into a single INFORM reply.
+     * <p><b>Reply semantics</b>: the returned future resolves on the final outcome of the
+     * exchange. An intermediate {@code AGREE} in a two-phase REQUEST exchange does not
+     * resolve the future; resolution waits for the subsequent {@code INFORM}/{@code FAILURE}
+     * (or an immediate {@code REFUSE}). See ADR-026.
      *
      * @param message the DialogueMessage to send
-     * @return future that completes with the first reply received within the configured timeout
+     * @return future that completes with the final reply received within the configured timeout
      */
     public CompletableFuture<DialogueMessage> send(DialogueMessage message) {
         String targetId = message.receiverId();
@@ -114,20 +113,25 @@ public class AgenorA2AAdapter {
      * Sends a message to an internal agent via MessageDispatcher.
      *
      * <p>Registers a temporary {@code subscribeRecipient} for the sender ID, sends the
-     * message, and resolves on the <em>first</em> reply delivered to that subscription.
-     * The subscription is cancelled immediately after the first reply, so any subsequent
-     * messages (e.g. a follow-up INFORM after an AGREE) are not captured.
+     * message, and resolves on the final reply delivered to that subscription. An
+     * intermediate {@code AGREE} is observed but does not resolve the future; the
+     * subscription stays open until a non-{@code AGREE} reply (typically {@code INFORM},
+     * {@code FAILURE}, or an immediate {@code REFUSE}) arrives. See ADR-026.
      */
     public CompletableFuture<DialogueMessage> sendInternal(DialogueMessage message) {
-        CompletableFuture<Message> replyFuture = new CompletableFuture<>();
+        CompletableFuture<DialogueMessage> replyFuture = new CompletableFuture<>();
         String replyTo = message.senderId() != null ? message.senderId() : localAgentId;
-        var subscription = messageDispatcher.subscribeRecipient(replyTo,
-                msg -> { replyFuture.complete(msg); return CompletableFuture.completedFuture(null); });
+        var subscription = messageDispatcher.subscribeRecipient(replyTo, msg -> {
+            var reply = DialogueMessage.fromMessage(msg);
+            if (reply.performative() != Performative.AGREE) {
+                replyFuture.complete(reply);
+            }
+            return CompletableFuture.completedFuture(null);
+        });
         messageDispatcher.sendTo(message.toMessage());
         return replyFuture
                 .orTimeout(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
-                .whenComplete((r, ex) -> subscription.unsubscribe())
-                .thenApply(DialogueMessage::fromMessage);
+                .whenComplete((r, ex) -> subscription.unsubscribe());
     }
 
     /**

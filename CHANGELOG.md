@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **REQUEST protocol two-phase response (AGREE/INFORM) resolved on the wrong reply (ADR-026)**:
+  `ConversationManager.request()` and `AgenorA2AAdapter.sendInternal()` previously resolved
+  their returned `CompletableFuture` on the first reply received — typically the intermediate
+  `AGREE` — because both `AGREE` and `INFORM` correlate to the original `REQUEST` message. The
+  final `INFORM`/`FAILURE` was silently discarded. Both now resolve on the final outcome
+  (`INFORM`/`FAILURE`, or an immediate `REFUSE`); `AGREE` no longer completes the future.
+  **Migration**: callers that relied on receiving the `AGREE` message from `request()`'s
+  future must switch to `ConversationManager.onMessage(conversationId, handler)` to observe
+  it. `ContractNetProtocol.callForProposals()` and `QueryProtocol` are unaffected. See
+  [ADR-026](docs/adr/ADR-026-request-protocol-final-resolution.md).
+
+### Added
+
+- **`ConversationManager.onMessage(String, Consumer<DialogueMessage>)`** promoted from
+  `DefaultConversationManager` onto the `ConversationManager` interface, so callers can
+  observe intermediate dialogue messages (e.g. `AGREE`) that no longer resolve the
+  `request()` future.
+
 ## [0.24.0] - 2026-07-13
 
 ### Changed
