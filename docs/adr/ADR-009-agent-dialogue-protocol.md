@@ -120,8 +120,10 @@ public record DialogueMessage(
 
 **Note — `inReplyTo` chaining**: both `AGREE` and `INFORM` set `inReplyTo = REQUEST.id`
 (i.e., both reply directly to the original REQUEST, not chained AGREE → INFORM).
-This means `ConversationManager.request()` resolves on the **first** reply received
-(typically AGREE), not on the final INFORM. See *Known Limitations* below.
+Historically this meant `ConversationManager.request()` resolved on the **first** reply
+received (typically AGREE), not on the final INFORM — see *Known Limitations* below. This is
+resolved by ADR-026: the future now defers past `AGREE` and resolves on the final
+`INFORM`/`FAILURE`.
 
 **Rationale**:
 - Zero new infrastructure for intra-runtime

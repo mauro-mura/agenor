@@ -110,12 +110,22 @@ public class MyAgent extends BaseAgent {
 ```java
 public class Example {
     public void example(DialogueCapability dialogue) {
-        // Simple request
+        // Simple request — the future resolves on the final INFORM/FAILURE,
+        // never on an intermediate AGREE (ADR-026)
         dialogue.request("other-agent", taskData)
             .thenAccept(response -> {
                 if (response.performative() == Performative.INFORM) {
                     // Success!
                     var result = response.content();
+                }
+            });
+
+        // To observe an intermediate AGREE (e.g. for progress reporting),
+        // register a listener instead of relying on the request() future
+        dialogue.getConversationManager()
+            .onMessage(conversationId, msg -> {
+                if (msg.performative() == Performative.AGREE) {
+                    // Request accepted, work is starting
                 }
             });
 

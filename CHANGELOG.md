@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-07-26
+
 ### Fixed
 
 - **REQUEST protocol two-phase response (AGREE/INFORM) resolved on the wrong reply (ADR-026)**:
@@ -789,7 +791,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/mauro-mura/agenor/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/mauro-mura/agenor/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/mauro-mura/jentic/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/mauro-mura/jentic/compare/v0.21.0...v0.22.0
