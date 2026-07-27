@@ -15,6 +15,7 @@ import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.TopicSubscriber;
 import dev.agenor.core.composite.CompletionStrategy;
+import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.BaseBehavior;
 import dev.agenor.runtime.behavior.CyclicBehavior;
 import dev.agenor.runtime.behavior.EventDrivenBehavior;
@@ -412,6 +413,13 @@ public class AnnotationProcessor {
         });
 
         String subscriptionId = topicSubscriber.subscribeTopic(topic, handler).subscriptionId();
+
+        // Also wire the handler to direct (point-to-point) messages addressed to this
+        // agent whose topic matches, so @AgenorMessageHandler works with sendTo()/receiverId
+        // addressing, not just topic pub/sub (see BaseAgent#registerDirectTopicHandler).
+        if (agent instanceof BaseAgent baseAgent) {
+            baseAgent.registerDirectTopicHandler(topic, handler);
+        }
 
         log.info("Subscribed agent '{}' to topic '{}' (method: {}, subscription: {})",
                 agent.getAgentName(), topic, method.getName(), subscriptionId);

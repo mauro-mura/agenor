@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`@AgenorMessageHandler` never fired for direct (point-to-point) messages sent via `sendTo()`/`receiverId`**:
+  `AnnotationProcessor` only wired annotated handlers onto the topic pub/sub channel
+  (`TopicSubscriber.subscribeTopic`), which is triggered by `publish()`. Messages sent with
+  `MessageDispatcher.sendTo()` are routed through a separate direct-receiver channel that
+  simply invoked `BaseAgent.onDirectMessage()` — a no-op by default — regardless of any
+  matching `@AgenorMessageHandler`, contradicting `onDirectMessage()`'s own Javadoc ("only
+  called if no `@AgenorMessageHandler` matches"). Agents addressed directly by `receiverId`
+  (e.g. `LLMDirectMessagingExample`) silently dropped every task message and never replied.
+  `BaseAgent` now tracks annotated handlers per topic (`registerDirectTopicHandler`) and
+  `handleDirectMessage()` dispatches to a matching handler before falling back to
+  `onDirectMessage()`.
+
 ## [0.24.1] - 2026-07-26
 
 ### Fixed

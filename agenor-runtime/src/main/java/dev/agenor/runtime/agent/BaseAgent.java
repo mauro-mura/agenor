@@ -3,6 +3,7 @@ package dev.agenor.runtime.agent;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -86,6 +87,7 @@ public abstract class BaseAgent implements Agent {
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
 
     private dev.agenor.core.messaging.Subscription directMessageSubscription;
+    private final Map<String, List<MessageHandler>> directTopicHandlers = new ConcurrentHashMap<>();
 
     // Lifecycle hooks - thread-safe collections
     private final List<Runnable> startHooks = new CopyOnWriteArrayList<>();
@@ -526,12 +528,43 @@ public abstract class BaseAgent implements Agent {
     }
 
     /**
+     * Registers a handler to be invoked for direct (point-to-point) messages whose
+     * {@link Message#topic()} matches the given topic.
+     *
+     * <p>Used internally by the runtime's annotation processor so that
+     * {@code @AgenorMessageHandler}-annotated methods also fire for messages sent
+     * via {@code sendTo()}/{@code receiverId} addressing, not just topic pub/sub.
+     *
+     * @param topic   the exact topic to match against {@link Message#topic()}
+     * @param handler the handler to invoke on a match
+     * @since 0.25.0
+     */
+    public void registerDirectTopicHandler(String topic, MessageHandler handler) {
+        Objects.requireNonNull(topic, "topic");
+        Objects.requireNonNull(handler, "handler");
+        directTopicHandlers.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(handler);
+    }
+
+    /**
      * Handle direct messages received by this agent.
      * Override to customize handling, or use @AgenorMessageHandler annotations.
      */
     protected void handleDirectMessage(Message message) {
         log.trace("Agent '{}' received direct message from '{}': {}",
                 agentId, message.senderId(), message.content());
+
+        List<MessageHandler> handlers = message.topic() == null ? null : directTopicHandlers.get(message.topic());
+        if (handlers != null && !handlers.isEmpty()) {
+            for (var handler : handlers) {
+                try {
+                    handler.handle(message).join();
+                } catch (Exception e) {
+                    log.error("Error executing @AgenorMessageHandler for topic '{}' on direct message to '{}': {}",
+                            message.topic(), agentId, e.getMessage(), e);
+                }
+            }
+            return;
+        }
 
         // Delegate to user hook
         onDirectMessage(message);
