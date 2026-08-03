@@ -2,6 +2,7 @@ package dev.agenor.runtime.hitl;
 
 import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalGate;
+import dev.agenor.core.hitl.ApprovalHandle;
 import dev.agenor.core.hitl.ApprovalRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +24,7 @@ import java.util.Objects;
  * @see InMemoryApprovalGate
  * @since 0.13.0
  */
-public class ApprovalService {
+public class ApprovalService implements ApprovalHandle {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalService.class);
 
@@ -48,6 +49,7 @@ public class ApprovalService {
      * @param requestId UUID of the pending request
      * @throws IllegalArgumentException if no pending request exists for {@code requestId}
      */
+    @Override
     public void approve(String requestId) {
         submit(requestId, new ApprovalDecision.Approved());
         log.info("Request approved: requestId={}", requestId);
@@ -60,6 +62,7 @@ public class ApprovalService {
      * @param reason    human-readable explanation; must not be {@code null}
      * @throws IllegalArgumentException if no pending request exists for {@code requestId}
      */
+    @Override
     public void reject(String requestId, String reason) {
         Objects.requireNonNull(reason, "reason must not be null");
         submit(requestId, new ApprovalDecision.Rejected(reason));
@@ -73,6 +76,7 @@ public class ApprovalService {
      * @param newPayload revised action payload; must not be {@code null}
      * @throws IllegalArgumentException if no pending request exists for {@code requestId}
      */
+    @Override
     public void modify(String requestId, Object newPayload) {
         Objects.requireNonNull(newPayload, "newPayload must not be null");
         submit(requestId, new ApprovalDecision.Modified(newPayload));
@@ -86,6 +90,7 @@ public class ApprovalService {
      * @param decision  the decision to submit; must not be {@code null}
      * @throws IllegalArgumentException if no pending request exists for {@code requestId}
      */
+    @Override
     public void submit(String requestId, ApprovalDecision decision) {
         Objects.requireNonNull(requestId, "requestId must not be null");
         Objects.requireNonNull(decision, "decision must not be null");
@@ -103,6 +108,7 @@ public class ApprovalService {
      *
      * @return immutable list of pending {@link ApprovalRequest}s
      */
+    @Override
     public List<ApprovalRequest> getPendingRequests() {
         return gate.getPendingRequests();
     }
