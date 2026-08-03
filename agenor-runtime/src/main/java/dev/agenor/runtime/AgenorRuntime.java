@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,9 +21,13 @@ import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.hitl.ApprovalGate;
-import dev.agenor.runtime.hitl.ApprovalService;
-import dev.agenor.runtime.hitl.HitlAnnotationProcessor;
-import dev.agenor.runtime.hitl.InMemoryApprovalGate;
+import dev.agenor.core.hitl.ApprovalHandle;
+import dev.agenor.core.hitl.NoopApprovalHandle;
+import dev.agenor.core.spi.AgentDiscoveryEngine;
+import dev.agenor.core.spi.AgentRegistrationExtension;
+import dev.agenor.core.spi.DefaultLLMMemoryManagerProvider;
+import dev.agenor.core.spi.HitlSupportProvider;
+import dev.agenor.core.spi.RegistrationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,20 +42,14 @@ import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.runtime.agent.LLMAgent;
-import dev.agenor.runtime.behavior.advanced.HumanCheckpointBehavior;
 import dev.agenor.runtime.config.DefaultConfigurationLoader;
 import dev.agenor.runtime.directory.CompositeAgentDirectory;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.runtime.discovery.AgentFactory;
-import dev.agenor.runtime.discovery.AgentScanner;
-import dev.agenor.runtime.discovery.AnnotationProcessor;
-import dev.agenor.runtime.guardrail.GuardrailAnnotationProcessor;
 import dev.agenor.runtime.lifecycle.LifecycleListener;
 import dev.agenor.runtime.lifecycle.LifecycleManager;
-import dev.agenor.runtime.memory.llm.DefaultLLMMemoryManager;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
+import dev.agenor.runtime.support.AgentDescriptors;
 
 /**
  * Main runtime for the Agenor framework with automatic agent discovery.
@@ -68,14 +67,16 @@ public class AgenorRuntime {
     private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
     private final AgenorTelemetry telemetry;
 
-    // HITL: singleton gate and service — shared across all agents
+    // HITL: singleton gate and handle — shared across all agents
     private final ApprovalGate approvalGate;
-    private final ApprovalService approvalService;
+    private final ApprovalHandle approvalService;
 
-    // Discovery components
-    private final AgentScanner agentScanner;
-    private final AgentFactory agentFactory;
-    private final AnnotationProcessor annotationProcessor;
+    // Optional-module extension points, resolved once via ServiceLoader (ADR-027)
+    private final List<AgentRegistrationExtension> registrationExtensions;
+    private final Optional<AgentDiscoveryEngine> discoveryEngine;
+    private final Optional<HitlSupportProvider> hitlSupportProvider;
+    private final Optional<DefaultLLMMemoryManagerProvider> llmMemoryManagerProvider;
+
     private final LifecycleManager lifecycleManager;
 
     // Configuration
@@ -121,20 +122,30 @@ public class AgenorRuntime {
                 builder.behaviorScheduler : new SimpleBehaviorScheduler(4, this.telemetry);
         this.memoryStore = builder.memoryStore; // optional
 
+        // Resolve optional-module extension points once (ADR-027). Any of these
+        // collections/Optionals can be empty when agenor-runtime-llm/-ext/-scanning
+        // is absent from the classpath — every call site below tolerates that.
+        this.registrationExtensions = ServiceLoader.load(AgentRegistrationExtension.class)
+                .stream().map(ServiceLoader.Provider::get).toList();
+        this.discoveryEngine = ServiceLoader.load(AgentDiscoveryEngine.class).findFirst();
+        this.hitlSupportProvider = ServiceLoader.load(HitlSupportProvider.class).findFirst();
+        this.llmMemoryManagerProvider = ServiceLoader.load(DefaultLLMMemoryManagerProvider.class).findFirst();
+
         this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
                 builder.llmMemoryManagerFactory :
                 this.createDefaultLLMMemoryManagerFactory();
 
-        // HITL: use provided gate or default in-memory
+        // HITL: use provided gate, or the optional provider's default, or none
         this.approvalGate = builder.approvalGate != null
                 ? builder.approvalGate
-                : new InMemoryApprovalGate();
-        this.approvalService = new ApprovalService(this.approvalGate);
+                : hitlSupportProvider.map(HitlSupportProvider::createDefaultApprovalGate).orElse(null);
+        this.approvalService = hitlSupportProvider
+                .map(provider -> provider.createApprovalHandle(this.approvalGate))
+                .orElseGet(NoopApprovalHandle::new);
 
-        // Initialize discovery components
-        this.agentScanner = new AgentScanner();
-        this.agentFactory = new AgentFactory(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore);
-        this.annotationProcessor = new AnnotationProcessor(messageDispatcher);
+        // Initialize the optional discovery engine, if present
+        this.discoveryEngine.ifPresent(engine -> engine.initialize(
+                new AgentContext(messageDispatcher, agentDirectory, behaviorScheduler, memoryStore)));
         this.lifecycleManager = new LifecycleManager();
 
         // Add default lifecycle listener
@@ -153,13 +164,9 @@ public class AgenorRuntime {
      * @return a factory function that creates LLMMemoryManager instances per agent
      */
     private Function<String,LLMMemoryManager> createDefaultLLMMemoryManagerFactory() {
-		if (memoryStore == null) return null;
-    	return agentId -> new DefaultLLMMemoryManager(
-		    memoryStore,
-		    new dev.agenor.runtime.memory.llm.SimpleTokenEstimator(),
-		    agentId
-		);
-	}
+        if (memoryStore == null || llmMemoryManagerProvider.isEmpty()) return null;
+        return agentId -> llmMemoryManagerProvider.get().create(memoryStore, agentId);
+    }
 
     /**
      * Start the runtime and all registered agents
@@ -295,22 +302,15 @@ public class AgenorRuntime {
             llmAware.setLLMMemoryManager(llmMemoryManagerFactory.apply(agent.getAgentId()));
         }
 
-        // Inject guardrail chain from @WithGuardrails annotation (LLMAgent only)
-        if (agent instanceof LLMAgent llmAgent) {
-            GuardrailAnnotationProcessor.process(llmAgent);
-            llmAgent.installTelemetry(telemetry);
-        }
-
-        // Wrap behaviors annotated with @RequiresApproval (BaseAgent and subclasses)
-        if (agent instanceof BaseAgent baseAgent) {
-            HitlAnnotationProcessor.process(baseAgent, approvalGate);
+        // Optional-module hooks (LLM guardrails/telemetry, HITL behavior wrapping, ...),
+        // discovered via ServiceLoader — no-op when the owning module is absent (ADR-027)
+        RegistrationContext registrationContext = new RegistrationContext(telemetry, approvalGate);
+        for (AgentRegistrationExtension extension : registrationExtensions) {
+            extension.onAgentRegistered(agent, registrationContext);
         }
 
         // Create a descriptor and register in a directory
-        AgentDescriptor descriptor = agentFactory.createDescriptor(
-                agent.getClass(),
-                agent
-        );
+        AgentDescriptor descriptor = AgentDescriptors.create(agent.getClass(), agent);
 
         agentDirectory.register(descriptor)
                 .exceptionally(throwable -> {
@@ -327,15 +327,17 @@ public class AgenorRuntime {
      * Create an agent from a class using annotation discovery
      */
     public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) {
+        AgentDiscoveryEngine engine = discoveryEngine.orElseThrow(() -> new IllegalStateException(
+                "createAgent(Class) requires agenor-runtime-scanning on the classpath"));
         try {
-            T agent = agentFactory.createAgent(agentClass);
+            T agent = engine.createAgent(agentClass);
             Objects.requireNonNull(agent, "Factory returned null agent for class: " + agentClass.getName());
 
             registerAgent(agent);
 
             // Process annotations if runtime is already started
             if (running) {
-                annotationProcessor.processAnnotations(agent);
+                engine.processAnnotations(agent);
             }
 
             return agent;
@@ -436,16 +438,20 @@ public class AgenorRuntime {
     }
 
     /**
-     * Returns the singleton {@link ApprovalService} for this runtime.
+     * Returns the singleton {@link ApprovalHandle} for this runtime.
      *
-     * <p>External systems (HTTP handlers, tests, webhooks) call this service to
-     * submit human approval decisions for pending {@link HumanCheckpointBehavior}
+     * <p>External systems (HTTP handlers, tests, webhooks) call this handle to
+     * submit human approval decisions for pending {@code HumanCheckpointBehavior}
      * executions.
      *
-     * @return the approval service; never {@code null}
+     * <p>Returns a {@link NoopApprovalHandle} when no HITL provider (e.g.
+     * {@code agenor-runtime-ext}) is on the classpath; its mutating methods throw
+     * {@link UnsupportedOperationException}.
+     *
+     * @return the approval handle; never {@code null}
      * @since 0.13.0
      */
-    public ApprovalService getApprovalService() {
+    public ApprovalHandle getApprovalService() {
         return approvalService;
     }
 
@@ -454,7 +460,7 @@ public class AgenorRuntime {
      */
     @SuppressWarnings("unchecked")
     private <T> void registerServiceUnchecked(Class<?> serviceClass, Object instance) {
-        agentFactory.addService((Class<T>) serviceClass, (T) instance);
+        discoveryEngine.ifPresent(engine -> engine.addService((Class<T>) serviceClass, (T) instance));
     }
 
     // ========== PRIVATE METHODS ==========
@@ -490,12 +496,15 @@ public class AgenorRuntime {
      * Discover agents from configured packages and create instances
      */
     private void discoverAndCreateAgents() {
+        AgentDiscoveryEngine engine = discoveryEngine.orElseThrow(() -> new IllegalStateException(
+                "Package scanning requires agenor-runtime-scanning on the classpath"));
+
         List<String> packages = configuration.agents().getAllScanPackages();
         log.info("Starting agent discovery in {} packages", packages.size());
 
         // Scan for agent classes
         String[] packageArray = packages.toArray(new String[0]);
-        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = agentScanner.scanForAgents(packageArray);
+        Set<Class<? extends dev.agenor.core.Agent>> agentClasses = engine.scanForAgents(packageArray);
 
         if (agentClasses.isEmpty()) {
             log.info("No agent classes found in scanned packages");
@@ -503,7 +512,7 @@ public class AgenorRuntime {
         }
 
         // Create agent instances
-        Map<String, dev.agenor.core.Agent> discoveredAgents = agentFactory.createAgents(agentClasses);
+        Map<String, dev.agenor.core.Agent> discoveredAgents = engine.createAgents(agentClasses);
 
         // Register discovered agents
         for (dev.agenor.core.Agent agent : discoveredAgents.values()) {
@@ -515,14 +524,24 @@ public class AgenorRuntime {
     }
 
     /**
-     * Process annotations for all registered agents
+     * Process annotations for all registered agents.
+     *
+     * <p>Silently no-ops when {@code agenor-runtime-scanning} is absent (logged once),
+     * rather than failing {@link #start()} for scanning-free applications that have
+     * no annotated agents.
      */
     private void processAgentAnnotations() {
+        if (discoveryEngine.isEmpty()) {
+            log.info("Skipping annotation processing: agenor-runtime-scanning is not on the classpath");
+            return;
+        }
+        AgentDiscoveryEngine engine = discoveryEngine.get();
+
         log.info("Processing annotations for {} agents", agents.size());
 
         for (dev.agenor.core.Agent agent : agents.values()) {
             try {
-                annotationProcessor.processAnnotations(agent);
+                engine.processAnnotations(agent);
             } catch (Exception e) {
                 log.error("Failed to process annotations for agent: {}", agent.getAgentId(), e);
             }
@@ -809,7 +828,8 @@ public class AgenorRuntime {
         /**
          * Sets the approval gate used for HITL workflows.
          *
-         * <p>Defaults to {@link InMemoryApprovalGate} when not set. Provide a
+         * <p>Defaults to an in-memory gate supplied by {@code agenor-runtime-ext}
+         * when not set, or {@code null} if that module is absent. Provide a
          * persistent implementation (e.g. {@code JdbcApprovalGate}) to survive
          * JVM restarts.
          *
