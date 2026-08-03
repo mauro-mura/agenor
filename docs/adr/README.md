@@ -32,6 +32,7 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-024](ADR-024-persistent-hitl-approval-queue.md)               | Persistent HITL Approval Queue (JDBC)       | Accepted | 2026-05-22 |
 | [ADR-025](ADR-025-agenor-rebrand.md)                                | Agenor Rebrand — Naming, Compat, Versioning | Accepted | 2026-05-28 |
 | [ADR-026](ADR-026-request-protocol-final-resolution.md)            | REQUEST Protocol Final-Resolution Semantics | Accepted | 2026-07-23 |
+| [ADR-027](ADR-027-minimal-runtime-llm-generic-split.md)             | Minimal Runtime Core — LLM / Generic-MAS Module Split | Accepted | 2026-08-03 |
 
 ---
 
@@ -182,6 +183,7 @@ graph TD
 - **ADR-024** (Persistent HITL Approval Queue) builds on ADR-001, ADR-004, ADR-015, ADR-022, ADR-023
 - **ADR-025** (Agenor Rebrand) builds on ADR-002, ADR-003, ADR-006, ADR-016, ADR-020 — affects naming and Maven coordinates for the entire project
 - **ADR-026** (REQUEST Protocol Final-Resolution Semantics) resolves the "Known Limitations" gap left open by ADR-009
+- **ADR-027** (Minimal Runtime Core — LLM/Generic-MAS Module Split) builds on ADR-002, ADR-004, ADR-018, ADR-020
 
 ---
 
