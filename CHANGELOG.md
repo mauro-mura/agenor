@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — `AgenorRuntime.getApprovalService()` now returns `ApprovalHandle` instead of the concrete `ApprovalService` class (ADR-027)**:
+  introduces a `ServiceLoader`-based SPI in `dev.agenor.core.spi`
+  (`AgentRegistrationExtension`, `AgentDiscoveryEngine`, `HitlSupportProvider`,
+  `DefaultLLMMemoryManagerProvider`) plus `dev.agenor.core.hitl.{ApprovalHandle,NoopApprovalHandle}`,
+  so `AgenorRuntime` no longer hard-imports `agent.LLMAgent`, `guardrail.*`, `hitl.*`,
+  `discovery.*`, or `memory.llm.*` directly. This is the prerequisite decoupling step for
+  splitting `agenor-runtime` into `agenor-runtime-llm`/`-ext`/`-scanning` modules, so that a
+  pure multi-agent-system consumer will eventually be able to depend on `agenor-runtime`
+  alone with zero LLM/HITL/scanning dependencies. When no HITL provider is on the classpath,
+  `getApprovalService()` returns a `NoopApprovalHandle` whose decision-submitting methods
+  fail fast with `UnsupportedOperationException` instead of silently doing nothing.
+  **Migration**: callers that only invoke interface methods (`approve`/`reject`/`modify`/
+  `submit`/`getPendingRequests`) are source-compatible but must recompile against the new
+  return type. See [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
+
 ### Fixed
 
 - **`@AgenorMessageHandler` never fired for direct (point-to-point) messages sent via `sendTo()`/`receiverId`**:
