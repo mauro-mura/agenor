@@ -31,6 +31,12 @@
 
             <dependency>
                 <groupId>dev.agenor</groupId>
+                <artifactId>agenor-runtime-llm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>dev.agenor</groupId>
                 <artifactId>agenor-adapters</artifactId>
                 <version>${project.version}</version>
             </dependency>

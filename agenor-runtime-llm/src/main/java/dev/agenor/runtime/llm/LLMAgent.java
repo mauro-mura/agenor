@@ -1,4 +1,4 @@
-package dev.agenor.runtime.agent;
+package dev.agenor.runtime.llm;
 
 import dev.agenor.core.guardrail.GuardrailContext;
 import dev.agenor.core.guardrail.GuardrailViolationException;
@@ -8,6 +8,7 @@ import dev.agenor.core.memory.MemoryEntry;
 import dev.agenor.core.memory.llm.ContextWindowStrategy;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.guardrail.GuardrailChain;
 import dev.agenor.runtime.memory.llm.ContextWindowStrategies;
 import dev.agenor.core.llm.LLMProvider;

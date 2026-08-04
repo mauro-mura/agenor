@@ -1,4 +1,4 @@
-package dev.agenor.runtime.agent;
+package dev.agenor.runtime.llm;
 
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.MemoryEntry;

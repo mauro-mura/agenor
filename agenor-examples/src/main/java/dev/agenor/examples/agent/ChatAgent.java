@@ -7,7 +7,7 @@ import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.MemoryEntry;
 import dev.agenor.core.memory.MemoryQuery;
 import dev.agenor.core.memory.MemoryScope;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 import dev.agenor.runtime.memory.llm.ContextWindowStrategies;
 
 import java.util.List;

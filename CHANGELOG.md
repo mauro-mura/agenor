@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `submit`/`getPendingRequests`) are source-compatible but must recompile against the new
   return type. See [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
 
+- **`agenor-runtime-llm` extracted as a new module (ADR-027, physical split step 1 of 3)**:
+  `LLMAgent` (renamed `dev.agenor.runtime.agent.LLMAgent` → `dev.agenor.runtime.llm.LLMAgent`
+  — **breaking change**), `memory/llm/*`, `guardrail/*`, and `reflection/DefaultReflectionStrategy`
+  moved out of `agenor-runtime` into `agenor-runtime-llm`. **Migration**: consumers that use
+  `LLMAgent`, guardrails, LLM memory management, or the built-in reflection strategy must add
+  a new `dev.agenor:agenor-runtime-llm` dependency and update the `LLMAgent` import. A pure
+  multi-agent-system consumer with no LLM usage is unaffected and pulls zero new dependencies.
+  See [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
+
 ### Fixed
 
 - **`@AgenorMessageHandler` never fired for direct (point-to-point) messages sent via `sendTo()`/`receiverId`**:

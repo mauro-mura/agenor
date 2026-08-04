@@ -3,7 +3,7 @@ package dev.agenor.runtime.guardrail;
 import dev.agenor.core.Agent;
 import dev.agenor.core.spi.AgentRegistrationExtension;
 import dev.agenor.core.spi.RegistrationContext;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 
 /**
  * Injects the {@code @WithGuardrails} chain and installs telemetry on

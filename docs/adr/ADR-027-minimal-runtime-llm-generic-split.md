@@ -39,7 +39,7 @@ needed to break it.
 | Module | Contents | Depends on |
 |---|---|---|
 | `agenor-runtime` (core) | Agent lifecycle (`BaseAgent`), messaging, directory, scheduler, dialogue (negotiation protocols incl. Contract-Net), base behaviors (`BaseBehavior`, `CyclicBehavior`, `EventDrivenBehavior`, `OneShotBehavior`, `WakerBehavior`, `ReflectionBehavior`), plus six additional packages with zero LLM/ext/scanning coupling: `config`, `directory`, `lifecycle`, `messaging`, `scheduler`, `telemetry` | `agenor-core` |
-| `agenor-runtime-llm` | `agent/LLMAgent.java` (renamed on move, see below), `memory/llm/*` (7 classes), `guardrail/*` (6 classes), `reflection/DefaultReflectionStrategy.java` | `agenor-runtime` |
+| `agenor-runtime-llm` | `agent/LLMAgent.java` (renamed on move, see below), `memory/llm/*` (8 classes), `guardrail/*` (7 classes), `reflection/DefaultReflectionStrategy.java` | `agenor-runtime` |
 | `agenor-runtime-ext` | `memory/InMemoryStore.java`, `filter/*`, `ratelimit/*`, `condition/*`, `persistence/*`, `behavior/composite/*` (3), `behavior/advanced/*` (9, incl. `HumanCheckpointBehavior`), `hitl/*` (5), `knowledge/*` (2) | `agenor-runtime` |
 | `agenor-runtime-scanning` | `discovery/*` (3 classes) | `agenor-runtime`, `agenor-runtime-ext` (for `@Behavior(type=FSM\|PARALLEL\|SEQUENTIAL)` resolution) |
 

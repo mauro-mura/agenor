@@ -4,7 +4,7 @@ import dev.agenor.core.exceptions.AgenorException;
 import dev.agenor.core.guardrail.InputGuardrail;
 import dev.agenor.core.guardrail.OutputGuardrail;
 import dev.agenor.core.guardrail.WithGuardrails;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

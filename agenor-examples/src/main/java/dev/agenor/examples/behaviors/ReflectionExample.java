@@ -7,7 +7,7 @@ import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.reflection.ReflectionConfig;
 import dev.agenor.runtime.AgenorRuntime;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 import dev.agenor.runtime.behavior.ReflectionBehavior;
 import dev.agenor.runtime.memory.InMemoryStore;
 import dev.agenor.runtime.reflection.DefaultReflectionStrategy;

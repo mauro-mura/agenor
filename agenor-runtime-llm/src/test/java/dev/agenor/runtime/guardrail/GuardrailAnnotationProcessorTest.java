@@ -5,7 +5,7 @@ import dev.agenor.core.guardrail.GuardrailResult;
 import dev.agenor.core.guardrail.InputGuardrail;
 import dev.agenor.core.guardrail.OutputGuardrail;
 import dev.agenor.core.guardrail.WithGuardrails;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

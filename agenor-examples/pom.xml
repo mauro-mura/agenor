@@ -67,6 +67,11 @@
 
         <dependency>
             <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-llm</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>dev.agenor</groupId>
             <artifactId>agenor-adapters</artifactId>
         </dependency>
 

@@ -10,7 +10,7 @@ import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.AgenorRuntime;
-import dev.agenor.runtime.agent.LLMAgent;
+import dev.agenor.runtime.llm.LLMAgent;
 import dev.agenor.runtime.guardrail.GuardrailChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
