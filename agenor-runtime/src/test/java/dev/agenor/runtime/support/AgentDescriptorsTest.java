@@ -83,7 +83,13 @@ class AgentDescriptorsTest {
         AgentDescriptor viaHelper = AgentDescriptors.create(SampleAnnotatedAgent.class, agent);
         AgentDescriptor viaFactory = agentFactory.createDescriptor(SampleAnnotatedAgent.class, agent);
 
-        assertThat(viaFactory).isEqualTo(viaHelper);
+        // registeredAt/lastSeen are independently stamped with Instant.now() by each call
+        // (AgentDescriptor defaults them when unset), so they are excluded here to avoid
+        // flakiness across the two clock reads.
+        assertThat(viaFactory)
+                .usingRecursiveComparison()
+                .ignoringFields("registeredAt", "lastSeen")
+                .isEqualTo(viaHelper);
     }
 
     @Agent(value = "sample-agent", type = "sample-type", capabilities = {"cap-a", "cap-b"}, autoStart = true)
