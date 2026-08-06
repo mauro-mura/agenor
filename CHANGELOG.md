@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`AgenorRuntime.registerAgent(Class<T>)`** — constructs an agent via its no-arg
+  constructor and registers it, the scanning-free default for `Class`-based
+  registration (ADR-027). Unlike `createAgent(Class)`, it has no dependency on the
+  optional `agenor-runtime-scanning` module: no classpath-scanning-based constructor
+  injection, no `@Behavior`/`@AgenorMessageHandler` annotation processing — it exists
+  purely to save a manual `new AgentClass()` before `registerAgent(Agent)` for the
+  common no-arg-constructible case. Agents whose only constructors take arguments must
+  either be constructed manually (see `getAgentContext()`) and passed to
+  `registerAgent(Agent)`, or created via `createAgent(Class)` with
+  `agenor-runtime-scanning` on the classpath. Throws `IllegalArgumentException` (not a
+  raw reflection exception) when the class has no accessible no-arg constructor. See
+  [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
+
 ### Changed
 
 - **BREAKING — `AgenorRuntime.getApprovalService()` now returns `ApprovalHandle` instead of the concrete `ApprovalService` class (ADR-027)**:

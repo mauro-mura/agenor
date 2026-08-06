@@ -324,6 +324,52 @@ public class AgenorRuntime {
     }
 
     /**
+     * Constructs an agent via its no-arg constructor and registers it — the
+     * scanning-free default for {@code Class}-based registration (ADR-027).
+     *
+     * <p>Unlike {@link #createAgent(Class)}, this method has no dependency on the
+     * optional {@code agenor-runtime-scanning} module: it does not use
+     * classpath-scanning-based constructor injection and does not process
+     * {@code @Behavior}/{@code @AgenorMessageHandler} annotations. It exists purely to
+     * save the caller a manual {@code new AgentClass()} before
+     * {@link #registerAgent(dev.agenor.core.Agent)} for the common case of a
+     * no-arg-constructible agent.
+     *
+     * <p>Agents whose only constructors take arguments (id, name, {@link AgentContext},
+     * or injected services) must either be constructed manually — see
+     * {@link #getAgentContext()} — and passed to {@link #registerAgent(dev.agenor.core.Agent)},
+     * or created via {@link #createAgent(Class)} with {@code agenor-runtime-scanning} on
+     * the classpath for full constructor injection.
+     *
+     * @param agentClass the agent class; must expose an accessible no-arg constructor
+     * @return the constructed and registered agent instance
+     * @throws IllegalArgumentException if {@code agentClass} has no accessible no-arg
+     *                                  constructor
+     * @throws RuntimeException         if construction otherwise fails (e.g. the
+     *                                  constructor throws)
+     * @since 0.25.0
+     */
+    public <T extends dev.agenor.core.Agent> T registerAgent(Class<T> agentClass) {
+        Objects.requireNonNull(agentClass, "agentClass cannot be null");
+        T agent;
+        try {
+            var constructor = agentClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            agent = constructor.newInstance();
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(
+                    "registerAgent(Class) requires a no-arg constructor on "
+                    + agentClass.getName() + ". For agents needing constructor arguments, "
+                    + "construct manually (see getAgentContext()) and call registerAgent(Agent), "
+                    + "or use createAgent(Class) with agenor-runtime-scanning on the classpath.", e);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to construct agent: " + agentClass.getName(), e);
+        }
+        registerAgent(agent);
+        return agent;
+    }
+
+    /**
      * Create an agent from a class using annotation discovery
      */
     public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) {

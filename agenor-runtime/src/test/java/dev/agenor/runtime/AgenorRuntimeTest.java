@@ -80,7 +80,7 @@ class AgenorRuntimeTest {
     @Test
     void registerAgent_shouldThrowForNullAgent() {
         AgenorRuntime runtime = AgenorRuntime.builder().build();
-        assertThatThrownBy(() -> runtime.registerAgent(null))
+        assertThatThrownBy(() -> runtime.registerAgent((dev.agenor.core.Agent) null))
             .isInstanceOf(NullPointerException.class)
             .hasMessageContaining("Agent cannot be null");
     }
@@ -174,6 +174,63 @@ class AgenorRuntimeTest {
         AgenorRuntime runtime = AgenorRuntime.builder().build();
         assertThatCode(() -> runtime.unregisterAgent("does-not-exist").join())
             .doesNotThrowAnyException();
+    }
+
+    // ========== registerAgent(Class) ==========
+    // Scanning-free default (ADR-027 task 5) — this test class lives in agenor-runtime,
+    // so agenor-runtime-scanning is genuinely absent from its test classpath: these
+    // tests prove the method works with zero optional modules present.
+
+    @Test
+    void registerAgent_class_shouldConstructAndRegisterAgent() {
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
+
+        TestAgent agent = runtime.registerAgent(TestAgent.class);
+
+        assertThat(agent).isNotNull();
+        assertThat(runtime.getAgents()).contains(agent);
+        assertThat(agent.getMessageDispatcher()).isNotNull();
+    }
+
+    @Test
+    void registerAgent_class_shouldGenerateRandomIdWhenAgentIdIsNullOrBlank() {
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
+
+        NoIdAgent agent = runtime.registerAgent(NoIdAgent.class);
+
+        assertThat(agent).isNotNull();
+        assertThat(runtime.getAgents()).hasSize(1).contains(agent);
+    }
+
+    @Test
+    void registerAgent_class_shouldThrowIllegalArgumentWhenNoNoArgConstructor() {
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
+
+        assertThatThrownBy(() -> runtime.registerAgent(LLMMemoryAwareTestAgent.class))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("no-arg constructor");
+    }
+
+    @Test
+    void registerAgent_class_shouldThrowForNullClass() {
+        AgenorRuntime runtime = AgenorRuntime.builder().build();
+        assertThatThrownBy(() -> runtime.registerAgent((Class<TestAgent>) null))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessageContaining("agentClass cannot be null");
+    }
+
+    @Test
+    void registerAgent_class_startAndStop() {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+
+        TestAgent agent = runtimeUnderTest.registerAgent(TestAgent.class);
+        runtimeUnderTest.start().join();
+        assertThat(runtimeUnderTest.isRunning()).isTrue();
+        assertThat(agent.isRunning()).isTrue();
+
+        runtimeUnderTest.stop().join();
+        assertThat(runtimeUnderTest.isRunning()).isFalse();
+        assertThat(agent.isRunning()).isFalse();
     }
 
     // ========== GETTERS ==========
