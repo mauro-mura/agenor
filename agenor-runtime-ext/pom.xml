@@ -11,9 +11,9 @@
         <version>0.25.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>agenor-runtime-llm</artifactId>
-    <name>Agenor Runtime LLM</name>
-    <description>LLM-specific runtime implementations (LLMAgent, LLM memory management, guardrails, reflection) for Agenor Framework (see ADR-027)</description>
+    <artifactId>agenor-runtime-ext</artifactId>
+    <name>Agenor Runtime Extensions</name>
+    <description>Generic multi-agent runtime extensions (filtering, rate limiting, conditions, persistence, composite/advanced behaviors, human-in-the-loop, knowledge, in-memory store) for Agenor Framework (see ADR-027)</description>
 
     <dependencies>
         <dependency>
@@ -25,16 +25,10 @@
             <artifactId>agenor-runtime</artifactId>
         </dependency>
 
-        <!-- ContentPolicyGuardrail parses YAML policy files -->
         <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
-        </dependency>
-
-        <!-- LLMAgentTest / DefaultLLMMemoryManagerTest / LLMMemoryIntegrationTest use InMemoryStore -->
-        <dependency>
-            <groupId>dev.agenor</groupId>
-            <artifactId>agenor-runtime-ext</artifactId>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>3.10.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -47,7 +41,7 @@
 	            <configuration>
 	                <archive>
 	                    <manifestEntries>
-	                        <Automatic-Module-Name>dev.agenor.runtime.llm</Automatic-Module-Name>
+	                        <Automatic-Module-Name>dev.agenor.runtime.ext</Automatic-Module-Name>
 	                    </manifestEntries>
 	                </archive>
 	            </configuration>

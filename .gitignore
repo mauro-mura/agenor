@@ -79,3 +79,6 @@ $RECYCLE.BIN/
 ## AI Coding Assistants ###
 CLAUDE.md
 .claude/
+
+## Graphify
+graphify-out/

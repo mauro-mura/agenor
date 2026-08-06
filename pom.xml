@@ -36,6 +36,8 @@
         <module>agenor-core</module>
         <module>agenor-runtime</module>
         <module>agenor-runtime-llm</module>
+        <module>agenor-runtime-ext</module>
+        <module>agenor-runtime-scanning</module>
         <module>agenor-adapters</module>
         <module>agenor-adapters-persistence</module>
         <module>agenor-spring-boot-starter</module>

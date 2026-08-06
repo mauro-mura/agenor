@@ -27,6 +27,13 @@
             <artifactId>agenor-runtime</artifactId>
         </dependency>
 
+        <!-- MessageSnifferAgentTest / SnifferSupportTest use TopicFilter -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-ext</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- CLI Framework -->
         <dependency>
             <groupId>info.picocli</groupId>

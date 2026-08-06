@@ -16,15 +16,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import dev.agenor.core.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.messaging.MessageDispatcher;
+import dev.agenor.core.memory.MemoryEntry;
+import dev.agenor.core.memory.MemoryQuery;
 import dev.agenor.core.memory.MemoryScope;
 import dev.agenor.core.memory.MemoryStats;
+import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.runtime.behavior.OneShotBehavior;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.runtime.memory.InMemoryStore;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 
@@ -166,172 +170,136 @@ class BaseAgentTest {
     @Test
     @DisplayName("Should store and recall short-term memory")
     void testShortTermMemory() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberShort("key1", "value1").join();
+        agent.rememberShort("key1", "value1").join();
 
-            Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
+        Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
 
-            assertThat(recalled).isPresent();
-            assertThat(recalled.get()).isEqualTo("value1");
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(recalled).isPresent();
+        assertThat(recalled.get()).isEqualTo("value1");
     }
 
     @Test
     @DisplayName("Should store short-term memory with TTL")
     void testShortTermWithTTL() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberShort("key1", "value1", Duration.ofHours(1)).join();
+        agent.rememberShort("key1", "value1", Duration.ofHours(1)).join();
 
-            Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
-            assertThat(recalled).isPresent();
-        } finally {
-            memoryStore.shutdown();
-        }
+        Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
+        assertThat(recalled).isPresent();
     }
 
     @Test
     @DisplayName("Should store and recall long-term memory")
     void testLongTermMemory() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberLong("key1", "value1").join();
+        agent.rememberLong("key1", "value1").join();
 
-            Optional<String> recalled = agent.recall("key1", MemoryScope.LONG_TERM).join();
+        Optional<String> recalled = agent.recall("key1", MemoryScope.LONG_TERM).join();
 
-            assertThat(recalled).isPresent();
-            assertThat(recalled.get()).isEqualTo("value1");
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(recalled).isPresent();
+        assertThat(recalled.get()).isEqualTo("value1");
     }
 
     @Test
     @DisplayName("Should store long-term memory with metadata")
     void testLongTermWithMetadata() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            Map<String, Object> metadata = Map.of("category", "test", "priority", 5);
-            agent.rememberLong("key1", "value1", metadata).join();
+        Map<String, Object> metadata = Map.of("category", "test", "priority", 5);
+        agent.rememberLong("key1", "value1", metadata).join();
 
-            Optional<String> recalled = agent.recall("key1", MemoryScope.LONG_TERM).join();
-            assertThat(recalled).isPresent();
-        } finally {
-            memoryStore.shutdown();
-        }
+        Optional<String> recalled = agent.recall("key1", MemoryScope.LONG_TERM).join();
+        assertThat(recalled).isPresent();
     }
 
     @Test
     @DisplayName("Should share memory between agents")
     void testSharedMemory() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         TestAgent agent1 = new TestAgent("agent-1", "Agent 1");
         TestAgent agent2 = new TestAgent("agent-2", "Agent 2");
 
         agent1.setMemoryStore(memoryStore);
         agent2.setMemoryStore(memoryStore);
 
-        try {
-            agent1.shareMemory("task-context", "Processing order #123", "agent-2").join();
+        agent1.shareMemory("task-context", "Processing order #123", "agent-2").join();
 
-            Optional<String> recalled = agent2.recallShared("task-context").join();
+        Optional<String> recalled = agent2.recallShared("task-context").join();
 
-            assertThat(recalled).isPresent();
-            assertThat(recalled.get()).isEqualTo("Processing order #123");
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(recalled).isPresent();
+        assertThat(recalled.get()).isEqualTo("Processing order #123");
     }
 
     @Test
     @DisplayName("Should search memories")
     void testSearchMemory() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberShort("key1", "Hello world").join();
-            agent.rememberShort("key2", "Hello there").join();
-            agent.rememberShort("key3", "Goodbye").join();
+        agent.rememberShort("key1", "Hello world").join();
+        agent.rememberShort("key2", "Hello there").join();
+        agent.rememberShort("key3", "Goodbye").join();
 
-            List<String> results = agent.searchMemory("hello", MemoryScope.SHORT_TERM).join();
+        List<String> results = agent.searchMemory("hello", MemoryScope.SHORT_TERM).join();
 
-            assertThat(results).hasSize(2);
-            assertThat(results).allMatch(s -> s.toLowerCase().contains("hello"));
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(results).hasSize(2);
+        assertThat(results).allMatch(s -> s.toLowerCase().contains("hello"));
     }
 
     @Test
     @DisplayName("Should forget memories")
     void testForgetMemory() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberShort("key1", "value1").join();
-            agent.forget("key1", MemoryScope.SHORT_TERM).join();
+        agent.rememberShort("key1", "value1").join();
+        agent.forget("key1", MemoryScope.SHORT_TERM).join();
 
-            Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
-            assertThat(recalled).isEmpty();
-        } finally {
-            memoryStore.shutdown();
-        }
+        Optional<String> recalled = agent.recall("key1", MemoryScope.SHORT_TERM).join();
+        assertThat(recalled).isEmpty();
     }
 
     @Test
     @DisplayName("Should get memory statistics")
     void testMemoryStats() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         agent.setMemoryStore(memoryStore);
 
-        try {
-            agent.rememberShort("key1", "value1").join();
-            agent.rememberShort("key2", "value2").join();
-            agent.rememberLong("key3", "value3").join();
+        agent.rememberShort("key1", "value1").join();
+        agent.rememberShort("key2", "value2").join();
+        agent.rememberLong("key3", "value3").join();
 
-            MemoryStats stats = agent.getMemoryStats();
+        MemoryStats stats = agent.getMemoryStats();
 
-            assertThat(stats.totalCount()).isEqualTo(3);
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(stats.totalCount()).isEqualTo(3);
     }
 
     @Test
     @DisplayName("Should isolate memories between agents")
     void testMemoryIsolation() {
-        InMemoryStore memoryStore = new InMemoryStore();
+        FakeMemoryStore memoryStore = new FakeMemoryStore();
         TestAgent agent1 = new TestAgent("agent-1", "Agent 1");
         TestAgent agent2 = new TestAgent("agent-2", "Agent 2");
 
         agent1.setMemoryStore(memoryStore);
         agent2.setMemoryStore(memoryStore);
 
-        try {
-            agent1.rememberShort("same-key", "value1").join();
-            agent2.rememberShort("same-key", "value2").join();
+        agent1.rememberShort("same-key", "value1").join();
+        agent2.rememberShort("same-key", "value2").join();
 
-            Optional<String> recalled1 = agent1.recall("same-key", MemoryScope.SHORT_TERM).join();
-            Optional<String> recalled2 = agent2.recall("same-key", MemoryScope.SHORT_TERM).join();
+        Optional<String> recalled1 = agent1.recall("same-key", MemoryScope.SHORT_TERM).join();
+        Optional<String> recalled2 = agent2.recall("same-key", MemoryScope.SHORT_TERM).join();
 
-            assertThat(recalled1.get()).isEqualTo("value1");
-            assertThat(recalled2.get()).isEqualTo("value2");
-        } finally {
-            memoryStore.shutdown();
-        }
+        assertThat(recalled1.get()).isEqualTo("value1");
+        assertThat(recalled2.get()).isEqualTo("value2");
     }
 
     // Test agent implementation
@@ -351,6 +319,75 @@ class BaseAgentTest {
         @Override
         protected void onStop() {
             stopCalled = true;
+        }
+    }
+
+    /**
+     * Minimal {@link MemoryStore} fixture used to test {@link BaseAgent}'s memory
+     * delegation without depending on a specific implementation ({@code InMemoryStore}
+     * lives in {@code agenor-runtime-ext}, a module {@code agenor-runtime} cannot
+     * depend on). {@code InMemoryStore}'s own behavior is covered by its dedicated
+     * test in {@code agenor-runtime-ext}.
+     */
+    static class FakeMemoryStore implements MemoryStore {
+        private final Map<MemoryScope, ConcurrentHashMap<String, MemoryEntry>> byScope =
+                new ConcurrentHashMap<>();
+
+        private ConcurrentHashMap<String, MemoryEntry> scope(MemoryScope scope) {
+            return byScope.computeIfAbsent(scope, s -> new ConcurrentHashMap<>());
+        }
+
+        @Override
+        public CompletableFuture<Void> store(String key, MemoryEntry entry, MemoryScope scope) {
+            scope(scope).put(key, entry);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<Optional<MemoryEntry>> retrieve(String key, MemoryScope scope) {
+            MemoryEntry entry = scope(scope).get(key);
+            if (entry != null && entry.isExpired()) {
+                scope(scope).remove(key);
+                entry = null;
+            }
+            return CompletableFuture.completedFuture(Optional.ofNullable(entry));
+        }
+
+        @Override
+        public CompletableFuture<List<MemoryEntry>> search(MemoryQuery query) {
+            var results = scope(query.scope()).values().stream()
+                    .filter(e -> !e.isExpired())
+                    .filter(e -> !query.hasOwnerFilter() || e.isOwnedBy(query.ownerId()))
+                    .filter(e -> !query.hasTextFilter()
+                            || e.content().toLowerCase().contains(query.text().toLowerCase()))
+                    .limit(query.limit())
+                    .toList();
+            return CompletableFuture.completedFuture(results);
+        }
+
+        @Override
+        public CompletableFuture<Void> delete(String key, MemoryScope scope) {
+            scope(scope).remove(key);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<Void> clear(MemoryScope scope) {
+            scope(scope).clear();
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<List<String>> listKeys(MemoryScope scope) {
+            return CompletableFuture.completedFuture(List.copyOf(scope(scope).keySet()));
+        }
+
+        @Override
+        public MemoryStats getStats() {
+            return MemoryStats.builder()
+                    .shortTermCount(scope(MemoryScope.SHORT_TERM).size())
+                    .longTermCount(scope(MemoryScope.LONG_TERM).size())
+                    .build();
         }
     }
 }

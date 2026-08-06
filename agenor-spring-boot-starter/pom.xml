@@ -42,6 +42,14 @@
             <artifactId>agenor-runtime</artifactId>
         </dependency>
 
+        <!-- agenor runtime-scanning — optional; required only when agenor.agents.base-package
+             (or scanPackage(...)) is used for classpath annotation discovery (ADR-027) -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-scanning</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- agenor adapters — optional; required only when agenor.llm.provider != none -->
         <dependency>
             <groupId>dev.agenor</groupId>

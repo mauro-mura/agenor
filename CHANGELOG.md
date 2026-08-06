@@ -33,6 +33,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   multi-agent-system consumer with no LLM usage is unaffected and pulls zero new dependencies.
   See [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
 
+- **`agenor-runtime-ext` and `agenor-runtime-scanning` extracted as new modules (ADR-027,
+  physical split steps 2 and 3 of 3)**: message filtering, rate limiting, conditions,
+  file-based persistence, composite/advanced behaviors (FSM, parallel, sequential, retry,
+  circuit breaker, batch, scheduled, throttled, conditional, human-checkpoint), the
+  human-in-the-loop implementation (`ApprovalService`, `InMemoryApprovalGate`, approval
+  notifiers), the knowledge store, and `InMemoryStore` moved out of `agenor-runtime` into
+  `agenor-runtime-ext`. Classpath annotation scanning and discovery (`AgentFactory`,
+  `AgentScanner`, `AnnotationProcessor`) moved into `agenor-runtime-scanning`, which depends
+  on `agenor-runtime-ext` for composite/advanced behavior-type resolution. No classes were
+  renamed — every package moved wholesale, so this is **not a breaking change** for code
+  that already depends on the affected `dev.agenor.runtime.*` packages by their existing
+  names. **Migration**: consumers using any of the above (filters, rate limiting,
+  conditions, file persistence, composite/advanced behaviors, HITL, knowledge, `InMemoryStore`)
+  must add a `dev.agenor:agenor-runtime-ext` dependency; consumers relying on
+  `@Agent`/`@Behavior`/`@AgenorMessageHandler` classpath scanning (`scanPackage(...)`,
+  `AgenorRuntime.createAgent(Class)`, or Spring Boot's `agenor.agents.base-package`) must
+  add `dev.agenor:agenor-runtime-scanning` (declared `optional` in
+  `agenor-spring-boot-starter`, matching the existing adapter opt-in pattern from ADR-018).
+  A pure multi-agent-system consumer using only `registerAgent(...)` with no filtering,
+  rate limiting, HITL, or scanning is unaffected and pulls zero new dependencies. See
+  [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
+
 ### Fixed
 
 - **`@AgenorMessageHandler` never fired for direct (point-to-point) messages sent via `sendTo()`/`receiverId`**:
