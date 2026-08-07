@@ -1,20 +1,21 @@
-package dev.agenor.runtime.behavior;
+package dev.agenor.runtime.behavior.advanced;
 
-import dev.agenor.core.condition.Condition;
-import dev.agenor.core.telemetry.AgenorTelemetry;
-import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.runtime.behavior.advanced.ConditionalBehavior;
-import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
-import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import dev.agenor.core.condition.Condition;
+import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.directory.InMemoryAgentDirectory;
+import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
+import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 
 /**
  * Unit tests for ConditionalBehavior

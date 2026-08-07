@@ -1,4 +1,4 @@
-package dev.agenor.runtime.hitl;
+package dev.agenor.runtime.behavior.advanced;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,7 +20,8 @@ import dev.agenor.core.hitl.ApprovalDecision;
 import dev.agenor.core.hitl.ApprovalRequest;
 import dev.agenor.core.hitl.ApprovalTimeoutException;
 import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.runtime.behavior.advanced.HumanCheckpointBehavior;
+import dev.agenor.runtime.hitl.ApprovalService;
+import dev.agenor.runtime.hitl.InMemoryApprovalGate;
 
 @DisplayName("HumanCheckpointBehavior")
 class HumanCheckpointBehaviorTest {

@@ -66,7 +66,7 @@ public class InMemoryApprovalGate implements ApprovalGate {
      *
      * @param scheduler scheduler used for timeout callbacks
      */
-    InMemoryApprovalGate(ScheduledExecutorService scheduler) {
+    public InMemoryApprovalGate(ScheduledExecutorService scheduler) {
         this.scheduler = scheduler;
     }
 
