@@ -25,6 +25,7 @@ import dev.agenor.core.hitl.ApprovalHandle;
 import dev.agenor.core.hitl.NoopApprovalHandle;
 import dev.agenor.core.spi.AgentDiscoveryEngine;
 import dev.agenor.core.spi.AgentRegistrationExtension;
+import dev.agenor.core.spi.BehaviorAnnotationExtension;
 import dev.agenor.core.spi.DefaultLLMMemoryManagerProvider;
 import dev.agenor.core.spi.HitlSupportProvider;
 import dev.agenor.core.spi.RegistrationContext;
@@ -42,6 +43,7 @@ import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.annotation.AgentAnnotationProcessor;
 import dev.agenor.runtime.config.DefaultConfigurationLoader;
 import dev.agenor.runtime.directory.CompositeAgentDirectory;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
@@ -76,6 +78,12 @@ public class AgenorRuntime {
     private final Optional<AgentDiscoveryEngine> discoveryEngine;
     private final Optional<HitlSupportProvider> hitlSupportProvider;
     private final Optional<DefaultLLMMemoryManagerProvider> llmMemoryManagerProvider;
+    private final Optional<BehaviorAnnotationExtension> behaviorAnnotationExtension;
+
+    // Always available regardless of which optional modules are present — handles
+    // @AgenorMessageHandler and the core @Behavior types directly, delegates ext-only
+    // types to behaviorAnnotationExtension when present (ADR-027 amendment)
+    private final AgentAnnotationProcessor annotationProcessor;
 
     private final LifecycleManager lifecycleManager;
 
@@ -130,6 +138,8 @@ public class AgenorRuntime {
         this.discoveryEngine = ServiceLoader.load(AgentDiscoveryEngine.class).findFirst();
         this.hitlSupportProvider = ServiceLoader.load(HitlSupportProvider.class).findFirst();
         this.llmMemoryManagerProvider = ServiceLoader.load(DefaultLLMMemoryManagerProvider.class).findFirst();
+        this.behaviorAnnotationExtension = ServiceLoader.load(BehaviorAnnotationExtension.class).findFirst();
+        this.annotationProcessor = new AgentAnnotationProcessor(messageDispatcher, behaviorAnnotationExtension);
 
         this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
                 builder.llmMemoryManagerFactory :
@@ -324,52 +334,6 @@ public class AgenorRuntime {
     }
 
     /**
-     * Constructs an agent via its no-arg constructor and registers it — the
-     * scanning-free default for {@code Class}-based registration (ADR-027).
-     *
-     * <p>Unlike {@link #createAgent(Class)}, this method has no dependency on the
-     * optional {@code agenor-runtime-scanning} module: it does not use
-     * classpath-scanning-based constructor injection and does not process
-     * {@code @Behavior}/{@code @AgenorMessageHandler} annotations. It exists purely to
-     * save the caller a manual {@code new AgentClass()} before
-     * {@link #registerAgent(dev.agenor.core.Agent)} for the common case of a
-     * no-arg-constructible agent.
-     *
-     * <p>Agents whose only constructors take arguments (id, name, {@link AgentContext},
-     * or injected services) must either be constructed manually — see
-     * {@link #getAgentContext()} — and passed to {@link #registerAgent(dev.agenor.core.Agent)},
-     * or created via {@link #createAgent(Class)} with {@code agenor-runtime-scanning} on
-     * the classpath for full constructor injection.
-     *
-     * @param agentClass the agent class; must expose an accessible no-arg constructor
-     * @return the constructed and registered agent instance
-     * @throws IllegalArgumentException if {@code agentClass} has no accessible no-arg
-     *                                  constructor
-     * @throws RuntimeException         if construction otherwise fails (e.g. the
-     *                                  constructor throws)
-     * @since 0.25.0
-     */
-    public <T extends dev.agenor.core.Agent> T registerAgent(Class<T> agentClass) {
-        Objects.requireNonNull(agentClass, "agentClass cannot be null");
-        T agent;
-        try {
-            var constructor = agentClass.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            agent = constructor.newInstance();
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(
-                    "registerAgent(Class) requires a no-arg constructor on "
-                    + agentClass.getName() + ". For agents needing constructor arguments, "
-                    + "construct manually (see getAgentContext()) and call registerAgent(Agent), "
-                    + "or use createAgent(Class) with agenor-runtime-scanning on the classpath.", e);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("Failed to construct agent: " + agentClass.getName(), e);
-        }
-        registerAgent(agent);
-        return agent;
-    }
-
-    /**
      * Create an agent from a class using annotation discovery
      */
     public <T extends dev.agenor.core.Agent> T createAgent(Class<T> agentClass) {
@@ -383,7 +347,7 @@ public class AgenorRuntime {
 
             // Process annotations if runtime is already started
             if (running) {
-                engine.processAnnotations(agent);
+                annotationProcessor.processAnnotations(agent);
             }
 
             return agent;
@@ -572,22 +536,24 @@ public class AgenorRuntime {
     /**
      * Process annotations for all registered agents.
      *
-     * <p>Silently no-ops when {@code agenor-runtime-scanning} is absent (logged once),
-     * rather than failing {@link #start()} for scanning-free applications that have
-     * no annotated agents.
+     * <p>Runs unconditionally regardless of which optional modules are present —
+     * {@code @AgenorMessageHandler} and the core {@code @Behavior} types have no
+     * optional-module dependency. An ext-only {@code @Behavior} type used without
+     * {@code agenor-runtime-ext} on the classpath fails {@link #start()} entirely
+     * (see {@link AgentAnnotationProcessor}) rather than being skipped for just that
+     * agent — a missing module is an application-wide configuration error, not a
+     * per-agent one.
      */
     private void processAgentAnnotations() {
-        if (discoveryEngine.isEmpty()) {
-            log.info("Skipping annotation processing: agenor-runtime-scanning is not on the classpath");
-            return;
-        }
-        AgentDiscoveryEngine engine = discoveryEngine.get();
-
         log.info("Processing annotations for {} agents", agents.size());
 
         for (dev.agenor.core.Agent agent : agents.values()) {
             try {
-                engine.processAnnotations(agent);
+                annotationProcessor.processAnnotations(agent);
+            } catch (IllegalStateException e) {
+                // missing agenor-runtime-ext for an ext-only @Behavior type — fail all
+                // of start(), not just this agent
+                throw e;
             } catch (Exception e) {
                 log.error("Failed to process annotations for agent: {}", agent.getAgentId(), e);
             }

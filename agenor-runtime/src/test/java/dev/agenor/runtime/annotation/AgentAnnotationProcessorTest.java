@@ -1,10 +1,13 @@
-package dev.agenor.runtime.discovery;
+package dev.agenor.runtime.annotation;
+
+import java.util.Optional;
 
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.messaging.TopicSubscriber;
+import dev.agenor.core.spi.BehaviorAnnotationExtension;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,9 +21,15 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Comprehensive tests for AnnotationProcessor
+ * Tests for {@link AgentAnnotationProcessor} covering {@code @AgenorMessageHandler} and
+ * the {@code @Behavior} types handled directly by {@code agenor-runtime} (ONE_SHOT,
+ * CYCLIC, WAKER, EVENT_DRIVEN, CUSTOM) — constructed with no
+ * {@link BehaviorAnnotationExtension}, proving these work with zero optional modules
+ * present. Ext-only behavior types (CONDITIONAL, THROTTLED, BATCH, RETRY, SEQUENTIAL,
+ * PARALLEL, FSM) are covered separately by {@code ExtBehaviorAnnotationExtensionTest}
+ * in {@code agenor-runtime-ext}.
  */
-class AnnotationProcessorTest {
+class AgentAnnotationProcessorTest {
 
     @Mock
     private TopicSubscriber topicSubscriber;
@@ -28,12 +37,12 @@ class AnnotationProcessorTest {
     @Mock
     private Subscription subscription;
 
-    private AnnotationProcessor processor;
+    private AgentAnnotationProcessor processor;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        processor = new AnnotationProcessor(topicSubscriber);
+        processor = new AgentAnnotationProcessor(topicSubscriber, Optional.empty());
 
         when(subscription.subscriptionId()).thenReturn("subscription-id");
         when(topicSubscriber.subscribeTopic(anyString(), any(MessageHandler.class)))
@@ -176,181 +185,17 @@ class AnnotationProcessorTest {
     }
 
     // =========================================================================
-    // CONDITIONAL BEHAVIOR TESTS
+    // EXT-ONLY BEHAVIOR TYPE WITHOUT EXTENSION TESTS
     // =========================================================================
 
     @Test
-    @DisplayName("Should create Conditional behavior with system condition")
-    void shouldCreateConditionalBehaviorWithSystemCondition() {
-        ConditionalSystemAgent agent = spy(new ConditionalSystemAgent());
+    @DisplayName("Should fail loudly for an ext-only behavior type when no extension is present")
+    void shouldThrowIllegalStateForExtOnlyTypeWithoutExtension() {
+        FsmWithoutExtensionAgent agent = spy(new FsmWithoutExtensionAgent());
 
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should create Conditional behavior with time condition")
-    void shouldCreateConditionalBehaviorWithTimeCondition() {
-        ConditionalTimeAgent agent = spy(new ConditionalTimeAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should create Conditional behavior with agent condition")
-    void shouldCreateConditionalBehaviorWithAgentCondition() {
-        ConditionalAgentAgent agent = spy(new ConditionalAgentAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should parse AND compound conditions")
-    void shouldParseAndConditions() {
-        ConditionalAndAgent agent = spy(new ConditionalAndAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should parse OR compound conditions")
-    void shouldParseOrConditions() {
-        ConditionalOrAgent agent = spy(new ConditionalOrAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should skip conditional behavior without condition")
-    void shouldSkipConditionalWithoutCondition() {
-        ConditionalNoConditionAgent agent = spy(new ConditionalNoConditionAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // THROTTLED BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Throttled behavior")
-    void shouldCreateThrottledBehavior() {
-        ThrottledAgent agent = spy(new ThrottledAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should skip throttled behavior without rate limit")
-    void shouldSkipThrottledWithoutRateLimit() {
-        ThrottledNoRateLimitAgent agent = spy(new ThrottledNoRateLimitAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent, never()).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // BATCH BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Batch behavior")
-    void shouldCreateBatchBehavior() {
-        BatchAgent agent = spy(new BatchAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should use default batch size when invalid")
-    void shouldUseDefaultBatchSizeWhenInvalid() {
-        BatchInvalidSizeAgent agent = spy(new BatchInvalidSizeAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // RETRY BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Retry behavior")
-    void shouldCreateRetryBehavior() {
-        RetryAgent agent = spy(new RetryAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    @Test
-    @DisplayName("Should use default retry count when invalid")
-    void shouldUseDefaultRetryCountWhenInvalid() {
-        RetryInvalidCountAgent agent = spy(new RetryInvalidCountAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // SEQUENTIAL BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Sequential behavior")
-    void shouldCreateSequentialBehavior() {
-        SequentialAgent agent = spy(new SequentialAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // PARALLEL BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Parallel behavior")
-    void shouldCreateParallelBehavior() {
-        ParallelAgent agent = spy(new ParallelAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // FSM BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create FSM behavior")
-    void shouldCreateFsmBehavior() {
-        FsmAgent agent = spy(new FsmAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
+        assertThatThrownBy(() -> processor.processAnnotations(agent))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("agenor-runtime-ext");
     }
 
     // =========================================================================
@@ -536,152 +381,12 @@ class AnnotationProcessorTest {
         }
     }
 
-    static class ConditionalSystemAgent extends BaseAgent {
-        public ConditionalSystemAgent() {
-            super("cond-sys", "Conditional System");
+    static class FsmWithoutExtensionAgent extends BaseAgent {
+        public FsmWithoutExtensionAgent() {
+            super("fsm-no-ext", "FSM Without Extension");
         }
 
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "system.cpu < 80")
-        public void whenLowCpu() {
-        }
-    }
-
-    static class ConditionalTimeAgent extends BaseAgent {
-        public ConditionalTimeAgent() {
-            super("cond-time", "Conditional Time");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "time.businesshours")
-        public void duringBusinessHours() {
-        }
-    }
-
-    static class ConditionalAgentAgent extends BaseAgent {
-        public ConditionalAgentAgent() {
-            super("cond-agent", "Conditional Agent");
-        }
-
-        @Behavior(type = BehaviorType.CONDITIONAL, condition = "agent.running")
-        public void whenRunning() {
-        }
-    }
-
-    static class ConditionalAndAgent extends BaseAgent {
-        public ConditionalAndAgent() {
-            super("cond-and", "Conditional AND");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "system.healthy AND time.weekday")
-        public void whenHealthyAndWeekday() {
-        }
-    }
-
-    static class ConditionalOrAgent extends BaseAgent {
-        public ConditionalOrAgent() {
-            super("cond-or", "Conditional OR");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL, condition = "time.weekend OR time.businesshours")
-        public void whenWeekendOrBusiness() {
-        }
-    }
-
-    static class ConditionalNoConditionAgent extends BaseAgent {
-        public ConditionalNoConditionAgent() {
-            super("cond-none", "Conditional None");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.CONDITIONAL)
-        public void noCondition() {
-        }
-    }
-
-    static class ThrottledAgent extends BaseAgent {
-        public ThrottledAgent() {
-            super("throttled", "Throttled Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.THROTTLED, rateLimit = "10/s")
-        public void throttledAction() {
-        }
-    }
-
-    static class ThrottledNoRateLimitAgent extends BaseAgent {
-        public ThrottledNoRateLimitAgent() {
-            super("throttled-none", "Throttled None");
-        }
-
-        @Behavior(type = BehaviorType.THROTTLED)
-        public void noRateLimit() {
-        }
-    }
-
-    static class BatchAgent extends BaseAgent {
-        public BatchAgent() {
-            super("batch", "Batch Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.BATCH, batchSize = 5, maxWaitTime = "10s")
-        public void processBatch() {
-        }
-    }
-
-    static class BatchInvalidSizeAgent extends BaseAgent {
-        public BatchInvalidSizeAgent() {
-            super("batch-invalid", "Batch Invalid");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.BATCH, batchSize = -1)
-        public void processBatch() {
-        }
-    }
-
-    static class RetryAgent extends BaseAgent {
-        public RetryAgent() {
-            super("retry", "Retry Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.RETRY, maxRetries = 3, backoff = "exponential", initialDelay = "1s")
-        public void retryAction() {
-        }
-    }
-
-    static class RetryInvalidCountAgent extends BaseAgent {
-        public RetryInvalidCountAgent() {
-            super("retry-invalid", "Retry Invalid");
-        }
-
-        @Behavior(type = BehaviorType.RETRY, maxRetries = -1)
-        public void retryAction() {
-        }
-    }
-
-    static class SequentialAgent extends BaseAgent {
-        public SequentialAgent() {
-            super("sequential", "Sequential Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.SEQUENTIAL, interval = "200ms", stepTimeout = "5s")
-        public void sequentialAction() {
-        }
-    }
-
-    static class ParallelAgent extends BaseAgent {
-        public ParallelAgent() {
-            super("parallel", "Parallel Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.PARALLEL, parallelStrategy = "all", requiredCompletions = 2)
-        public void parallelAction() {
-        }
-    }
-
-    static class FsmAgent extends BaseAgent {
-        public FsmAgent() {
-            super("fsm", "FSM Agent");
-        }
-
-        @Behavior(type = BehaviorType.FSM, fsmInitialState = "IDLE", stateTimeout = "10s")
+        @Behavior(type = BehaviorType.FSM, fsmInitialState = "IDLE")
         public void fsmAction() {
         }
     }

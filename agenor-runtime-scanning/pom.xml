@@ -13,7 +13,7 @@
 
     <artifactId>agenor-runtime-scanning</artifactId>
     <name>Agenor Runtime Scanning</name>
-    <description>Classpath annotation scanning and agent discovery for Agenor Framework, isolated from the core runtime for GraalVM native-image compatibility (ADR-016, ADR-027)</description>
+    <description>Classpath scanning and DI-based agent discovery for Agenor Framework, isolated from the core runtime for GraalVM native-image compatibility (ADR-016, ADR-027)</description>
 
     <dependencies>
         <dependency>
@@ -23,10 +23,6 @@
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-runtime</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>dev.agenor</groupId>
-            <artifactId>agenor-runtime-ext</artifactId>
         </dependency>
     </dependencies>
 

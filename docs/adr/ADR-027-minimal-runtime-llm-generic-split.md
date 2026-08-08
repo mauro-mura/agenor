@@ -41,7 +41,7 @@ needed to break it.
 | `agenor-runtime` (core) | Agent lifecycle (`BaseAgent`), messaging, directory, scheduler, dialogue (negotiation protocols incl. Contract-Net), base behaviors (`BaseBehavior`, `CyclicBehavior`, `EventDrivenBehavior`, `OneShotBehavior`, `WakerBehavior`, `ReflectionBehavior`), plus six additional packages with zero LLM/ext/scanning coupling: `config`, `directory`, `lifecycle`, `messaging`, `scheduler`, `telemetry` | `agenor-core` |
 | `agenor-runtime-llm` | `agent/LLMAgent.java` (renamed on move, see below), `memory/llm/*` (8 classes), `guardrail/*` (7 classes), `reflection/DefaultReflectionStrategy.java` | `agenor-runtime` |
 | `agenor-runtime-ext` | `memory/InMemoryStore.java`, `filter/*`, `ratelimit/*`, `condition/*`, `persistence/*`, `behavior/composite/*` (3), `behavior/advanced/*` (9, incl. `HumanCheckpointBehavior`), `hitl/*` (5), `knowledge/*` (2) | `agenor-runtime` |
-| `agenor-runtime-scanning` | `discovery/*` (3 classes) | `agenor-runtime`, `agenor-runtime-ext` (for `@Behavior(type=FSM\|PARALLEL\|SEQUENTIAL)` resolution) |
+| `agenor-runtime-scanning` | `discovery/*` (3 classes) | `agenor-runtime` (see Amendment 2026-08-08 — no longer depends on `agenor-runtime-ext`) |
 
 Dependency graph is a flat DAG: `agenor-core → agenor-runtime → {llm, ext} → scanning (→
 ext only)`. No cross-dependency between `llm` and `ext`. A pure-MAS consumer adds zero
@@ -166,6 +166,104 @@ updates, the `agenor-examples` migration (roughly 87 files reference the package
 split), the migration guide, and the version bump/release are deferred to follow-up work
 tracked in the working plan document, following the same phased-implementation pattern
 ADR-026 used for its own deferred `AgenorAgentExecutor` fix.
+
+## Amendment (2026-08-08): unconditional annotation processing, `AnnotationProcessor` split
+
+**Status of this amendment**: Accepted, same status as the parent ADR.
+
+### Problem
+
+The original decision (see "Known limitation carried forward") accepted that
+`processAgentAnnotations()` silently no-ops when `agenor-runtime-scanning` is absent,
+reasoning that annotation processing was inherently tied to the scanning SPI. Reading
+the actual `AnnotationProcessor` implementation post-extraction showed this reasoning
+was wrong: `@AgenorMessageHandler` processing and five of `@Behavior`'s twelve dispatch
+arms (`ONE_SHOT`, `CYCLIC`, `WAKER`, `EVENT_DRIVEN`, `CUSTOM`) use only classes already
+in `agenor-runtime` core — `AnnotationProcessor` ended up gated behind the scanning SPI
+purely because of its historical package location (`discovery/*`), not because of any
+real dependency. Consequence: every manually-registered agent using
+`registerAgent(Agent)` — including every example in `agenor-examples`, e.g.
+`PingPongExample`, which uses `@Behavior(type=CYCLIC)` and `@AgenorMessageHandler` with
+zero classpath scanning — silently lost annotation processing if
+`agenor-runtime-scanning` happened to be absent from the classpath, with only a log line
+as evidence.
+
+### Decision
+
+1. `dev.agenor.core.spi.AgentDiscoveryEngine` loses its `processAnnotations(Agent)`
+   method — it becomes a pure discovery/DI SPI (`initialize`, `scanForAgents`,
+   `createAgents`, `createAgent`, `addService`).
+2. `AnnotationProcessor` (formerly `agenor-runtime-scanning`) is split by actual
+   dependency, the same axis this ADR already used for the module split itself:
+   - `dev.agenor.runtime.annotation.AgentAnnotationProcessor` (new, in `agenor-runtime`)
+     handles `@AgenorMessageHandler` (all of it) and `@Behavior` for
+     `ONE_SHOT`/`CYCLIC`/`WAKER`/`EVENT_DRIVEN`/`CUSTOM`. It has no optional-module
+     dependency and needs no `ServiceLoader` indirection for these cases.
+   - A new SPI, `dev.agenor.core.spi.BehaviorAnnotationExtension` (in `agenor-core`),
+     covers the remaining `@Behavior` types (`CONDITIONAL`, `THROTTLED`, `BATCH`,
+     `RETRY`, `SEQUENTIAL`, `PARALLEL`, `FSM`), whose implementation classes live in
+     `agenor-runtime-ext`. Implemented by
+     `dev.agenor.runtime.behavior.advanced.ExtBehaviorAnnotationExtension` in
+     `agenor-runtime-ext`.
+3. `AgenorRuntime.processAgentAnnotations()` becomes **unconditional** — it always runs
+   for every registered agent during `start()`, regardless of which optional modules are
+   present. Unlike every other ADR-027 SPI seam (which silently no-ops when its module is
+   absent, because absence is an expected, benign configuration for a scanning-free app),
+   using an `agenor-runtime-ext`-only `@Behavior` type without `agenor-runtime-ext`
+   present is a hard `IllegalStateException` naming the missing module, and fails
+   `start()` in its entirety (not just the offending agent) — thrown out of `start()`.
+   Rationale for this asymmetry: a `@Behavior` annotation names its required type
+   explicitly and is always known at registration time — there is no "maybe this app
+   just doesn't use annotations" ambiguity the way there is for, say, HITL or LLM memory
+   management, whose absence is a legitimate steady state. Failing the whole `start()`
+   rather than just that agent matches the existing hard-fail contract of
+   `createAgent(Class)` without scanning: a missing module is an application-wide
+   configuration error, not a per-agent one.
+4. `AgenorRuntime.createAgent(Class<T>)`'s annotation-processing step no longer routes
+   through `AgentDiscoveryEngine`; it calls the same unconditional
+   `AgentAnnotationProcessor` directly.
+5. `AgenorRuntime.registerAgent(Class<T>)`, added earlier in this same unreleased
+   development cycle as "the scanning-free default for `Class`-based registration," is
+   **removed**. Its own javadoc already described it as existing "purely to save the
+   caller a manual `new AgentClass()`"; with (1)-(4) above, plain
+   `registerAgent(Agent)` plus `@Behavior`/`@AgenorMessageHandler` now works correctly
+   with zero optional modules present, which was this method's original and only
+   justification. It also introduced a `registerAgent(null)` overload-resolution
+   ambiguity against `registerAgent(Agent)`, requiring an explicit cast in one existing
+   test — a self-inflicted wart this removal also cleans up.
+6. As a side effect of (2), `agenor-runtime-scanning` no longer depends on
+   `agenor-runtime-ext` — verified by inspection that `AgentFactory`, `AgentScanner`,
+   and `DefaultAgentDiscoveryEngine` (the only files remaining in that module) never
+   imported any `agenor-runtime-ext` type directly; the dependency existed solely to
+   compile the now-relocated ext-dependent half of `AnnotationProcessor`.
+
+### Consequences
+
+- **Positive**: closes a real bug (annotations silently inert for manually-registered
+  agents without the scanning module), simplifies the module graph
+  (`agenor-runtime-scanning` sheds a dependency), and removes a redundant, already-buggy
+  public method (`registerAgent(Class<T>)`) before it ever shipped.
+- **Negative / trade-off**: `@Behavior` types now have two different failure modes for
+  "required module absent" depending on type — `AgentDiscoveryEngine`-mediated calls
+  (`createAgent(Class)`, `scanPackage`) still fail via `IllegalStateException` naming
+  `agenor-runtime-scanning`; `@Behavior`-annotation-mediated ext-type dispatch fails via
+  a *different* `IllegalStateException` naming `agenor-runtime-ext`. Both are loud,
+  clear failures (no silent no-op in either case) but a developer debugging "why did
+  startup throw" needs to read the message to know which module is missing, rather than
+  there being one universal "scanning absent" error. Judged acceptable: the messages are
+  explicit about which module and why.
+- **Neutral**: this amendment does not change the ADR's four-module target shape or
+  dependency DAG — `agenor-runtime-scanning`'s `agenor-runtime-ext` edge is removed, which
+  is a strict simplification of the previously-decided graph, not a new architectural
+  axis. `CIRCUIT_BREAKER`/`SCHEDULED`/`PIPELINE` remain permanently unsupported via
+  `@Behavior` (pre-existing gap, unchanged by this amendment — they always fell through
+  to `UnsupportedOperationException` regardless of classpath).
+
+### The `Final module set` table (main body of this ADR, above) is updated as follows
+
+`agenor-runtime-scanning`'s `Depends on` column changes from
+`agenor-runtime, agenor-runtime-ext (for @Behavior(type=FSM|PARALLEL|SEQUENTIAL) resolution)`
+to simply `agenor-runtime`.
 
 ## Related ADRs
 

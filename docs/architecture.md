@@ -82,7 +82,8 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 - **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.agenor.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
 - **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
-- **AgentScanner + AnnotationProcessor**: Scans packages for annotated agents/handlers and wires runtime.
+- **AgentScanner + AgentFactory** (`agenor-runtime-scanning`, optional): classpath scanning and DI-based construction for `createAgent(Class)`/`scanPackage(...)`.
+- **AgentAnnotationProcessor** (`agenor-runtime`) + **ExtBehaviorAnnotationExtension** (`agenor-runtime-ext`, optional): wire `@Behavior`/`@AgenorMessageHandler` on any registered agent, independent of classpath scanning. Runs unconditionally; ext-only behavior types (CONDITIONAL, THROTTLED, BATCH, RETRY, SEQUENTIAL, PARALLEL, FSM) fail loudly if `agenor-runtime-ext` is absent.
 - **AgenorRuntime**: Entry point to bootstrap, start, and stop the agent system.
 
 ### Memory

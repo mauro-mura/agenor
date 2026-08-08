@@ -1,147 +1,56 @@
-package dev.agenor.runtime.discovery;
+package dev.agenor.runtime.behavior.advanced;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.time.Duration;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
-import dev.agenor.core.annotations.AgenorMessageHandler;
-import dev.agenor.core.annotations.Behavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Agent;
-import dev.agenor.core.Message;
-import dev.agenor.core.MessageHandler;
-import dev.agenor.core.messaging.TopicSubscriber;
+import dev.agenor.core.BehaviorType;
+import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.composite.CompletionStrategy;
-import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.runtime.behavior.BaseBehavior;
-import dev.agenor.runtime.behavior.CyclicBehavior;
-import dev.agenor.runtime.behavior.EventDrivenBehavior;
-import dev.agenor.runtime.behavior.OneShotBehavior;
-import dev.agenor.runtime.behavior.WakerBehavior;
+import dev.agenor.core.spi.BehaviorAnnotationExtension;
 import dev.agenor.runtime.behavior.composite.FSMBehavior;
 import dev.agenor.runtime.behavior.composite.ParallelBehavior;
 import dev.agenor.runtime.behavior.composite.SequentialBehavior;
 
 /**
- * Processor for handling annotations on agent classes.
- * Creates behaviors and message handlers from annotations.
+ * {@link BehaviorAnnotationExtension} implementation covering the {@code @Behavior}
+ * types whose implementation classes live in {@code agenor-runtime-ext}: CONDITIONAL,
+ * THROTTLED, BATCH, RETRY, SEQUENTIAL, PARALLEL, FSM. Discovered via
+ * {@code META-INF/services} by {@code agenor-runtime}'s core annotation processor.
+ *
+ * @since 0.25.0
  */
-public class AnnotationProcessor {
+public final class ExtBehaviorAnnotationExtension implements BehaviorAnnotationExtension {
 
-    private static final Logger log = LoggerFactory.getLogger(AnnotationProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(ExtBehaviorAnnotationExtension.class);
 
-    private final TopicSubscriber topicSubscriber;
+    private static final Set<BehaviorType> SUPPORTED = EnumSet.of(
+            BehaviorType.CONDITIONAL, BehaviorType.THROTTLED, BehaviorType.BATCH,
+            BehaviorType.RETRY, BehaviorType.SEQUENTIAL, BehaviorType.PARALLEL, BehaviorType.FSM);
 
-    public AnnotationProcessor(TopicSubscriber topicSubscriber) {
-        this.topicSubscriber = topicSubscriber;
+    @Override
+    public boolean supports(BehaviorType type) {
+        return SUPPORTED.contains(type);
     }
 
-    /**
-     * Process all annotations on an agent
-     */
-    public void processAnnotations(Agent agent) {
-        Class<?> agentClass = agent.getClass();
-
-        log.debug("Processing annotations for agent: {} ({})", agent.getAgentName(), agentClass.getName());
-
-        // Process behavior annotations
-        processBehaviorAnnotations(agent, agentClass);
-
-        // Process message handler annotations
-        processMessageHandlerAnnotations(agent, agentClass);
-
-        log.debug("Annotation processing completed for agent: {}", agent.getAgentName());
-    }
-
-    /**
-     * Process @Behavior annotations
-     */
-    private void processBehaviorAnnotations(Agent agent, Class<?> agentClass) {
-        Method[] methods = agentClass.getDeclaredMethods();
-
-        for (Method method : methods) {
-            Behavior behaviorAnnotation = method.getAnnotation(Behavior.class);
-
-            if (behaviorAnnotation != null) {
-                try {
-                    createBehaviorFromAnnotation(agent, method, behaviorAnnotation);
-                } catch (Exception e) {
-                    log.error("Failed to create behavior from annotation for method: {}.{}",
-                             agentClass.getName(), method.getName(), e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Process @AgenorMessageHandler annotations
-     */
-    private void processMessageHandlerAnnotations(Agent agent, Class<?> agentClass) {
-        Method[] methods = agentClass.getDeclaredMethods();
-
-        for (Method method : methods) {
-            AgenorMessageHandler handlerAnnotation = method.getAnnotation(AgenorMessageHandler.class);
-
-            if (handlerAnnotation != null && handlerAnnotation.autoSubscribe()) {
-                try {
-                    createMessageHandlerFromAnnotation(agent, method, handlerAnnotation);
-                } catch (Exception e) {
-                    log.error("Failed to create message handler from annotation for method: {}.{}",
-                             agentClass.getName(), method.getName(), e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Create behavior from @Behavior annotation
-     */
-    private void createBehaviorFromAnnotation(Agent agent, Method method, Behavior annotation) {
-        if (!annotation.autoStart()) {
-            log.debug("Skipping auto-start for behavior method: {}", method.getName());
-            return;
-        }
-
-        // Validate method signature
-        if (!isValidBehaviorMethod(method)) {
-            log.warn("Invalid behavior method signature: {}. Method should be public, non-static, and have no parameters",
-                    method.getName());
-            return;
-        }
-
-        method.setAccessible(true);
-
-        dev.agenor.core.Behavior behavior = switch (annotation.type()) {
-            case ONE_SHOT -> createOneShotBehavior(agent, method, annotation);
-            case CYCLIC -> createCyclicBehavior(agent, method, annotation);
-            case WAKER -> createWakerBehavior(agent, method, annotation);
-            case EVENT_DRIVEN -> createEventDrivenBehavior(agent, method, annotation);
+    @Override
+    public dev.agenor.core.Behavior createBehavior(Agent agent, Method method, Behavior annotation) {
+        return switch (annotation.type()) {
             case CONDITIONAL -> createConditionalBehavior(agent, method, annotation);
             case THROTTLED -> createThrottledBehavior(agent, method, annotation);
             case BATCH -> createBatchBehavior(agent, method, annotation);
             case RETRY -> createRetryBehavior(agent, method, annotation);
-            case CUSTOM -> createCustomBehavior(agent, method, annotation);
             case SEQUENTIAL -> createSequentialBehavior(agent, method, annotation);
             case PARALLEL -> createParallelBehavior(agent, method, annotation);
             case FSM -> createFSMBehavior(agent, method, annotation);
-            default -> throw new UnsupportedOperationException("Behavior type not supported: " + annotation.type());
+            default -> throw new IllegalStateException("Unsupported behavior type: " + annotation.type());
         };
-
-        if (behavior != null) {
-            if (behavior instanceof BaseBehavior baseBehavior) {
-                baseBehavior.setAgent(agent);
-            }
-
-            agent.addBehavior(behavior);
-
-            log.info("Added {} behavior '{}' to agent '{}'",
-                    annotation.type().name().toLowerCase(),
-                    method.getName(),
-                    agent.getAgentName());
-        }
     }
 
     private dev.agenor.core.Behavior createSequentialBehavior(Agent agent, Method method, Behavior annotation) {
@@ -237,7 +146,7 @@ public class AnnotationProcessor {
 
         String behaviorId = generateBehaviorId(agent, method);
 
-        return new dev.agenor.runtime.behavior.advanced.ConditionalBehavior(behaviorId, condition, interval) {
+        return new ConditionalBehavior(behaviorId, condition, interval) {
             @Override
             protected void conditionalAction() {
                 invokeMethod(agent, method);
@@ -259,7 +168,7 @@ public class AnnotationProcessor {
 
         String behaviorId = generateBehaviorId(agent, method);
 
-        return new dev.agenor.runtime.behavior.advanced.ThrottledBehavior(behaviorId, rateLimit, interval, true) {
+        return new ThrottledBehavior(behaviorId, rateLimit, interval, true) {
             @Override
             protected void throttledAction() {
                 invokeMethod(agent, method);
@@ -284,7 +193,7 @@ public class AnnotationProcessor {
         // Note: Batch behaviors should typically be created programmatically in onStart()
         // This creates a placeholder that logs a warning
         final int finalBatchSize = batchSize;
-        return new dev.agenor.runtime.behavior.advanced.BatchBehavior<Object>(behaviorId, finalBatchSize, maxWaitTime) {
+        return new BatchBehavior<Object>(behaviorId, finalBatchSize, maxWaitTime) {
             @Override
             protected void processBatch(List<Object> batch) {
                 log.warn("BatchBehavior '{}' processBatch() not implemented - create behavior programmatically", behaviorId);
@@ -300,12 +209,12 @@ public class AnnotationProcessor {
                 Duration.ofSeconds(1) : parseDuration(annotation.initialDelay());
 
         // Parse backoff strategy
-        dev.agenor.runtime.behavior.advanced.RetryBehavior.BackoffStrategy backoffStrategy;
+        RetryBehavior.BackoffStrategy backoffStrategy;
         try {
-            backoffStrategy = dev.agenor.runtime.behavior.advanced.RetryBehavior.BackoffStrategy.valueOf(backoffStr);
+            backoffStrategy = RetryBehavior.BackoffStrategy.valueOf(backoffStr);
         } catch (IllegalArgumentException e) {
             log.warn("Invalid backoff strategy '{}', using EXPONENTIAL", backoffStr);
-            backoffStrategy = dev.agenor.runtime.behavior.advanced.RetryBehavior.BackoffStrategy.EXPONENTIAL;
+            backoffStrategy = RetryBehavior.BackoffStrategy.EXPONENTIAL;
         }
 
         if (maxRetries < 0) {
@@ -320,7 +229,7 @@ public class AnnotationProcessor {
         // Note: Retry behaviors should typically be created programmatically in onStart()
         // This creates a placeholder that logs a warning
         final int finalMaxRetries = maxRetries;
-        return new dev.agenor.runtime.behavior.advanced.RetryBehavior<Object>(
+        return new RetryBehavior<Object>(
                 behaviorId, finalMaxRetries, backoffStrategy, initialDelay) {
             @Override
             protected Object attemptAction() throws Exception {
@@ -390,98 +299,6 @@ public class AnnotationProcessor {
         return dev.agenor.core.condition.Condition.always();
     }
 
-    /**
-     * Create message handler from @AgenorMessageHandler annotation
-     */
-    private void createMessageHandlerFromAnnotation(Agent agent, Method method, AgenorMessageHandler annotation) {
-        // Validate method signature
-        if (!isValidMessageHandlerMethod(method)) {
-            log.warn("Invalid message handler method signature: {}. Method should be public, non-static, and take a Message parameter",
-                    method.getName());
-            return;
-        }
-
-        method.setAccessible(true);
-        String topic = annotation.value();
-
-        MessageHandler handler = MessageHandler.sync(message -> {
-            try {
-                method.invoke(agent, message);
-            } catch (Exception e) {
-                throw new RuntimeException("Error executing message handler: " + method.getName(), e);
-            }
-        });
-
-        String subscriptionId = topicSubscriber.subscribeTopic(topic, handler).subscriptionId();
-
-        // Also wire the handler to direct (point-to-point) messages addressed to this
-        // agent whose topic matches, so @AgenorMessageHandler works with sendTo()/receiverId
-        // addressing, not just topic pub/sub (see BaseAgent#registerDirectTopicHandler).
-        if (agent instanceof BaseAgent baseAgent) {
-            baseAgent.registerDirectTopicHandler(topic, handler);
-        }
-
-        log.info("Subscribed agent '{}' to topic '{}' (method: {}, subscription: {})",
-                agent.getAgentName(), topic, method.getName(), subscriptionId);
-    }
-
-    private dev.agenor.core.Behavior createOneShotBehavior(Agent agent, Method method, Behavior annotation) {
-        String behaviorId = generateBehaviorId(agent, method);
-
-        return new OneShotBehavior(behaviorId) {
-            @Override
-            protected void action() {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
-    private dev.agenor.core.Behavior createCyclicBehavior(Agent agent, Method method, Behavior annotation) {
-        String behaviorId = generateBehaviorId(agent, method);
-        Duration interval = parseDuration(annotation.interval());
-
-        return new CyclicBehavior(behaviorId, interval) {
-            @Override
-            protected void action() {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
-    private dev.agenor.core.Behavior createWakerBehavior(Agent agent, Method method, Behavior annotation) {
-        String behaviorId = generateBehaviorId(agent, method);
-        Duration initialDelay = parseDuration(annotation.initialDelay());
-
-        // For now, treat waker as delayed one-shot
-        return WakerBehavior.wakeAfter(initialDelay, () -> invokeMethod(agent, method));
-    }
-
-    private dev.agenor.core.Behavior createEventDrivenBehavior(Agent agent, Method method, Behavior annotation) {
-        // Event-driven behaviors typically need a topic - for now, use method name as topic
-        String topic = method.getName().toLowerCase();
-        String behaviorId = generateBehaviorId(agent, method);
-
-        return new EventDrivenBehavior(behaviorId, topic) {
-            @Override
-            protected void handleMessage(Message message) {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
-    private dev.agenor.core.Behavior createCustomBehavior(Agent agent, Method method, Behavior annotation) {
-        // Custom behaviors use the interval as their execution pattern
-        String behaviorId = generateBehaviorId(agent, method);
-        Duration interval = parseDuration(annotation.interval());
-
-        return new CyclicBehavior(behaviorId, interval) {
-            @Override
-            protected void action() {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
     private void invokeMethod(Agent agent, Method method) {
         try {
             method.invoke(agent);
@@ -527,20 +344,5 @@ public class AnnotationProcessor {
             log.warn("Invalid duration format: '{}', using 1 second default", durationString);
             return Duration.ofSeconds(1);
         }
-    }
-
-    private boolean isValidBehaviorMethod(Method method) {
-        return Modifier.isPublic(method.getModifiers()) &&
-               !Modifier.isStatic(method.getModifiers()) &&
-               method.getParameterCount() == 0 &&
-               (method.getReturnType() == void.class || method.getReturnType() == Void.class);
-    }
-
-    private boolean isValidMessageHandlerMethod(Method method) {
-        return Modifier.isPublic(method.getModifiers()) &&
-               !Modifier.isStatic(method.getModifiers()) &&
-               method.getParameterCount() == 1 &&
-               method.getParameterTypes()[0] == Message.class &&
-               (method.getReturnType() == void.class || method.getReturnType() == Void.class);
     }
 }

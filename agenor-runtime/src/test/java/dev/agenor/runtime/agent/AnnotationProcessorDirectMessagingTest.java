@@ -1,10 +1,12 @@
 package dev.agenor.runtime.agent;
 
+import java.util.Optional;
+
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.runtime.annotation.AgentAnnotationProcessor;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import dev.agenor.runtime.discovery.AnnotationProcessor;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,15 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * Verifies that {@link AnnotationProcessor}-wired {@code @AgenorMessageHandler}
+ * Verifies that {@link AgentAnnotationProcessor}-wired {@code @AgenorMessageHandler}
  * methods on a {@link BaseAgent} receive direct (point-to-point) messages sent via
  * {@code sendTo()}, not just {@code publish()}, falling back to
  * {@code onDirectMessage()} only when no handler matches.
  *
- * <p>Split out of {@code BaseAgentDirectMessagingTest} (ADR-027, task 4): the rest of
- * that suite tests {@link BaseAgent}'s direct-messaging dispatch without annotation
- * processing and stays in {@code agenor-runtime}, which cannot depend on
- * {@link AnnotationProcessor} (moved to {@code agenor-runtime-scanning}).
+ * <p>Lives alongside {@code BaseAgentDirectMessagingTest} in {@code agenor-runtime}
+ * (ADR-027 amendment): {@code @AgenorMessageHandler} processing has no optional-module
+ * dependency, so both suites now live in the same module.
  */
 class AnnotationProcessorDirectMessagingTest {
 
@@ -50,7 +51,7 @@ class AnnotationProcessorDirectMessagingTest {
         // Given: an agent with an @AgenorMessageHandler bound to a topic, processed by the runtime
         AnnotatedTestAgent agent = new AnnotatedTestAgent("annotated-agent");
         setupAgent(agent);
-        new AnnotationProcessor(messageDispatcher).processAnnotations(agent);
+        new AgentAnnotationProcessor(messageDispatcher, Optional.empty()).processAnnotations(agent);
         agent.start().join();
 
         // When: a direct message with the matching topic is sent (point-to-point, not pub/sub)
@@ -81,7 +82,7 @@ class AnnotationProcessorDirectMessagingTest {
         // Given: an agent with an @AgenorMessageHandler bound to a different topic
         AnnotatedTestAgent agent = new AnnotatedTestAgent("annotated-agent");
         setupAgent(agent);
-        new AnnotationProcessor(messageDispatcher).processAnnotations(agent);
+        new AgentAnnotationProcessor(messageDispatcher, Optional.empty()).processAnnotations(agent);
         agent.start().join();
 
         // When: a direct message with a non-matching topic is sent

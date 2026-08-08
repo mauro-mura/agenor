@@ -4,6 +4,7 @@ import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.config.ConfigurationException;
 import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
@@ -80,7 +81,7 @@ class AgenorRuntimeTest {
     @Test
     void registerAgent_shouldThrowForNullAgent() {
         AgenorRuntime runtime = AgenorRuntime.builder().build();
-        assertThatThrownBy(() -> runtime.registerAgent((dev.agenor.core.Agent) null))
+        assertThatThrownBy(() -> runtime.registerAgent(null))
             .isInstanceOf(NullPointerException.class)
             .hasMessageContaining("Agent cannot be null");
     }
@@ -174,63 +175,6 @@ class AgenorRuntimeTest {
         AgenorRuntime runtime = AgenorRuntime.builder().build();
         assertThatCode(() -> runtime.unregisterAgent("does-not-exist").join())
             .doesNotThrowAnyException();
-    }
-
-    // ========== registerAgent(Class) ==========
-    // Scanning-free default (ADR-027 task 5) — this test class lives in agenor-runtime,
-    // so agenor-runtime-scanning is genuinely absent from its test classpath: these
-    // tests prove the method works with zero optional modules present.
-
-    @Test
-    void registerAgent_class_shouldConstructAndRegisterAgent() {
-        AgenorRuntime runtime = AgenorRuntime.builder().build();
-
-        TestAgent agent = runtime.registerAgent(TestAgent.class);
-
-        assertThat(agent).isNotNull();
-        assertThat(runtime.getAgents()).contains(agent);
-        assertThat(agent.getMessageDispatcher()).isNotNull();
-    }
-
-    @Test
-    void registerAgent_class_shouldGenerateRandomIdWhenAgentIdIsNullOrBlank() {
-        AgenorRuntime runtime = AgenorRuntime.builder().build();
-
-        NoIdAgent agent = runtime.registerAgent(NoIdAgent.class);
-
-        assertThat(agent).isNotNull();
-        assertThat(runtime.getAgents()).hasSize(1).contains(agent);
-    }
-
-    @Test
-    void registerAgent_class_shouldThrowIllegalArgumentWhenNoNoArgConstructor() {
-        AgenorRuntime runtime = AgenorRuntime.builder().build();
-
-        assertThatThrownBy(() -> runtime.registerAgent(LLMMemoryAwareTestAgent.class))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("no-arg constructor");
-    }
-
-    @Test
-    void registerAgent_class_shouldThrowForNullClass() {
-        AgenorRuntime runtime = AgenorRuntime.builder().build();
-        assertThatThrownBy(() -> runtime.registerAgent((Class<TestAgent>) null))
-            .isInstanceOf(NullPointerException.class)
-            .hasMessageContaining("agentClass cannot be null");
-    }
-
-    @Test
-    void registerAgent_class_startAndStop() {
-        runtimeUnderTest = AgenorRuntime.builder().build();
-
-        TestAgent agent = runtimeUnderTest.registerAgent(TestAgent.class);
-        runtimeUnderTest.start().join();
-        assertThat(runtimeUnderTest.isRunning()).isTrue();
-        assertThat(agent.isRunning()).isTrue();
-
-        runtimeUnderTest.stop().join();
-        assertThat(runtimeUnderTest.isRunning()).isFalse();
-        assertThat(agent.isRunning()).isFalse();
     }
 
     // ========== GETTERS ==========
@@ -533,6 +477,98 @@ class AgenorRuntimeTest {
                 .isEqualTo(1);
     }
 
+    // ========== REQUEST-REPLY / MESSAGE DISPATCH INTEGRATION ==========
+    // Moved from AgenorRuntimeScanningIntegrationTest (ADR-027 amendment): these use
+    // @AgenorMessageHandler on manually-registerAgent(Agent)'d instances, with zero
+    // classpath scanning involved, so they have no scanning-module dependency and now
+    // belong here — this is also the regression-test proof that annotation processing
+    // no longer silently no-ops when agenor-runtime-scanning is absent.
+
+    /**
+     * Correct agent-to-agent request-reply: the requester (a registered agent) subscribes for direct
+     * replies via subscribeRecipient(getAgentId()), publishes the request, then awaits the reply.
+     * The responder can sendTo(requester agentId) because it is registered in the AgentDirectory.
+     */
+    @Test
+    void requestReply_agentToAgent_viaDispatcher_shouldDeliverAndReceiveReply() throws Exception {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+        CountDownLatch replyLatch = new CountDownLatch(1);
+        AtomicReference<Message> received = new AtomicReference<>();
+
+        RequesterAgent requester = new RequesterAgent("rr-requester", replyLatch, received);
+        EchoResponderAgent responder = new EchoResponderAgent("rr-responder-new");
+        runtimeUnderTest.registerAgent(requester);
+        runtimeUnderTest.registerAgent(responder);
+        runtimeUnderTest.start().join();
+
+        requester.doRequestReply();
+
+        assertThat(replyLatch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isNotNull();
+        assertThat(received.get().correlationId()).isEqualTo(requester.lastRequestId());
+        assertThat(received.get().getContent(String.class)).isEqualTo("pong");
+    }
+
+    @Test
+    void messageHandler_shouldReceiveMessagePublishedViaGetMessageDispatcher() throws Exception {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> received = new AtomicReference<>();
+
+        MessageCapturingAgent agent = new MessageCapturingAgent("capture-agent", latch, received);
+        runtimeUnderTest.registerAgent(agent);
+        runtimeUnderTest.start().join();
+
+        runtimeUnderTest.getMessageDispatcher().publish(
+                Message.builder().topic("capture.topic").content("hello").build());
+
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isEqualTo("hello");
+    }
+
+    @Test
+    void getMessageDispatcher_shouldBeTheSameInstanceUsedByAgentHandlers() throws Exception {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> received = new AtomicReference<>();
+
+        MessageCapturingAgent agent = new MessageCapturingAgent("capture-agent-2", latch, received);
+        runtimeUnderTest.registerAgent(agent);
+        runtimeUnderTest.start().join();
+
+        // Agent publishes back on "capture.reply" — subscribe via the same dispatcher
+        AtomicReference<String> reply = new AtomicReference<>();
+        CountDownLatch replyLatch = new CountDownLatch(1);
+        runtimeUnderTest.getMessageDispatcher().subscribeTopic("capture.reply", msg -> {
+            reply.set(msg.getContent(String.class));
+            replyLatch.countDown();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        runtimeUnderTest.getMessageDispatcher().publish(
+                Message.builder().topic("capture.topic").content("ping").build());
+
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).isEqualTo("ping");
+    }
+
+    // ========== BEHAVIOR ANNOTATION / OPTIONAL-MODULE FAILURE ==========
+
+    /**
+     * agenor-runtime's test classpath genuinely has no agenor-runtime-ext (this module
+     * doesn't depend on it), so this proves an ext-only {@code @Behavior} type fails
+     * start() loudly rather than being silently skipped (ADR-027 amendment).
+     */
+    @Test
+    void start_shouldFailWhenExtOnlyBehaviorTypeUsedWithoutAgenorRuntimeExt() {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+        runtimeUnderTest.registerAgent(new FsmWithoutExtensionAgent());
+
+        assertThatThrownBy(() -> runtimeUnderTest.start().join())
+            .hasRootCauseInstanceOf(IllegalStateException.class)
+            .hasStackTraceContaining("agenor-runtime-ext");
+    }
+
     // ========== HELPERS ==========
 
     static class TestAgent extends BaseAgent {
@@ -640,6 +676,85 @@ class AgenorRuntimeTest {
         protected void handleDirectMessage(Message message) {
             captured.set(message.getContent(String.class));
             latch.countDown();
+        }
+    }
+
+    /** Sends a request via the dispatcher request-reply pattern (subscribeRecipient + publish). */
+    static class RequesterAgent extends BaseAgent {
+        private final CountDownLatch latch;
+        private final AtomicReference<Message> received;
+        private volatile String lastRequestId;
+
+        RequesterAgent(String agentId, CountDownLatch latch, AtomicReference<Message> received) {
+            super(agentId, agentId);
+            this.latch = latch;
+            this.received = received;
+        }
+
+        void doRequestReply() {
+            Message request = Message.builder()
+                    .senderId(getAgentId())
+                    .topic("rr.request")
+                    .content("ping")
+                    .build();
+            lastRequestId = request.id();
+
+            getMessageDispatcher()
+                    .subscribeRecipient(getAgentId(), msg -> {
+                        if (request.id().equals(msg.correlationId())) {
+                            received.set(msg);
+                            latch.countDown();
+                        }
+                        return CompletableFuture.completedFuture(null);
+                    });
+            getMessageDispatcher().publish(request);
+        }
+
+        String lastRequestId() { return lastRequestId; }
+    }
+
+    /** Handles "rr.request" topic and replies via getMessageDispatcher().sendTo(). */
+    @Agent("echo-responder-agent")
+    static class EchoResponderAgent extends BaseAgent {
+        EchoResponderAgent(String agentId) {
+            super(agentId, agentId);
+        }
+
+        @AgenorMessageHandler("rr.request")
+        public void onRequest(Message message) {
+            Message reply = message.reply("pong")
+                    .topic("rr.reply")
+                    .build();
+            getMessageDispatcher().sendTo(reply);
+        }
+    }
+
+    @Agent("message-capturing-agent")
+    static class MessageCapturingAgent extends BaseAgent {
+        private final CountDownLatch latch;
+        private final AtomicReference<String> captured;
+
+        MessageCapturingAgent(String agentId, CountDownLatch latch, AtomicReference<String> captured) {
+            super(agentId, agentId);
+            this.latch = latch;
+            this.captured = captured;
+        }
+
+        @AgenorMessageHandler("capture.topic")
+        public void onMessage(Message message) {
+            captured.set(message.getContent(String.class));
+            latch.countDown();
+        }
+    }
+
+    /** No agenor-runtime-ext on this module's test classpath — FSM must fail start() loudly. */
+    static class FsmWithoutExtensionAgent extends BaseAgent {
+        FsmWithoutExtensionAgent() {
+            super("fsm-no-ext-runtime-test", "FSM Without Extension");
+        }
+
+        @dev.agenor.core.annotations.Behavior(type = dev.agenor.core.BehaviorType.FSM, fsmInitialState = "IDLE")
+        public void fsmAction() {
         }
     }
 }

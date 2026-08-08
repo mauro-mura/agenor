@@ -7,14 +7,19 @@ import dev.agenor.core.Agent;
 import dev.agenor.core.context.AgentContext;
 
 /**
- * Optional package-scanning and annotation-processing engine, discovered via
+ * Optional package-scanning and DI-based agent construction engine, discovered via
  * {@link java.util.ServiceLoader}.
  *
  * <p>{@code agenor-runtime} depends on this interface only; the implementation
- * (reflection-based scanning, factory instantiation, annotation processing) lives
- * in {@code agenor-runtime-scanning} and is resolved once at {@code AgenorRuntime}
+ * (reflection-based classpath scanning, factory instantiation) lives in
+ * {@code agenor-runtime-scanning} and is resolved once at {@code AgenorRuntime}
  * construction time. When absent, package-scanning calls fail with a clear
  * {@link IllegalStateException} pointing at the missing module.
+ *
+ * <p>{@code @Behavior}/{@code @AgenorMessageHandler} annotation processing is not part
+ * of this contract — it runs unconditionally in {@code agenor-runtime} regardless of
+ * whether this engine is present; see {@link BehaviorAnnotationExtension} for the
+ * seam covering ext-only behavior types.
  *
  * @since 0.25.0
  */
@@ -51,14 +56,6 @@ public interface AgentDiscoveryEngine {
      * @return the created agent instance
      */
     <T extends Agent> T createAgent(Class<T> agentClass);
-
-    /**
-     * Processes {@code @Behavior} and {@code @AgenorMessageHandler} annotations
-     * on {@code agent}.
-     *
-     * @param agent the agent to process; never {@code null}
-     */
-    void processAnnotations(Agent agent);
 
     /**
      * Registers an additional service instance available for constructor injection.

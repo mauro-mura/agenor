@@ -7,21 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **`AgenorRuntime.registerAgent(Class<T>)`** — constructs an agent via its no-arg
-  constructor and registers it, the scanning-free default for `Class`-based
-  registration (ADR-027). Unlike `createAgent(Class)`, it has no dependency on the
-  optional `agenor-runtime-scanning` module: no classpath-scanning-based constructor
-  injection, no `@Behavior`/`@AgenorMessageHandler` annotation processing — it exists
-  purely to save a manual `new AgentClass()` before `registerAgent(Agent)` for the
-  common no-arg-constructible case. Agents whose only constructors take arguments must
-  either be constructed manually (see `getAgentContext()`) and passed to
-  `registerAgent(Agent)`, or created via `createAgent(Class)` with
-  `agenor-runtime-scanning` on the classpath. Throws `IllegalArgumentException` (not a
-  raw reflection exception) when the class has no accessible no-arg constructor. See
-  [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
-
 ### Changed
 
 - **BREAKING — `AgenorRuntime.getApprovalService()` now returns `ApprovalHandle` instead of the concrete `ApprovalService` class (ADR-027)**:
@@ -54,10 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   circuit breaker, batch, scheduled, throttled, conditional, human-checkpoint), the
   human-in-the-loop implementation (`ApprovalService`, `InMemoryApprovalGate`, approval
   notifiers), the knowledge store, and `InMemoryStore` moved out of `agenor-runtime` into
-  `agenor-runtime-ext`. Classpath annotation scanning and discovery (`AgentFactory`,
-  `AgentScanner`, `AnnotationProcessor`) moved into `agenor-runtime-scanning`, which depends
-  on `agenor-runtime-ext` for composite/advanced behavior-type resolution. No classes were
-  renamed — every package moved wholesale, so this is **not a breaking change** for code
+  `agenor-runtime-ext`. Classpath scanning and DI-based discovery (`AgentFactory`,
+  `AgentScanner`) moved into `agenor-runtime-scanning`, which depends only on
+  `agenor-runtime` (see the annotation-processing fix below — `agenor-runtime-scanning` no
+  longer needs `agenor-runtime-ext`). No classes were renamed — every package moved
+  wholesale, so this is **not a breaking change** for code
   that already depends on the affected `dev.agenor.runtime.*` packages by their existing
   names. **Migration**: consumers using any of the above (filters, rate limiting,
   conditions, file persistence, composite/advanced behaviors, HITL, knowledge, `InMemoryStore`)
@@ -71,6 +57,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
 
 ### Fixed
+
+- **`@Behavior`/`@AgenorMessageHandler` silently inert for manually-registered agents when `agenor-runtime-scanning` was absent (ADR-027 amendment)**:
+  annotation processing was gated behind the `AgentDiscoveryEngine` SPI purely because of
+  `AnnotationProcessor`'s historical package location, even though it never used classpath
+  scanning — the practical effect was that any `registerAgent(Agent)`-registered agent
+  (including every example in `agenor-examples`) lost `@Behavior`/`@AgenorMessageHandler`
+  processing without `agenor-runtime-scanning` on the classpath, with only a log line as
+  evidence. Split `AnnotationProcessor` by actual dependency: a new
+  `dev.agenor.runtime.annotation.AgentAnnotationProcessor` in `agenor-runtime` now handles
+  `@AgenorMessageHandler` and the `ONE_SHOT`/`CYCLIC`/`WAKER`/`EVENT_DRIVEN`/`CUSTOM`
+  `@Behavior` types unconditionally, with no optional-module dependency. The remaining
+  types (`CONDITIONAL`/`THROTTLED`/`BATCH`/`RETRY`/`SEQUENTIAL`/`PARALLEL`/`FSM`, whose
+  implementation classes live in `agenor-runtime-ext`) are covered by a new
+  `dev.agenor.core.spi.BehaviorAnnotationExtension` SPI, implemented by
+  `agenor-runtime-ext`. Unlike other ADR-027 SPI seams, using one of these ext-only types
+  without `agenor-runtime-ext` present now fails `start()` loudly with a clear
+  `IllegalStateException` rather than silently skipping — a `@Behavior` annotation names
+  its required type explicitly, so there's no legitimate "app doesn't use annotations"
+  ambiguity to justify a silent no-op. **Also removed**: `AgenorRuntime.registerAgent(Class<T>)`
+  (added earlier this same unreleased cycle) — its only purpose was working around this
+  bug for `Class`-based registration; with the fix, plain `registerAgent(Agent)` plus
+  annotations works correctly with zero optional modules present, making the extra
+  overload redundant (it also introduced a `registerAgent(null)` overload-resolution
+  ambiguity, now gone). See [ADR-027](docs/adr/ADR-027-minimal-runtime-llm-generic-split.md).
 
 - **`@AgenorMessageHandler` never fired for direct (point-to-point) messages sent via `sendTo()`/`receiverId`**:
   `AnnotationProcessor` only wired annotated handlers onto the topic pub/sub channel
