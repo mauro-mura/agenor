@@ -6,9 +6,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Build Status](https://github.com/mauro-mura/agenor/actions/workflows/build.yml/badge.svg)](https://github.com/mauro-mura/agenor/actions/workflows/build.yml)
 
-> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+> **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
-Agenor is a contemporary multi-agent framework that modernizes the concepts pioneered by JADE, bringing them into the cloud-native era with Java 21, virtual threads, and a pragmatic approach to distributed systems.
+Agenor is a contemporary multi-agent framework for building systems of autonomous agents that coordinate, negotiate, and execute — modernizing the concepts pioneered by JADE for the cloud-native era with Java 21 and virtual threads. LLM-backed reasoning (agenor-runtime-llm) is an optional module, not a prerequisite.
 
 ## 🚀 Vision
 
@@ -115,16 +115,17 @@ public class HelloAgent extends BaseAgent {
 ```java
 public class HelloWorld {
     public static void main(String[] args) {
-        var runtime = AgenorRuntime.builder()
-                .scanPackage("com.example.agents")
-                .build();
-
+        var runtime = AgenorRuntime.builder().build();
+        runtime.registerAgent(new HelloAgent());
         runtime.start();
     }
 }
 ```
 
-> `scanPackage(...)` requires `agenor-runtime-scanning` on the classpath (ADR-027).
+> `registerAgent(...)` works with just `agenor-core` + `agenor-runtime` — no extra module
+> needed. For automatic classpath discovery instead of manual registration, use
+> `.scanPackage(...)` on the builder, which requires adding `agenor-runtime-scanning` to
+> the classpath (ADR-027).
 
 ## 🏗️ Architecture
 
@@ -288,30 +289,40 @@ That's it — `AgenorRuntime` is started and stopped automatically by the Spring
 
 ## 🚀 Features
 
-### Current (MVP)
+### Core — multi-agent coordination (`agenor-core` + `agenor-runtime`)
 - [x] Agent lifecycle management
 - [x] In-memory message passing
 - [x] Local agent directory
-- [x] Annotation-based configuration (agents, behaviors, handlers)
+- [x] Annotation-based agent/behavior/handler declarations (`@Agent`, `@Behavior`, `@AgenorMessageHandler`)
 - [x] Behavior types: Cyclic, One-shot, Event-driven, Waker
+- [x] Dialogue protocol (Request, Query, Contract-Net) — negotiation with no LLM required
+- [x] YAML configuration support
+
+### Optional: LLM integration (`agenor-runtime-llm`)
+- [x] LLM-aware agent (`LLMAgent`) — OpenAI, Anthropic, Ollama providers via `agenor-adapters`
+- [x] Memory management with context window strategies (fixed, sliding, summarization)
+- [x] Reflection pattern (Generate → Critique → Revise)
+- [x] Guardrail layer (content policy, PII redaction, JSON schema, max tokens)
+
+### Optional: extended runtime behaviors & utilities (`agenor-runtime-ext`)
 - [x] Composite behaviors: Sequential, Parallel, FSM
-- [x] Advanced behaviors: Conditional, Throttled
+- [x] Advanced behaviors: Conditional, Throttled, Batch, Retry, Circuit Breaker, Pipeline, Scheduled
 - [x] Message filtering (topic, header, content, predicate, composite)
 - [x] Rate limiting (token bucket, sliding window)
+- [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
 - [x] File-based persistence utilities
-- [x] YAML configuration support
+- [x] Human-in-the-Loop checkpoint
+
+### Optional: classpath scanning & discovery (`agenor-runtime-scanning`)
+- [x] Automatic agent discovery via classpath scanning (`scanPackage(...)`)
+- [x] Isolated from `agenor-runtime` for GraalVM native-image friendliness
+
+### Integrations & tooling (`agenor-adapters`, `agenor-tools`, `agenor-spring-boot-starter`)
+- [x] A2A (Agent-to-Agent) protocol support
+- [x] MCP adapter
 - [x] Web management console
 - [x] CLI tools
-- [x] A2A (Agent-to-Agent) protocol support
-- [x] LLM integration (OpenAI, Anthropic, Ollama)
-- [x] LLM integration with memory management (context window strategies)
-- [x] Dialogue protocol (Request, Query, Contract-Net)
-- [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
-- [x] Reflection Pattern
-- [x] Human-in-the-Loop Checkpoint
-- [x] Guardrail layer
-- [x] MCP adapter
-- [x] Spring Boot 4.0.x autoconfiguration (agenor-spring-boot-starter)
+- [x] Spring Boot 4.0.x autoconfiguration
 
 
 ## 📚 Examples
@@ -330,6 +341,10 @@ mvn exec:java -pl agenor-examples \
 # Level 1 — retry behavior with backoff strategies
 mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.behaviors.RetryExample"
+
+# Level 2 — Contract-Net negotiation (CFP → propose → accept)
+mvn exec:java -pl agenor-examples \
+  -Dexec.mainClass="dev.agenor.examples.dialogue.ContractNetExample"
 
 # Level 5 — e-commerce FSM + parallel validators
 mvn exec:java -pl agenor-examples \
@@ -407,6 +422,16 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 - Cloud-native vs desktop-oriented
 - Interface-first vs monolithic
 - Reactive patterns vs blocking I/O
+
+**Built for coordination, not just generation:**
+- Agents are independent, addressable, long-lived processes — each with its own
+  lifecycle and behavior scheduler, registered in an `AgentDirectory` for discovery
+- Asynchronous messaging (pub/sub topics + direct messaging) is a core primitive, not a
+  side effect of an LLM call
+- Dialogue protocols (Request, Query, Contract-Net) let agents negotiate and delegate
+  tasks to each other — no LLM required to run a negotiation
+- LLM-backed reasoning (`agenor-runtime-llm`) is one optional capability an agent can
+  have, not the mechanism coordination is built on
 
 **vs. Building from Scratch:**
 - Proven multi-agent patterns
