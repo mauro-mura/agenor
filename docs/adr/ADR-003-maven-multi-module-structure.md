@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
-**Last Modified**: 2026-05-17  
+**Last Modified**: 2026-08-09 (module list updated per ADR-027 runtime split)  
 **Authors**: Project Team  
 
 ### Context
@@ -19,7 +19,10 @@ We will use a **Maven Multi-Module structure** with clear module boundaries and 
 agenor/
 ├── agenor-bom/                          # Bill of Materials — version management
 ├── agenor-core/                         # Core interfaces only
-├── agenor-runtime/                      # In-memory implementations
+├── agenor-runtime/                      # In-memory implementations (BaseAgent, messaging, directory, scheduler, dialogue)
+├── agenor-runtime-llm/                  # LLM-aware runtime pieces, split from agenor-runtime (see ADR-027)
+├── agenor-runtime-ext/                  # Extended runtime pieces, split from agenor-runtime (see ADR-027)
+├── agenor-runtime-scanning/             # Classpath scanning / agent discovery, split from agenor-runtime (see ADR-027)
 ├── agenor-adapters/                     # LLM + A2A + MCP + OTel* + Redis*
 ├── agenor-adapters-persistence/         # JDBC directory + JDBC HITL (see ADR-022)
 ├── agenor-spring-boot-starter/          # Spring Boot 4.0.x auto-configuration
@@ -33,17 +36,25 @@ agenor/
 
 1. **agenor-core**: No dependencies (except Jackson for serialization and SLF4J API).
 2. **agenor-runtime**: Depends only on `agenor-core`; no third-party framework deps.
-3. **agenor-adapters**: Depends on `agenor-core`; brings in LLM/A2A/MCP libraries.
+3. **agenor-runtime-llm**: Depends only on `agenor-runtime`. Holds `LLMAgent`, LLM memory
+   management, guardrails, and the default reflection strategy. See ADR-027.
+4. **agenor-runtime-ext**: Depends only on `agenor-runtime`. Holds `InMemoryStore`, filters,
+   rate limiting, conditions, file persistence, composite/advanced behaviors, and HITL. See
+   ADR-027.
+5. **agenor-runtime-scanning**: Depends only on `agenor-runtime` — explicitly **not** on
+   `agenor-runtime-ext`, so scanning stays usable (and GraalVM native-image friendly) without
+   pulling in the extended behavior stack. See ADR-027.
+6. **agenor-adapters**: Depends on `agenor-core`; brings in LLM/A2A/MCP libraries.
    Heavy optional backends (OTel, Lettuce/Redis) are declared `optional=true` per ADR-018.
-4. **agenor-adapters-persistence**: Depends on `agenor-core`; contains HikariCP, Flyway,
+7. **agenor-adapters-persistence**: Depends on `agenor-core`; contains HikariCP, Flyway,
    and JDBC drivers. Placed in a dedicated sub-module per ADR-018 because the persistence
    stack is heavyweight and operationally distinct from the agentic toolkit. See ADR-022.
-5. **agenor-examples**: Can depend on any module.
-6. **agenor-tools**: Depends on `agenor-runtime`.
-7. **agenor-spring-boot-starter**: Depends on `agenor-runtime` (mandatory) and
-   `agenor-adapters` / `agenor-adapters-persistence` (both `optional=true`). All Spring Boot
-   dependencies declared `optional=true` — no Spring Boot on the transitive classpath of
-   non-Spring consumers. See ADR-016.
+8. **agenor-examples**: Can depend on any module.
+9. **agenor-tools**: Depends on `agenor-runtime`.
+10. **agenor-spring-boot-starter**: Depends on `agenor-runtime` (mandatory) and
+    `agenor-adapters` / `agenor-adapters-persistence` (both `optional=true`). All Spring Boot
+    dependencies declared `optional=true` — no Spring Boot on the transitive classpath of
+    non-Spring consumers. See ADR-016.
 
 **Rule for placing new adapter dependencies**: see **ADR-018 — Optional Adapter Dependencies
 Pattern**. In brief: lightweight libs go in `agenor-adapters` compile scope; optional/heavy
@@ -72,6 +83,9 @@ exclusive alternatives gets its own `agenor-adapters-<concern>` sub-module.
     <module>agenor-bom</module>
     <module>agenor-core</module>
     <module>agenor-runtime</module>
+    <module>agenor-runtime-llm</module>        <!-- see ADR-027 -->
+    <module>agenor-runtime-ext</module>        <!-- see ADR-027 -->
+    <module>agenor-runtime-scanning</module>   <!-- see ADR-027 -->
     <module>agenor-adapters</module>
     <module>agenor-adapters-persistence</module>  <!-- see ADR-022 -->
     <module>agenor-spring-boot-starter</module>

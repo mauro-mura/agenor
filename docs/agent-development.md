@@ -8,6 +8,7 @@ This guide shows how to build agents, behaviors, and message handlers with Ageno
 - Add dependencies:
   - `dev.agenor:agenor-core`
   - `dev.agenor:agenor-runtime`
+  - `dev.agenor:agenor-runtime-scanning` — required if you use `scanPackage(...)` for classpath-based agent discovery (ADR-027); not needed if you register agents directly with `registerAgent(Agent)`.
 
 ## Create Your First Agent
 

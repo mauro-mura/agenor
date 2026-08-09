@@ -6,7 +6,7 @@ The LLM subsystem spans three modules:
 
 - **`agenor-core`** (`dev.agenor.core.llm`, `dev.agenor.core.memory.llm`) — provider-agnostic interfaces and records
 - **`agenor-adapters`** (`dev.agenor.adapters.llm`) — concrete provider implementations
-- **`agenor-runtime`** (`dev.agenor.runtime.agent.LLMAgent`, `dev.agenor.runtime.memory.llm`) — LLM-aware base agent and memory management
+- **`agenor-runtime-llm`** (`dev.agenor.runtime.llm.LLMAgent`, `dev.agenor.runtime.memory.llm`) — LLM-aware base agent and memory management, split out of `agenor-runtime` per ADR-027
 
 ---
 
@@ -36,10 +36,10 @@ agenor-adapters / dev.agenor.adapters.llm
 ├── ollama/OllamaProvider.java
 └── ToolConversionUtils.java     # FunctionDefinition → vendor schema
 
-agenor-runtime / dev.agenor.runtime.agent
+agenor-runtime-llm / dev.agenor.runtime.llm
 └── LLMAgent.java                # LLM-powered base agent
 
-agenor-runtime / dev.agenor.runtime.memory.llm
+agenor-runtime-llm / dev.agenor.runtime.memory.llm
 ├── DefaultLLMMemoryManager.java
 ├── ContextWindowStrategies.java # FIXED, SLIDING, SUMMARIZED constants
 ├── FixedWindowStrategy.java
@@ -250,7 +250,7 @@ provider.chat(request).thenAccept(response -> {
 
 ## LLMAgent — Agents Based on LLM
 
-`LLMAgent` (in `agenor-runtime`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
+`LLMAgent` (in `agenor-runtime-llm`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
 
 If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.agenor.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
 
@@ -358,7 +358,7 @@ public class SupportAgent extends LLMAgent {
 
 ### DefaultLLMMemoryManager
 
-`DefaultLLMMemoryManager` is the `LLMMemoryManager` implementation provided by `agenor-runtime`. It wires together a `MemoryStore` (for persistence), a `TokenEstimator`, and an in-memory conversation list.
+`DefaultLLMMemoryManager` is the `LLMMemoryManager` implementation provided by `agenor-runtime-llm`. It wires together a `MemoryStore` (for persistence), a `TokenEstimator`, and an in-memory conversation list.
 
 ```java
 MemoryStore store         = new InMemoryStore();
@@ -383,7 +383,7 @@ List<MemoryEntry> facts = memory.retrieveRelevantContext("user preferences", 500
 
 ### Context Window Strategies
 
-`ContextWindowStrategies` (in `agenor-runtime`) exposes three pre-built strategy constants:
+`ContextWindowStrategies` (in `agenor-runtime-llm`) exposes three pre-built strategy constants:
 
 | Constant | Algorithm | Requires LLM | Best For |
 |----------|-----------|--------------|---------|

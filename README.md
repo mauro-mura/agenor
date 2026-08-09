@@ -124,25 +124,27 @@ public class HelloWorld {
 }
 ```
 
+> `scanPackage(...)` requires `agenor-runtime-scanning` on the classpath (ADR-027).
+
 ## 🏗️ Architecture
 
 Agenor follows a modular, interface-first architecture:
 
 For details, read the Architecture Guide at docs/architecture.md.
 
-```
-┌──────────────────┬─────────────────┬──────────────────────┐
-│   agenor-core    │ agenor-runtime  │  agenor-adapters     │
-│   (interfaces)   │ (basic impls)   │  (integrations)      │
-├──────────────────┼─────────────────┼──────────────────────┤
-│ Agent            │ BaseAgent       │ OpenAIProvider       │
-│ MessageDispatcher│ LLMAgent        │ AnthropicProvider    │
-│ AgentDirectory   │ InMemoryDispatch│ OllamaProvider       │
-│ BehaviorScheduler│ InMemoryDir     │ A2A Adapter          │
-│ LLMProvider      │ SimpleScheduler │ extensible           │
-│ MemoryStore      │ InMemoryStore   │                      │
-└──────────────────┴─────────────────┴──────────────────────┘
-```
+| agenor-core (interfaces) | agenor-runtime (basic impls) | agenor-runtime-llm (LLM-aware) | agenor-runtime-ext (extensions) | agenor-runtime-scanning (classpath scanning) | agenor-adapters (integrations) |
+|---|---|---|---|---|---|
+| Agent | BaseAgent | LLMAgent | InMemoryStore | AgentScanner | OpenAIProvider |
+| MessageDispatcher | InMemoryDispatcher | DefaultLLMMemoryManager | Filters | AgentFactory | AnthropicProvider |
+| AgentDirectory | InMemoryDirectory | Guardrails | RateLimiters | | OllamaProvider |
+| BehaviorScheduler | SimpleScheduler | | Conditions | | A2A Adapter |
+| LLMProvider | | | HITL | | extensible |
+| MemoryStore | | | | | |
+
+`agenor-runtime-llm`, `agenor-runtime-ext`, and `agenor-runtime-scanning` were split out of
+`agenor-runtime` per ADR-027 — a pure multi-agent-system consumer with no LLM, extended
+behavior, or classpath-scanning needs can depend on `agenor-core` + `agenor-runtime` alone.
+See docs/architecture.md for the full breakdown.
 
 ### Core Components
 
@@ -197,6 +199,42 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime</artifactId>
+    <version>0.25.0-SNAPSHOT</version>
+</dependency>
+```
+
+### agenor-runtime-llm
+LLM-aware runtime pieces (ADR-027): `LLMAgent`, LLM memory management, guardrails, reflection
+strategy. Depends on `agenor-runtime`.
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-runtime-llm</artifactId>
+    <version>0.25.0-SNAPSHOT</version>
+</dependency>
+```
+
+### agenor-runtime-ext
+Extended runtime pieces (ADR-027): `InMemoryStore`, filters, rate limiting, conditions, file
+persistence, composite/advanced behaviors, HITL, knowledge. Depends on `agenor-runtime`.
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-runtime-ext</artifactId>
+    <version>0.25.0-SNAPSHOT</version>
+</dependency>
+```
+
+### agenor-runtime-scanning
+Classpath scanning and DI-based agent discovery (ADR-027), isolated so `agenor-runtime` stays
+GraalVM native-image friendly. Required for `scanPackage(...)`. Depends on `agenor-runtime`.
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-runtime-scanning</artifactId>
     <version>0.25.0-SNAPSHOT</version>
 </dependency>
 ```

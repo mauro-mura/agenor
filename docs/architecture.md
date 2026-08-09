@@ -9,20 +9,19 @@ This document describes Agenor's architecture: an interface-first, Java 21+ mult
 
 ## 1. Architectural Overview
 
-Agenor embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Adapters (LLM providers, A2A) live in agenor-adapters.
+Agenor embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Per ADR-027, LLM-aware pieces, extended behaviors/persistence, and classpath scanning were split out of agenor-runtime into agenor-runtime-llm, agenor-runtime-ext, and agenor-runtime-scanning respectively — each depends only on agenor-runtime, so a pure multi-agent-system consumer can depend on agenor-core + agenor-runtime alone. Adapters (LLM providers, A2A) live in agenor-adapters.
 
-| agenor-core (interfaces) | agenor-runtime (in-memory impls) | agenor-adapters (integrations) |
-|--------------------------|----------------------------------|--------------------------------|
-| Agent                    | BaseAgent                        | OpenAIProvider                 |
-| Message                  | LLMAgent                         | AnthropicProvider              |
-| MessageDispatcher        | InMemoryMessageDispatcher        | OllamaProvider                 |
-| directory.AgentDirectory | InMemoryAgentDirectory           | LLMProviderFactory             |
-| Behavior                 | SimpleBehaviorScheduler          | A2A Adapter                    |
-| BehaviorScheduler        | Behaviors (Cyclic…)              | AgenorA2AClient                |
-| LLMProvider              | InMemoryStore                    | AgenorAgentExecutor            |
-| MemoryStore              | DefaultLLMMemoryManager          |                                |
-| Condition                | Filters, RateLimiters            |                                |
-|                          | Conditions, Dialogue             |                                |
+| agenor-core (interfaces) | agenor-runtime (in-memory impls) | agenor-runtime-llm / -ext / -scanning | agenor-adapters (integrations) |
+|--------------------------|----------------------------------|----------------------------------------|--------------------------------|
+| Agent                    | BaseAgent                        | LLMAgent (llm)                         | OpenAIProvider                 |
+| Message                  | InMemoryMessageDispatcher        | DefaultLLMMemoryManager (llm)          | AnthropicProvider              |
+| MessageDispatcher        | InMemoryAgentDirectory           | Guardrails (llm)                       | OllamaProvider                 |
+| directory.AgentDirectory | SimpleBehaviorScheduler          | InMemoryStore (ext)                    | LLMProviderFactory             |
+| Behavior                 | Behaviors (Cyclic…)              | Filters, RateLimiters (ext)            | A2A Adapter                    |
+| BehaviorScheduler        | Dialogue                         | Conditions, HITL (ext)                 | AgenorA2AClient                |
+| LLMProvider              |                                   | AgentScanner, AgentFactory (scanning)  | AgenorAgentExecutor            |
+| MemoryStore              |                                   |                                         |                                |
+| Condition                |                                   |                                         |                                |
 
 
 Design goals:
@@ -36,6 +35,9 @@ Design goals:
 
 - agenor-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
 - agenor-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
+- agenor-runtime-llm (ADR-027): LLM-aware runtime pieces — `LLMAgent`, LLM memory, guardrails, reflection. Depends on agenor-runtime.
+- agenor-runtime-ext (ADR-027): Extended runtime pieces — `InMemoryStore`, filters, rate limiting, conditions, persistence, composite/advanced behaviors, HITL, knowledge. Depends on agenor-runtime.
+- agenor-runtime-scanning (ADR-027): Classpath scanning and DI-based agent discovery, isolated for GraalVM native-image friendliness. Depends on agenor-runtime.
 - agenor-adapters: LLM providers and A2A adapter.
 - agenor-examples: Demonstrates usage patterns and best practices.
 
@@ -55,19 +57,22 @@ Design goals:
 
 These are deliberately small to keep adapters swappable without breaking user code.
 
-## 4. Runtime Implementations (agenor-runtime)
+## 4. Runtime Implementations (agenor-runtime, agenor-runtime-llm, agenor-runtime-ext)
 
 ### Agent Base Classes
 
-- **BaseAgent**: Convenience base class wiring message handling, behavior registration, services injection, and lifecycle hooks (`onStart()` / `onStop()`).
-- **LLMAgent**: Extends `BaseAgent` with conversation history management, context window budgeting, and long-term fact storage. Requires a `LLMMemoryManager` to be injected before start.
+- **BaseAgent** (`agenor-runtime`): Convenience base class wiring message handling, behavior registration, services injection, and lifecycle hooks (`onStart()` / `onStop()`).
+- **LLMAgent** (`agenor-runtime-llm`): Extends `BaseAgent` with conversation history management, context window budgeting, and long-term fact storage. Requires a `LLMMemoryManager` to be injected before start.
 
 ### Behaviors
 
+Base behaviors (`agenor-runtime`):
 - CyclicBehavior: executes at fixed intervals
 - OneShotBehavior: runs once and completes
 - EventDrivenBehavior: reacts to incoming messages/events
 - WakerBehavior: runs after a delay or when a Condition becomes true
+
+Composite/advanced behaviors (`agenor-runtime-ext`, optional — see [AgentAnnotationProcessor / ExtBehaviorAnnotationExtension](#agent-directory-and-scheduler) below):
 - Sequential, Parallel, FSMBehavior: composite execution patterns
 - ConditionalBehavior: gates execution on a `Condition`
 - ThrottledBehavior: wraps any behavior with a `RateLimiter`
@@ -88,14 +93,14 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Memory
 
-- **InMemoryStore**: Thread-safe `MemoryStore` implementation backed by `ConcurrentHashMap`. Stores `MemoryEntry` objects with topic, scope (`SHORT_TERM` / `LONG_TERM`), content, and optional TTL. Does not persist to disk.
-- **DefaultLLMMemoryManager**: Bridges `InMemoryStore` and the LLM conversation history. Supports three context window strategies:
+- **InMemoryStore** (`agenor-runtime-ext`): Thread-safe `MemoryStore` implementation backed by `ConcurrentHashMap`. Stores `MemoryEntry` objects with topic, scope (`SHORT_TERM` / `LONG_TERM`), content, and optional TTL. Does not persist to disk.
+- **DefaultLLMMemoryManager** (`agenor-runtime-llm`): Bridges a `MemoryStore` (e.g. `InMemoryStore`) and the LLM conversation history. Supports three context window strategies:
   - `FixedWindow` — keeps the N most recent messages
   - `SlidingWindow` — keeps messages within a rolling token budget (default)
   - `Summarization` — auto-summarizes old messages using an LLM call
-- **TokenBudgetManager** and **ModelTokenLimits**: Helpers for token estimation and model-specific limits.
+- **TokenBudgetManager** and **ModelTokenLimits** (`agenor-runtime-llm`): Helpers for token estimation and model-specific limits.
 
-### Message Filters
+### Message Filters (`agenor-runtime-ext`)
 
 All filters implement `MessageFilter` (package `dev.agenor.runtime.filter`). Used with `FilterableSubscriber.subscribeFiltered`:
 
@@ -105,14 +110,14 @@ All filters implement `MessageFilter` (package `dev.agenor.runtime.filter`). Use
 - **PredicateFilter**: arbitrary `Predicate<Message>` with optional description
 - **CompositeFilter**: `and`, `or`, `not` combinators
 
-### Rate Limiters
+### Rate Limiters (`agenor-runtime-ext`)
 
 Package `dev.agenor.runtime.ratelimit`, both implement `RateLimiter`:
 
 - **SlidingWindowRateLimiter**: tracks request timestamps in a rolling time window
 - **TokenBucketRateLimiter**: classic token-bucket with configurable refill rate
 
-### Conditions
+### Conditions (`agenor-runtime-ext`)
 
 Package `dev.agenor.runtime.condition`, all produce `Condition` instances:
 
