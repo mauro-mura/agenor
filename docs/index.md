@@ -54,6 +54,8 @@ New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
 |----------|-------------|
 | [MCP Adapter](adapters/mcp.md) | Integrate Model Context Protocol servers into Agenor agents |
 | [Redis Messaging Adapter](adapters/redis.md) | At-least-once distributed messaging via Redis Streams (since 0.21.0) |
+| [JDBC Directory Adapter](adapters/jdbc-directory.md) | Persistent, JDBC-backed agent directory (ADR-022, ADR-023) |
+| [Persistent HITL](hitl-persistence.md) | JDBC-backed Human-in-the-Loop approval queue (ADR-022, ADR-024) |
 
 ## Integrations
 

@@ -33,13 +33,17 @@ Design goals:
 
 ## 2. Modules
 
+- agenor-bom: Bill of Materials for dependency version management across the framework.
 - agenor-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
 - agenor-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
 - agenor-runtime-llm (ADR-027): LLM-aware runtime pieces — `LLMAgent`, LLM memory, guardrails, reflection. Depends on agenor-runtime.
 - agenor-runtime-ext (ADR-027): Extended runtime pieces — `InMemoryStore`, filters, rate limiting, conditions, persistence, composite/advanced behaviors, HITL, knowledge. Depends on agenor-runtime.
 - agenor-runtime-scanning (ADR-027): Classpath scanning and DI-based agent discovery, isolated for GraalVM native-image friendliness. Depends on agenor-runtime.
 - agenor-adapters: LLM providers and A2A adapter.
+- agenor-adapters-persistence (ADR-022): JDBC-backed agent directory and persistent HITL approval queue.
+- agenor-spring-boot-starter: Spring Boot 4.0.x auto-configuration for Agenor.
 - agenor-examples: Demonstrates usage patterns and best practices.
+- agenor-tools: Web console (Jetty) and CLI (PicoCLI) utilities.
 
 ## 3. Core Abstractions (agenor-core)
 
@@ -190,6 +194,18 @@ Key classes in `dev.agenor.adapters.messaging.redis`:
 - **ConsumerLoop**: virtual-thread blocking `XREADGROUP` loop with DLQ after `maxDeliveryAttempts`.
 
 For the full guide see [`docs/adapters/redis.md`](adapters/redis.md).
+
+### JDBC Persistence Adapter (agenor-adapters-persistence)
+
+Implements `dev.agenor.core.directory.AgentDirectory` and the HITL `ApprovalService` on top of a
+relational database via plain JDBC, for deployments that need a durable, queryable agent registry
+and approval queue (ADR-022).
+
+- **JdbcAgentDirectory**: persistent implementation of `AgentDirectory` (ADR-023).
+- **JdbcApprovalGate**: persistent HITL approval queue (ADR-024).
+
+For the full guides see [JDBC Directory Adapter](adapters/jdbc-directory.md) and
+[Persistent HITL](hitl-persistence.md).
 
 ### Extension Points
 
