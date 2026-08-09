@@ -102,13 +102,13 @@ lifecycleManager.addLifecycleListener(new LoggingLifecycleListener());
 
 ## Behaviors
 
-Supported behavior types (see `agenor-runtime` implementations):
-- Cyclic: run at a fixed interval
-- One-shot: run once and complete
-- Event-driven: react to incoming messages
-- Waker: run once after a delay
-- Composite: sequential, parallel, FSM (runtime support utilities)
-- Advanced: conditional, throttled, batch, retry, circuit breaker, scheduled, pipeline
+Supported behavior types:
+- Cyclic: run at a fixed interval (`agenor-runtime`)
+- One-shot: run once and complete (`agenor-runtime`)
+- Event-driven: react to incoming messages (`agenor-runtime`)
+- Waker: run once after a delay (`agenor-runtime`)
+- Composite: sequential, parallel, FSM (`agenor-runtime-ext`, optional — see ADR-027)
+- Advanced: conditional, throttled, batch, retry, circuit breaker, scheduled, pipeline (`agenor-runtime-ext`, optional — see ADR-027)
 
 Annotate public methods on your agent class with `@Behavior` and use `BehaviorType` plus optional timing parameters like `interval` or `delay`.
 

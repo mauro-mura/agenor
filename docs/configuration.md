@@ -217,7 +217,7 @@ var runtime = AgenorRuntime.builder()
 
 ## Persistence
 
-`agenor-runtime` provides a file-based persistence service suitable for development/testing. Persistence is enabled programmatically via `PersistenceManager`.
+`agenor-runtime-ext` provides a file-based persistence service suitable for development/testing (split out of `agenor-runtime` per ADR-027). Persistence is enabled programmatically via `PersistenceManager`.
 
 ---
 

@@ -285,7 +285,7 @@ User input
 | `GuardrailViolationException` | Unchecked, extends `AgenorException` |
 | `@WithGuardrails` | Annotation for declarative chain wiring |
 
-### Implementations (`agenor-runtime` / `dev.agenor.runtime.guardrail`)
+### Implementations (`agenor-runtime-llm` / `dev.agenor.runtime.guardrail`, split out of `agenor-runtime` per ADR-027)
 
 | Class | Type |
 |-------|------|
@@ -328,7 +328,7 @@ Core types (agenor-core / dev.agenor.core.hitl):
 ApprovalRequest, ApprovalDecision (sealed), ApprovalGate, ApprovalNotifier,
 ApprovalTimeoutException, @RequiresApproval
 
-Implementations (agenor-runtime / dev.agenor.runtime.hitl):
+Implementations (agenor-runtime-ext / dev.agenor.runtime.hitl, split out of agenor-runtime per ADR-027):
 InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
 LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
 

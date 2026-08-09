@@ -9,7 +9,7 @@ internal business fields across JVM restarts.
 
 The persistence subsystem spans two modules:
 - **`agenor-core`** (`dev.agenor.core.persistence`) — interfaces and records
-- **`agenor-runtime`** (`dev.agenor.runtime.persistence`) — implementations
+- **`agenor-runtime-ext`** (`dev.agenor.runtime.persistence`) — implementations, split out of `agenor-runtime` per ADR-027
 
 ---
 
@@ -22,7 +22,7 @@ agenor-core / dev.agenor.core.persistence
 ├── PersistenceService.java   # Save/load interface
 └── PersistenceStrategy.java  # When to auto-save (enum)
 
-agenor-runtime / dev.agenor.runtime.persistence
+agenor-runtime-ext / dev.agenor.runtime.persistence
 ├── FilePersistenceService.java  # JSON file-based PersistenceService
 └── PersistenceManager.java      # Auto-save orchestrator, wired by AgenorRuntime
 ```

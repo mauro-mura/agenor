@@ -10,7 +10,7 @@ implementation.
 
 The memory subsystem spans two modules:
 - **`agenor-core`** (`dev.agenor.core.memory`) — interfaces and records
-- **`agenor-runtime`** (`dev.agenor.runtime.memory`) — implementations
+- **`agenor-runtime-ext`** (`dev.agenor.runtime.memory`) — implementations, split out of `agenor-runtime` per ADR-027
 
 For LLM-specific memory (conversation history, context window strategies) see
 [LLM Integration](llm-integration.md).
@@ -28,11 +28,11 @@ agenor-core / dev.agenor.core.memory
 ├── MemoryStats.java       # Stats record
 └── MemoryException.java   # Typed error hierarchy
 
-agenor-runtime / dev.agenor.runtime.memory
+agenor-runtime-ext / dev.agenor.runtime.memory
 └── InMemoryStore.java     # Default MemoryStore implementation
 ```
 
-Agent state persistence classes (`dev.agenor.core.persistence`, `dev.agenor.runtime.persistence`)
+Agent state persistence classes (`dev.agenor.core.persistence`, `dev.agenor.runtime.persistence` in `agenor-runtime-ext`)
 are documented in [persistence.md](persistence.md).
 
 ---
@@ -189,7 +189,7 @@ store.delete("pref:user:theme", MemoryScope.LONG_TERM).join();
 
 ## InMemoryStore
 
-`InMemoryStore` is the default `MemoryStore` implementation in `agenor-runtime`. It stores entries in thread-safe `ConcurrentHashMap` instances, automatically removes expired entries on retrieval and via a background cleanup task, and does **not** persist to disk.
+`InMemoryStore` is the default `MemoryStore` implementation in `agenor-runtime-ext`. It stores entries in thread-safe `ConcurrentHashMap` instances, automatically removes expired entries on retrieval and via a background cleanup task, and does **not** persist to disk.
 
 ```java
 // Default: max 10 000 entries per scope, 60 s cleanup interval

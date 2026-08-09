@@ -2,6 +2,7 @@
 
 **Status**: Accepted
 **Date**: 2026-03-05  
+**Last Modified**: 2026-08-09 (see Amendment below)  
 **Authors**: Project Team
 
 ## Context
@@ -51,3 +52,15 @@ in production use.
   (mitigated by small surface area and clear naming).
 - **Negative**: `agenor-examples` support package requires import updates
   (mechanical, no logic changes).
+
+## Amendment (2026-08-09)
+
+ADR-027 split `agenor-runtime` into `agenor-runtime`, `agenor-runtime-llm`,
+`agenor-runtime-ext`, and `agenor-runtime-scanning`. `InMemoryKnowledgeStore<C>` and
+`QueryExpander` moved to **`agenor-runtime-ext`** (package unchanged:
+`dev.agenor.runtime.knowledge`); they were never part of the LLM-coupling or
+classpath-scanning axes ADR-027 split along, so they landed in the general "extensions"
+module alongside filters, rate limiting, conditions, persistence, and HITL. `KnowledgeStore<C>`,
+`KnowledgeDocument<C>`, and `EmbeddingProvider` remain in `agenor-core` as originally decided;
+`agenor-adapters` embedding providers are unaffected. No further decision change — this
+amendment only corrects the module attribution above.
