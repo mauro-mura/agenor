@@ -81,10 +81,11 @@ nav:
     - Agent Directory: directory.md
     - Message Filtering: message-filtering.md
     - Dialog Protocol: dialog-protocol.md
-  - LLM Integration:
-    - Overview: llm-integration.md
+  - Memory & Persistence:
     - Memory Management: memory.md
     - Agent State Persistence: persistence.md
+  - LLM Integration:
+    - Overview: llm-integration.md
     - Guardrails: guardrails.md
   - Adapters:
     - MCP: adapters/mcp.md
