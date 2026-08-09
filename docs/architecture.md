@@ -1,6 +1,6 @@
 # Architecture Guide
 
-> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+> **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
 This document describes Agenor's architecture: an interface-first, Java 21+ multi-agent framework with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
 

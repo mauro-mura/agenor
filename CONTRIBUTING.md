@@ -1,6 +1,6 @@
 # Contributing to Agenor
 
-> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+> **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
 Thank you for your interest in contributing to Agenor. This document provides guidelines for contributors and explains how to propose changes, report issues, and get your work merged.
 

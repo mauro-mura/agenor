@@ -13,7 +13,7 @@
 
     <artifactId>agenor-spring-boot-starter</artifactId>
     <name>Agenor Spring Boot Starter</name>
-    <description>Spring Boot 4.0.x auto-configuration for agenor - the enterprise-grade agent framework for the JVM</description>
+    <description>Spring Boot 4.0.x auto-configuration for agenor — multi-agent coordination for the JVM</description>
 
     <properties>
         <!-- Pinned here; not in root pom to avoid leaking Spring Boot into non-Spring modules -->

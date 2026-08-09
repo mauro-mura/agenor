@@ -182,6 +182,12 @@ agenor:
 
 ## 📦 Modules
 
+Agenor is an 11-module Maven project.
+
+### agenor-bom
+Bill of Materials — manages dependency versions across all Agenor modules. See
+[Installation](#installation) above for the import snippet.
+
 ### agenor-core
 Core interfaces and abstractions. No implementations, just contracts.
 
@@ -251,6 +257,17 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 </dependency>
 ```
 
+### agenor-adapters-persistence
+JDBC-backed agent directory and persistent Human-in-the-Loop checkpoints (ADR-022, ADR-023).
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-adapters-persistence</artifactId>
+    <version>0.25.0-SNAPSHOT</version>
+</dependency>
+```
+
 ### agenor-tools
 Web Console and CLI tools.
 
@@ -286,6 +303,11 @@ agenor:
 ```
  
 That's it — `AgenorRuntime` is started and stopped automatically by the Spring lifecycle.
+
+### agenor-examples
+Runnable examples organized as a 6-level learning path (Level 0–5), from a first agent
+exchange to production-grade systems. Not published as a dependency — see the
+[📚 Examples](#-examples) section below.
 
 ## 🚀 Features
 

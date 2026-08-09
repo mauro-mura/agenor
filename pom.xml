@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
 
     <name>Agenor Multi-Agent Framework</name>
-    <description>Java meets Agentic - enterprise-grade agent framework for the JVM</description>
+    <description>Multi-agent coordination for the JVM — autonomous agents that negotiate, delegate, and execute, with optional LLM reasoning</description>
     <url>https://agenor.dev</url>
 
     <properties>

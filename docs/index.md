@@ -1,6 +1,6 @@
 # Agenor Documentation
 
-> **Java meets Agentic.** The enterprise-grade agent framework for the JVM.
+> **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
 Agenor lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments. Built on Java 21+ virtual threads, with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
 
