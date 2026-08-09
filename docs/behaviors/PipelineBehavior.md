@@ -4,6 +4,18 @@
 
 **PipelineBehavior** is an advanced behavior pattern in the Agenor Framework that enables multi-stage sequential data processing with type-safe transformations, comprehensive error handling, and detailed monitoring capabilities.
 
+**Type**: `BehaviorType.PIPELINE` | **Package**: `dev.agenor.runtime.behavior.advanced`
+
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> `PipelineBehavior` has no `@Behavior`-annotation shortcut — it's constructed programmatically.
+> Without `agenor-runtime-ext` on the classpath, code referencing this class will not compile.
+
 ---
 
 ## Table of Contents

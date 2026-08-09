@@ -4,6 +4,18 @@ The HITL Checkpoint pattern (ADR-015) suspends agent execution until a human
 operator approves, rejects, or modifies a critical action. Virtual threads
 (ADR-001) park cheaply during the wait — no OS thread is consumed.
 
+> **Module**: `HumanCheckpointBehavior` and the persistent `ApprovalGate`/`ApprovalService`
+> implementations live in `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Unlike `@Behavior`-declared types, HITL fails *soft*: without `agenor-runtime-ext` on the
+> classpath, `runtime.getApprovalService()` returns a `NoopApprovalHandle` whose mutating methods
+> throw `UnsupportedOperationException` at call time, rather than failing at `start()`.
+
 ## Flow
 
 ```

@@ -6,6 +6,16 @@
 
 **Since**: v0.2.0 | **Type**: `BehaviorType.THROTTLED` | **Package**: `dev.agenor.runtime.behavior.advanced`
 
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = THROTTLED)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 ---
 
 ## Key Features

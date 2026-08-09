@@ -4,6 +4,18 @@
 
 **CircuitBreakerBehavior** implements the Circuit Breaker pattern for fault tolerance and cascading failure prevention in distributed systems. It protects your application from repeatedly calling a failing service, allowing it time to recover while providing fallback mechanisms.
 
+**Type**: `BehaviorType.CIRCUIT_BREAKER` | **Package**: `dev.agenor.runtime.behavior.advanced`
+
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> `CircuitBreakerBehavior` has no `@Behavior`-annotation shortcut — it's constructed programmatically.
+> Without `agenor-runtime-ext` on the classpath, code referencing this class will not compile.
+
 ## Pattern Description
 
 The Circuit Breaker pattern acts like an electrical circuit breaker - it "opens" when too many failures occur, preventing further calls to a failing service. After a recovery period, it transitions to a "half-open" state to test if the service has recovered.
@@ -708,7 +720,4 @@ protected String executeAction() throws Exception {
 **Version**: 0.2.0  
 **Since**: Agenor 0.2.0  
 **Status**: Production Ready ✅
-
-=== docs/behaviors/PipelineBehavior.md ===
-# 🔄 PipelineBehavior - Complete Documentation
 

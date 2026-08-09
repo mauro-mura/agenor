@@ -3,6 +3,16 @@
 **Since**: v0.3.0 | **Updated**: v0.14.0  
 **Type**: `BehaviorType.PARALLEL` | **Package**: `dev.agenor.runtime.behavior.composite`
 
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = PARALLEL)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 ## Overview
 
 `ParallelBehavior` executes multiple child behaviors **concurrently** using virtual threads.

@@ -3,6 +3,16 @@
 **Since**: v0.3.0 | **Updated**: v0.14.0  
 **Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.agenor.runtime.behavior.composite`
 
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = SEQUENTIAL)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 ## Overview
 
 `SequentialBehavior` executes child behaviors **one after another**, waiting for each to complete

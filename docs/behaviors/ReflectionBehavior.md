@@ -9,6 +9,12 @@ configured threshold or `maxIterations` is reached.
 
 **Since**: v0.12.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.agenor.runtime.behavior`
 
+> **Module**: `agenor-runtime` — `ReflectionBehavior` itself needs **no extra dependency** beyond
+> the core runtime; it drives any `ReflectionStrategy` (`dev.agenor.core.reflection`). The built-in
+> `DefaultReflectionStrategy` (LLM-backed critique/revise, ADR-012) lives in `agenor-runtime-llm` —
+> supply your own `ReflectionStrategy` implementation to use `ReflectionBehavior` with
+> `agenor-runtime` alone.
+
 ---
 
 ## How It Works

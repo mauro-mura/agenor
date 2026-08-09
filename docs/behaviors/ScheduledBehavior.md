@@ -6,6 +6,16 @@
 
 **Since**: v0.2.0 | **Type**: `BehaviorType.SCHEDULED` | **Package**: `dev.agenor.runtime.behavior.advanced`
 
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> `ScheduledBehavior` has no `@Behavior`-annotation shortcut — it's constructed programmatically.
+> Without `agenor-runtime-ext` on the classpath, code referencing this class will not compile.
+
 ---
 
 ## Key Features
@@ -490,7 +500,7 @@ void testCronParsing() {
 | Metrics | ✅ Built-in | ❌ No | ⚠️ Requires plugin |
 | Thread-Safe | ✅ Yes | ⚠️ Partial | ✅ Yes |
 | Lightweight | ✅ Yes | ✅ Yes | ❌ Heavy |
-| Dependencies | ✅ None | ✅ None | ❌ Many |
+| Dependencies | `agenor-runtime-ext` | ✅ None | ❌ Many |
 
 ---
 

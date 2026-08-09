@@ -6,6 +6,16 @@
 
 **Since**: v0.3.0 | **Type**: `BehaviorType.FSM` | **Package**: `dev.agenor.runtime.behavior.composite` | **Extends**: `CompositeBehavior`
 
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = FSM)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 > **Scheduling note**: `FSMBehavior` has type `BehaviorType.FSM`, which is **not scheduled automatically** by the `SimpleBehaviorScheduler`. You must drive it explicitly — see [Basic Usage](#basic-usage) below.
 
 ---

@@ -67,6 +67,10 @@ The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
 </dependencies>
 ```
 
+`agenor-runtime` alone gives you the core behavior types (`CYCLIC`, `ONE_SHOT`, `EVENT_DRIVEN`,
+`WAKER`). Composite, advanced, and Human-in-the-Loop behaviors require an extra `agenor-runtime-ext`
+dependency (ADR-027) — see the [Behaviors Overview](behaviors/README.md#extended-behaviors-agenor-runtime-ext-adr-027).
+
 ## Next Steps
 
 | I want to… | Go to |

@@ -2,7 +2,9 @@
 
 Behaviors are the primary mechanism for implementing agent logic. Every behavior belongs to exactly one agent and runs under the control of the `BehaviorScheduler`.
 
-## Behavior Types
+## Core Behaviors (`agenor-runtime`)
+
+No extra dependency beyond `agenor-core` + `agenor-runtime`.
 
 | Type | Class | Description |
 |------|-------|-------------|
@@ -10,23 +12,38 @@ Behaviors are the primary mechanism for implementing agent logic. Every behavior
 | `CYCLIC` | `CyclicBehavior` | Executes repeatedly at a fixed interval |
 | `EVENT_DRIVEN` | `EventDrivenBehavior` | Reacts to incoming messages on a topic |
 | `WAKER` | `WakerBehavior` | Wakes up when a condition or time is met |
+| `ONE_SHOT` | `ReflectionBehavior` | Generate → Critique → Revise loop; the built-in `DefaultReflectionStrategy` implementation requires `agenor-runtime-llm`, see [ReflectionBehavior](ReflectionBehavior.md) |
+
+## Extended Behaviors (`agenor-runtime-ext`, ADR-027)
+
+A pure multi-agent-system consumer never needs these. Add the module to use them:
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-runtime-ext</artifactId>
+</dependency>
+```
+
+| Type | Class | Description |
+|------|-------|-------------|
 | `SCHEDULED` | `ScheduledBehavior` | Cron-based time scheduling |
 | `PARALLEL` | `ParallelBehavior` | Runs child behaviors concurrently |
 | `SEQUENTIAL` | `SequentialBehavior` | Runs child behaviors one after another |
 | `FSM` | `FSMBehavior` | Finite State Machine with guarded transitions |
-| `CUSTOM` | `ConditionalBehavior` | Executes only when a `Condition` is satisfied |
-| `CUSTOM` | `ThrottledBehavior` | Rate-limited execution via token bucket |
+| `CONDITIONAL` | `ConditionalBehavior` | Executes only when a `Condition` is satisfied |
+| `THROTTLED` | `ThrottledBehavior` | Rate-limited execution via token bucket |
+| `BATCH` | `BatchBehavior` | Collects items into batches, flushes on size or timeout |
+| `RETRY` | `RetryBehavior` | Automatic retry with configurable back-off |
+| `CIRCUIT_BREAKER` | `CircuitBreakerBehavior` | Fault-tolerance circuit breaker pattern |
+| `PIPELINE` | `PipelineBehavior` | Multi-stage sequential data transformation |
+| — | `HumanCheckpointBehavior` | Human-In-The-Loop Checkpoint, see [hitl.md](hitl.md) |
 
-## Advanced / Pattern Behaviors
-
-| Behavior | Description |
-|----------|-------------|
-| `BatchBehavior` | Collects items into batches, flushes on size or timeout |
-| `CircuitBreakerBehavior` | Fault-tolerance circuit breaker pattern |
-| `PipelineBehavior` | Multi-stage sequential data transformation |
-| `RetryBehavior` | Automatic retry with configurable back-off |
-| `ReflectionBehavior` | Generate → Critique → Revise loop for LLM output self-improvement |
-| `Human-In-The-Loop` | Human-In-The-Loop Checkpoint |
+`CONDITIONAL`, `THROTTLED`, `BATCH`, `RETRY`, `SEQUENTIAL`, `PARALLEL`, and `FSM` can be declared via
+`@Behavior`; without `agenor-runtime-ext` on the classpath this fails at `AgenorRuntime.start()`
+with `IllegalStateException`. `SCHEDULED`, `PIPELINE`, and `CIRCUIT_BREAKER` have no annotation
+shortcut and must be constructed programmatically — without the module, referencing code simply
+won't compile.
 
 ## Quick Reference
 

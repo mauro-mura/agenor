@@ -4,6 +4,18 @@
 
 **RetryBehavior** is an advanced behavior that automatically retries failed operations with configurable backoff strategies. It's essential for building resilient systems that can handle transient failures gracefully.
 
+**Type**: `BehaviorType.RETRY` | **Package**: `dev.agenor.runtime.behavior.advanced`
+
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = RETRY)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 ---
 
 ## ✅ Implementation Status

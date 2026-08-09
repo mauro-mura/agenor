@@ -4,6 +4,18 @@
 
 `BatchBehavior` is an advanced behavior pattern that collects items into batches and processes them efficiently in bulk operations. This is essential for optimizing I/O-bound operations, reducing overhead, and improving throughput in multi-agent systems.
 
+**Type**: `BehaviorType.BATCH` | **Package**: `dev.agenor.runtime.behavior.advanced`
+
+> **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
+> ```xml
+> <dependency>
+>     <groupId>dev.agenor</groupId>
+>     <artifactId>agenor-runtime-ext</artifactId>
+> </dependency>
+> ```
+> Declaring `@Behavior(type = BATCH)` without `agenor-runtime-ext` on the classpath fails at
+> `AgenorRuntime.start()` with `IllegalStateException`.
+
 ## Key Features
 
 ✅ **Dual Trigger System**
