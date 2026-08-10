@@ -24,7 +24,9 @@ theme:
         name: Switch to light mode
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
     - navigation.top
     - content.code.copy
     - search.suggest
@@ -54,46 +56,44 @@ validation:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - Architecture: architecture.md
-  - Configuration: configuration.md
-  - Agent Development: agent-development.md
-  - Behaviors:
-    - Overview: behaviors/README.md
-    - Cyclic: behaviors/CyclicBehavior.md
-    - OneShot: behaviors/OneShotBehavior.md
-    - Waker: behaviors/WakerBehavior.md
-    - Scheduled: behaviors/ScheduledBehavior.md
-    - EventDriven: behaviors/EventDrivenBehavior.md
-    - FSM: behaviors/FSMBehavior.md
-    - Conditional: behaviors/ConditionalBehavior.md
-    - Sequential: behaviors/SequentialBehavior.md
-    - Parallel: behaviors/ParallelBehavior.md
-    - Pipeline: behaviors/PipelineBehavior.md
-    - Batch: behaviors/BatchBehavior.md
-    - Retry: behaviors/RetryBehavior.md
-    - Throttled: behaviors/ThrottledBehavior.md
-    - CircuitBreaker: behaviors/CircuitBreakerBehavior.md
-    - Reflection: behaviors/ReflectionBehavior.md
-    - Human-In-The-Loop: behaviors/hitl.md
-  - Messaging & Directory:
+  - Guides:
+    - Getting Started: getting-started.md
+    - Architecture: architecture.md
+    - Configuration: configuration.md
+    - Agent Development: agent-development.md
+    - Behaviors:
+      - Overview: behaviors/README.md
+      - Cyclic: behaviors/CyclicBehavior.md
+      - OneShot: behaviors/OneShotBehavior.md
+      - Waker: behaviors/WakerBehavior.md
+      - Scheduled: behaviors/ScheduledBehavior.md
+      - EventDriven: behaviors/EventDrivenBehavior.md
+      - FSM: behaviors/FSMBehavior.md
+      - Conditional: behaviors/ConditionalBehavior.md
+      - Sequential: behaviors/SequentialBehavior.md
+      - Parallel: behaviors/ParallelBehavior.md
+      - Pipeline: behaviors/PipelineBehavior.md
+      - Batch: behaviors/BatchBehavior.md
+      - Retry: behaviors/RetryBehavior.md
+      - Throttled: behaviors/ThrottledBehavior.md
+      - CircuitBreaker: behaviors/CircuitBreakerBehavior.md
+      - Reflection: behaviors/ReflectionBehavior.md
+      - Human-In-The-Loop: behaviors/hitl.md
+  - Coordination:
     - Messaging Guide: messaging.md
     - Agent Directory: directory.md
     - Message Filtering: message-filtering.md
     - Dialog Protocol: dialog-protocol.md
-  - Memory & Persistence:
     - Memory Management: memory.md
     - Agent State Persistence: persistence.md
-  - LLM Integration:
-    - Overview: llm-integration.md
+  - LLM & Adapters:
+    - LLM Overview: llm-integration.md
     - Guardrails: guardrails.md
-  - Adapters:
     - MCP: adapters/mcp.md
     - Redis Messaging: adapters/redis.md
     - JDBC Directory: adapters/jdbc-directory.md
     - Persistent HITL: hitl-persistence.md
-  - Observability:
-    - OpenTelemetry: observability.md
+  - Observability: observability.md
   - Integrations:
     - Spring Boot Starter: spring-boot-starter.md
   - API Reference: api/index.html
