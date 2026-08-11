@@ -73,11 +73,35 @@ One behavior type per example, all self-contained.
 
 ### Level 4 — LLM integration
 
-Requires `OPENAI_API_KEY` environment variable.
+These examples run for free by default against a **local Ollama** instance —
+no signup, no API key, no env var needed. This holds even if you also have
+`OPENAI_API_KEY`/`GROQ_API_KEY`/`ANTHROPIC_API_KEY` sitting in your shell:
+local Ollama is always used unless you explicitly opt into a different
+backend with `LLM_BACKEND`.
+
+| `LLM_BACKEND` | Requires | Cost | Notes |
+|----------------|----------|------|-------|
+| _(unset)_ / `ollama` | — | **Free, local** | Default. Install from [ollama.com](https://ollama.com), then `ollama pull llama3.2`. Override host/model with `OLLAMA_BASE_URL`/`OLLAMA_MODEL`. |
+| `groq` | `GROQ_API_KEY` | **Free tier** | Cloud, OpenAI-compatible endpoint, fast, supports function calling. Get a key at [console.groq.com](https://console.groq.com/keys). |
+| `openai` | `OPENAI_API_KEY` | Paid | |
+| `anthropic` | `ANTHROPIC_API_KEY` | Paid | |
+
+Example: `LLM_BACKEND=groq GROQ_API_KEY=... mvn exec:java -pl agenor-examples ...`
+
+Optional model overrides: `OPENAI_MODEL`, `GROQ_MODEL`, `ANTHROPIC_MODEL`,
+`OLLAMA_MODEL`. See `dev.agenor.examples.llm.ExampleLLMProvider` for the
+selection logic used by every example below.
+
+> **Function-calling caveat:** Agenor's Ollama adapter doesn't wire up tool
+> calling, so examples that demonstrate `FunctionDefinition`/tool use
+> (`AIAssistantExample`, the capability/fault-tolerance research-team
+> examples, `McpExample`'s LLM round-trip) will run under the local Ollama
+> default but won't actually invoke tools. Set `LLM_BACKEND=groq` (free) or
+> `LLM_BACKEND=openai`/`anthropic` to see the full function-calling demo.
 
 | Example | Main class | Pattern |
 |---------|-----------|---------|
-| `OpenAIProviderExample` | `dev.agenor.examples.llm.OpenAIProviderExample` | Raw `LLMProvider` API |
+| `LLMProviderExample` | `dev.agenor.examples.llm.LLMProviderExample` | Raw `LLMProvider` API |
 | `CustomerSupportExample` | `dev.agenor.examples.llm.CustomerSupportExample` | LLM-driven intent routing |
 | `AIAssistantExample` | `dev.agenor.examples.llm.tools.AIAssistantExample` | Function calling / tool use |
 | `LLMDirectMessagingExample` | `dev.agenor.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
@@ -132,7 +156,7 @@ dev.agenor.examples
 ├── agent/                     ChatAgentExample
 ├── filtering/                 MessageFilterExample
 ├── dialogue/                  ContractNet, Query, Request protocols
-├── llm/                       LLMDirectMessagingExample, CustomerSupport, OpenAI, AIAssistant
+├── llm/                       LLMDirectMessagingExample, CustomerSupport, LLMProviderExample, AIAssistant
 │   ├── capabilities/          LLMCapabilityDiscoveryExample
 │   └── dynamic_discovery/     LLMFaultToleranceExample
 ├── ecommerce/                 ECommerceApplication

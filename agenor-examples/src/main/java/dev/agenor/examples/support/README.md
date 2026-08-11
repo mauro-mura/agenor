@@ -51,6 +51,15 @@ support/
     └── MockUserDataService.java
 ```
 
+## LLM Backend
+
+`llm/LLMConfig.fromEnvironment()` is off by default — template-based
+responses, no LLM required at all. Set `LLM_BACKEND` to opt in explicitly:
+`ollama` (local, + optional `OLLAMA_BASE_URL`/`OLLAMA_MODEL`), `groq` (free
+tier, + `GROQ_API_KEY`), `openai` (+ `OPENAI_API_KEY`), or `anthropic`
+(+ `ANTHROPIC_API_KEY`). A stray `OPENAI_API_KEY` left in the shell without
+`LLM_BACKEND=openai` never silently enables a paid backend.
+
 ## Run Modes
 
 ```bash

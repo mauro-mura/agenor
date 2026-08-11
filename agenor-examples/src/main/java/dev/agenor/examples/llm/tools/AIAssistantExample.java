@@ -7,12 +7,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.runtime.AgenorRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
+import dev.agenor.examples.llm.ExampleLLMProvider;
 import dev.agenor.core.Message;
 import dev.agenor.core.llm.LLMProvider;
 
@@ -31,14 +30,6 @@ public class AIAssistantExample {
     private static final Logger log = LoggerFactory.getLogger(AIAssistantExample.class);
 
     public static void main(String[] args) throws Exception {
-        // Check for required API key
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("Error: OPENAI_API_KEY environment variable must be set");
-            System.err.println("Get your API key from: https://platform.openai.com/api-keys");
-            System.exit(1);
-        }
-
         AIAssistantExample example = new AIAssistantExample();
         example.runInteractiveDemo();
     }
@@ -46,13 +37,18 @@ public class AIAssistantExample {
     public void runInteractiveDemo() throws Exception {
         log.info("Starting AI Assistant Example");
 
-        // Create AI Assistant with OpenAI provider
-        LLMProvider llmProvider = LLMProviderFactory.openai()
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .modelName(OpenAIProvider.Models.GPT_4_1)
+        // Local Ollama by default; set LLM_BACKEND=groq/openai/anthropic
+        // (+ the matching *_API_KEY) to use a different backend — see ExampleLLMProvider.
+        LLMProvider llmProvider = ExampleLLMProvider.builder()
                 .temperature(0.7)
                 .maxTokens(1500)
                 .build();
+
+        if (!llmProvider.supportsFunctionCalling()) {
+            log.warn("{} doesn't support function calling in this adapter — tool calls "
+                    + "(weather/calculator/time/db) will be ignored. Set LLM_BACKEND=groq or "
+                    + "LLM_BACKEND=openai for the full tool-use demo.", llmProvider.getProviderName());
+        }
 
         // Create and configure Agenor runtime
         AgenorRuntime runtime = AgenorRuntime.builder()
@@ -181,10 +177,7 @@ public class AIAssistantExample {
         // Setup runtime
         AgenorRuntime runtime = AgenorRuntime.builder().build();
 
-        LLMProvider llmProvider = LLMProviderFactory.openai()
-            .apiKey(System.getenv("OPENAI_API_KEY"))
-            .modelName(OpenAIProvider.Models.GPT_4O)
-            .build();
+        LLMProvider llmProvider = ExampleLLMProvider.builder().build();
 
         AIAssistantAgent aiAgent = new AIAssistantAgent(llmProvider);
         runtime.registerAgent(aiAgent);

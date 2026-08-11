@@ -7,7 +7,6 @@ import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -18,7 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * Demonstrates @Agent, @Behavior, @AgenorMessageHandler with agents
  * registered manually via registerAgent() and communicating via direct receiverId
- * addressing (point-to-point), with LLM function calling through OpenAI GPT-4.
+ * addressing (point-to-point). Runs against a free local Ollama instance by
+ * default — see {@link ExampleLLMProvider} for the LLM_BACKEND=groq/openai/anthropic
+ * escalation options.
  *
  * Pattern: manual registration, hardcoded agent IDs, direct messaging.
  * See LLMCapabilityDiscoveryExample for capability-based discovery.
@@ -27,15 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LLMDirectMessagingExample {
 
     public static void main(String[] args) throws Exception {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("ERROR: OPENAI_API_KEY environment variable not set");
-            System.exit(1);
-        }
-
-        LLMProvider llmProvider = OpenAIProvider.builder()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
+        LLMProvider llmProvider = ExampleLLMProvider.builder()
             .temperature(0.7)
             .maxTokens(1500)
             .build();

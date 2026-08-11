@@ -1,14 +1,12 @@
 package dev.agenor.examples.llm;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.llm.*;
 
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Example demonstrating OpenAI provider usage in an Agenor framework.
+ * Example demonstrating the {@link LLMProvider} API in an Agenor framework.
  *
  * Features:
  * - Basic chat
@@ -16,36 +14,32 @@ import java.util.concurrent.CompletableFuture;
  * - Conversation history
  * - Function calling
  * - Error handling
+ *
+ * Runs against a free local Ollama instance by default. Set LLM_BACKEND=groq
+ * (+ GROQ_API_KEY) for a free cloud alternative, or LLM_BACKEND=openai/anthropic
+ * (+ the matching *_API_KEY) if you have paid credits — see {@link ExampleLLMProvider}.
  */
-public class OpenAIProviderExample {
+public class LLMProviderExample {
 
     public static void main(String[] args) {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isEmpty()) {
-            System.err.println("Error: OPENAI_API_KEY environment variable not set");
-            System.exit(1);
-        }
-
-        new OpenAIProviderExample().run(apiKey);
+        new LLMProviderExample().run();
     }
 
-    private void run(String apiKey) {
-        System.out.println("=== Agenor OpenAI Provider Examples ===\n");
+    private void run() {
+        System.out.println("=== Agenor LLM Provider Examples ===\n");
 
-        example1_BasicChat(apiKey);
-        example2_StreamingChat(apiKey);
-        example3_ConversationHistory(apiKey);
-        example4_FunctionCalling(apiKey);
-        example5_InteractiveChatbot(apiKey);
+        example1_BasicChat();
+        example2_StreamingChat();
+        example3_ConversationHistory();
+        example4_FunctionCalling();
+        example5_InteractiveChatbot();
     }
 
     // EXAMPLE 1: Basic single-turn chat
-    private void example1_BasicChat(String apiKey) {
+    private void example1_BasicChat() {
         System.out.println("--- Example 1: Basic Chat ---");
 
-        LLMProvider provider = LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
+        LLMProvider provider = ExampleLLMProvider.builder()
             .temperature(0.7)
             .maxTokens(150)
             .build();
@@ -67,13 +61,10 @@ public class OpenAIProviderExample {
     }
 
     // EXAMPLE 2: Streaming response for real-time UX
-    private void example2_StreamingChat(String apiKey) {
+    private void example2_StreamingChat() {
         System.out.println("--- Example 2: Streaming Chat ---");
 
-        LLMProvider provider = LLMProviderFactory.openai()
-                .apiKey(apiKey)
-                .modelName(OpenAIProvider.Models.GPT_4O_MINI)
-                .build();
+        LLMProvider provider = ExampleLLMProvider.builder().build();
 
         LLMRequest request = LLMRequest.builder()
             .addMessage(LLMMessage.user("Write a haiku about artificial intelligence"))
@@ -97,12 +88,10 @@ public class OpenAIProviderExample {
     }
 
     // EXAMPLE 3: Multi-turn conversation with history
-    private void example3_ConversationHistory(String apiKey) {
+    private void example3_ConversationHistory() {
         System.out.println("--- Example 3: Conversation History ---");
 
-        LLMProvider provider = LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
+        LLMProvider provider = ExampleLLMProvider.builder()
             .maxTokens(200)
             .build();
 
@@ -123,13 +112,15 @@ public class OpenAIProviderExample {
     }
 
     // EXAMPLE 4: Function calling (tool use)
-    private void example4_FunctionCalling(String apiKey) {
+    private void example4_FunctionCalling() {
         System.out.println("--- Example 4: Function Calling ---");
 
-        LLMProvider provider = LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4O)
-            .build();
+        LLMProvider provider = ExampleLLMProvider.builder().build();
+
+        if (!provider.supportsFunctionCalling()) {
+            System.out.println("(" + provider.getProviderName() + " doesn't support function calling in this "
+                + "adapter — set LLM_BACKEND=groq or LLM_BACKEND=openai for a full demo)");
+        }
 
         // Define weather tool
         FunctionDefinition weatherFunction = FunctionDefinition.builder("get_weather")
@@ -161,13 +152,11 @@ public class OpenAIProviderExample {
     }
 
     // EXAMPLE 5: Interactive chatbot
-    private void example5_InteractiveChatbot(String apiKey) {
+    private void example5_InteractiveChatbot() {
         System.out.println("--- Example 5: Interactive Chatbot ---");
         System.out.println("Type 'quit' to exit\n");
 
-        LLMProvider provider = LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
+        LLMProvider provider = ExampleLLMProvider.builder()
             .temperature(0.8)
             .build();
 

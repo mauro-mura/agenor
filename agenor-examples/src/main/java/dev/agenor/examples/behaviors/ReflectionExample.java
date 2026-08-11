@@ -1,6 +1,6 @@
 package dev.agenor.examples.behaviors;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
+import dev.agenor.examples.llm.ExampleLLMProvider;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
@@ -29,10 +29,9 @@ import java.util.concurrent.TimeUnit;
  *   <li>Repeat up to {@code maxIterations} times, then emit the best result.</li>
  * </ol>
  *
- * <p>Requires:
- * <pre>
- * export OPENAI_API_KEY=sk-...
- * </pre>
+ * <p>Runs against a free local Ollama instance by default. Set LLM_BACKEND=groq
+ * (+ GROQ_API_KEY) for a free cloud alternative, or LLM_BACKEND=openai/anthropic
+ * (+ the matching *_API_KEY) if you have paid credits — see {@link ExampleLLMProvider}.
  *
  * <p>Run with:
  * <pre>
@@ -45,26 +44,16 @@ public class ReflectionExample {
     private static final Logger log = LoggerFactory.getLogger(ReflectionExample.class);
 
     public static void main(String[] args) throws Exception {
-      String apiKey = System.getenv("OPENAI_API_KEY");
-      if (apiKey == null || apiKey.isBlank()) {
-          log.error("ERROR: OPENAI_API_KEY environment variable is not set.");
-          System.exit(1);
-      }
-
-      log.info("=== ReflectionBehavior Example (OpenAI) ===");
+      log.info("=== ReflectionBehavior Example ===");
 
       // Two separate provider instances: generation uses higher temperature for
       // creative output; critique uses lower temperature for consistent scoring.
-      LLMProvider generationProvider = LLMProviderFactory.openai()
-              .apiKey(apiKey)
-              .modelName("gpt-4o-mini")
+      LLMProvider generationProvider = ExampleLLMProvider.builder()
               .temperature(0.7)
               .maxTokens(300)
               .build();
 
-      LLMProvider critiqueProvider = LLMProviderFactory.openai()
-              .apiKey(apiKey)
-              .modelName("gpt-4o-mini")
+      LLMProvider critiqueProvider = ExampleLLMProvider.builder()
               .temperature(0.3)
               .maxTokens(500)
               .build();

@@ -114,7 +114,7 @@ public class SupportChatbotExample {
         LLMResponseGenerator llmGenerator = new LLMResponseGenerator(llmConfig);
 
         if (llmGenerator.isLLMEnabled()) {
-            log.info("LLM enabled: {} mode", llmConfig.getProviderType());
+            log.info("LLM enabled: {} mode, model={}", llmConfig.getProviderType(), llmConfig.getModelName());
         } else {
             log.info("LLM not configured - using template-based responses");
         }

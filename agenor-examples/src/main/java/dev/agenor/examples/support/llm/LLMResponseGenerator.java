@@ -33,7 +33,7 @@ public class LLMResponseGenerator {
 
     public LLMResponseGenerator(LLMConfig config) {
         this.provider = config.createProvider();
-        this.modelName = getModelFromConfig(config);
+        this.modelName = config.getModelName();
         this.timeoutSeconds = 30;
 
         if (this.provider != null) {
@@ -185,14 +185,5 @@ public class LLMResponseGenerator {
 
             Could you rephrase your question or choose one of these topics?
             """;
-    }
-
-    private String getModelFromConfig(LLMConfig config) {
-        return switch (config.getProviderType()) {
-            case OPENAI -> "gpt-4o-mini";
-            case ANTHROPIC -> "claude-3-haiku-20240307";
-            case OLLAMA -> "llama3.2";
-            case NONE -> null;
-        };
     }
 }

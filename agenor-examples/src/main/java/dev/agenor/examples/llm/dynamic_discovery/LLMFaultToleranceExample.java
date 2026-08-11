@@ -7,7 +7,7 @@ import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.llm.*;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
+import dev.agenor.examples.llm.ExampleLLMProvider;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -32,19 +32,18 @@ import java.util.stream.Collectors;
 public class LLMFaultToleranceExample {
 
     public static void main(String[] args) throws Exception {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("ERROR: OPENAI_API_KEY environment variable not set");
-            System.exit(1);
-        }
-
-        // Create LLM provider
-        LLMProvider llmProvider = OpenAIProvider.builder()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4_1_MINI)
+        // Local Ollama by default; set LLM_BACKEND=groq/openai/anthropic
+        // (+ the matching *_API_KEY) to use a different backend — see ExampleLLMProvider.
+        LLMProvider llmProvider = ExampleLLMProvider.builder()
             .temperature(0.7)
             .maxTokens(1500)
             .build();
+
+        if (!llmProvider.supportsFunctionCalling()) {
+            System.out.println("(" + llmProvider.getProviderName() + " doesn't support function calling in this "
+                + "adapter — the evaluate_technology/analyze_market_segment/analyze_competitor_strategy tools "
+                + "won't be invoked. Set LLM_BACKEND=groq or LLM_BACKEND=openai for the full demo.)");
+        }
 
         // Create runtime
         AgenorRuntime runtime = AgenorRuntime.builder()

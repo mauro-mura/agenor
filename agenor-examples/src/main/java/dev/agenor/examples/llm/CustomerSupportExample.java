@@ -1,7 +1,5 @@
 package dev.agenor.examples.llm;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.*;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.messaging.Subscription;
@@ -16,10 +14,8 @@ import java.util.concurrent.TimeUnit;
 public class CustomerSupportExample {
 
     public static void main(String[] args) {
-        // Initialize LLM provider
-        LLMProvider llmProvider = LLMProviderFactory.openai()
-            .apiKey(System.getenv("OPENAI_API_KEY"))
-            .modelName(OpenAIProvider.Models.GPT_4O_MINI)
+        // Initialize LLM provider (local Ollama by default; see ExampleLLMProvider)
+        LLMProvider llmProvider = ExampleLLMProvider.builder()
             .temperature(0.7)
             .build();
 
@@ -28,7 +24,7 @@ public class CustomerSupportExample {
             .build();
 
         // Create and register agent
-        CustomerSupportAgent agent = new CustomerSupportAgent(llmProvider, "gpt-4o-mini");
+        CustomerSupportAgent agent = new CustomerSupportAgent(llmProvider, llmProvider.getDefaultModel());
         runtime.registerAgent(agent);
 
         // Start runtime

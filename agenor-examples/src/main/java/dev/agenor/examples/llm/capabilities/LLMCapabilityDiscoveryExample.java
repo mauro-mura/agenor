@@ -1,7 +1,6 @@
 package dev.agenor.examples.llm.capabilities;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
+import dev.agenor.examples.llm.ExampleLLMProvider;
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.*;
 import dev.agenor.core.annotations.Agent;
@@ -28,20 +27,16 @@ import java.util.concurrent.*;
 public class LLMCapabilityDiscoveryExample {
 
     public static void main(String[] args) throws Exception {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("ERROR: OPENAI_API_KEY environment variable not set");
-            System.exit(1);
-        }
-
-        LLMProvider llmProvider = LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .modelName(OpenAIProvider.Models.GPT_4_1_MINI)
+        LLMProvider llmProvider = ExampleLLMProvider.builder()
             .temperature(0.7)
             .maxTokens(1500)
-            .logRequests(true)
-            .logResponses(true)
             .build();
+
+        if (!llmProvider.supportsFunctionCalling()) {
+            System.out.println("(" + llmProvider.getProviderName() + " doesn't support function calling in this "
+                + "adapter — the evaluate_technology/analyze_market_segment tools won't be invoked. "
+                + "Set LLM_BACKEND=groq or LLM_BACKEND=openai for the full demo.)");
+        }
 
         AgenorRuntime runtime = AgenorRuntime.builder()
             .scanPackages("dev.agenor.examples.llm.capabilities")

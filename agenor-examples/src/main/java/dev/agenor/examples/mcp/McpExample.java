@@ -1,7 +1,6 @@
 package dev.agenor.examples.mcp;
 
-import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
+import dev.agenor.examples.llm.ExampleLLMProvider;
 import dev.agenor.adapters.mcp.McpClientFactory;
 import dev.agenor.adapters.mcp.McpFunctionAdapter;
 import dev.agenor.adapters.mcp.McpToolRegistry;
@@ -20,17 +19,19 @@ import java.util.Map;
  * <p>Requires Docker installed and running. The MCP server runs in a container:
  * no local Node.js installation needed.
  *
- * <p><b>Run (tool listing + direct call only):</b>
+ * <p><b>Run (tool listing + direct call + LLM round-trip):</b>
  * <pre>
  *   mvn exec:java -pl agenor-examples \
  *       -Dexec.mainClass=dev.agenor.examples.McpExample
  * </pre>
  *
- * <p><b>Run (with LLM round-trip):</b>
- * <pre>
- *   ANTHROPIC_API_KEY=sk-ant-... mvn exec:java -pl agenor-examples \
- *       -Dexec.mainClass=dev.agenor.examples.McpExample
- * </pre>
+ * <p>The LLM round-trip runs against a free local Ollama instance by default
+ * (no key needed). Set LLM_BACKEND=groq (+ GROQ_API_KEY) for a free cloud
+ * alternative with real tool-calling support, or LLM_BACKEND=openai/anthropic
+ * (+ the matching *_API_KEY) if you have paid credits — see {@link ExampleLLMProvider}.
+ * Agenor's Ollama adapter doesn't wire up function calling, so the round-trip
+ * won't actually invoke MCP tools unless a provider with tool-calling support
+ * is configured.
  *
  * <p>The example mounts {@code /tmp} into the container. Override with:
  * <pre>
@@ -39,7 +40,6 @@ import java.util.Map;
  */
 public class McpExample {
 
-    private static final String MODEL   = OpenAIProvider.Models.GPT_4_1_MINI.toString();
     private static final String ROOT    = System.getProperty("mcp.root", "/tmp");
     private static final String IMAGE   = "node:22-alpine";
     private static final String PACKAGE = "@modelcontextprotocol/server-filesystem";
@@ -77,12 +77,11 @@ public class McpExample {
                 System.out.println(result.content());
             }
 
-            // 3 — optional LLM round-trip
-            String apiKey = System.getenv("OPENAI_API_KEY");
-            if (apiKey != null && !apiKey.isBlank()) {
-                llmRoundTrip(adapter, apiKey);
-            } else {
-                System.out.println("\n(Set OPENAI_API_KEY to enable the LLM round-trip demo)");
+            // 3 — optional LLM round-trip (local Ollama by default; see ExampleLLMProvider)
+            try {
+                llmRoundTrip(adapter);
+            } catch (Exception e) {
+                System.out.println("\n(LLM round-trip skipped: " + e.getMessage() + ")");
             }
 
         } finally {
@@ -94,14 +93,16 @@ public class McpExample {
     // LLM round-trip
     // -------------------------------------------------------------------------
 
-    private static void llmRoundTrip(McpFunctionAdapter adapter, String apiKey) throws Exception {
-        System.out.println("\n--- LLM round-trip (" + MODEL + ") ---");
+    private static void llmRoundTrip(McpFunctionAdapter adapter) throws Exception {
+        var provider = ExampleLLMProvider.builder().maxTokens(512).build();
+        String model = provider.getDefaultModel();
 
-        var provider  = LLMProviderFactory.openai()
-                .apiKey(apiKey)
-                .modelName(MODEL)
-                .maxTokens(512)
-                .build();
+        System.out.println("\n--- LLM round-trip (" + model + ") ---");
+        if (!provider.supportsFunctionCalling()) {
+            System.out.println("(" + provider.getProviderName() + " doesn't support function calling in this "
+                + "adapter — MCP tools won't be invoked. Set LLM_BACKEND=groq or LLM_BACKEND=openai for the "
+                + "full demo.)");
+        }
 
         var functions = adapter.buildFunctionDefinitions().get();
 
@@ -110,7 +111,7 @@ public class McpExample {
                 "You have filesystem access via tools. Use them to answer the user."));
         history.add(LLMMessage.user("List the contents of " + ROOT + "."));
 
-        LLMRequest.Builder requestBuilder = LLMRequest.builder().model(MODEL)
+        LLMRequest.Builder requestBuilder = LLMRequest.builder().model(model)
                 .maxTokens(512);
         functions.forEach(requestBuilder::addFunction);
 
@@ -127,7 +128,7 @@ public class McpExample {
                 history.add(toolResult);
             }
 
-            LLMRequest.Builder nextBuilder = LLMRequest.builder().model(MODEL).maxTokens(512);
+            LLMRequest.Builder nextBuilder = LLMRequest.builder().model(model).maxTokens(512);
             functions.forEach(nextBuilder::addFunction);
             response = provider.chat(nextBuilder.messages(history).build()).get();
         }
