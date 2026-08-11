@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-08-11
+
+### Added
+
+- **Local-first LLM backend selection for examples**: Level 4/5 LLM examples
+  previously hardcoded `LLMProviderFactory.openai()`, requiring a paid
+  `OPENAI_API_KEY` just to run them. `ExampleLLMProvider` now selects the
+  backend via an explicit `LLM_BACKEND` env var (`ollama` default / `groq` /
+  `openai` / `anthropic`), so a local Ollama server with no signup works out
+  of the box, and a stale `*_API_KEY` sitting in the shell never silently
+  hijacks the default. Applied across the 8 Level 4 LLM examples and
+  `McpExample`'s optional LLM round-trip; warns when the selected provider
+  doesn't support function calling (the Ollama adapter doesn't wire up tool
+  calls). `SupportChatbotExample`'s `LLMConfig` is aligned to the same
+  `LLM_BACKEND` selector (adding Groq as a fourth option), with `NONE`
+  (template-based responses) kept as its zero-config default; `LLMConfig`
+  now also exposes the resolved `getModelName()`/`getBaseUrl()` and fixes a
+  hardcoded per-provider model switch that previously ignored `*_MODEL`
+  overrides. `OpenAIProviderExample` renamed to `LLMProviderExample`
+  (no longer OpenAI-specific).
+
 ### Changed
 
 - **BREAKING — `AgenorRuntime.getApprovalService()` now returns `ApprovalHandle` instead of the concrete `ApprovalService` class (ADR-027)**:
@@ -878,7 +899,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.24.1...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/mauro-mura/agenor/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/mauro-mura/agenor/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/mauro-mura/agenor/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/mauro-mura/jentic/compare/v0.22.0...v0.23.0
