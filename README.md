@@ -16,8 +16,8 @@ Agenor reimagines multi-agent systems with modern Java practices:
 
 - **Start Simple, Scale Smart**: Begin with in-memory implementations, evolve to enterprise solutions
 - **Interface-First Design**: Clean abstractions that enable seamless technology transitions
-- **Cloud-Native Ready**: Container-friendly, microservices-oriented, Kubernetes-native
-- **Developer Experience**: Hot reload, clear APIs, minimal configuration
+- **JVM-Native**: Runs as a plain Java 21 process — embeds in any Spring Boot service; optional Redis/JDBC backends enable stateless, multi-node deployments
+- **Developer Experience**: Clear APIs, minimal configuration, annotation-driven agent discovery
 - **Virtual Threads**: Leverage Java 21's Project Loom for efficient concurrency
 
 ## ⚡ Quick Start
