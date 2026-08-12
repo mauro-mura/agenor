@@ -117,7 +117,7 @@ public class HelloWorld {
     public static void main(String[] args) {
         var runtime = AgenorRuntime.builder().build();
         runtime.registerAgent(new HelloAgent());
-        runtime.start();
+        runtime.start().join();
     }
 }
 ```
