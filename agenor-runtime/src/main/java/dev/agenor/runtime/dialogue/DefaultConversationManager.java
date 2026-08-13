@@ -95,6 +95,7 @@ public class DefaultConversationManager implements ConversationManager {
         var protocol = protocolRegistry.get("contract-net").orElse(null);
         var responses = new ConcurrentHashMap<String, DialogueMessage>();
         var responseFutures = new java.util.ArrayList<CompletableFuture<DialogueMessage>>();
+        var cfpMessageIds = new java.util.ArrayList<String>();
 
         for (String participant : participants) {
             var conversation = new DefaultConversation(
@@ -120,6 +121,7 @@ public class DefaultConversationManager implements ConversationManager {
             // Store ROOT future in pendingResponses - handleIncoming will complete it
             var responseFuture = new CompletableFuture<DialogueMessage>();
             pendingResponses.put(message.id(), responseFuture);
+            cfpMessageIds.add(message.id());
 
             // Chain to collect responses
             responseFutures.add(responseFuture.thenApply(response -> {
@@ -132,7 +134,12 @@ public class DefaultConversationManager implements ConversationManager {
 
         return CompletableFuture.allOf(responseFutures.toArray(new CompletableFuture[0]))
             .orTimeout(deadline.toMillis(), TimeUnit.MILLISECONDS)
-            .handle((v, ex) -> List.copyOf(responses.values()));
+            .handle((v, ex) -> {
+                // Participants that never answered leave their future pending forever;
+                // drop their entries so the map stays bounded by in-flight CFPs only.
+                cfpMessageIds.forEach(pendingResponses::remove);
+                return List.copyOf(responses.values());
+            });
     }
 
     @Override
@@ -252,6 +259,14 @@ public class DefaultConversationManager implements ConversationManager {
     }
 
     /**
+     * Number of replies this manager is still waiting for. Package-private: no public
+     * surface observes {@code pendingResponses}, and its boundedness needs a test.
+     */
+    int pendingResponseCount() {
+        return pendingResponses.size();
+    }
+
+    /**
      * Decides whether an incoming reply should resolve the pending-response future.
      *
      * <p>Resolves on any reply except an intermediate {@code AGREE} for which the
@@ -311,6 +326,9 @@ public class DefaultConversationManager implements ConversationManager {
         return responseFuture
             .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
             .whenComplete((response, ex) -> {
+                // Unconditional: on the success path handleIncoming() has already removed it,
+                // on the timeout path nothing else ever would.
+                pendingResponses.remove(message.id());
                 if (ex != null) {
                     conversation.setState(ProtocolState.TIMEOUT);
                 }

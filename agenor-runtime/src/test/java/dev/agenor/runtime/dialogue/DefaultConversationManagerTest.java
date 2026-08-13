@@ -9,10 +9,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -343,5 +348,55 @@ class DefaultConversationManagerTest {
             .getActiveAsPerformer("local-agent");
 
         assertThat(commitments).hasSize(1);
+    }
+
+    @Test
+    void shouldNotLeakPendingResponseWhenRequestTimesOut() {
+        // Given a request to a participant that never replies
+        var future = manager.request("silent-agent", "task", Duration.ofMillis(50));
+        assertThat(manager.pendingResponseCount()).isEqualTo(1);
+
+        // When the timeout fires
+        assertThatThrownBy(() -> future.get(2, TimeUnit.SECONDS))
+            .isInstanceOf(ExecutionException.class)
+            .hasCauseInstanceOf(TimeoutException.class);
+
+        // Then the pending entry is gone and the conversation is marked TIMEOUT
+        assertThat(manager.pendingResponseCount()).isZero();
+        assertThat(manager.getConversationsWith("silent-agent").get(0).getState())
+            .isEqualTo(ProtocolState.TIMEOUT);
+    }
+
+    @Test
+    void shouldNotLeakPendingResponseWhenRequestSucceeds() {
+        var future = manager.request("remote-agent", "task", Duration.ofSeconds(5));
+        var requestMsg = manager.getActiveConversations().get(0).getHistory().get(0);
+
+        manager.handleIncoming(DialogueMessage.builder()
+            .conversationId(requestMsg.conversationId())
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.INFORM)
+            .content("done")
+            .inReplyTo(requestMsg.id())
+            .build());
+
+        assertThat(future).isCompleted();
+        assertThat(manager.pendingResponseCount()).isZero();
+    }
+
+    @Test
+    void shouldNotLeakPendingResponsesWhenCallForProposalsDeadlineExpires() throws Exception {
+        // Given a CFP to three participants, none of which proposes
+        var future = manager.callForProposals(
+            List.of("worker-1", "worker-2", "worker-3"), "spec", Duration.ofMillis(50));
+        assertThat(manager.pendingResponseCount()).isEqualTo(3);
+
+        // When the deadline expires
+        var proposals = future.get(2, TimeUnit.SECONDS);
+
+        // Then no proposal is collected and no pending entry survives
+        assertThat(proposals).isEmpty();
+        assertThat(manager.pendingResponseCount()).isZero();
     }
 }
