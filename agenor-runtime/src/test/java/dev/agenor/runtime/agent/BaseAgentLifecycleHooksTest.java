@@ -1,6 +1,7 @@
 package dev.agenor.runtime.agent;
 
 import dev.agenor.core.BehaviorScheduler;
+import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
@@ -48,6 +49,25 @@ class BaseAgentLifecycleHooksTest {
     // =========================================================================
     // START HOOKS
     // =========================================================================
+
+    @Test
+    void testHooksAreReachableThroughTheLifecycleHooksInterface() {
+        // Given a BaseAgent seen only as a LifecycleHooks (how capabilities discover it)
+        LifecycleHooks hooks = agent;
+        AtomicBoolean started = new AtomicBoolean(false);
+        AtomicBoolean stopped = new AtomicBoolean(false);
+
+        hooks.onStartHook(() -> started.set(true));
+        hooks.onStopHook(() -> stopped.set(true));
+
+        // When
+        agent.start().join();
+        agent.stop().join();
+
+        // Then
+        assertThat(started).isTrue();
+        assertThat(stopped).isTrue();
+    }
 
     @Test
     void testStartHookIsCalledOnAgentStart() {

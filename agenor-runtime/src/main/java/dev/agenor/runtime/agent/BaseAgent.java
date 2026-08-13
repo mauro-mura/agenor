@@ -21,6 +21,7 @@ import dev.agenor.core.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.BehaviorScheduler;
+import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.FilterableSubscriber;
@@ -76,7 +77,7 @@ import dev.agenor.runtime.behavior.BaseBehavior;
  *
  * @since 0.1.0
  */
-public abstract class BaseAgent implements Agent {
+public abstract class BaseAgent implements Agent, LifecycleHooks {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -373,6 +374,7 @@ public abstract class BaseAgent implements Agent {
      *
      * @param hook the runnable to execute on start
      */
+    @Override
     public void onStartHook(Runnable hook) {
         if (hook != null) {
             startHooks.add(hook);
@@ -389,6 +391,7 @@ public abstract class BaseAgent implements Agent {
      *
      * @param hook the runnable to execute on stop
      */
+    @Override
     public void onStopHook(Runnable hook) {
         if (hook != null) {
             stopHooks.add(hook);

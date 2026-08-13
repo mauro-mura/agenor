@@ -13,12 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Agent;
+import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.annotations.PersistenceConfig;
 import dev.agenor.core.persistence.AgentState;
 import dev.agenor.core.persistence.PersistenceService;
 import dev.agenor.core.persistence.PersistenceStrategy;
 import dev.agenor.core.persistence.Stateful;
-import dev.agenor.runtime.agent.BaseAgent;
 
 /**
  * Manages automatic persistence for agents based on their configuration.
@@ -346,9 +346,9 @@ public class PersistenceManager {
     }
 
     private void setupOnStopPersistence(AgentPersistenceContext context) {
-        // Add shutdown hook if agent is BaseAgent
-        if (context.agent instanceof BaseAgent baseAgent) {
-            baseAgent.onStopHook(() -> {
+        // Add shutdown hook if the agent supports lifecycle hooks (BaseAgent does)
+        if (context.agent instanceof LifecycleHooks hooks) {
+            hooks.onStopHook(() -> {
                 try {
                     AgentState state = context.statefulAgent.captureState();
                     persistenceService.saveState(context.agent.getAgentId(), state)
