@@ -8,7 +8,9 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,15 +33,38 @@ public class DialogueHandlerRegistry {
     /**
      * Scans an object for @DialogueHandler annotated methods and registers them.
      *
+     * <p>The whole class hierarchy is walked, so handlers declared on an abstract base
+     * agent are registered for its concrete subclasses too. Each method signature is
+     * considered once, at its most-derived declaration: an override wins over the method
+     * it overrides and is never registered twice. Invocation stays virtual, so registering
+     * a base-class {@code Method} still dispatches to the override.
+     *
+     * <p>Scanning replaces any previously registered handlers, so calling it twice on the
+     * same target does not double-dispatch.
+     *
      * @param target the object to scan
      */
     public void scan(Object target) {
-        Class<?> clazz = target.getClass();
+        handlers.clear();
+        byProtocol.clear();
+        byPerformative.clear();
 
-        for (Method method : clazz.getDeclaredMethods()) {
-            DialogueHandler annotation = method.getAnnotation(DialogueHandler.class);
-            if (annotation != null) {
-                registerHandler(target, method, annotation);
+        Class<?> clazz = target.getClass();
+        var seenSignatures = new HashSet<String>();
+
+        for (Class<?> current = clazz; current != null && current != Object.class;
+                current = current.getSuperclass()) {
+            for (Method method : current.getDeclaredMethods()) {
+                if (method.isSynthetic() || method.isBridge()) {
+                    continue;
+                }
+                if (!seenSignatures.add(signatureOf(method))) {
+                    continue; // already seen on a more derived class
+                }
+                DialogueHandler annotation = method.getAnnotation(DialogueHandler.class);
+                if (annotation != null) {
+                    registerHandler(target, method, annotation);
+                }
             }
         }
 
@@ -51,6 +76,14 @@ public class DialogueHandlerRegistry {
             list.sort(Comparator.comparingInt(HandlerEntry::priority).reversed()));
 
         log.debug("Registered {} dialogue handlers for {}", handlers.size(), clazz.getSimpleName());
+    }
+
+    /**
+     * Identity of an overridable method: name plus parameter types, ignoring the declaring
+     * class, so that an override and the method it overrides collapse to one entry.
+     */
+    private static String signatureOf(Method method) {
+        return method.getName() + Arrays.toString(method.getParameterTypes());
     }
 
     /**
