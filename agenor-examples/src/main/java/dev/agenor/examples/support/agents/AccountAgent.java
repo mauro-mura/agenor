@@ -48,14 +48,14 @@ public class AccountAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
+        // No dialogue wiring needed: DialogueCapability registers itself on BaseAgent's
+        // lifecycle hooks when it is constructed.
         getMessageDispatcher().subscribeTopic("support.account", MessageHandler.sync(this::handleAccountQuery));
         log.info("Account Agent started with dialogue support");
     }
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
         log.info("Account Agent stopped");
     }
 

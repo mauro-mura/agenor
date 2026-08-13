@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dialogue Protocol resource leaks**: three maps in the dialogue runtime grew for the
+  entire lifetime of an agent. `DefaultConversationManager` only removed a pending-response
+  future on the success path, so every timed-out `request()`/`query()` leaked an entry and
+  `callForProposals()` leaked one per participant that never proposed — the exact failure
+  mode Contract-Net is built to tolerate. `conversations` and `commitments` were never
+  pruned at all: `getActiveConversations()` filters the view, not the map, and
+  `DefaultCommitmentTracker.cleanup(Duration)` existed but nothing ever called it (and it
+  left its `messageId -> commitmentId` index behind). Terminated conversations and
+  commitments are now swept periodically — default retention 5 minutes, sweep every
+  minute, both configurable via `DialogueCapability.builder(agent)` — by a single daemon
+  thread per agent, started in `initialize()` and stopped in `shutdown()`.
+  `ConversationManager` and `CommitmentTracker` gain a `default` no-op `cleanup(Duration)`
+  so store-backed implementations with their own expiry are unaffected.
+  Investigated and **not** present: the suspected per-task subscription leak in
+  `AgenorAgentExecutor` — `execute()` already unsubscribes in a `finally` block.
+- **`@DialogueHandler` methods inherited from a base class were silently ignored**:
+  `DialogueHandlerRegistry.scan()` used `getDeclaredMethods()`, so an `AbstractWorkerAgent`
+  holding shared handlers registered zero handlers for its concrete subclasses, with no
+  warning. The scan now walks the class hierarchy, de-duplicating by signature so an
+  override is registered once and wins over the method it overrides. `scan()` also clears
+  its state first, so scanning twice can no longer double-dispatch.
+
+### Added
+
+- **`LifecycleHooks` (`agenor-core`)**: `onStartHook`/`onStopHook` extracted from the
+  concrete `BaseAgent`, so framework capabilities can wire themselves to an agent's
+  lifecycle without downcasting. Deliberately kept out of the `Agent` interface — hook
+  support stays opt-in. `PersistenceManager` migrated to it, dropping its cross-module
+  `instanceof BaseAgent`.
+- **Injection seam for dialogue collaborators**: `DialogueCapability.builder(agent)` accepts
+  a `ConversationManagerFactory`, a `ProtocolRegistry` (so a custom `Protocol` can be
+  registered without bypassing `DialogueCapability`) and a `CommitmentTracker`. The
+  capability now stores and exposes the interfaces, not the default implementations, as
+  required by ADR-002 — a persistent or distributed `ConversationManager` no longer requires
+  forking the class. `ConversationManager` gains `getCommitmentTracker()` and
+  `CommitmentTracker` gains `getByMessageId(String)`.
+
+### Changed
+
+- **`DialogueCapability` wires itself into the agent lifecycle**: constructing it registers
+  `initialize()`/`shutdown()` on the agent's `LifecycleHooks` when the agent supports them
+  (`BaseAgent` does), so agents no longer need `onStart()`/`onStop()` overrides for dialogue.
+  Agents implementing `Agent` directly get a warning naming what leaks if they never call
+  `shutdown()`. `initialize()` is idempotent and resolves the dispatcher from the agent
+  itself. Every public method now fails with an actionable `IllegalStateException` instead
+  of a bare `NullPointerException` when the capability was never initialized, and
+  `shutdown()` clears the manager so a stopped agent can be started again.
+  `getCommitmentTracker()` returns `CommitmentTracker` rather than the concrete
+  `DefaultCommitmentTracker`.
+- Dialogue examples and the docs quick-starts no longer show manual `onStart()`/`onStop()`
+  dialogue wiring; `dialog-protocol.md` now states explicitly that conversation state is
+  per-agent, in-memory and node-local, and what an agent without `LifecycleHooks` must do.
+
+### Deprecated
+
+- `DialogueCapability.initialize(MessageDispatcher)` (since 0.26.0, for removal) — use the
+  no-arg `initialize()`. The overload still honours the dispatcher passed to it, so existing
+  call sites keep working unchanged.
+
 ## [0.25.0] - 2026-08-11
 
 ### Added

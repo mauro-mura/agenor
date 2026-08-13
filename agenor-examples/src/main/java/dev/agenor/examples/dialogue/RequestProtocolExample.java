@@ -107,7 +107,7 @@ public class RequestProtocolExample {
                 directory.register(AgentDescriptor.builder("server")
                         .agentName("Server").agentType("ServerAgent")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
                 running = true;
                 System.out.println("[Server] Started");
             });
@@ -180,7 +180,7 @@ public class RequestProtocolExample {
                 directory.register(AgentDescriptor.builder("client")
                         .agentName("Client").agentType("ClientAgent")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
                 running = true;
                 System.out.println("[Client] Started");
             });

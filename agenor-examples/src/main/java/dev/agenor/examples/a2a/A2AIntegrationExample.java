@@ -194,7 +194,9 @@ public class A2AIntegrationExample {
         @Override
         public CompletableFuture<Void> start() {
             return CompletableFuture.runAsync(() -> {
-                dialogue.initialize(getMessageDispatcher());
+                // start() is overridden wholesale here, so BaseAgent's lifecycle hooks never
+                // run: this agent wires dialogue itself.
+                dialogue.initialize();
                 running = true;
                 System.out.println("[OrderProcessor] Started");
             });

@@ -49,14 +49,13 @@ public class BudgetAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
+        // Dialogue wires itself through BaseAgent's lifecycle hooks - nothing to do here.
         getMessageDispatcher().subscribeTopic("support.budget", MessageHandler.sync(this::handleBudgetQuery));
         log.info("Budget Agent started with dialogue support");
     }
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
         log.info("Budget Agent stopped");
     }
 

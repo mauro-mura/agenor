@@ -265,6 +265,20 @@ class DialogueCapabilityTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
+    void shouldStillHonourTheDispatcherPassedToTheDeprecatedInitialize() {
+        // TestDialogueAgent.getMessageDispatcher() returns null, so the deprecated overload
+        // cannot delegate to the no-arg initialize() - it must use what it was given.
+        // Every other call in this class relies on the same guarantee.
+        assertThat(agent.getMessageDispatcher()).isNull();
+
+        capability.initialize(messageService);
+
+        verify(messageService).subscribeRecipient(eq("test-agent"), any());
+        assertThat(capability.getActiveConversations()).isEmpty();
+    }
+
+    @Test
     void shouldFailFastWithActionableMessageWhenNotInitialized() {
         var uninitialized = new DialogueCapability(agent);
 

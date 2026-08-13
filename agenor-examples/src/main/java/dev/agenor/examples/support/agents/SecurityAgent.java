@@ -50,14 +50,13 @@ public class SecurityAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
+        // Dialogue wires itself through BaseAgent's lifecycle hooks - nothing to do here.
         getMessageDispatcher().subscribeTopic("support.security", MessageHandler.sync(this::handleSecurityQuery));
         log.info("Security Agent started with dialogue support");
     }
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
         log.info("Security Agent stopped");
     }
 

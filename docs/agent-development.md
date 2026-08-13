@@ -361,23 +361,13 @@ Conditions also compose with `and()`, `or()`, `negate()` (default methods on `Co
 
 ## Dialogue and Protocols
 
-Agenor supports structured agent communication through `DialogueCapability`. Attach it to any `BaseAgent` via composition and initialise it in `onStart()`.
+Agenor supports structured agent communication through `DialogueCapability`. Attach it to any `BaseAgent` via composition — it registers itself on the agent's start/stop hooks, so no lifecycle wiring is needed. An agent that implements `Agent` directly must call `dialogue.initialize()` from its `start()` and `dialogue.shutdown()` from its `stop()`.
 
 ```java
 @Agent("coordinator")
 public class CoordinatorAgent extends BaseAgent {
 
     private final DialogueCapability dialogue = new DialogueCapability(this);
-
-    @Override
-    protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
-    }
-
-    @Override
-    protected void onStop() {
-        dialogue.shutdown();
-    }
 
     // Respond to incoming REQUEST performatives
     @DialogueHandler(performatives = {Performative.REQUEST})

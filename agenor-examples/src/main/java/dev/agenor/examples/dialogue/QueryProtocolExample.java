@@ -113,7 +113,7 @@ public class QueryProtocolExample {
                 directory.register(AgentDescriptor.builder("kb")
                         .agentName("Knowledge Base").agentType("KnowledgeBase")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
                 running = true;
                 System.out.println("[KB] Started with " + facts.size() + " facts");
             });
@@ -178,7 +178,7 @@ public class QueryProtocolExample {
                 directory.register(AgentDescriptor.builder("client")
                         .agentName("Client").agentType("QueryClient")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
                 running = true;
                 System.out.println("[Client] Started\n");
             });

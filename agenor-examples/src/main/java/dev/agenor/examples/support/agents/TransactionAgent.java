@@ -49,14 +49,13 @@ public class TransactionAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
+        // Dialogue wires itself through BaseAgent's lifecycle hooks - nothing to do here.
         getMessageDispatcher().subscribeTopic("support.transaction", MessageHandler.sync(this::handleTransactionQuery));
         log.info("Transaction Agent started with dialogue support");
     }
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
         log.info("Transaction Agent stopped");
     }
 

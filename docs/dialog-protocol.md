@@ -79,19 +79,11 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 
 ```java
 public class MyAgent extends BaseAgent {
-    
+
+    // No lifecycle wiring needed: the capability registers itself on the agent's
+    // start/stop hooks when it is constructed (since 0.26.0)
     private final DialogueCapability dialogue = new DialogueCapability(this);
-    
-    @Override
-    protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
-    }
-    
-    @Override
-    protected void onStop() {
-        dialogue.shutdown();
-    }
-    
+
     // Handle incoming requests
     @DialogueHandler(performatives = Performative.REQUEST)
     public void handleRequest(DialogueMessage msg) {
@@ -104,6 +96,21 @@ public class MyAgent extends BaseAgent {
     }
 }
 ```
+
+> **Agents that do not extend `BaseAgent`.** Auto-wiring works through the
+> `LifecycleHooks` interface, which `BaseAgent` implements. An agent implementing
+> `Agent` directly (or one that overrides `start()`/`stop()` wholesale instead of
+> `onStart()`/`onStop()`) must do the wiring itself: call `dialogue.initialize()` from
+> its `start()` and `dialogue.shutdown()` from its `stop()`. Skipping `shutdown()`
+> leaks the agent's recipient subscription and its retention sweep thread for the
+> lifetime of the process. Calling `initialize()` twice is harmless — it is idempotent,
+> so mixing automatic and manual wiring is safe.
+
+### Handlers on a base class
+
+`@DialogueHandler` methods are discovered across the whole class hierarchy, so shared
+handlers can live on an abstract base agent. An override of an annotated method is
+registered once, and the subclass version is the one invoked.
 
 ### 2. Send Requests
 
@@ -339,9 +346,47 @@ mvn exec:java -pl agenor-examples \
     -Dexec.mainClass="dev.agenor.examples.dialogue.ContractNetExample"
 ```
 
+## Conversation state: what it is and how long it lives
+
+Conversation state is **per-agent**, not a shared blackboard. Every `DialogueCapability`
+owns its own `ConversationManager`, `CommitmentTracker` and handler registry; nothing is
+shared between agents in the same JVM except the transport (`MessageDispatcher`). There is
+no central place to query "all conversations in the runtime" — each agent tracks the
+dialogues it takes part in, from its own point of view.
+
+That state is **held in memory and node-local**. It does not survive the agent's process:
+a restart drops every in-flight conversation, and the peer is not notified — it waits out
+its own timeout. Do not model anything durable on top of a `Conversation` or a
+`Commitment`.
+
+Conversations and commitments that have reached a terminal state are swept automatically
+(default: every minute, keeping the last 5 minutes), so long-lived agents do not accumulate
+them. The window is configurable:
+
+```java
+DialogueCapability dialogue = DialogueCapability.builder(this)
+    .retention(Duration.ofMinutes(30))
+    .sweepInterval(Duration.ofMinutes(5))
+    .build();
+```
+
+## Swapping the conversation manager
+
+`DialogueCapability` depends only on the `ConversationManager` and `CommitmentTracker`
+interfaces. An alternative implementation — or a `ProtocolRegistry` carrying a custom
+`Protocol` — is supplied through the same builder, without forking anything:
+
+```java
+DialogueCapability dialogue = DialogueCapability.builder(this)
+    .protocolRegistry(registryWithMyProtocol)
+    .conversationManagerFactory(MyConversationManager::new)
+    .build();
+```
+
 ## Best Practices
 
-1. **Always initialize DialogueCapability in onStart()**
+1. **Let DialogueCapability wire itself** — override `onStart()`/`onStop()` only for your
+   own logic. If your agent is not a `BaseAgent`, call `initialize()`/`shutdown()` yourself
 2. **Use appropriate timeouts for async operations**
 3. **Handle all response types (INFORM, REFUSE, FAILURE)**
 4. **Track commitments for long-running operations**
@@ -350,6 +395,14 @@ mvn exec:java -pl agenor-examples \
 
 ## Version History
 
+- **0.26.0** - Lifecycle and resource-management hardening
+  - `DialogueCapability` self-registers via `LifecycleHooks`; `initialize()` is idempotent
+    and resolves the dispatcher from the agent (`initialize(MessageDispatcher)` deprecated)
+  - Injectable `ConversationManager` / `ProtocolRegistry` / `CommitmentTracker` via
+    `DialogueCapability.builder(agent)`
+  - Terminated conversations, commitments and timed-out pending responses no longer
+    accumulate for the lifetime of the agent
+  - `@DialogueHandler` methods inherited from a base class are now discovered
 - **0.5.0** - Initial dialogue protocol implementation
   - Core types and interfaces
   - Three protocol implementations

@@ -65,7 +65,7 @@ class DialogueRoundTripTest {
                 directory.register(AgentDescriptor.builder("kb")
                         .agentName("KB").agentType("KbAgent")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
             });
         }
 
@@ -106,7 +106,7 @@ class DialogueRoundTripTest {
                 directory.register(AgentDescriptor.builder("client")
                         .agentName("Client").agentType("ClientAgent")
                         .status(AgentStatus.RUNNING).build()).join();
-                dialogue.initialize(dispatcher);
+                dialogue.initialize();
             });
         }
 

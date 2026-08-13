@@ -72,8 +72,8 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStart() {
-        // Initialize dialogue capability for collaborative reasoning
-        dialogue.initialize(getMessageDispatcher());
+        // Dialogue needs no wiring here: DialogueCapability registers itself on BaseAgent's
+        // lifecycle hooks when it is constructed.
 
         // Subscribe to FAQ topic
         getMessageDispatcher().subscribeTopic("support.faq", MessageHandler.sync(this::handleFAQQuery));
@@ -101,7 +101,6 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
         log.info("FAQ Agent stopped");
     }
 

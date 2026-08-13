@@ -91,14 +91,8 @@ public class ContractNetExample {
         @Override
         protected void onStart() {
             super.onStart();
-            dialogue.initialize(getMessageDispatcher());
+            // dialogue initializes itself via BaseAgent's lifecycle hooks
             System.out.println("[Manager] Started");
-        }
-
-        @Override
-        protected void onStop() {
-            super.onStop();
-            dialogue.shutdown();
         }
 
         CompletableFuture<String> allocateTask(Task task, List<String> workerIds) {
@@ -166,14 +160,8 @@ public class ContractNetExample {
         @Override
         protected void onStart() {
             super.onStart();
-            dialogue.initialize(getMessageDispatcher());
+            // dialogue initializes itself via BaseAgent's lifecycle hooks
             System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
-        }
-
-        @Override
-        protected void onStop() {
-            super.onStop();
-            dialogue.shutdown();
         }
 
         @DialogueHandler(performatives = Performative.CFP)

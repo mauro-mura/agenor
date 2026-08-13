@@ -86,7 +86,7 @@ public class CollaborativeRouterAgent extends BaseAgent {
 
     @Override
     protected void onStart() {
-        dialogue.initialize(getMessageDispatcher());
+        // Dialogue wires itself through BaseAgent's lifecycle hooks - nothing to do here.
 
         // Subscribe to support queries
         getMessageDispatcher().subscribeTopic("support.query", MessageHandler.sync(this::handleQuery));
@@ -99,7 +99,7 @@ public class CollaborativeRouterAgent extends BaseAgent {
 
     @Override
     protected void onStop() {
-        dialogue.shutdown();
+        // Dialogue shuts itself down through BaseAgent's lifecycle hooks.
     }
 
     /**
