@@ -386,6 +386,39 @@ class DefaultConversationManagerTest {
     }
 
     @Test
+    void shouldRemoveTerminalConversationsOnCleanup() {
+        // Given one completed and one still-open conversation
+        var completed = DialogueMessage.builder()
+            .conversationId("conv-done")
+            .senderId("remote-agent")
+            .receiverId("local-agent")
+            .performative(Performative.REQUEST)
+            .protocol("request")
+            .build();
+        manager.handleIncoming(completed);
+        manager.onMessage("conv-done", msg -> { });
+        manager.cancel("conv-done");
+
+        manager.request("remote-agent", "still running", Duration.ofSeconds(30));
+
+        // When sweeping with a zero retention window
+        int removed = manager.cleanup(Duration.ZERO);
+
+        // Then only the terminal conversation is dropped
+        assertThat(removed).isEqualTo(1);
+        assertThat(manager.getConversation("conv-done")).isEmpty();
+        assertThat(manager.getActiveConversations()).hasSize(1);
+    }
+
+    @Test
+    void shouldKeepActiveConversationsOnCleanupHoweverOld() {
+        manager.request("remote-agent", "task", Duration.ofSeconds(30));
+
+        assertThat(manager.cleanup(Duration.ZERO)).isZero();
+        assertThat(manager.getActiveConversations()).hasSize(1);
+    }
+
+    @Test
     void shouldNotLeakPendingResponsesWhenCallForProposalsDeadlineExpires() throws Exception {
         // Given a CFP to three participants, none of which proposes
         var future = manager.callForProposals(

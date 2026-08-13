@@ -16,6 +16,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides dialogue capabilities to agents via composition.
@@ -48,15 +51,30 @@ public class DialogueCapability {
     private static final Logger log = LoggerFactory.getLogger(DialogueCapability.class);
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
 
+    /** How long terminated conversations and commitments are kept before being swept. */
+    static final Duration DEFAULT_RETENTION = Duration.ofMinutes(5);
+
+    /** How often the sweep runs. */
+    static final Duration DEFAULT_SWEEP_INTERVAL = Duration.ofMinutes(1);
+
     private final Agent agent;
     private final DialogueHandlerRegistry handlerRegistry;
+    private final Duration retention;
+    private final Duration sweepInterval;
 
     private DefaultConversationManager conversationManager;
     private Subscription subscription;
+    private ScheduledExecutorService reaper;
 
     public DialogueCapability(Agent agent) {
+        this(agent, DEFAULT_RETENTION, DEFAULT_SWEEP_INTERVAL);
+    }
+
+    DialogueCapability(Agent agent, Duration retention, Duration sweepInterval) {
         this.agent = agent;
         this.handlerRegistry = new DialogueHandlerRegistry();
+        this.retention = retention;
+        this.sweepInterval = sweepInterval;
     }
 
     /**
@@ -76,12 +94,14 @@ public class DialogueCapability {
             agent.getAgentId(),
             MessageHandler.sync(this::handleIncomingMessage)
         );
+        startReaper();
         log.info("Dialogue capability initialized for agent {} with {} handlers",
             agent.getAgentId(), handlerRegistry.size());
     }
 
     /**
-     * Shuts down dialogue capabilities, cancelling the recipient subscription.
+     * Shuts down dialogue capabilities, cancelling the recipient subscription and
+     * stopping the retention sweep.
      * Should be called during agent shutdown (e.g., in onStop()).
      *
      * @since 0.20.0
@@ -91,7 +111,67 @@ public class DialogueCapability {
             subscription.unsubscribe();
             subscription = null;
         }
+        stopReaper();
         log.debug("Dialogue capability shut down for agent {}", agent.getAgentId());
+    }
+
+    /**
+     * Starts the periodic sweep that drops terminated conversations and commitments.
+     *
+     * <p>Both maps are keyed by identifiers that are never reused, so nothing removes an
+     * entry once a dialogue ends — without this sweep they grow for the whole lifetime of
+     * the agent. The thread is a daemon so that an agent which forgets {@link #shutdown()}
+     * still lets the JVM exit.
+     */
+    private void startReaper() {
+        if (isReaperRunning()) {
+            return; // initialize() called twice: never start a second sweep thread
+        }
+        reaper = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "dialogue-reaper-" + agent.getAgentId());
+            t.setDaemon(true);
+            return t;
+        });
+        reaper.scheduleAtFixedRate(
+            this::sweep,
+            sweepInterval.toMillis(),
+            sweepInterval.toMillis(),
+            TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void sweep() {
+        try {
+            int conversations = conversationManager.cleanup(retention);
+            int commitments = conversationManager.getCommitmentTracker().cleanup(retention);
+            if (conversations > 0 || commitments > 0) {
+                log.debug("Dialogue sweep for agent {}: removed {} conversations, {} commitments",
+                    agent.getAgentId(), conversations, commitments);
+            }
+        } catch (Exception e) {
+            // Never let a sweep failure kill the scheduled task
+            log.warn("Dialogue sweep failed for agent {}: {}", agent.getAgentId(), e.getMessage(), e);
+        }
+    }
+
+    private void stopReaper() {
+        if (reaper == null) {
+            return;
+        }
+        reaper.shutdown();
+        try {
+            if (!reaper.awaitTermination(5, TimeUnit.SECONDS)) {
+                reaper.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            reaper.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Package-private: the sweep has no public surface, but its lifecycle needs a test. */
+    boolean isReaperRunning() {
+        return reaper != null && !reaper.isShutdown();
     }
 
     /**

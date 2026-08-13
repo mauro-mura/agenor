@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -156,6 +157,50 @@ class DialogueCapabilityTest {
         capability.request("agent-2", "task2");
 
         assertThat(capability.getActiveConversations()).hasSize(2);
+    }
+
+    @Test
+    void shouldStartReaperOnInitializeAndStopItOnShutdown() {
+        assertThat(capability.isReaperRunning()).isFalse();
+
+        capability.initialize(messageService);
+        assertThat(capability.isReaperRunning()).isTrue();
+
+        capability.shutdown();
+        assertThat(capability.isReaperRunning()).isFalse();
+    }
+
+    @Test
+    void shouldNotStartASecondReaperWhenInitializedTwice() {
+        capability.initialize(messageService);
+        capability.initialize(messageService);
+
+        capability.shutdown();
+
+        assertThat(capability.isReaperRunning()).isFalse();
+    }
+
+    @Test
+    void shouldSweepTerminatedConversationsPeriodically() {
+        // Given a capability whose sweep runs every 20ms with no retention window
+        var sweeping = new DialogueCapability(agent, Duration.ZERO, Duration.ofMillis(20));
+        sweeping.initialize(messageService);
+        try {
+            sweeping.request("agent-1", "task");
+            var conversationId = sweeping.getActiveConversations().get(0).getId();
+            sweeping.getConversationManager().cancel(conversationId);
+
+            // When the sweep runs, the terminated conversation is dropped
+            long deadline = System.currentTimeMillis() + 2_000;
+            while (sweeping.getConversation(conversationId).isPresent()
+                    && System.currentTimeMillis() < deadline) {
+                Thread.onSpinWait();
+            }
+
+            assertThat(sweeping.getConversation(conversationId)).isEmpty();
+        } finally {
+            sweeping.shutdown();
+        }
     }
 
     // Test agent with dialogue handlers

@@ -110,6 +110,24 @@ public interface ConversationManager {
     void cancel(String conversationId);
 
     /**
+     * Removes conversations that have reached a terminal state and have been inactive
+     * for longer than the given duration.
+     *
+     * <p>Conversation state is retained after a dialogue ends so that it can still be
+     * inspected; without a periodic sweep the retained state grows for the whole lifetime
+     * of the agent. Implementations that do not accumulate state in memory (for example a
+     * store-backed manager with its own expiry) may leave this as the default no-op.
+     *
+     * @param olderThan retention window measured from the conversation's last activity;
+     *                  {@link Duration#ZERO} removes every terminated conversation
+     * @return the number of conversations removed
+     * @since 0.26.0
+     */
+    default int cleanup(Duration olderThan) {
+        return 0;
+    }
+
+    /**
      * Registers a handler invoked for every message received in a specific conversation,
      * including intermediate replies (e.g. {@code AGREE}) that do not resolve the future
      * returned by {@link #request(String, Object, Duration)}.

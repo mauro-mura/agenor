@@ -192,6 +192,39 @@ class DefaultCommitmentTrackerTest {
             .isEqualTo(CommitmentState.RELEASED);
     }
 
+    @Test
+    void shouldRemoveTerminalCommitmentsAndTheirMessageIndexOnCleanup() {
+        // Given one terminal and one still-active commitment
+        var terminal = createActiveCommitment();
+        tracker.release(terminal.getId());
+
+        var active = DialogueMessage.builder()
+            .id("msg-2")
+            .conversationId("conv-2")
+            .senderId("performer")
+            .receiverId("requester")
+            .performative(Performative.AGREE)
+            .build();
+        tracker.createFromMessage(active);
+
+        // When sweeping with a zero retention window
+        int removed = tracker.cleanup(Duration.ZERO);
+
+        // Then only the terminal one is gone, index included
+        assertThat(removed).isEqualTo(1);
+        assertThat(tracker.get(terminal.getId())).isEmpty();
+        assertThat(tracker.getByMessageId("msg-1")).isEmpty();
+        assertThat(tracker.getByMessageId("msg-2")).isPresent();
+    }
+
+    @Test
+    void shouldKeepActiveCommitmentsOnCleanupHoweverOld() {
+        var commitment = createActiveCommitment();
+
+        assertThat(tracker.cleanup(Duration.ZERO)).isZero();
+        assertThat(tracker.get(commitment.getId())).isPresent();
+    }
+
     private dev.agenor.core.dialogue.Commitment createActiveCommitment() {
         var msg = DialogueMessage.builder()
             .id("msg-1")

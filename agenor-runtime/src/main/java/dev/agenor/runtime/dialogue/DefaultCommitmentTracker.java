@@ -162,18 +162,23 @@ public class DefaultCommitmentTracker implements CommitmentTracker {
     /**
      * Removes completed/terminal commitments older than specified duration.
      *
+     * <p>The {@code messageId -> commitmentId} index is pruned along with them, otherwise
+     * it would keep growing after the commitments it points at are gone.
+     *
      * @param olderThan remove commitments older than this duration
      * @return number of commitments removed
      */
+    @Override
     public int cleanup(Duration olderThan) {
         var cutoff = Instant.now().minus(olderThan);
         var toRemove = commitments.entrySet().stream()
             .filter(e -> e.getValue().getState().isTerminal())
-            .filter(e -> e.getValue().getCreatedAt().isBefore(cutoff))
+            .filter(e -> !e.getValue().getCreatedAt().isAfter(cutoff))
             .map(Map.Entry::getKey)
-            .toList();
+            .collect(java.util.stream.Collectors.toSet());
 
         toRemove.forEach(commitments::remove);
+        messageToCommitment.values().removeIf(toRemove::contains);
         return toRemove.size();
     }
 }

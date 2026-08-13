@@ -10,6 +10,7 @@ import dev.agenor.core.dialogue.protocol.ProtocolState;
 import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -249,6 +250,34 @@ public class DefaultConversationManager implements ConversationManager {
     @Override
     public void onMessage(String conversationId, Consumer<DialogueMessage> handler) {
         messageHandlers.put(conversationId, handler);
+    }
+
+    /**
+     * Removes conversations whose protocol state is terminal and whose last activity is
+     * older than {@code olderThan}, together with any per-conversation handler registered
+     * via {@link #onMessage(String, Consumer)}.
+     *
+     * <p>Active conversations are never removed, however old: a slow participant must not
+     * have its conversation swept out from under it.
+     *
+     * @param olderThan retention window measured from the conversation's last activity
+     * @return the number of conversations removed
+     * @since 0.26.0
+     */
+    @Override
+    public int cleanup(Duration olderThan) {
+        var cutoff = Instant.now().minus(olderThan);
+        var toRemove = conversations.entrySet().stream()
+            .filter(e -> e.getValue().getState().isTerminal())
+            .filter(e -> !e.getValue().getLastActivity().isAfter(cutoff))
+            .map(Map.Entry::getKey)
+            .toList();
+
+        toRemove.forEach(id -> {
+            conversations.remove(id);
+            messageHandlers.remove(id);
+        });
+        return toRemove.size();
     }
 
     /**

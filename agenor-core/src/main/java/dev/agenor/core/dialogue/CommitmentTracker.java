@@ -1,5 +1,6 @@
 package dev.agenor.core.dialogue;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,4 +72,22 @@ public interface CommitmentTracker {
      * @param commitmentId the commitment to release
      */
     void release(String commitmentId);
+
+    /**
+     * Removes commitments that have reached a terminal state and are older than the
+     * given duration.
+     *
+     * <p>Commitments outlive the message exchange that created them so that they remain
+     * observable after the fact; without a periodic sweep they accumulate for the whole
+     * lifetime of the agent. Implementations backed by a store with its own expiry may
+     * leave this as the default no-op.
+     *
+     * @param olderThan retention window measured from the commitment's creation time;
+     *                  {@link Duration#ZERO} removes every terminated commitment
+     * @return the number of commitments removed
+     * @since 0.26.0
+     */
+    default int cleanup(Duration olderThan) {
+        return 0;
+    }
 }
