@@ -1,6 +1,7 @@
 package dev.agenor.runtime.dialogue;
 
 import dev.agenor.core.messaging.MessageDispatcher;
+import dev.agenor.core.dialogue.CommitmentTracker;
 import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.ConversationManager;
 import dev.agenor.core.dialogue.DialogueMessage;
@@ -30,7 +31,7 @@ public class DefaultConversationManager implements ConversationManager {
     private final String localAgentId;
     private final MessageDispatcher messageDispatcher;
     private final ProtocolRegistry protocolRegistry;
-    private final DefaultCommitmentTracker commitmentTracker;
+    private final CommitmentTracker commitmentTracker;
 
     private final Map<String, DefaultConversation> conversations = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<DialogueMessage>> pendingResponses = new ConcurrentHashMap<>();
@@ -46,7 +47,7 @@ public class DefaultConversationManager implements ConversationManager {
             String localAgentId,
             MessageDispatcher messageDispatcher,
             ProtocolRegistry protocolRegistry,
-            DefaultCommitmentTracker commitmentTracker) {
+            CommitmentTracker commitmentTracker) {
         this.localAgentId = localAgentId;
         this.messageDispatcher = messageDispatcher;
         this.protocolRegistry = protocolRegistry;
@@ -283,7 +284,8 @@ public class DefaultConversationManager implements ConversationManager {
     /**
      * @return the commitment tracker
      */
-    public DefaultCommitmentTracker getCommitmentTracker() {
+    @Override
+    public CommitmentTracker getCommitmentTracker() {
         return commitmentTracker;
     }
 

@@ -1,19 +1,23 @@
 package dev.agenor.runtime.dialogue;
 
 import dev.agenor.core.Agent;
+import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.Subscription;
+import dev.agenor.core.dialogue.CommitmentTracker;
 import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.ConversationManager;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -23,19 +27,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * Provides dialogue capabilities to agents via composition.
  *
- * <p>Usage:
+ * <p>Usage — an agent implementing {@link LifecycleHooks} (as {@code BaseAgent} does) needs
+ * no lifecycle wiring at all: the capability registers itself on construction.
+ *
  * <pre>{@code
  * public class MyAgent extends BaseAgent {
- *     private final DialogueCapability dialogue;
- *
- *     public MyAgent() {
- *         this.dialogue = new DialogueCapability(this);
- *     }
- *
- *     @Override
- *     protected void onStart() {
- *         dialogue.initialize(getMessageService());
- *     }
+ *     private final DialogueCapability dialogue = new DialogueCapability(this);
  *
  *     @DialogueHandler(performatives = REQUEST)
  *     public void handleRequest(DialogueMessage msg) {
@@ -43,6 +40,17 @@ import java.util.concurrent.TimeUnit;
  *     }
  * }
  * }</pre>
+ *
+ * <p>An agent implementing {@link Agent} directly, without {@link LifecycleHooks}, must do
+ * the wiring itself: call {@link #initialize()} from its {@code start()} and
+ * {@link #shutdown()} from its {@code stop()}. Skipping {@code shutdown()} leaks the
+ * agent's recipient subscription and its retention sweep for the lifetime of the process.
+ *
+ * <p>Conversation state is <strong>per-agent</strong>: each capability owns its own
+ * {@link ConversationManager}, and nothing is shared between agents beyond the transport.
+ *
+ * <p>Collaborators can be replaced through {@link #builder(Agent)} — see
+ * {@link ConversationManagerFactory}.
  *
  * @since 0.5.0
  */
@@ -59,50 +67,162 @@ public class DialogueCapability {
 
     private final Agent agent;
     private final DialogueHandlerRegistry handlerRegistry;
+    private final ConversationManagerFactory conversationManagerFactory;
+    private final ProtocolRegistry protocolRegistry;
+    private final CommitmentTracker commitmentTracker;
     private final Duration retention;
     private final Duration sweepInterval;
 
-    private DefaultConversationManager conversationManager;
+    private volatile ConversationManager conversationManager;
     private Subscription subscription;
     private ScheduledExecutorService reaper;
 
+    /**
+     * Creates a dialogue capability for the given agent, with the built-in protocols and an
+     * in-memory conversation manager.
+     *
+     * <p><strong>Invariant — this constructor must not dereference {@code agent}</strong>
+     * beyond the {@code instanceof} check below. The idiomatic call site is a field
+     * initializer ({@code private final DialogueCapability dialogue = new DialogueCapability(this)}),
+     * which runs while the agent is still being constructed: the runtime has not injected the
+     * {@code MessageDispatcher} yet, and no subclass constructor body has executed, so
+     * {@code getAgentId()} can legitimately still return null. Everything that reads from the
+     * agent is deferred to {@link #initialize()}.
+     *
+     * @param agent the agent this capability belongs to
+     */
     public DialogueCapability(Agent agent) {
-        this(agent, DEFAULT_RETENTION, DEFAULT_SWEEP_INTERVAL);
+        this(agent, DefaultConversationManager::new, new ProtocolRegistry(),
+            new DefaultCommitmentTracker(), DEFAULT_RETENTION, DEFAULT_SWEEP_INTERVAL);
     }
 
-    DialogueCapability(Agent agent, Duration retention, Duration sweepInterval) {
-        this.agent = agent;
+    private DialogueCapability(
+            Agent agent,
+            ConversationManagerFactory conversationManagerFactory,
+            ProtocolRegistry protocolRegistry,
+            CommitmentTracker commitmentTracker,
+            Duration retention,
+            Duration sweepInterval) {
+        this.agent = Objects.requireNonNull(agent, "agent cannot be null");
+        this.conversationManagerFactory =
+            Objects.requireNonNull(conversationManagerFactory, "conversationManagerFactory cannot be null");
+        this.protocolRegistry = Objects.requireNonNull(protocolRegistry, "protocolRegistry cannot be null");
+        this.commitmentTracker = Objects.requireNonNull(commitmentTracker, "commitmentTracker cannot be null");
+        this.retention = Objects.requireNonNull(retention, "retention cannot be null");
+        this.sweepInterval = Objects.requireNonNull(sweepInterval, "sweepInterval cannot be null");
         this.handlerRegistry = new DialogueHandlerRegistry();
-        this.retention = retention;
-        this.sweepInterval = sweepInterval;
+
+        if (agent instanceof LifecycleHooks hooks) {
+            hooks.onStartHook(this::initialize);
+            hooks.onStopHook(this::shutdown);
+        } else {
+            // Deliberately the class name, not getAgentId(): see the invariant above.
+            log.warn("{} does not implement LifecycleHooks: call dialogue.initialize() from the "
+                    + "agent's start() and dialogue.shutdown() from its stop(). Without shutdown() "
+                    + "the recipient subscription and the retention sweep leak for the lifetime "
+                    + "of the process.",
+                agent.getClass().getName());
+        }
     }
 
     /**
-     * Initializes dialogue capabilities with the message dispatcher.
-     * Should be called during agent startup (e.g., in onStart()).
+     * Creates a builder for a capability with custom collaborators (conversation manager,
+     * protocol registry, commitment tracker, retention window).
+     *
+     * @param agent the agent this capability belongs to
+     * @return a new builder
+     * @since 0.26.0
+     */
+    public static Builder builder(Agent agent) {
+        return new Builder(agent);
+    }
+
+    /**
+     * Initializes dialogue capabilities, resolving the transport from the agent itself.
+     *
+     * <p>Called automatically on agent start when the agent implements {@link LifecycleHooks};
+     * agents that do not must call it from their own {@code start()}. Idempotent: a second
+     * call is a no-op, so mixing automatic and manual wiring is safe.
+     *
+     * @throws IllegalStateException if the agent has no message dispatcher yet
+     * @since 0.26.0
+     */
+    public void initialize() {
+        if (conversationManager != null) {
+            return;
+        }
+        MessageDispatcher dispatcher = agent.getMessageDispatcher();
+        if (dispatcher == null) {
+            throw new IllegalStateException(
+                "Cannot initialize dialogue for agent " + agent.getAgentId()
+                    + ": no MessageDispatcher available. Register the agent with AgenorRuntime "
+                    + "before starting it, or call initialize(MessageDispatcher) explicitly.");
+        }
+        doInitialize(dispatcher);
+    }
+
+    /**
+     * Initializes dialogue capabilities with an explicit message dispatcher.
      *
      * @param dispatcher the message dispatcher to use
      * @since 0.20.0
+     * @deprecated since 0.26.0, use {@link #initialize()} — the capability resolves the
+     *             dispatcher from the agent, which is the only one the runtime holds. This
+     *             overload still honours the dispatcher passed to it.
      */
+    @Deprecated(since = "0.26.0", forRemoval = true)
     public void initialize(MessageDispatcher dispatcher) {
-        this.conversationManager = new DefaultConversationManager(
+        Objects.requireNonNull(dispatcher, "dispatcher cannot be null");
+        if (conversationManager != null) {
+            return;
+        }
+        doInitialize(dispatcher);
+    }
+
+    private synchronized void doInitialize(MessageDispatcher dispatcher) {
+        if (conversationManager != null) {
+            return; // also protects handlerRegistry.scan() from double-registration
+        }
+        var manager = conversationManagerFactory.create(
             agent.getAgentId(),
-            dispatcher
+            dispatcher,
+            protocolRegistry,
+            commitmentTracker
         );
         handlerRegistry.scan(agent);
         subscription = dispatcher.subscribeRecipient(
             agent.getAgentId(),
             MessageHandler.sync(this::handleIncomingMessage)
         );
+        this.conversationManager = manager;
         startReaper();
         log.info("Dialogue capability initialized for agent {} with {} handlers",
             agent.getAgentId(), handlerRegistry.size());
     }
 
     /**
+     * @return the conversation manager, failing with an actionable message when the
+     *         capability was never initialized
+     */
+    private ConversationManager requireInitialized() {
+        var manager = conversationManager;
+        if (manager == null) {
+            throw new IllegalStateException(
+                "DialogueCapability not initialized for agent " + agent.getAgentId()
+                    + " — call initialize() from your agent's start(), or implement "
+                    + "LifecycleHooks (BaseAgent already does) for automatic wiring");
+        }
+        return manager;
+    }
+
+    /**
      * Shuts down dialogue capabilities, cancelling the recipient subscription and
      * stopping the retention sweep.
-     * Should be called during agent shutdown (e.g., in onStop()).
+     *
+     * <p>Called automatically on agent stop when the agent implements {@link LifecycleHooks};
+     * agents that do not must call it from their own {@code stop()}. Conversation state does
+     * not survive: a subsequent {@link #initialize()} starts from a fresh manager, which is
+     * what an agent restart needs since the old subscription is gone.
      *
      * @since 0.20.0
      */
@@ -112,6 +232,7 @@ public class DialogueCapability {
             subscription = null;
         }
         stopReaper();
+        conversationManager = null;
         log.debug("Dialogue capability shut down for agent {}", agent.getAgentId());
     }
 
@@ -141,9 +262,13 @@ public class DialogueCapability {
     }
 
     private void sweep() {
+        var manager = conversationManager;
+        if (manager == null) {
+            return; // shutdown() raced the sweep
+        }
         try {
-            int conversations = conversationManager.cleanup(retention);
-            int commitments = conversationManager.getCommitmentTracker().cleanup(retention);
+            int conversations = manager.cleanup(retention);
+            int commitments = manager.getCommitmentTracker().cleanup(retention);
             if (conversations > 0 || commitments > 0) {
                 log.debug("Dialogue sweep for agent {}: removed {} conversations, {} commitments",
                     agent.getAgentId(), conversations, commitments);
@@ -219,7 +344,7 @@ public class DialogueCapability {
      * @see #request(String, Object)
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {
-        return conversationManager.request(targetAgentId, content, timeout);
+        return requireInitialized().request(targetAgentId, content, timeout);
     }
 
     /**
@@ -238,7 +363,7 @@ public class DialogueCapability {
      * @see #query(String, Object)
      */
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query, Duration timeout) {
-        return conversationManager.query(targetAgentId, query, timeout);
+        return requireInitialized().query(targetAgentId, query, timeout);
     }
 
     /**
@@ -246,14 +371,14 @@ public class DialogueCapability {
      */
     public CompletableFuture<List<DialogueMessage>> callForProposals(
             List<String> participants, Object taskSpec, Duration deadline) {
-        return conversationManager.callForProposals(participants, taskSpec, deadline);
+        return requireInitialized().callForProposals(participants, taskSpec, deadline);
     }
 
     /**
      * Replies to a received message.
      */
     public CompletableFuture<Void> reply(DialogueMessage original, Performative performative, Object content) {
-        return conversationManager.reply(original, performative, content);
+        return requireInitialized().reply(original, performative, content);
     }
 
     /**
@@ -306,27 +431,110 @@ public class DialogueCapability {
      * Gets a conversation by ID.
      */
     public Optional<Conversation> getConversation(String conversationId) {
-        return conversationManager.getConversation(conversationId);
+        return requireInitialized().getConversation(conversationId);
     }
 
     /**
      * Gets all active conversations.
      */
     public List<Conversation> getActiveConversations() {
-        return conversationManager.getActiveConversations();
+        return requireInitialized().getActiveConversations();
     }
 
     /**
      * Gets the underlying conversation manager.
      */
     public ConversationManager getConversationManager() {
-        return conversationManager;
+        return requireInitialized();
     }
 
     /**
      * Gets the commitment tracker.
+     *
+     * @since 0.26.0 returns the {@link CommitmentTracker} interface rather than the
+     *        concrete default implementation
      */
-    public DefaultCommitmentTracker getCommitmentTracker() {
-        return conversationManager.getCommitmentTracker();
+    public CommitmentTracker getCommitmentTracker() {
+        return requireInitialized().getCommitmentTracker();
+    }
+
+    /**
+     * Builder for a {@link DialogueCapability} with non-default collaborators.
+     *
+     * <p>Every collaborator has the same default the plain constructor uses, so only what
+     * actually differs needs to be set.
+     *
+     * @since 0.26.0
+     */
+    public static final class Builder {
+
+        private final Agent agent;
+        private ConversationManagerFactory conversationManagerFactory = DefaultConversationManager::new;
+        private ProtocolRegistry protocolRegistry = new ProtocolRegistry();
+        private CommitmentTracker commitmentTracker = new DefaultCommitmentTracker();
+        private Duration retention = DEFAULT_RETENTION;
+        private Duration sweepInterval = DEFAULT_SWEEP_INTERVAL;
+
+        private Builder(Agent agent) {
+            this.agent = agent;
+        }
+
+        /**
+         * @param factory creates the conversation manager; default
+         *                {@code DefaultConversationManager::new} (in-memory, node-local)
+         * @return this builder
+         */
+        public Builder conversationManagerFactory(ConversationManagerFactory factory) {
+            this.conversationManagerFactory = factory;
+            return this;
+        }
+
+        /**
+         * @param registry the protocols available to this agent, e.g. one carrying a custom
+         *                 {@code Protocol}; default: the built-in request/query/contract-net
+         * @return this builder
+         */
+        public Builder protocolRegistry(ProtocolRegistry registry) {
+            this.protocolRegistry = registry;
+            return this;
+        }
+
+        /**
+         * @param tracker records the commitments made in this agent's conversations;
+         *                default {@code DefaultCommitmentTracker}
+         * @return this builder
+         */
+        public Builder commitmentTracker(CommitmentTracker tracker) {
+            this.commitmentTracker = tracker;
+            return this;
+        }
+
+        /**
+         * @param retention how long terminated conversations and commitments are kept
+         *                  before being swept; default 5 minutes
+         * @return this builder
+         */
+        public Builder retention(Duration retention) {
+            this.retention = retention;
+            return this;
+        }
+
+        /**
+         * @param sweepInterval how often the retention sweep runs; default 1 minute
+         * @return this builder
+         */
+        public Builder sweepInterval(Duration sweepInterval) {
+            this.sweepInterval = sweepInterval;
+            return this;
+        }
+
+        /**
+         * @return the configured capability, already registered on the agent's lifecycle
+         *         hooks when it supports them
+         */
+        public DialogueCapability build() {
+            return new DialogueCapability(agent, conversationManagerFactory, protocolRegistry,
+                commitmentTracker, retention, sweepInterval);
+        }
     }
 }

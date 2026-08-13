@@ -107,6 +107,7 @@ public class DefaultCommitmentTracker implements CommitmentTracker {
     /**
      * Gets commitment ID by the message that created it.
      */
+    @Override
     public Optional<String> getByMessageId(String messageId) {
         if (messageId == null) {
             return Optional.empty();

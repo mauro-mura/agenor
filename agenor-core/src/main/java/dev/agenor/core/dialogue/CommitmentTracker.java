@@ -36,6 +36,19 @@ public interface CommitmentTracker {
     Optional<Commitment> get(String commitmentId);
 
     /**
+     * Retrieves the ID of the commitment created by a given message.
+     *
+     * <p>Used to correlate an incoming reply with the commitment its original message
+     * created, so that the commitment can be advanced by
+     * {@link #updateFromResponse(String, DialogueMessage)}.
+     *
+     * @param messageId the ID of the message that created the commitment; may be null
+     * @return the commitment ID if that message created one
+     * @since 0.26.0
+     */
+    Optional<String> getByMessageId(String messageId);
+
+    /**
      * Gets all active commitments where the agent is the performer.
      *
      * @param agentId the agent ID

@@ -110,6 +110,19 @@ public interface ConversationManager {
     void cancel(String conversationId);
 
     /**
+     * Returns the commitment tracker backing this manager.
+     *
+     * <p>Commitments are created and advanced as a side effect of the messages flowing
+     * through a conversation, so the tracker is part of a manager's contract rather than
+     * an implementation detail: a caller holding only this interface must still be able
+     * to observe the promises its agent has made.
+     *
+     * @return the commitment tracker, never null
+     * @since 0.26.0
+     */
+    CommitmentTracker getCommitmentTracker();
+
+    /**
      * Removes conversations that have reached a terminal state and have been inactive
      * for longer than the given duration.
      *
