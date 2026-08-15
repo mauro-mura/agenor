@@ -1,5 +1,6 @@
 package dev.agenor.core.dialogue;
 
+import dev.agenor.core.Message;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -90,6 +91,63 @@ class DialogueMessageTest {
         assertThat(reconstructed.senderId()).isEqualTo(original.senderId());
         assertThat(reconstructed.performative()).isEqualTo(original.performative());
         assertThat(reconstructed.protocol()).isEqualTo(original.protocol());
+    }
+
+    @Test
+    void shouldClassifyAMessageProducedByToMessageAsDialogue() {
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .receiverId("agent-2")
+            .performative(Performative.REQUEST)
+            .content("do something")
+            .build()
+            .toMessage();
+
+        assertThat(DialogueMessage.isDialogueMessage(message)).isTrue();
+    }
+
+    @Test
+    void shouldNotClassifyAPlainMessageAsDialogue() {
+        // Given a message sent with sendTo(), carrying no dialogue headers
+        var message = Message.builder()
+            .senderId("agent-1")
+            .receiverId("agent-2")
+            .content("just a notification")
+            .build();
+
+        assertThat(DialogueMessage.isDialogueMessage(message)).isFalse();
+    }
+
+    @Test
+    void shouldNotClassifyAnUnknownPerformativeAsDialogue() {
+        // Given a peer speaking a dialect this runtime does not know
+        var message = Message.builder()
+            .senderId("agent-1")
+            .header("performative", "TELEPATHY")
+            .content("data")
+            .build();
+
+        // Then it is not routed to dialogue...
+        assertThat(DialogueMessage.isDialogueMessage(message)).isFalse();
+
+        // ...while fromMessage() stays lenient for callers that already know what they hold
+        assertThat(DialogueMessage.fromMessage(message).performative())
+            .isEqualTo(Performative.INFORM);
+    }
+
+    @Test
+    void shouldClassifyAndConvertALowerCasePerformativeConsistently() {
+        // Given a header that the converter accepts case-insensitively
+        var message = Message.builder()
+            .senderId("agent-1")
+            .header("performative", "inform")
+            .content("data")
+            .build();
+
+        // Then the classifier agrees with it — both read the same parse
+        assertThat(DialogueMessage.isDialogueMessage(message)).isTrue();
+        assertThat(DialogueMessage.fromMessage(message).performative())
+            .isEqualTo(Performative.INFORM);
     }
 
     @Test

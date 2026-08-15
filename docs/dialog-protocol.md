@@ -386,6 +386,37 @@ DialogueCapability dialogue = DialogueCapability.builder(this)
     .build();
 ```
 
+## Mixing dialogue with plain direct messages
+
+An agent can use `@AgenorMessageHandler`/`onDirectMessage()` and dialogue at the same time.
+Both read the same recipient channel, so the framework has to decide which path each inbound
+message belongs to. The rule is a single pure function:
+
+```java
+DialogueMessage.isDialogueMessage(message)   // performative header present and recognised
+```
+
+A message that does not qualify is **never** turned into a conversation: it is left to the
+direct-message path. A message whose `performative` header holds a value this runtime does not
+know is treated the same way and logged at WARN, rather than being executed as an `INFORM` its
+sender never sent.
+
+The reverse is not filtered: a dialogue message **also** reaches `onDirectMessage()`, because an
+agent without a `DialogueCapability` must still be able to receive it. If you override
+`onDirectMessage()` on an agent that speaks dialogue, skip dialogue traffic yourself:
+
+```java
+@Override
+protected void onDirectMessage(Message message) {
+    if (DialogueMessage.isDialogueMessage(message)) {
+        return;   // handled by @DialogueHandler
+    }
+    ...
+}
+```
+
+See ADR-029 for the reasoning behind the asymmetry.
+
 ## Swapping the conversation manager
 
 `DialogueCapability` depends only on the `ConversationManager` and `CommitmentTracker`

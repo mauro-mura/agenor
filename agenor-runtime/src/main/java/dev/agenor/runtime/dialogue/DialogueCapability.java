@@ -322,8 +322,29 @@ public class DialogueCapability {
 
     /**
      * Handles an incoming message, converting to DialogueMessage and dispatching.
+     *
+     * <p>An agent's recipient channel carries every direct message sent to it, not only dialogue
+     * traffic — a {@code BaseAgent} with dialogue holds two subscriptions on it. Anything that is
+     * not a dialogue message is left to the other one: converting it here would fabricate an
+     * {@code INFORM} in a conversation nobody started, which would then never reach a terminal
+     * state and never be swept. See ADR-029.
      */
     private void handleIncomingMessage(Message message) {
+        if (!DialogueMessage.isDialogueMessage(message)) {
+            if (message.headers().containsKey("performative")) {
+                // A peer speaking a dialect this runtime does not know. Silently dropping it is
+                // the kind of thing that costs a day of debugging, so say so.
+                log.warn("Agent {} is not routing message {} from {} to dialogue: unknown "
+                        + "performative '{}'",
+                    agent.getAgentId(), message.id(), message.senderId(),
+                    message.headers().get("performative"));
+            } else {
+                log.trace("Agent {} received a non-dialogue message {} from {}; left to the "
+                        + "direct-message path",
+                    agent.getAgentId(), message.id(), message.senderId());
+            }
+            return;
+        }
         try {
             DialogueMessage dialogueMessage = DialogueMessage.fromMessage(message);
 

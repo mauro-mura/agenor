@@ -48,7 +48,40 @@ public record DialogueMessage(
     }
 
     /**
+     * Decides whether a {@link Message} is part of a dialogue exchange.
+     *
+     * <p>A message qualifies when its {@code performative} header is present <em>and</em> names
+     * a known {@link Performative}. The header is what declares communicative intent;
+     * {@code conversationId} is deliberately not required, because a peer's first message may
+     * legitimately omit it.
+     *
+     * <p>This is the classifier; {@link #fromMessage(Message)} is the converter. Converting
+     * without classifying first is the caller asserting it already knows what it holds — which
+     * is correct when awaiting the reply to a dialogue it started itself. Components that route
+     * arbitrary inbound traffic should classify first: a message that is not dialogue must not
+     * be turned into a synthetic {@code INFORM} in a conversation nobody started.
+     *
+     * <p>A message whose {@code performative} header holds an unrecognised value is
+     * <strong>not</strong> a dialogue message: it comes from a peer speaking a dialect this
+     * runtime does not know, and executing it as {@code INFORM} would run something its sender
+     * never said. See ADR-029.
+     *
+     * @param message the message to classify; must not be null
+     * @return true if the message carries a known performative
+     * @since 0.26.0
+     */
+    public static boolean isDialogueMessage(Message message) {
+        Objects.requireNonNull(message, "message cannot be null");
+        return parsePerformative(message).isPresent();
+    }
+
+    /**
      * Creates a new DialogueMessage from an existing Message.
+     *
+     * <p>Lenient by design: a missing or unrecognised {@code performative} header becomes
+     * {@link Performative#INFORM} and a missing {@code conversationId} is generated. Use
+     * {@link #isDialogueMessage(Message)} first when the message came from a channel that also
+     * carries non-dialogue traffic.
      */
     public static DialogueMessage fromMessage(Message message) {
         Objects.requireNonNull(message, "message cannot be null");
@@ -146,15 +179,27 @@ public record DialogueMessage(
     }
 
     private static Performative extractPerformative(Message message) {
+        return parsePerformative(message).orElse(Performative.INFORM);
+    }
+
+    /**
+     * Reads the {@code performative} header, if it is present and names a known performative.
+     *
+     * <p>Single source of truth for both {@link #isDialogueMessage(Message)} and
+     * {@link #extractPerformative(Message)}: if the two parsed independently, a header the
+     * classifier rejected could still be converted (or vice versa) — for instance a lower-case
+     * {@code "inform"}.
+     */
+    private static Optional<Performative> parsePerformative(Message message) {
         String perf = message.headers().get("performative");
-        if (perf != null) {
-            try {
-                return Performative.valueOf(perf.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                return Performative.INFORM;
-            }
+        if (perf == null) {
+            return Optional.empty();
         }
-        return Performative.INFORM;
+        try {
+            return Optional.of(Performative.valueOf(perf.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     private static String extractProtocol(Message message) {

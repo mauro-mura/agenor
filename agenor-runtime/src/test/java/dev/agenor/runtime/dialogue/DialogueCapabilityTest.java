@@ -88,6 +88,49 @@ class DialogueCapabilityTest {
     }
 
     @Test
+    void shouldIgnorePlainMessagesInsteadOfFabricatingAConversation() {
+        capability.initialize(messageService);
+
+        // Given a plain sendTo() message: no performative, no conversationId
+        var plainMsg = Message.builder()
+            .id("plain-1")
+            .senderId("remote-agent")
+            .receiverId("test-agent")
+            .content("just a notification")
+            .build();
+
+        // When it arrives on the recipient channel the dialogue capability shares with the agent
+        messageHandler.handle(plainMsg);
+
+        // Then no phantom conversation is created — this is the assertion that covers the leak,
+        // since such a conversation is never terminal and the retention sweep cannot reach it
+        assertThat(capability.getActiveConversations()).isEmpty();
+        // ...and no dialogue handler runs on traffic that is not dialogue
+        assertThat(agent.informCount.get()).isZero();
+    }
+
+    @Test
+    void shouldIgnoreMessagesCarryingAnUnknownPerformative() {
+        capability.initialize(messageService);
+
+        // Given a peer speaking a dialect this runtime does not know
+        var futureMsg = Message.builder()
+            .id("future-1")
+            .senderId("remote-agent")
+            .receiverId("test-agent")
+            .header("conversationId", "conv-future")
+            .header("performative", "TELEPATHY")
+            .content("data")
+            .build();
+
+        messageHandler.handle(futureMsg);
+
+        // Then it is not executed as a fabricated INFORM
+        assertThat(capability.getActiveConversations()).isEmpty();
+        assertThat(agent.informCount.get()).isZero();
+    }
+
+    @Test
     void shouldSendRequest() {
         capability.initialize(messageService);
 
@@ -280,6 +323,59 @@ class DialogueCapabilityTest {
     }
 
     @Test
+    void shouldRouteEachInboundMessageToOnlyOnePathOnARealAgent() {
+        // Given a BaseAgent that both handles direct messages and speaks dialogue. It holds two
+        // subscriptions on its own recipient channel (its own, plus the capability's), which the
+        // mocked-dispatcher tests above cannot reproduce.
+        var mixed = new MixedTrafficAgent("mixed-agent");
+        var dispatcher = new InMemoryMessageDispatcher(
+            new InMemoryAgentDirectory(), AgenorTelemetry.noop());
+        mixed.setMessageDispatcher(dispatcher);
+        mixed.start().join();
+
+        try {
+            // When one plain message and one dialogue message arrive
+            dispatcher.sendTo(Message.builder()
+                .senderId("someone")
+                .receiverId("mixed-agent")
+                .content("plain payload")
+                .build());
+            dispatcher.sendTo(DialogueMessage.builder()
+                .conversationId("conv-real")
+                .senderId("someone")
+                .receiverId("mixed-agent")
+                .performative(Performative.REQUEST)
+                .content("do the thing")
+                .build()
+                .toMessage());
+
+            // deliverToReceiver() starts a virtual thread per handler without awaiting them, so
+            // sendTo()'s future completes before the handlers have run: wait for the counters.
+            awaitUntil(() -> mixed.directMessages.get() == 2 && mixed.dialogueMessages.get() == 1);
+
+            // Then both reach the direct path — BaseAgent deliberately does not filter (D3)...
+            assertThat(mixed.directMessages.get()).isEqualTo(2);
+            // ...only the dialogue one reaches a @DialogueHandler...
+            assertThat(mixed.dialogueMessages.get()).isEqualTo(1);
+            // ...and exactly one conversation exists: the plain message fabricated none. This is
+            // the assertion that covers the leak — a phantom conversation is never terminal, so
+            // the retention sweep could not reclaim it.
+            assertThat(mixed.dialogue.getActiveConversations()).hasSize(1);
+            assertThat(mixed.dialogue.getConversation("conv-real")).isPresent();
+        } finally {
+            mixed.stop().join();
+        }
+    }
+
+    /** Bounded wait: no Awaitility on the classpath, and no fixed sleep in tests. */
+    private static void awaitUntil(java.util.function.BooleanSupplier condition) {
+        long deadline = System.currentTimeMillis() + 2_000;
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
+            Thread.onSpinWait();
+        }
+    }
+
+    @Test
     void shouldShutdownAutomaticallyOnStopForLifecycleHooksAgent() {
         var hookAgent = new HookedDialogueAgent("hooked-agent-2");
         hookAgent.setMessageDispatcher(
@@ -411,6 +507,27 @@ class DialogueCapabilityTest {
         }
     }
 
+    /** Mixes direct messaging and dialogue on one agent — the shape ADR-029 D3 is about. */
+    static class MixedTrafficAgent extends BaseAgent {
+        final DialogueCapability dialogue = new DialogueCapability(this);
+        final AtomicInteger directMessages = new AtomicInteger();
+        final AtomicInteger dialogueMessages = new AtomicInteger();
+
+        MixedTrafficAgent(String id) {
+            super(id, id);
+        }
+
+        @Override
+        protected void onDirectMessage(Message message) {
+            directMessages.incrementAndGet();
+        }
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage msg) {
+            dialogueMessages.incrementAndGet();
+        }
+    }
+
     /** Reproduces the MultiInstanceWorker shape: agentId resolved from a late-assigned field. */
     static class LateIdAgent extends BaseAgent {
         private final String lateId;
@@ -432,6 +549,7 @@ class DialogueCapabilityTest {
         private final String id;
         final AtomicReference<DialogueMessage> lastRequest = new AtomicReference<>();
         final AtomicInteger requestCount = new AtomicInteger();
+        final AtomicInteger informCount = new AtomicInteger();
 
         TestDialogueAgent(String id) {
             this.id = id;
@@ -450,6 +568,12 @@ class DialogueCapabilityTest {
         public void handleRequest(DialogueMessage msg) {
             lastRequest.set(msg);
             requestCount.incrementAndGet();
+        }
+
+        /** Present so that a plain message reinterpreted as a synthetic INFORM would be seen. */
+        @DialogueHandler(performatives = Performative.INFORM)
+        public void handleInform(DialogueMessage msg) {
+            informCount.incrementAndGet();
         }
     }
 }

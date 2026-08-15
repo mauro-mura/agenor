@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Plain direct messages were reinterpreted as dialogue** (ADR-029): an agent's recipient
+  channel carries every message sent to it, and a `BaseAgent` with dialogue holds two
+  subscriptions on it — its own and the capability's. `DialogueMessage.fromMessage()` defaults a
+  missing `performative` header to `INFORM` and generates a `conversationId`, so an ordinary
+  `sendTo()` message became a synthetic `INFORM` in a conversation nobody started: it was
+  dispatched to any matching `@DialogueHandler`, and it added a permanent entry to the
+  conversation map. **This was a fourth resource leak, and the retention sweep added above could
+  not reclaim it** — such a conversation never reaches a terminal state, and the sweep only
+  removes terminal ones. `DialogueCapability` now classifies inbound traffic with the new
+  `DialogueMessage.isDialogueMessage(Message)` and leaves everything else to the direct-message
+  path. A message whose `performative` header holds an unrecognised value is likewise not routed
+  to dialogue — it is logged at WARN instead of being executed as an `INFORM` its sender never
+  sent. `fromMessage()` itself is unchanged, so callers converting a reply they are already
+  waiting for (the A2A adapters) are unaffected. Note that a dialogue message still reaches
+  `onDirectMessage()`: an agent *without* dialogue must keep receiving it, so `BaseAgent`
+  deliberately does not filter.
 - **Dialogue Protocol resource leaks**: three maps in the dialogue runtime grew for the
   entire lifetime of an agent. `DefaultConversationManager` only removed a pending-response
   future on the success path, so every timed-out `request()`/`query()` leaked an entry and
