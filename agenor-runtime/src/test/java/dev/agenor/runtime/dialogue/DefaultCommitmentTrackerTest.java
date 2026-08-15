@@ -173,6 +173,23 @@ class DefaultCommitmentTrackerTest {
     }
 
     @Test
+    void shouldNotViolateCommitmentsWhoseDeadlineHasNotPassed() {
+        // Given a commitment created with the default (5 minute) deadline
+        var msg = DialogueMessage.builder()
+            .senderId("performer").receiverId("requester")
+            .performative(Performative.AGREE).build();
+        var commitment = tracker.createFromMessage(msg);
+
+        // When violations are checked before the deadline — the sweep does this every minute
+        var violations = tracker.checkViolations();
+
+        // Then nothing is flagged and the commitment is untouched
+        assertThat(violations).isEmpty();
+        assertThat(tracker.get(commitment.getId()).get().getState())
+            .isEqualTo(CommitmentState.ACTIVE);
+    }
+
+    @Test
     void shouldCancelCommitment() {
         var commitment = createActiveCommitment();
 

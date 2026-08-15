@@ -49,6 +49,12 @@ import java.util.concurrent.TimeUnit;
  * <p>Conversation state is <strong>per-agent</strong>: each capability owns its own
  * {@link ConversationManager}, and nothing is shared between agents beyond the transport.
  *
+ * <p>While initialized, a background sweep drops terminated conversations and commitments
+ * past their retention window and marks overdue commitments as
+ * {@link dev.agenor.core.dialogue.CommitmentState#VIOLATED} — no manual
+ * {@link CommitmentTracker#checkViolations()} loop is needed. Detection is therefore delayed
+ * by up to one sweep interval (default one minute); shorten it via {@link Builder#sweepInterval}.
+ *
  * <p>Collaborators can be replaced through {@link #builder(Agent)} — see
  * {@link ConversationManagerFactory}.
  *
@@ -237,7 +243,8 @@ public class DialogueCapability {
     }
 
     /**
-     * Starts the periodic sweep that drops terminated conversations and commitments.
+     * Starts the periodic sweep that drops terminated conversations and commitments and
+     * marks overdue commitments as violated.
      *
      * <p>Both maps are keyed by identifiers that are never reused, so nothing removes an
      * entry once a dialogue ends — without this sweep they grow for the whole lifetime of
@@ -267,8 +274,22 @@ public class DialogueCapability {
             return; // shutdown() raced the sweep
         }
         try {
+            var tracker = manager.getCommitmentTracker();
             int conversations = manager.cleanup(retention);
-            int commitments = manager.getCommitmentTracker().cleanup(retention);
+            int commitments = tracker.cleanup(retention);
+
+            // Order matters: checkViolations() moves an overdue commitment to VIOLATED, which
+            // CommitmentState.isTerminal() reports as terminal, and cleanup() selects on
+            // createdAt — not on when the state became terminal. Violating first would let a
+            // commitment older than the retention window be marked and deleted in the same
+            // sweep, so its creditor could never observe VIOLATED through get(). Sweeping
+            // first leaves it in place for at least one full interval.
+            var violated = tracker.checkViolations();
+            violated.forEach(c -> log.warn(
+                "Commitment {} violated for agent {}: deadline exceeded, {} owes {} in conversation {}",
+                c.getId(), agent.getAgentId(), c.getPerformer(), c.getRequester(),
+                c.getConversationId()));
+
             if (conversations > 0 || commitments > 0) {
                 log.debug("Dialogue sweep for agent {}: removed {} conversations, {} commitments",
                     agent.getAgentId(), conversations, commitments);
@@ -520,7 +541,8 @@ public class DialogueCapability {
         }
 
         /**
-         * @param sweepInterval how often the retention sweep runs; default 1 minute
+         * @param sweepInterval how often the retention sweep runs; default 1 minute. It also
+         *                      bounds how late an overdue commitment is marked violated
          * @return this builder
          */
         public Builder sweepInterval(Duration sweepInterval) {

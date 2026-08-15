@@ -232,10 +232,26 @@ var myCommitments = dialogue.getCommitmentTracker()
 var waitingFor = dialogue.getCommitmentTracker()
     .getActiveAsRequester(agentId);
 
-// Detect violations (deadline exceeded)
+// Force an immediate violation check (deadline exceeded).
+// You rarely need this: the retention sweep already runs it — see below.
 var violations = dialogue.getCommitmentTracker()
     .checkViolations();
 ```
+
+While the capability is initialized, its background sweep marks overdue commitments as
+`VIOLATED` on its own and logs each one at WARN. Detection is delayed by at most one sweep
+interval (default one minute):
+
+```java
+private final DialogueCapability dialogue = DialogueCapability.builder(this)
+    .sweepInterval(Duration.ofSeconds(5))   // tighter violation detection
+    .build();
+```
+
+The same sweep drops terminated commitments once they are older than the retention window
+(default 5 minutes), so poll `get(commitmentId)` within that window or raise `retention()`.
+Pruning runs before the violation check, so a commitment that has just been marked `VIOLATED`
+stays readable for at least one full interval.
 
 Commitment states:
 - `PENDING` - Created but not yet accepted

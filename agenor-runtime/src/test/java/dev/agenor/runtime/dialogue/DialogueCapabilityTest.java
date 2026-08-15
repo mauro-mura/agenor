@@ -5,6 +5,8 @@ import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.Subscription;
+import dev.agenor.core.dialogue.Commitment;
+import dev.agenor.core.dialogue.CommitmentState;
 import dev.agenor.core.dialogue.ConversationManager;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
@@ -211,6 +213,42 @@ class DialogueCapabilityTest {
             }
 
             assertThat(sweeping.getConversation(conversationId)).isEmpty();
+        } finally {
+            sweeping.shutdown();
+        }
+    }
+
+    @Test
+    void shouldMarkOverdueCommitmentsViolatedFromTheSweep() {
+        // Given a tracker whose commitments are overdue almost as soon as they are created,
+        // and a capability sweeping every 20ms
+        var tracker = new DefaultCommitmentTracker(Duration.ofMillis(1));
+        var sweeping = DialogueCapability.builder(agent)
+            .commitmentTracker(tracker)
+            .sweepInterval(Duration.ofMillis(20))
+            .build();
+        sweeping.initialize(messageService);
+        try {
+            var commitment = tracker.createFromMessage(DialogueMessage.builder()
+                .senderId("requester")
+                .receiverId("test-agent")
+                .performative(Performative.REQUEST)
+                .content("deliver the report")
+                .build());
+            assertThat(commitment.getState()).isEqualTo(CommitmentState.PENDING);
+
+            // When the sweep runs — nobody ever calls checkViolations() by hand
+            long deadline = System.currentTimeMillis() + 2_000;
+            while (commitment.getState() != CommitmentState.VIOLATED
+                    && System.currentTimeMillis() < deadline) {
+                Thread.onSpinWait();
+            }
+
+            // Then the commitment is observable as violated through the tracker
+            assertThat(sweeping.getCommitmentTracker().get(commitment.getId()))
+                .get()
+                .extracting(Commitment::getState)
+                .isEqualTo(CommitmentState.VIOLATED);
         } finally {
             sweeping.shutdown();
         }
