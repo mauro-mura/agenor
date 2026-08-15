@@ -45,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   required by ADR-002 — a persistent or distributed `ConversationManager` no longer requires
   forking the class. `ConversationManager` gains `getCommitmentTracker()` and
   `CommitmentTracker` gains `getByMessageId(String)`.
+- **Commitment deadline violations are detected automatically**: `checkViolations()` existed
+  but nothing ever called it, so a commitment whose deadline passed stayed `ACTIVE` forever
+  unless the consumer wrote its own polling loop — "observable promises" that nobody observed.
+  The retention sweep introduced above now runs it, so an overdue commitment moves to
+  `VIOLATED` on its own and is logged at WARN naming performer, requester and conversation.
+  Detection is delayed by up to one sweep interval (default one minute), configurable via
+  `DialogueCapability.builder(agent).sweepInterval(...)`. The sweep prunes *before* it
+  violates, so a commitment marked violated survives at least one full interval and stays
+  observable through `get(commitmentId)`.
 
 ### Changed
 
@@ -67,6 +76,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DialogueCapability.initialize(MessageDispatcher)` (since 0.26.0, for removal) — use the
   no-arg `initialize()`. The overload still honours the dispatcher passed to it, so existing
   call sites keep working unchanged.
+
+### Migration Guide (0.25.x → 0.26.0)
+
+> Concerns you only if you **implement** the dialogue core interfaces yourself, or if you
+> declared a dialogue collaborator with its concrete type. Code that uses `DialogueCapability`
+> on a `BaseAgent` needs no changes — the examples in this repo were migrated by deleting
+> lifecycle wiring, not by adding any.
+
+**Signature changes**
+
+| Change | Breaks |
+|---|---|
+| `ConversationManager.getCommitmentTracker()` — new abstract method | external *implementors* of the interface |
+| `CommitmentTracker.getByMessageId(String)` — new abstract method | external *implementors* of the interface |
+| `DialogueCapability.getCommitmentTracker()` now returns `CommitmentTracker`, not `DefaultCommitmentTracker` | binary always; source only if the caller declared the concrete type |
+| `DefaultConversationManager.getCommitmentTracker()` — same return-type change | same |
+| `DefaultConversationManager(String, MessageDispatcher, ProtocolRegistry, DefaultCommitmentTracker)` — 4th parameter widened to `CommitmentTracker` | binary; source-compatible |
+
+```java
+// Before (0.25.x)
+DefaultCommitmentTracker tracker = dialogue.getCommitmentTracker();
+
+// After (0.26.0)
+CommitmentTracker tracker = dialogue.getCommitmentTracker();
+```
+
+**Behaviour changes** — these compile unchanged and only show up at runtime:
+
+- `shutdown()` clears the conversation manager, so `getConversation(...)` after an agent stops
+  now throws `IllegalStateException` instead of returning data. This is what makes a stopped
+  agent restartable: the next `initialize()` builds a fresh manager and re-subscribes.
+- Public methods called before `initialize()` throw `IllegalStateException` with an actionable
+  message instead of `NullPointerException`.
+- Terminated conversations and commitments are swept after the retention window (default 5
+  minutes). Code that reads the history of a long-finished dialogue must read it sooner, or
+  raise the window:
+
+```java
+private final DialogueCapability dialogue = DialogueCapability.builder(this)
+    .retention(Duration.ofHours(1))
+    .build();
+```
 
 ## [0.25.0] - 2026-08-11
 
