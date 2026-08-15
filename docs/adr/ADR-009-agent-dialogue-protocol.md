@@ -321,6 +321,24 @@ allows `ConversationManager` to track the full sequence.
 > **Resolved by ADR-026** (2026-07-23): adopts fire-and-final semantics via a targeted gate
 > on the existing `Protocol` FSM. See ADR-026 for the decision and rationale.
 
+**`Protocol.isValid()` is never called**: the FSM describes which performatives are allowed in
+each state, but `DefaultConversation.addMessage()` only calls `nextState(...)`, which returns
+the current state unchanged for an unexpected performative. A protocol violation therefore
+produces no state change, no error and no log line — the framework detects the malformed
+exchange and discards that knowledge.
+
+**Non-dialogue messages are reinterpreted as dialogue**: `DialogueMessage.fromMessage()` defaults
+a missing `performative` header to `INFORM` and fabricates a `conversationId`. Because a
+`BaseAgent` with dialogue holds two subscriptions on its own recipient channel (its own
+auto-subscription plus `DialogueCapability`'s), a plain `sendTo()` message is delivered to the
+dialogue path as well and becomes a synthetic `INFORM` in a brand-new conversation — which is
+also dispatched to any matching `@DialogueHandler`.
+
+> **Resolved by ADR-029** (2026-08-15): validation is enforced at warning level from the
+> sender's perspective, and a pure static `DialogueMessage.isDialogueMessage(Message)`
+> classifier keeps non-dialogue traffic off the dialogue path. ADR-029 also records why the
+> synthetic conversations were a resource leak the 0.26.0 retention sweep could not reach.
+
 ### Neutral
 
 1. **No custom wire protocol**: Delegates to A2A SDK (intentional)

@@ -33,6 +33,18 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-025](ADR-025-agenor-rebrand.md)                                | Agenor Rebrand — Naming, Compat, Versioning | Accepted | 2026-05-28 |
 | [ADR-026](ADR-026-request-protocol-final-resolution.md)            | REQUEST Protocol Final-Resolution Semantics | Accepted | 2026-07-23 |
 | [ADR-027](ADR-027-minimal-runtime-llm-generic-split.md)             | Minimal Runtime Core — LLM / Generic-MAS Module Split | Accepted | 2026-08-03 |
+| ADR-028                                                             | Agent Presence — JDBC and Redis          | Reserved | —          |
+| [ADR-029](ADR-029-protocol-validation-and-dialogue-message-classification.md) | Protocol Validation Enforcement and Dialogue Message Classification | Accepted | 2026-08-15 |
+| ADR-030                                                             | `Message.content` Typing Across Transports | Proposed | —          |
+| ADR-031                                                             | Conversation-State Durability            | Proposed | —          |
+
+> **Rows without a link are claimed numbers, not written documents.** They are listed so that two
+> parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide.
+> **ADR-028** is reserved for Agent Presence (JDBC + Redis) and is not written yet; the number
+> stays reserved even though 029 landed first. **ADR-030** (`Message.content` typing across
+> transports, amending ADR-005) and **ADR-031** (conversation-state durability, the missing rung
+> on ADR-004's ladder) are claimed as follow-ups to ADR-029. Do not reuse these numbers for
+> anything else.
 
 ---
 
@@ -184,6 +196,7 @@ graph TD
 - **ADR-025** (Agenor Rebrand) builds on ADR-002, ADR-003, ADR-006, ADR-016, ADR-020 — affects naming and Maven coordinates for the entire project
 - **ADR-026** (REQUEST Protocol Final-Resolution Semantics) resolves the "Known Limitations" gap left open by ADR-009
 - **ADR-027** (Minimal Runtime Core — LLM/Generic-MAS Module Split) builds on ADR-002, ADR-004, ADR-018, ADR-020
+- **ADR-029** (Protocol Validation Enforcement and Dialogue Message Classification) builds on ADR-002 and ADR-009, and generalises the sender-perspective reading of `allowedPerformatives()` that ADR-026 introduced
 
 ---
 
