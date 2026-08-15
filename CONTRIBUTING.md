@@ -240,6 +240,13 @@ Resolves #issue-number
    - Integration tests for component interaction
    - Mock external dependencies
 
+5. **Optional runtime modules**
+   - Before adding an accessor to `AgenorRuntime` for an optional feature, or a sixth core SPI,
+     read ADR-027 § Amendment 2026-08-15
+   - When adding an annotation whose processor lives in an optional module, add it to
+     `AgentRegistrationExtension.OPTIONAL_FEATURE_ANNOTATIONS` and claim it from that module's
+     `handledAnnotations()` — otherwise it silently does nothing when the module is absent
+
 ## 🧪 Testing Guidelines
 
 ### Test Structure

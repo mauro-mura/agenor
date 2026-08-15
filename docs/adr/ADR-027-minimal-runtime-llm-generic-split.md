@@ -138,12 +138,12 @@ level but must recompile.
 
 - Two breaking API changes: the `LLMAgent` package rename and `getApprovalService()`'s
   return-type change. Both acceptable pre-1.0 per project convention (see ADR-025).
-- `processAgentAnnotations()` silently no-ops when `agenor-runtime-scanning` is absent,
-  even though it runs unconditionally in `start()`. A user relying on `@AgenorMessageHandler`
-  or `@Behavior` annotation processing without realizing the module is required would see
-  annotations quietly ignored rather than a startup failure. Mitigated with a one-time
-  startup log line and explicit javadoc; a hard failure was rejected because it would
-  break `start()` for scanning-free apps that have zero annotated agents.
+- ~~`processAgentAnnotations()` silently no-ops when `agenor-runtime-scanning` is absent,
+  even though it runs unconditionally in `start()`.~~ **Superseded by the 2026-08-08 amendment**,
+  which made annotation processing independent of `AgentDiscoveryEngine`; see
+  *Correction to "Negative / trade-offs"* in the 2026-08-15 amendment for what happens today.
+  The silent failure that does remain — an annotation whose processor lives in an absent module —
+  is mitigated there by the startup diagnostics originally promised in this bullet.
 - The SPI adds one layer of indirection (`ServiceLoader` lookup, interface dispatch)
   around collaborators that were previously constructed directly. Negligible at runtime
   (resolved once at startup, not per-call) but adds a few new types to read when tracing
@@ -264,6 +264,82 @@ as evidence.
 `agenor-runtime-scanning`'s `Depends on` column changes from
 `agenor-runtime, agenor-runtime-ext (for @Behavior(type=FSM|PARALLEL|SEQUENTIAL) resolution)`
 to simply `agenor-runtime`.
+
+## Amendment (2026-08-15): conventions for the SPI seam, and startup diagnostics
+
+Two boundaries this ADR implies but never wrote down, plus the correction of one trade-off
+bullet that the 2026-08-08 amendment made obsolete without updating.
+
+### C1 — no new feature-specific accessors on `AgenorRuntime`
+
+`getApprovalService()` is grandfathered. Any further optional capability is reached through its
+own SPI or through the module that provides it, never through a new getter on the runtime entry
+point.
+
+Rationale: the entry point's public surface would otherwise grow by one method per optional
+feature, and it is the surface that gets frozen at 1.0. A getter also re-creates the coupling
+this ADR removed — `AgenorRuntime` would have to name the optional type in its own signature.
+
+### C2 — threshold on SPI proliferation
+
+There are **five** core SPIs, not four: `AgentDiscoveryEngine`, `AgentRegistrationExtension`,
+`BehaviorAnnotationExtension`, `DefaultLLMMemoryManagerProvider`, `HitlSupportProvider`. The
+fifth arrived with the 2026-08-08 amendment above.
+
+All five are accepted as they stand. **Before adding a sixth**, evaluate consolidating them into
+a generic lifecycle-hook + capability-registry model, and record the outcome in a new ADR
+whichever way it goes — including a decision to keep the feature-named SPIs, which is a
+legitimate result and worth writing down once so it is not re-litigated.
+
+Not before: at five, each SPI still names a real, distinct extension point, and a capability
+registry would trade a readable `ServiceLoader.load(HitlSupportProvider.class)` for an untyped
+lookup that fails at runtime instead of at compile time.
+
+### Correction to "Negative / trade-offs": the annotation-processing bullet
+
+The bullet stating that `processAgentAnnotations()` "silently no-ops when
+`agenor-runtime-scanning` is absent" **describes behaviour that no longer exists** — the
+2026-08-08 amendment above replaced it and the bullet was never updated. What actually happens
+today:
+
+- `@AgenorMessageHandler` and the core `@Behavior` types are processed unconditionally by
+  `AgentAnnotationProcessor`, which `agenor-runtime` always constructs. `AgentDiscoveryEngine`
+  is not involved, so its absence changes nothing here.
+- An ext-only `@Behavior` type without `agenor-runtime-ext` fails `start()` with an
+  `IllegalStateException` naming the module. Loud, not silent.
+- `AgentDiscoveryEngine`-mediated calls (`createAgent(Class)`, package scanning) still throw
+  when `agenor-runtime-scanning` is absent.
+
+That leaves exactly one silent failure mode, and it is a different one from what the bullet
+described: an annotation whose only processor lives in an absent module — `@WithGuardrails`
+without `agenor-runtime-llm`, `@RequiresApproval` without `agenor-runtime-ext` — is simply never
+acted on, and the agent runs without the protection it declares.
+
+### Startup diagnostics — the promised mitigation, now implemented
+
+The original "mitigated with a one-time startup log line" was never built. It now exists, in
+`AgenorRuntime.logOptionalModuleDiagnostics()`, called once per `start()`:
+
+- one INFO line naming which optional modules resolved, because `ServiceLoader` finding nothing
+  is indistinguishable from finding everything unless the runtime says so;
+- one aggregated WARN per annotation type that no loaded extension claims, naming the affected
+  agents.
+
+The mechanism is an inversion: `AgentRegistrationExtension` gained a diagnostics-only
+`handledAnnotations()` default method, so each module declares what it processes and
+`agenor-runtime` never needs a map from annotation to artifact. `agenor-core` contributes only
+`OPTIONAL_FEATURE_ANNOTATIONS`, a list of its own annotation types; **no module artifact name
+appears in `agenor-core`**, which was the binding constraint.
+
+Two limits worth stating rather than discovering later:
+
+- The WARN detects a *missing module*, not an annotation placed where its processor cannot act.
+  `@WithGuardrails` applies to `LLMAgent` subclasses and `@RequiresApproval` to `BaseAgent`
+  subclasses; on any other agent they do nothing even with the module present, and the runtime
+  cannot know that without the coupling C1 forbids. Each extension therefore reports that case
+  itself, in the module that has the knowledge.
+- `OPTIONAL_FEATURE_ANNOTATIONS` is a maintained list. An annotation added without an entry
+  there degrades exactly as before this amendment. Its Javadoc says so.
 
 ## Related ADRs
 

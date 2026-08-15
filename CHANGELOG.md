@@ -71,6 +71,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Optional-module diagnostics at startup** (ADR-027 § Amendment 2026-08-15): the ADR-027 seam
+  degrades silently — without `agenor-runtime-llm` a `@WithGuardrails` agent runs unguarded, and
+  nothing says so. `AgenorRuntime.start()` now logs one INFO line naming the optional modules that
+  resolved (`ServiceLoader` finding nothing looks exactly like finding everything from the
+  outside), and one aggregated WARN per annotation type that no loaded extension claims, naming
+  the affected agents. `AgentRegistrationExtension` gains a diagnostics-only default method
+  `handledAnnotations()`, so each module declares what it processes and the runtime needs no
+  annotation→artifact map; `agenor-core` contributes only `OPTIONAL_FEATURE_ANNOTATIONS`, a list
+  of its own types. Existing extensions keep compiling and claim nothing.
+  The shipped extensions also report the case the runtime cannot see: `@WithGuardrails` on an
+  agent that is not an `LLMAgent`, and `@RequiresApproval` on one that is not a `BaseAgent`, do
+  nothing even with the module present — each extension now says so.
 - **`LifecycleHooks` (`agenor-core`)**: `onStartHook`/`onStopHook` extracted from the
   concrete `BaseAgent`, so framework capabilities can wire themselves to an agent's
   lifecycle without downcasting. Deliberately kept out of the `Agent` interface — hook

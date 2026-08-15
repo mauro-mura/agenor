@@ -1,5 +1,6 @@
 package dev.agenor.runtime;
 
+import java.lang.annotation.Annotation;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -197,6 +198,10 @@ public class AgenorRuntime {
                 if (!configuration.agents().getAllScanPackages().isEmpty()) {
                     discoverAndCreateAgents();
                 }
+
+                // Report which optional modules resolved, and any optional annotation that
+                // nothing will act on — after discovery, so every agent is known (ADR-027)
+                logOptionalModuleDiagnostics();
 
                 // Process annotations for all agents
                 processAgentAnnotations();
@@ -500,6 +505,62 @@ public class AgenorRuntime {
                     log.debug("    {}: {}", key, value)
             );
         }
+    }
+
+    /**
+     * Reports the state of the optional-module seam once per {@link #start()}.
+     *
+     * <p>Two things degrade silently without this. Which optional modules actually resolved is
+     * invisible — {@code ServiceLoader} finding nothing looks exactly like finding everything
+     * from the outside — so one INFO line names them. And an annotation whose only processor
+     * lives in an absent module is simply never acted on, leaving an agent running without the
+     * protection it declares; each such annotation gets one aggregated WARN naming the agents,
+     * rather than one line per agent.
+     *
+     * <p>The runtime deliberately does not name the module to install: {@code agenor-core}
+     * knows the annotation types (they are its own) but not which artifact ships their
+     * processor, and teaching it would be exactly the coupling ADR-027 removed.
+     */
+    private void logOptionalModuleDiagnostics() {
+        log.info("Optional modules — registration extensions: {}; agent discovery: {}; "
+                        + "HITL support: {}; LLM memory: {}; ext behaviors: {}",
+                registrationExtensions.isEmpty() ? "none" : registrationExtensions.stream()
+                        .map(e -> e.getClass().getSimpleName()).toList(),
+                describe(discoveryEngine), describe(hitlSupportProvider),
+                describe(llmMemoryManagerProvider), describe(behaviorAnnotationExtension));
+
+        Set<Class<? extends Annotation>> claimed = registrationExtensions.stream()
+                .flatMap(extension -> extension.handledAnnotations().stream())
+                .collect(java.util.stream.Collectors.toSet());
+
+        for (Class<? extends Annotation> annotation
+                : AgentRegistrationExtension.OPTIONAL_FEATURE_ANNOTATIONS) {
+            if (claimed.contains(annotation)) {
+                continue;
+            }
+            // getAnnotation() on the concrete class, matching how the processors themselves
+            // look it up: these annotations are not @Inherited, so a hierarchy walk here would
+            // warn about agents whose annotation was never going to be read anyway.
+            List<String> declaringAgents = agents.values().stream()
+                    .map(agent -> agent.getClass())
+                    .filter(clazz -> clazz.getAnnotation(annotation) != null)
+                    .map(Class::getSimpleName)
+                    .distinct()
+                    .toList();
+            if (declaringAgents.isEmpty()) {
+                continue;
+            }
+            log.warn("{} agent(s) declare @{} but no registered AgentRegistrationExtension "
+                            + "handles it — the annotation will have no effect. Agents: {}. "
+                            + "The module providing this feature is probably missing from the "
+                            + "classpath.",
+                    declaringAgents.size(), annotation.getSimpleName(),
+                    String.join(", ", declaringAgents));
+        }
+    }
+
+    private static String describe(Optional<?> resolved) {
+        return resolved.map(value -> value.getClass().getSimpleName()).orElse("absent");
     }
 
     /**
