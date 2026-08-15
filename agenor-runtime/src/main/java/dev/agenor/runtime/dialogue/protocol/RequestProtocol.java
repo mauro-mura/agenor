@@ -75,7 +75,10 @@ public class RequestProtocol implements Protocol {
             };
         } else {
             return switch (state) {
-                case AWAITING_RESPONSE -> Set.of(AGREE, REFUSE, INFORM);
+                // FAILURE belongs here: nextState() already routes AWAITING_RESPONSE + FAILURE
+                // to FAILED, so a responder that fails outright — without first agreeing, which
+                // dialogue.failure(...) supports — was following a transition this set denied.
+                case AWAITING_RESPONSE -> Set.of(AGREE, REFUSE, INFORM, FAILURE);
                 case AGREED -> Set.of(INFORM, FAILURE);
                 default -> Set.of();
             };

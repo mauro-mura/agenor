@@ -4,6 +4,8 @@ import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.protocol.Protocol;
 import dev.agenor.core.dialogue.protocol.ProtocolState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ import java.util.Optional;
  * @since 0.5.0
  */
 public class DefaultConversation implements Conversation {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultConversation.class);
 
     private final String id;
     private final Protocol protocol;
@@ -96,6 +100,12 @@ public class DefaultConversation implements Conversation {
     /**
      * Adds a message to the conversation and updates state.
      *
+     * <p>When the conversation has a protocol, the message is checked against it first. A
+     * message the protocol does not allow in the current state is reported at WARN and then
+     * processed exactly as before — it stays in the history and the transition still runs,
+     * which for the built-in protocols leaves the state unchanged. Reporting rather than
+     * rejecting is deliberate: see ADR-029.
+     *
      * @param message the message to add
      */
     public void addMessage(DialogueMessage message) {
@@ -103,8 +113,30 @@ public class DefaultConversation implements Conversation {
         lastActivity = Instant.now();
 
         if (protocol != null) {
+            reportIfInvalid(message);
             state = protocol.nextState(state, message.performative(), isInitiator);
         }
+    }
+
+    /**
+     * Checks a message against the protocol from the <em>sender's</em> point of view.
+     *
+     * <p>{@code allowedPerformatives(state, isInitiator)} answers "what may this party send
+     * now?", so validating an inbound message with this conversation's own {@code isInitiator}
+     * would flag every legitimate reply — an incoming {@code AGREE} while awaiting a response
+     * would be checked against what the <em>initiator</em> may send, which is only
+     * {@code CANCEL}. The sender's role is derivable without knowing the local agent id:
+     * {@code initiatorId} is the initiator on both sides of the exchange.
+     */
+    private void reportIfInvalid(DialogueMessage message) {
+        boolean senderIsInitiator = message.senderId().equals(initiatorId);
+        if (protocol.isValid(state, message.performative(), senderIsInitiator)) {
+            return;
+        }
+        log.warn("Protocol violation in conversation {} ({}): {} sent {} in state {}, "
+                + "which allows {}",
+            id, protocol.getId(), message.senderId(), message.performative(), state,
+            protocol.allowedPerformatives(state, senderIsInitiator));
     }
 
     /**

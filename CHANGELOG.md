@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Protocol violations were silently absorbed** (ADR-029): `Protocol.isValid()` existed but
+  nothing ever called it, so a peer sending a performative the protocol does not allow in the
+  current state produced no state change, no error and no log line — the framework detected the
+  malformed exchange and discarded the finding. `DefaultConversation.addMessage()` now checks
+  each message and reports a violation at WARN, naming the conversation, the sender, the
+  performative, the state and what that state allows. Nothing else changes: the message is still
+  appended to the history and the transition still runs, so this is observability, not
+  enforcement.
+  The check uses the **sender's** perspective — `allowedPerformatives(state, isInitiator)`
+  answers "what may this party send now?", so validating an inbound reply against the local
+  agent's own role would flag every legitimate exchange.
+  Expect new warnings in two legitimate-but-late cases: a reply arriving after the initiator's
+  timeout finds the conversation in `TIMEOUT`, and one arriving after `cancel()` finds it in
+  `CANCELLED`; neither state allows anything. The report is correct — the reply genuinely arrived
+  out of protocol.
+- **`RequestProtocol` contradicted itself** (ADR-029): `nextState()` routed
+  `AWAITING_RESPONSE` + `FAILURE` to `FAILED`, but `allowedPerformatives(AWAITING_RESPONSE,
+  isInitiator = false)` omitted `FAILURE`. A responder failing outright without first agreeing —
+  which `DialogueCapability.failure(...)` supports — followed a transition the same state machine
+  declared invalid. Harmless while `isValid()` was dead; a false violation report once it is
+  enforced. `FAILURE` is now listed, and a test asserts the two halves of the FSM agree for every
+  performative.
 - **Plain direct messages were reinterpreted as dialogue** (ADR-029): an agent's recipient
   channel carries every message sent to it, and a `BaseAgent` with dialogue holds two
   subscriptions on it — its own and the capability's. `DialogueMessage.fromMessage()` defaults a

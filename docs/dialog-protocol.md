@@ -188,6 +188,8 @@ State transitions:
 - `INITIATED` → REQUEST → `AWAITING_RESPONSE`
 - `AWAITING_RESPONSE` → AGREE → `AGREED`
 - `AWAITING_RESPONSE` → REFUSE → `REFUSED`
+- `AWAITING_RESPONSE` → INFORM → `COMPLETED` (responder collapsing AGREE + INFORM)
+- `AWAITING_RESPONSE` → FAILURE → `FAILED` (responder failing without agreeing first)
 - `AGREED` → INFORM → `COMPLETED`
 - `AGREED` → FAILURE → `FAILED`
 
@@ -218,6 +220,27 @@ Manager                      Workers (multiple)
     │◄──── INFORM/FAILURE ───────│
     │                            │
 ```
+
+### Protocol violations are reported, not enforced
+
+Every message added to a conversation that has a protocol is checked against it. A performative
+the protocol does not allow in the current state is logged at WARN, naming the conversation, the
+sender, the state and what that state allows:
+
+```
+Protocol violation in conversation conv-42 (request): agent-b sent INFORM in state INITIATED,
+which allows [REQUEST]
+```
+
+Nothing is rejected: the message still enters the history and the state machine still runs, so a
+non-compliant peer degrades exactly as before — you just find out about it. The check is made
+from the **sender's** point of view, so a normal reply is never flagged.
+
+Two legitimate situations do produce a warning, and they are not bugs: a reply that arrives after
+the initiator's timeout (state `TIMEOUT`) or after `cancel()` (state `CANCELLED`). Neither state
+allows anything, because the conversation is over — the reply really did arrive out of protocol.
+
+A conversation with no protocol is never checked; there is no state machine to check against.
 
 ## Commitments
 
