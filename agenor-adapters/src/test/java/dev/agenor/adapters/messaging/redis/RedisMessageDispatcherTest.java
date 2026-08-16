@@ -308,4 +308,39 @@ class RedisMessageDispatcherTest {
                     .isInstanceOf(AgentNotFoundException.class);
         }
     }
+
+    @Nested
+    class AdvertisedEndpoint {
+
+        @Test
+        @DisplayName("advertises this node's id and the redis transport")
+        void localEndpoint_carriesConfiguredNodeId() {
+            var endpoint = dispatcher.localEndpoint();
+
+            assertThat(endpoint).isPresent();
+            assertThat(endpoint.get().nodeId()).isEqualTo("node-1");
+            assertThat(endpoint.get().transportType()).isEqualTo("redis");
+        }
+
+        @Test
+        @DisplayName("the advertised node id is the one sendTo routes to")
+        void localEndpoint_matchesTheStreamSendToWritesTo() {
+            // Given a peer whose directory entry was produced by a dispatcher like this one
+            var advertised = dispatcher.localEndpoint().orElseThrow();
+            when(agentResolver.resolveEndpoint("agent-remote"))
+                    .thenReturn(CompletableFuture.completedFuture(Optional.of(advertised)));
+            when(messageTransport.send(any(), any()))
+                    .thenReturn(CompletableFuture.completedFuture(null));
+
+            // When a message is routed to it
+            dispatcher.sendTo(Message.builder().receiverId("agent-remote").content("x").build())
+                    .join();
+
+            // Then the transport targets that same node — the two must never drift, because a
+            // mismatch is a message written to a stream nobody reads, with no error raised
+            var captor = ArgumentCaptor.forClass(TransportEndpoint.class);
+            verify(messageTransport).send(captor.capture(), any(Message.class));
+            assertThat(captor.getValue().address()).isEqualTo("node-1");
+        }
+    }
 }

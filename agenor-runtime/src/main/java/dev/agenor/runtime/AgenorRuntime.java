@@ -37,6 +37,7 @@ import dev.agenor.core.directory.AgentDiscovery;
 import dev.agenor.core.directory.AgentPresence;
 import dev.agenor.core.directory.AgentRegistry;
 import dev.agenor.core.directory.AgentResolver;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.config.ConfigurationLoader;
 import dev.agenor.core.config.ConfigurationException;
@@ -324,8 +325,16 @@ public class AgenorRuntime {
             extension.onAgentRegistered(agent, registrationContext);
         }
 
-        // Create a descriptor and register in a directory
+        // Create a descriptor and register in a directory.
+        // If the dispatcher knows how agents on this node are reached from other nodes, stamp
+        // that endpoint on the descriptor: the directory is where a peer looks it up, and a
+        // networked transport that advertises nothing routes cross-node messages into the void.
         AgentDescriptor descriptor = AgentDescriptors.create(agent.getClass(), agent);
+        if (messageDispatcher instanceof LocalEndpointProvider provider) {
+            descriptor = provider.localEndpoint()
+                    .map(descriptor::withEndpoint)
+                    .orElse(descriptor);
+        }
 
         agentDirectory.register(descriptor)
                 .exceptionally(throwable -> {

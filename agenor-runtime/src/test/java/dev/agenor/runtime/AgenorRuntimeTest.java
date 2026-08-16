@@ -1,8 +1,10 @@
 package dev.agenor.runtime;
 
+import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.Message;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.config.ConfigurationException;
@@ -10,6 +12,7 @@ import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
+import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -744,6 +748,64 @@ class AgenorRuntimeTest {
         public void onMessage(Message message) {
             captured.set(message.getContent(String.class));
             latch.countDown();
+        }
+    }
+
+    // ========== ADVERTISED ENDPOINT (LocalEndpointProvider) ==========
+
+    @Test
+    void shouldAdvertiseTheDispatchersEndpointWhenItDeclaresOne() {
+        // Given a dispatcher that knows how its node is reached — the shape of a networked
+        // transport such as Redis
+        var advertised = new AgentEndpoint("node-7", "redis", Map.of());
+        var directory = new InMemoryAgentDirectory();
+        AgenorRuntime runtime = AgenorRuntime.builder()
+                .messageDispatcher(new EndpointAdvertisingDispatcher(directory, advertised))
+                .agentRegistry(directory)
+                .agentResolver(directory)
+                .build();
+
+        // When an agent registers
+        runtime.registerAgent(new TestAgent("agent-1", "Agent 1"));
+
+        // Then the directory carries that endpoint, so a peer resolving this agent learns which
+        // node owns it. Without this the JDBC registry stores an empty node id and cross-node
+        // delivery fails silently.
+        var stored = directory.findById("agent-1").join().orElseThrow();
+        assertThat(stored.endpoint()).isEqualTo(advertised);
+    }
+
+    @Test
+    void shouldLeaveTheDirectoryDefaultWhenTheDispatcherDeclaresNothing() {
+        // Given the default in-memory dispatcher, which has no node identity to publish
+        var directory = new InMemoryAgentDirectory();
+        AgenorRuntime runtime = AgenorRuntime.builder()
+                .agentRegistry(directory)
+                .agentResolver(directory)
+                .build();
+
+        runtime.registerAgent(new TestAgent("agent-1", "Agent 1"));
+
+        // Then the directory applies its own local-endpoint default, exactly as before
+        var stored = directory.findById("agent-1").join().orElseThrow();
+        assertThat(stored.endpoint()).isNotNull();
+        assertThat(stored.endpoint().transportType()).isEqualTo("local");
+    }
+
+    /** Minimal dispatcher that advertises a fixed endpoint; only registration is exercised. */
+    static class EndpointAdvertisingDispatcher extends InMemoryMessageDispatcher
+            implements LocalEndpointProvider {
+
+        private final AgentEndpoint endpoint;
+
+        EndpointAdvertisingDispatcher(InMemoryAgentDirectory resolver, AgentEndpoint endpoint) {
+            super(resolver);
+            this.endpoint = endpoint;
+        }
+
+        @Override
+        public Optional<AgentEndpoint> localEndpoint() {
+            return Optional.of(endpoint);
         }
     }
 

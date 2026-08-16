@@ -69,6 +69,23 @@ public record AgentDescriptor(
         return new AgentDescriptorBuilder(agentId);
     }
 
+    /**
+     * Returns a copy of this descriptor carrying the given endpoint.
+     *
+     * <p>The endpoint is filled in late: whoever builds a descriptor from an agent instance
+     * knows the agent, while only the transport knows how that agent is reachable from another
+     * node. This keeps that hand-off to one expression instead of restating all nine components
+     * at each site that needs it.
+     *
+     * @param newEndpoint the endpoint to advertise; may be null to clear it
+     * @return a new descriptor identical to this one except for the endpoint
+     * @since 0.26.0
+     */
+    public AgentDescriptor withEndpoint(AgentEndpoint newEndpoint) {
+        return new AgentDescriptor(agentId, agentName, agentType, status, capabilities,
+                metadata, newEndpoint, registeredAt, lastSeen);
+    }
+
     public static class AgentDescriptorBuilder {
         private final String agentId;
         private String agentName;

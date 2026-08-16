@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cross-node delivery silently dropped every message when a persistent directory was combined
+  with a networked transport.** Nothing in the registration path ever populated
+  `AgentDescriptor.endpoint`: `AgentDescriptors.create()` leaves it null, and
+  `InMemoryAgentDirectory.register()` quietly compensated by synthesising
+  `AgentEndpoint.local(nodeId)` from its own node id. `JdbcAgentRegistry` has no such
+  compensation, so it stored `node_id = ""` — and `RedisMessageDispatcher.sendTo()`, which routes
+  on the resolved endpoint's node id, then wrote to the stream `<prefix>:node:` that no consumer
+  loop reads. The message vanished with **no exception and no warning**. No test caught it
+  because no test combined the two: each was exercised only against its in-memory counterpart.
+  A dispatcher that knows how its own node is addressed now says so, through the new opt-in
+  `LocalEndpointProvider` (`agenor-core`), and `AgenorRuntime` stamps that endpoint on the
+  descriptor before registering it. `RedisMessageDispatcher` implements it, advertising the very
+  node stream its own consumer loop reads — deriving the value from anywhere else would let the
+  two drift, and a drift has exactly the same silent symptom. `InMemoryMessageDispatcher`
+  deliberately does **not** implement it: it has no node identity worth publishing, so
+  single-node behaviour is byte-for-byte unchanged. `AgentDescriptor` gains `withEndpoint(...)`
+  for the hand-off.
+
 - **Two lost-update races in the dialogue runtime**: a conversation is mutated from arbitrary
   threads — `InMemoryMessageDispatcher` delivers every message on its own virtual thread with no
   per-recipient serialisation, and the timeout path writes from another — while

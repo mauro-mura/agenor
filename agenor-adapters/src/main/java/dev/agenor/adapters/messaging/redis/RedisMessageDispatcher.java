@@ -1,10 +1,12 @@
 package dev.agenor.adapters.messaging.redis;
 
+import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.TransportEndpoint;
 import dev.agenor.core.directory.AgentResolver;
 import dev.agenor.core.exceptions.AgentNotFoundException;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.Subscription;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -41,7 +44,7 @@ import java.util.function.Supplier;
  * @since 0.21.0
  * @see RedisMessagingFactory
  */
-public final class RedisMessageDispatcher implements MessageDispatcher {
+public final class RedisMessageDispatcher implements MessageDispatcher, LocalEndpointProvider {
 
     private static final Logger log = LoggerFactory.getLogger(RedisMessageDispatcher.class);
 
@@ -129,6 +132,26 @@ public final class RedisMessageDispatcher implements MessageDispatcher {
             var dest = new TransportEndpoint(ep.transportType(), ep.nodeId(), ep.transportProps());
             return messageTransport.send(dest, msg);
         });
+    }
+
+    // -------------------------------------------------------------------------
+    // LocalEndpointProvider
+    // -------------------------------------------------------------------------
+
+    /**
+     * Advertises this node's Redis stream as the way to reach agents registered here.
+     *
+     * <p>The {@code nodeId} is the one this dispatcher's own consumer loop listens on
+     * ({@code <prefix>:node:<nodeId>}), which is what makes the advertised endpoint truthful:
+     * a peer routing to it via {@link #sendTo(Message)} writes to the very stream this instance
+     * reads. Deriving it from any other source — a separate runtime setting, say — would let the
+     * two drift, and the symptom of a drift is a message that disappears with no error.
+     *
+     * @return always present; the transport type is {@code "redis"}
+     */
+    @Override
+    public Optional<AgentEndpoint> localEndpoint() {
+        return Optional.of(new AgentEndpoint(config.nodeId(), "redis", Map.of()));
     }
 
     // -------------------------------------------------------------------------
