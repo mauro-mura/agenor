@@ -2,9 +2,13 @@ package dev.agenor.core;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import dev.agenor.core.messaging.MessageDispatcher;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -233,6 +237,20 @@ public record Message(
 ) {
 
     /**
+     * Converts post-transport content back into the type the caller asks for.
+     *
+     * <p><strong>Must stay configured identically to the Redis {@code MessageCodec}'s mapper</strong>
+     * ({@code findAndRegisterModules}, no timestamp dates, lenient on unknown properties). That
+     * codec is what produced the {@code Map} being converted here; if the two configurations
+     * diverge — most visibly on {@code java.time} handling — a payload it serialised
+     * successfully fails to convert back. See ADR-030.
+     */
+    private static final ObjectMapper CONTENT_MAPPER = new ObjectMapper()
+            .findAndRegisterModules()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    /**
      * Canonical constructor with default value generation and defensive copying.
      *
      * <p>This constructor ensures that:
@@ -278,16 +296,25 @@ public record Message(
     }
 
     /**
-     * Retrieves the message content with automatic type casting.
+     * Retrieves the message content as the requested type, converting it if necessary.
      *
-     * <p>This is a convenience method that casts the {@code content} object to
-     * the specified type. It's more readable than manual casting and provides
-     * a clear API for type-safe content retrieval.
+     * <p>This is the accessor to use in a message handler. Casting {@link #content()}
+     * directly works only as long as the message never crosses a serialising transport, which
+     * is a property of the deployment, not of the code — see below.
      *
-     * <p><strong>Type Safety:</strong>
-     * This method performs an unchecked cast. Ensure the type parameter matches
-     * the actual type of the content, or a {@code ClassCastException} will be
-     * thrown when the returned value is used.
+     * <p><strong>Why this is not a cast:</strong>
+     * {@code content} is declared {@code Object} and carries no type information on the wire
+     * (ADR-005). The in-memory dispatcher therefore hands the receiver the sender's original
+     * object, while a serialising transport such as Redis (ADR-021) hands it a
+     * {@code LinkedHashMap} rebuilt from JSON. This method absorbs that difference:
+     *
+     * <ul>
+     *   <li>content already of the requested type — returned as the <strong>same
+     *       reference</strong>, no allocation, no Jackson involved</li>
+     *   <li>content deserialised into a {@code Map}/{@code List} — converted to the requested
+     *       type</li>
+     *   <li>content {@code null} — returns {@code null}</li>
+     * </ul>
      *
      * <p><strong>Null Handling:</strong>
      * Returns {@code null} if the content is {@code null}. Always check for
@@ -302,13 +329,13 @@ public record Message(
      * Boolean flag = message.getContent(Boolean.class);
      * }</pre>
      *
-     * <p>Complex domain objects:
+     * <p>Complex domain objects — works on every transport:
      * <pre>{@code
      * OrderData order = message.getContent(OrderData.class);
      * PaymentRequest payment = message.getContent(PaymentRequest.class);
      * }</pre>
      *
-     * <p>Collections (requires care with generics):
+     * <p>Collections (requires care with generics — element types are not converted):
      * <pre>{@code
      * @SuppressWarnings("unchecked")
      * List<String> items = message.getContent(List.class);
@@ -327,14 +354,63 @@ public record Message(
      * }
      * }</pre>
      *
+     * <p><strong>Limitation — this removes the {@code ClassCastException}, not the need to ask
+     * for the right type.</strong> Conversion is lenient about unknown properties, so that a
+     * receiver still reads a payload whose sender has added a field. The cost is that reading a
+     * post-transport payload as an <em>unrelated</em> type succeeds, yielding an object with
+     * null or default fields, instead of failing. Only an incompatible shape (a scalar read as a
+     * record, say) throws. Check {@code content-class} in the headers when the sender's claim
+     * matters.
+     *
+     * <p><strong>Cost:</strong> conversion runs on every call, so a handler reading the same
+     * payload more than once should hold the result in a local variable.
+     *
      * @param <T> the expected type of the content
-     * @param type the class of the expected type (for clarity, not type checking)
-     * @return the content cast to type T, or null if content is null
-     * @throws ClassCastException if the content cannot be cast to type T
+     * @param type the class of the expected type; must not be null
+     * @return the content as type T, or null if content is null
+     * @throws IllegalArgumentException if the content is neither an instance of {@code type} nor
+     *         convertible to it
+     * @see #convertContent(Object, Class)
      */
-    @SuppressWarnings("unchecked")
     public <T> T getContent(Class<T> type) {
-        return (T) content;
+        return convertContent(content, type);
+    }
+
+    /**
+     * Converts an arbitrary message payload to the requested type.
+     *
+     * <p>The shared implementation behind {@link #getContent(Class)} and the dialogue layer's
+     * equivalent accessor, exposed so that both read the same semantics from one place rather
+     * than from two implementations that can drift apart. Handler code should call
+     * {@link #getContent(Class)}; this overload exists for callers holding a payload without a
+     * {@code Message} around it.
+     *
+     * @param <T> the expected type of the content
+     * @param content the payload to convert; may be null
+     * @param type the class of the expected type; must not be null
+     * @return the content as type T, or null if content is null
+     * @throws IllegalArgumentException if the content is neither an instance of {@code type} nor
+     *         convertible to it
+     * @since 0.26.0
+     */
+    public static <T> T convertContent(Object content, Class<T> type) {
+        Objects.requireNonNull(type, "type cannot be null");
+        if (content == null) {
+            return null;
+        }
+        if (type.isInstance(content)) {
+            return type.cast(content);
+        }
+        try {
+            return CONTENT_MAPPER.convertValue(content, type);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Cannot read message content as " + type.getName() + ": the payload is a "
+                            + content.getClass().getName()
+                            + " and could not be converted. A payload that crossed a serialising"
+                            + " transport arrives as a Map; one that did not arrives as the"
+                            + " sender's own type. Neither matches the requested type here.", e);
+        }
     }
 
     /**

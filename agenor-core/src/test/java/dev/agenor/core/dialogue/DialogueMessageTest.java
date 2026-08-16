@@ -195,4 +195,104 @@ class DialogueMessageTest {
         assertThatThrownBy(() -> message.metadata().put("new", "value"))
             .isInstanceOf(UnsupportedOperationException.class);
     }
+
+    @Test
+    void shouldDeclareThePayloadTypeInTheContentClassHeader() {
+        // Given
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.PROPOSE)
+            .content(new Bid(9.5, 3))
+            .build();
+
+        // When
+        var headers = message.toMessage().headers();
+
+        // Then
+        assertThat(headers).containsEntry(
+            DialogueMessage.CONTENT_CLASS_HEADER, Bid.class.getName());
+    }
+
+    @Test
+    void shouldNotDeclareAContentClassWhenThereIsNoContent() {
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.CANCEL)
+            .build();
+
+        assertThat(message.toMessage().headers())
+            .doesNotContainKey(DialogueMessage.CONTENT_CLASS_HEADER);
+    }
+
+    @Test
+    void shouldNotReuseTheContentTypeHeaderName() {
+        // Given — `content-type` already means a domain label (ADR-005's example) and an
+        // HTTP-style media type (docs/message-filtering.md); a Java class name is neither
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.PROPOSE)
+            .content(new Bid(9.5, 3))
+            .build();
+
+        assertThat(message.toMessage().headers()).doesNotContainKey("content-type");
+    }
+
+    @Test
+    void shouldReturnTheSameReferenceWhenContentIsAlreadyTyped() {
+        // Given a dialogue message that never left the JVM
+        var bid = new Bid(9.5, 3);
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.PROPOSE)
+            .content(bid)
+            .build();
+
+        // When / Then
+        assertThat(message.contentAs(Bid.class)).isSameAs(bid);
+    }
+
+    @Test
+    void shouldConvertContentThatArrivedAsAMap() {
+        // Given the shape a payload has after a serialising transport rebuilt it from JSON
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.PROPOSE)
+            .content(Map.of("cost", 9.5, "timeSeconds", 3))
+            .build();
+
+        // When / Then — this is the call that makes cross-runtime dialogue usable
+        assertThat(message.contentAs(Bid.class)).isEqualTo(new Bid(9.5, 3));
+    }
+
+    @Test
+    void shouldNameTheSenderDeclaredTypeWhenConversionFails() {
+        // Given a message reconstructed from the wire, whose content-class says one thing
+        // while the handler asks for another
+        var onTheWire = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.PROPOSE)
+            .content(new Bid(9.5, 3))
+            .build()
+            .toMessage();
+        var received = DialogueMessage.fromMessage(onTheWire);
+
+        // When / Then
+        assertThatThrownBy(() -> received.contentAs(Instant.class))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(Bid.class.getName())
+            .hasMessageContaining(DialogueMessage.CONTENT_CLASS_HEADER);
+    }
+
+    @Test
+    void shouldReturnNullContentAsNull() {
+        var message = DialogueMessage.builder()
+            .senderId("agent-1")
+            .performative(Performative.CANCEL)
+            .build();
+
+        assertThat(message.contentAs(Bid.class)).isNull();
+    }
+
+    // Test record standing in for a domain payload — the Contract-Net bid shape
+    record Bid(double cost, int timeSeconds) {}
 }

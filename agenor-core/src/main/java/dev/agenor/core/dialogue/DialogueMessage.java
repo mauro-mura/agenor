@@ -38,6 +38,24 @@ public record DialogueMessage(
     Map<String, Object> metadata
 ) {
 
+    /**
+     * Header carrying the payload's Java type, written by {@link #toMessage()} when the content
+     * is non-null.
+     *
+     * <p>Deliberately <strong>not</strong> {@code content-type}: that key already means a domain
+     * label in ADR-005's message example and an HTTP-style media type in the message-filtering
+     * guide, and a Java class name is neither.
+     *
+     * <p>Informational only. {@link #contentAs(Class)} converts to the type the caller asks for
+     * and never reads this header to decide what to build — a peer written in another language
+     * neither writes nor understands it, and honouring it would make the wire format
+     * Java-specific. It is used for diagnostics and lets a Java peer route on payload type
+     * without deserialising. See ADR-030.
+     *
+     * @since 0.26.0
+     */
+    public static final String CONTENT_CLASS_HEADER = "content-class";
+
     public DialogueMessage {
         Objects.requireNonNull(id, "id cannot be null");
         Objects.requireNonNull(conversationId, "conversationId cannot be null");
@@ -102,6 +120,10 @@ public record DialogueMessage(
 
     /**
      * Converts this DialogueMessage to a Message.
+     *
+     * <p>Writes the dialogue headers ({@code conversationId}, {@code performative}, and
+     * {@code protocol} when set) plus {@link #CONTENT_CLASS_HEADER} when the content is
+     * non-null.
      */
     public Message toMessage() {
         return Message.builder()
@@ -113,6 +135,49 @@ public record DialogueMessage(
             .timestamp(timestamp)
             .headers(buildHeaders())
             .build();
+    }
+
+    /**
+     * Reads {@link #content()} as the requested type, converting it if necessary.
+     *
+     * <p>This is the accessor a {@code @DialogueHandler} should use. Casting {@code content()}
+     * directly works only while the dialogue stays inside one JVM: over a serialising transport
+     * such as Redis (ADR-021) the payload arrives as a {@code Map} and the cast throws — a
+     * failure that no in-memory test can reproduce, which is why the cast is a bug even when it
+     * currently works.
+     *
+     * <pre>{@code
+     * // breaks the first time this dialogue crosses a runtime boundary
+     * Bid bid = (Bid) proposal.content();
+     *
+     * // works on every transport
+     * Bid bid = proposal.contentAs(Bid.class);
+     * }</pre>
+     *
+     * <p>Content already of the requested type is returned as the same reference; content
+     * rebuilt from JSON is converted. Delegates to {@link Message#convertContent(Object, Class)}
+     * so both accessors share one implementation, and adds the sender's declared type from
+     * {@link #CONTENT_CLASS_HEADER} to the failure message when one is available.
+     *
+     * @param <T> the expected type of the content
+     * @param type the class of the expected type; must not be null
+     * @return the content as type T, or null if the content is null
+     * @throws IllegalArgumentException if the content is neither an instance of {@code type} nor
+     *         convertible to it
+     * @since 0.26.0
+     */
+    public <T> T contentAs(Class<T> type) {
+        try {
+            return Message.convertContent(content, type);
+        } catch (IllegalArgumentException e) {
+            var declared = metadata.get(CONTENT_CLASS_HEADER);
+            if (declared == null) {
+                throw e;
+            }
+            throw new IllegalArgumentException(
+                e.getMessage() + " The sender declared it as " + declared + " ("
+                    + CONTENT_CLASS_HEADER + " header).", e);
+        }
     }
 
     /**
@@ -164,6 +229,7 @@ public record DialogueMessage(
         headers.put("conversationId", conversationId);
         headers.put("performative", performative.name());
         if (protocol != null) headers.put("protocol", protocol);
+        if (content != null) headers.put(CONTENT_CLASS_HEADER, content.getClass().getName());
         return headers;
     }
 

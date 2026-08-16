@@ -102,6 +102,64 @@ class MessageTest {
     }
 
     @Test
+    void shouldReturnTheSameReferenceWhenContentIsAlreadyOfTheRequestedType() {
+        // Given a message that never crossed a serialising transport
+        TestData content = new TestData("test", 42);
+        Message message = Message.builder().topic("test").content(content).build();
+
+        // When
+        TestData retrieved = message.getContent(TestData.class);
+
+        // Then no conversion happened — the in-memory path must stay allocation-free
+        assertThat(retrieved).isSameAs(content);
+    }
+
+    @Test
+    void shouldConvertContentThatArrivedAsAMap() {
+        // Given the shape a payload has after a serialising transport rebuilt it from JSON
+        Message message = Message.builder()
+            .topic("test")
+            .content(Map.of("name", "test", "value", 42))
+            .build();
+
+        // When
+        TestData retrieved = message.getContent(TestData.class);
+
+        // Then
+        assertThat(retrieved).isEqualTo(new TestData("test", 42));
+    }
+
+    @Test
+    void shouldReturnNullContentAsNull() {
+        // Given
+        Message message = Message.builder().topic("test").build();
+
+        // When / Then
+        assertThat(message.getContent(TestData.class)).isNull();
+    }
+
+    @Test
+    void shouldReportBothTypesWhenContentCannotBeConverted() {
+        // Given content that is neither the requested type nor convertible to it
+        Message message = Message.builder().topic("test").content(42).build();
+
+        // When / Then — the diagnostic must name both types, since the in-memory and
+        // post-transport paths are indistinguishable at the call site
+        assertThatThrownBy(() -> message.getContent(TestData.class))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(TestData.class.getName())
+            .hasMessageContaining(Integer.class.getName());
+    }
+
+    @Test
+    void shouldRejectNullRequestedType() {
+        Message message = Message.builder().topic("test").content("x").build();
+
+        assertThatThrownBy(() -> message.getContent(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
     void shouldCreateReplyMessage() {
         // Given
         Message original = Message.builder()
