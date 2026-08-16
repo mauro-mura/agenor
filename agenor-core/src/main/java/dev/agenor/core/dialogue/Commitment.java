@@ -11,6 +11,16 @@ import java.util.Optional;
  * a request. The performer is obligated to fulfill the commitment to the
  * requester.
  *
+ * <p><strong>Lifetime — a commitment does not outlive the process that tracks it.</strong> It
+ * lives in the tracking agent's memory, so a restart loses it and nothing will move it to
+ * {@link CommitmentState#VIOLATED} afterwards, however overdue it becomes. A commitment is an
+ * observable promise within a running dialogue, <em>not</em> an audit record: anything that must
+ * be auditable belongs in the agent's own persistent state. See ADR-031.
+ *
+ * <p>Commitments in a terminal state are swept after a retention window (default 5 minutes),
+ * and deadline violations are detected by the same sweep — so a violated commitment stays
+ * readable for at least one interval after it is marked.
+ *
  * @since 0.5.0
  */
 public interface Commitment {

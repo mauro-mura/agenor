@@ -35,16 +35,13 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-027](ADR-027-minimal-runtime-llm-generic-split.md)             | Minimal Runtime Core — LLM / Generic-MAS Module Split | Accepted | 2026-08-03 |
 | ADR-028                                                             | Agent Presence — JDBC and Redis          | Reserved | —          |
 | [ADR-029](ADR-029-protocol-validation-and-dialogue-message-classification.md) | Protocol Validation Enforcement and Dialogue Message Classification | Accepted | 2026-08-15 |
-| ADR-030                                                             | `Message.content` Typing Across Transports | Proposed | —          |
-| ADR-031                                                             | Conversation-State Durability            | Proposed | —          |
+| [ADR-030](ADR-030-message-content-typing-across-transports.md)      | `Message.content` Typing Across Transports | Accepted | 2026-08-16 |
+| [ADR-031](ADR-031-conversation-state-durability.md)                 | Conversation-State Durability            | Accepted | 2026-08-16 |
 
 > **Rows without a link are claimed numbers, not written documents.** They are listed so that two
 > parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide.
 > **ADR-028** is reserved for Agent Presence (JDBC + Redis) and is not written yet; the number
-> stays reserved even though 029 landed first. **ADR-030** (`Message.content` typing across
-> transports, amending ADR-005) and **ADR-031** (conversation-state durability, the missing rung
-> on ADR-004's ladder) are claimed as follow-ups to ADR-029. Do not reuse these numbers for
-> anything else.
+> stays reserved even though 029, 030 and 031 landed first. Do not reuse it for anything else.
 
 ---
 
@@ -197,6 +194,8 @@ graph TD
 - **ADR-026** (REQUEST Protocol Final-Resolution Semantics) resolves the "Known Limitations" gap left open by ADR-009
 - **ADR-027** (Minimal Runtime Core — LLM/Generic-MAS Module Split) builds on ADR-002, ADR-004, ADR-018, ADR-020
 - **ADR-029** (Protocol Validation Enforcement and Dialogue Message Classification) builds on ADR-002 and ADR-009, and generalises the sender-perspective reading of `allowedPerformatives()` that ADR-026 introduced
+- **ADR-030** (`Message.content` Typing Across Transports) amends **ADR-005** with a scoped note on receiving-side typing; the defect it fixes manifests only on ADR-021's transport, and the silent break it removes is the one ADR-004 promises cannot happen
+- **ADR-031** (Conversation-State Durability) fills the dialogue rung ADR-004's ladder was missing — deliberately at the first step — and bounds ADR-009's model; it depends on ADR-030, because affirming cross-runtime dialogue is only honest once non-`String` payloads survive the transport
 
 ---
 

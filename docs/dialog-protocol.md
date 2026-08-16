@@ -393,10 +393,39 @@ shared between agents in the same JVM except the transport (`MessageDispatcher`)
 no central place to query "all conversations in the runtime" — each agent tracks the
 dialogues it takes part in, from its own point of view.
 
-That state is **held in memory and node-local**. It does not survive the agent's process:
-a restart drops every in-flight conversation, and the peer is not notified — it waits out
-its own timeout. Do not model anything durable on top of a `Conversation` or a
-`Commitment`.
+### Two different questions, two different answers
+
+"Node-local" describes where the *state* lives, not how far a dialogue can reach. Keep the
+two apart (ADR-031):
+
+| | Answer |
+|---|---|
+| **Can agents in different runtimes hold a dialogue?** | **Yes**, and always could. A dialogue is an exchange of `Message`s over whatever `MessageDispatcher` the agent holds — with Redis messaging (ADR-021) or the A2A adapter, the peer can be in another process, on another host. |
+| **Does an agent's conversation state survive that agent's restart?** | **No**, by design. |
+
+### Restart and failover semantics
+
+Conversation state is **held in memory, in the agent's own process**. When an agent
+restarts:
+
+- every in-flight conversation it was tracking is gone, and so are its commitments — nothing
+  will mark an abandoned commitment `VIOLATED` after the restart;
+- the peer is **not** notified. It waits out its own timeout and its future completes
+  exceptionally — that timeout *is* the failover mechanism, and it is armed on every
+  `request()`, `query()` and `callForProposals()`;
+- a `CompletableFuture` the restarted agent was going to complete cannot be recovered by any
+  means, since it was a live object in a process that no longer exists.
+
+So **do not model anything durable on top of a `Conversation` or a `Commitment`**. If a
+business process must survive a restart, keep it in the agent's own persistent state
+(`@Persist`, or the HITL approval queue) and use dialogue to carry its steps, not to record
+them. Dialogue is built for exchanges measured in seconds to minutes, not for long-running
+sagas.
+
+This is a contract, not a limitation waiting to be fixed: `ConversationManager` is an
+interface and `DialogueCapability` takes it through a factory, so a persistent implementation
+can be added later without changing any agent code — see ADR-031 for why one has not been
+built.
 
 Conversations and commitments that have reached a terminal state are swept automatically
 (default: every minute, keeping the last 5 minutes), so long-lived agents do not accumulate

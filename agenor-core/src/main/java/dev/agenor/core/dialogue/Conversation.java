@@ -13,6 +13,18 @@ import java.util.Optional;
  * <p>A conversation tracks the sequence of messages exchanged,
  * the protocol being followed, and the current state.
  *
+ * <p><strong>Lifetime — this state does not outlive the agent's process.</strong> Each agent
+ * keeps its own view of the conversations it takes part in, in memory. A restart drops every
+ * in-flight conversation; the peer is not notified and simply waits out its own timeout. Model
+ * nothing durable on a conversation: if a business process must survive a restart, keep it in
+ * the agent's own persistent state and use dialogue to carry its steps, not to record them.
+ *
+ * <p>This is about state, not reach: agents in <em>different</em> runtimes can hold a dialogue
+ * whenever the transport spans them. See ADR-031.
+ *
+ * <p>Conversations that reach a terminal state are swept after a retention window (default 5
+ * minutes), so a long-lived agent does not accumulate them.
+ *
  * @since 0.5.0
  */
 public interface Conversation {

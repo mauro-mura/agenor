@@ -71,6 +71,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Message.getContent(Class<T>)` now actually converts** (ADR-030): it was an unchecked cast
+  that did nothing, so it read like the answer to the payload-typing problem and was not.
+  `Message.content` is declared `Object` and carries no type information on the wire, so the
+  in-memory dispatcher hands the receiver the sender's original object while a serialising
+  transport such as Redis hands it a `LinkedHashMap` rebuilt from JSON — a `ClassCastException`
+  that no in-memory test can reproduce and that every dialogue test therefore missed. The
+  accessor now returns the same reference when the content is already of the requested type
+  (no allocation, no Jackson), converts it when it arrived as a `Map`, and throws
+  `IllegalArgumentException` naming both types when it can do neither. `DialogueMessage` gains
+  `contentAs(Class<T>)`, delegating to the same implementation, and `toMessage()` writes the
+  payload's Java type into a `content-class` header — informational only, since conversion is
+  driven by the type the caller asks for and the wire format stays language-neutral.
+  Deliberately **not** named `content-type`: that key already means a domain label in ADR-005's
+  own example and an HTTP-style media type in `docs/message-filtering.md`.
+  **Limitation, by design**: conversion is lenient about unknown properties so that a receiver
+  keeps reading a payload whose sender added a field. Reading a post-transport payload as an
+  *unrelated* record therefore succeeds with null fields instead of throwing. The accessor
+  removes the `ClassCastException`, not the need to ask for the right type.
+  `MessageFilterBuilder.contentType(Class)` has the same root cause — it filters with
+  `instanceof` and silently stops matching after a serialising transport — and is knowingly
+  left unfixed until someone needs it.
 - **Optional-module diagnostics at startup** (ADR-027 § Amendment 2026-08-15): the ADR-027 seam
   degrades silently — without `agenor-runtime-llm` a `@WithGuardrails` agent runs unguarded, and
   nothing says so. `AgenorRuntime.start()` now logs one INFO line naming the optional modules that
@@ -120,6 +141,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dialogue examples and the docs quick-starts no longer show manual `onStart()`/`onStop()`
   dialogue wiring; `dialog-protocol.md` now states explicitly that conversation state is
   per-agent, in-memory and node-local, and what an agent without `LifecycleHooks` must do.
+- **The durability contract for dialogue state is now written down** (ADR-031). It was
+  unspecified, and the "node-local" phrasing added above could be read as "dialogue only works
+  within one node" — which is false and now stated as such. The two axes are separated
+  explicitly: agents in **different runtimes can hold a dialogue** whenever the transport spans
+  them (Redis messaging, A2A), while an agent's **own conversation state does not survive its
+  own process** — by design, not by omission. `dialog-protocol.md` gains a restart/failover
+  section (the peer waits out its own timeout, in-flight commitments are lost and will never be
+  marked `VIOLATED`, a pending future cannot be recovered by any store), and `Conversation` and
+  `Commitment` carry the same contract in their Javadoc for anyone reading only the API. No
+  persistent `ConversationManager` is shipped: the factory seam added in this release means one
+  can be added later without changing agent code, so building it before an adopter needs it
+  would buy nothing — and it would not fix the part that actually breaks on restart.
 
 ### Deprecated
 
@@ -167,6 +200,23 @@ CommitmentTracker tracker = dialogue.getCommitmentTracker();
 private final DialogueCapability dialogue = DialogueCapability.builder(this)
     .retention(Duration.ofHours(1))
     .build();
+```
+
+- `Message.getContent(Class<T>)` converts instead of casting blindly (ADR-030), and throws
+  `IllegalArgumentException` — not `ClassCastException` at the use site — when it cannot. This
+  is a widening: content already of the requested type still comes back as the same reference,
+  and a call that used to blow up later either succeeds now or fails immediately with a message
+  naming both types. Nothing that worked stops working. If you catch `ClassCastException` around
+  a `getContent(...)` call, that catch no longer fires.
+
+**Recommended change** — casting `content()` is a latent bug on any transport that serialises:
+
+```java
+// Before — works in one JVM, throws ClassCastException over Redis or A2A
+Bid bid = (Bid) proposal.content();
+
+// After — works on every transport
+Bid bid = proposal.contentAs(Bid.class);
 ```
 
 ## [0.25.0] - 2026-08-11
