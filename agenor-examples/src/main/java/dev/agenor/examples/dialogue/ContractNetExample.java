@@ -111,17 +111,20 @@ public class ContractNetExample {
                         return CompletableFuture.completedFuture("NO_PROPOSALS");
                     }
 
-                    // Print all proposals
+                    // Print all proposals.
+                    // contentAs(), not a cast: a cast to Bid works here only because every
+                    // agent shares one JVM. Over a serialising transport the payload arrives
+                    // as a Map and the cast throws — see ADR-030.
                     System.out.println("\n[Manager] Proposals:");
                     for (DialogueMessage p : proposals) {
-                        Bid bid = (Bid) p.content();
+                        Bid bid = p.contentAs(Bid.class);
                         System.out.printf("  - %s: cost=%.2f, time=%ds%n",
                             p.senderId(), bid.cost(), bid.timeSeconds());
                     }
 
                     // Select best (lowest cost)
                     DialogueMessage best = proposals.stream()
-                        .min(Comparator.comparingDouble(p -> ((Bid) p.content()).cost()))
+                        .min(Comparator.comparingDouble(p -> p.contentAs(Bid.class).cost()))
                         .orElseThrow();
 
                     System.out.println("\n[Manager] Selected: " + best.senderId());
@@ -168,7 +171,17 @@ public class ContractNetExample {
         public void handleCFP(DialogueMessage msg) {
             System.out.println("[" + id + "] Received CFP");
 
-            if (!(msg.content() instanceof Task task)) {
+            // `instanceof Task` would fail for the same reason a cast would: after a
+            // serialising transport the payload is a Map, not a Task. Conversion is lenient
+            // about fields it does not recognise, so an unrelated payload yields a Task with
+            // null fields rather than throwing — hence the explicit check (ADR-030).
+            Task task;
+            try {
+                task = msg.contentAs(Task.class);
+            } catch (IllegalArgumentException e) {
+                task = null;
+            }
+            if (task == null || task.type() == null) {
                 dialogue.refuse(msg, "Invalid task");
                 return;
             }
