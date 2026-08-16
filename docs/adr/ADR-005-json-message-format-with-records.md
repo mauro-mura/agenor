@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
+**Last Modified**: 2026-08-16 (see Amendment below)  
 **Authors**: Project Team  
 
 ### Context
@@ -72,3 +73,25 @@ public record Message(
 - **Positive**: Excellent tooling support
 - **Negative**: Slightly larger than binary formats
 - **Negative**: JSON parsing overhead (acceptable for most use cases)
+
+---
+
+### Amendment (2026-08-16) — receiving-side typing, per ADR-030
+
+This ADR fixed the wire format but never specified what the **receiver** gets back. Because
+`content` is declared `Object`, a serialising transport materialises a JSON object as a `Map`,
+while the in-memory dispatcher hands over the original reference — so the same handler code
+works on one transport and throws `ClassCastException` on the other.
+
+[ADR-030](ADR-030-message-content-typing-across-transports.md) closes that gap without changing
+anything decided here: `Object content` stays, JSON stays, the format stays language-neutral. It
+adds `Message.getContent(Class<T>)` as a real converting accessor and an optional `content-class`
+header carrying the payload's Java type as a hint.
+
+Two details of this document are superseded in scope:
+
+- The `"content-type": "weather-data"` header in the example above is a **domain label**, not a
+  type hint and not an HTTP media type. ADR-030 deliberately does not reuse that key.
+- "Types: Full support for Java time types, collections" describes what Jackson can serialise,
+  not what survives as a typed object on the receiving end. For a payload that is a domain
+  record, only ADR-030's accessor gives it back.
