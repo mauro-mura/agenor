@@ -339,6 +339,21 @@ also dispatched to any matching `@DialogueHandler`.
 > classifier keeps non-dialogue traffic off the dialogue path. ADR-029 also records why the
 > synthetic conversations were a resource leak the 0.26.0 retention sweep could not reach.
 
+**Dialogue shares one correlation namespace with ad-hoc request/reply** (open, 2026-08-16):
+`DialogueMessage.toMessage()`/`fromMessage()` map `inReplyTo` onto `Message.correlationId()` —
+the same field the codebase uses for non-dialogue request/reply. Functionally consistent, and
+not a defect: the two never collide in practice because ids are UUIDs. It is recorded as a
+**layering** note, because it shares a root cause with the double-subscription problem ADR-029
+fixed — dialogue is a convention layered on the generic envelope rather than a channel of its
+own. Anything that later needs true isolation between dialogue and ad-hoc traffic starts here.
+
+**The common REQUEST shape still needs boilerplate** (open, 2026-08-16): ADR-026 resolves the
+caller's future on the *final* reply, which is the right default, but an initiator that wants to
+observe the intermediate `AGREE` as progress must reach for
+`getConversationManager().onMessage(...)`. "AGREE for progress, INFORM for the result" is the
+common case and deserves a first-class API rather than a documented workaround. Not scheduled —
+recorded so the next person to touch `DialogueCapability` has the option in front of them.
+
 ### Neutral
 
 1. **No custom wire protocol**: Delegates to A2A SDK (intentional)
