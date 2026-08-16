@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two lost-update races in the dialogue runtime**: a conversation is mutated from arbitrary
+  threads — `InMemoryMessageDispatcher` delivers every message on its own virtual thread with no
+  per-recipient serialisation, and the timeout path writes from another — while
+  `DefaultConversation` performed `state = protocol.nextState(state, ...)` as an unguarded
+  read-modify-write over a `volatile` field. Two concurrent deliveries could each transition from
+  the same state, discarding one; more damagingly, a `setState(TIMEOUT)` could be overwritten by a
+  transition computed from the state that preceded it, leaving a conversation that looks live
+  after its own timeout has fired — and therefore still eligible for the ADR-026 resolution gate.
+  The history append, the ADR-029 validation and the transition now happen under one lock;
+  `state` and `lastActivity` stay `volatile` so readers need not take it.
+  `DefaultConversationManager.handleIncoming()` had a second, distinct race: a check-then-act
+  (`get` → null → `new` → `put`) on the conversation map. Two messages opening the same unknown
+  conversation built two objects and kept whichever `put` ran last, so the message written to the
+  discarded one was **lost outright** — not a wrong state, a missing message. Replaced with
+  `computeIfAbsent`. Both races are covered by looped concurrency tests that fail without the fix.
+
 - **Protocol violations were silently absorbed** (ADR-029): `Protocol.isValid()` existed but
   nothing ever called it, so a peer sending a performative the protocol does not allow in the
   current state produced no state change, no error and no log line — the framework detected the

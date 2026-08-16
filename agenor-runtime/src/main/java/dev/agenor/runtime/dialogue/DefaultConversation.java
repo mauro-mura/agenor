@@ -30,7 +30,23 @@ public class DefaultConversation implements Conversation {
     private final Instant startedAt;
     private final List<DialogueMessage> history;
 
+    /**
+     * Guards every read-modify-write of {@link #state} and {@link #lastActivity}, and the
+     * history append that belongs to the same transition.
+     *
+     * <p>A conversation is mutated from arbitrary threads: the dispatcher delivers each message
+     * on its own virtual thread with no per-recipient serialisation, and the timeout path calls
+     * {@link #setState} from another. Without this lock, {@code state = nextState(state, ...)}
+     * is a torn read-modify-write and one update is lost — most damagingly a {@code TIMEOUT}
+     * overwritten by a transition computed from the state that preceded it, leaving a
+     * conversation that looks live after its own timeout fired.
+     */
+    private final Object stateLock = new Object();
+
+    /** Written under {@link #stateLock}; {@code volatile} so readers need not take it. */
     private volatile ProtocolState state;
+
+    /** Written under {@link #stateLock}; {@code volatile} so readers need not take it. */
     private volatile Instant lastActivity;
 
     public DefaultConversation(
@@ -106,15 +122,23 @@ public class DefaultConversation implements Conversation {
      * which for the built-in protocols leaves the state unchanged. Reporting rather than
      * rejecting is deliberate: see ADR-029.
      *
+     * <p>The append, the validation and the transition happen under {@link #stateLock} as one
+     * unit, so concurrent deliveries are applied one after another and each transition sees the
+     * state the previous one produced. Note this calls {@link Protocol#nextState} while holding
+     * the lock: a {@code Protocol} implementation must not block or call back into the
+     * conversation from another thread.
+     *
      * @param message the message to add
      */
     public void addMessage(DialogueMessage message) {
-        history.add(message);
-        lastActivity = Instant.now();
+        synchronized (stateLock) {
+            history.add(message);
+            lastActivity = Instant.now();
 
-        if (protocol != null) {
-            reportIfInvalid(message);
-            state = protocol.nextState(state, message.performative(), isInitiator);
+            if (protocol != null) {
+                reportIfInvalid(message);
+                state = protocol.nextState(state, message.performative(), isInitiator);
+            }
         }
     }
 
@@ -142,10 +166,17 @@ public class DefaultConversation implements Conversation {
     /**
      * Manually sets the state (for timeout/cancel scenarios).
      *
+     * <p>Takes {@link #stateLock} for the same reason {@link #addMessage} does: this runs on the
+     * timeout or cancel path while a late reply may be transitioning the same conversation. The
+     * two orderings both remain possible — the state either survives or is replaced by a
+     * transition that observed it — but neither can be silently discarded.
+     *
      * @param newState the new state
      */
     public void setState(ProtocolState newState) {
-        this.state = newState;
-        this.lastActivity = Instant.now();
+        synchronized (stateLock) {
+            this.state = newState;
+            this.lastActivity = Instant.now();
+        }
     }
 }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -431,5 +432,50 @@ class DefaultConversationManagerTest {
         // Then no proposal is collected and no pending entry survives
         assertThat(proposals).isEmpty();
         assertThat(manager.pendingResponseCount()).isZero();
+    }
+
+    /**
+     * The dispatcher delivers every message on its own virtual thread with no per-recipient
+     * serialisation, so two messages opening the same unknown conversation arrive concurrently.
+     * A check-then-act (get → null → new → put) builds two conversations and keeps one, and the
+     * message that went into the discarded one is gone — not a wrong state, a lost message.
+     */
+    @Test
+    void shouldNotLoseAMessageWhenTwoArriveOnAnUnknownConversationAtOnce() throws Exception {
+        for (int round = 0; round < 200; round++) {
+            // Given two messages for a conversation this agent has never seen
+            var conversationId = "conv-" + round;
+            var start = new CountDownLatch(1);
+            var done = new CountDownLatch(2);
+
+            // When they are handled at the same instant
+            for (int i = 0; i < 2; i++) {
+                var message = DialogueMessage.builder()
+                    .conversationId(conversationId)
+                    .senderId("remote-agent")
+                    .receiverId("local-agent")
+                    .performative(Performative.INFORM)
+                    .content("msg-" + i)
+                    .build();
+                Thread.ofVirtual().start(() -> {
+                    try {
+                        start.await();
+                        manager.handleIncoming(message);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            start.countDown();
+            assertThat(done.await(5, TimeUnit.SECONDS)).isTrue();
+
+            // Then both are in the history of the one conversation that exists
+            assertThat(manager.getConversation(conversationId).orElseThrow().getHistory())
+                .as("round %d — one message was written to a conversation that was then "
+                    + "discarded by the racing put", round)
+                .hasSize(2);
+        }
     }
 }

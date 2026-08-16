@@ -147,23 +147,24 @@ public class DefaultConversationManager implements ConversationManager {
     @Override
     public void handleIncoming(DialogueMessage message) {
         var conversationId = message.conversationId();
-        var conversation = conversations.get(conversationId);
 
-        if (conversation == null) {
-            // New incoming conversation
+        // computeIfAbsent, not get-then-put: the dispatcher delivers each message on its own
+        // virtual thread, so two messages opening the same unknown conversation arrive
+        // concurrently. A check-then-act builds two conversations and keeps whichever put ran
+        // last — the message written to the discarded one is lost outright.
+        var conversation = conversations.computeIfAbsent(conversationId, id -> {
             var protocol = message.getProtocol()
                 .flatMap(protocolRegistry::get)
                 .orElse(null);
 
-            conversation = new DefaultConversation(
-                conversationId,
+            return new DefaultConversation(
+                id,
                 protocol,
                 message.senderId(),
                 localAgentId,
                 false
             );
-            conversations.put(conversationId, conversation);
-        }
+        });
 
         conversation.addMessage(message);
 
