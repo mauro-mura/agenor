@@ -336,6 +336,15 @@ public class AgenorRuntime {
                     .orElse(descriptor);
         }
 
+        // Hand the same descriptor to the agent. BaseAgent.start() re-registers itself as RUNNING
+        // from its own copy, so an agent left holding the bare default it builds in its constructor
+        // would overwrite this row moments later — losing the annotation-derived type and
+        // capabilities, and the endpoint that makes it reachable from another node. Agents created
+        // through AgentFactory already get one; those registered as plain instances did not.
+        if (agent instanceof BaseAgent baseAgent) {
+            baseAgent.setAgentDescriptor(descriptor);
+        }
+
         agentDirectory.register(descriptor)
                 .exceptionally(throwable -> {
                     log.error("Failed to register agent {} in directory: {}",

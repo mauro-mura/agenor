@@ -709,6 +709,16 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         behaviors.values().forEach(Behavior::stop);
     }
 
+    /**
+     * Re-registers this agent as RUNNING, carrying over every field of the descriptor the
+     * runtime handed us.
+     *
+     * <p>This overwrites the row written at {@code registerAgent} time, so anything omitted here
+     * is silently erased on start. The endpoint is the field that hurts most: it names the node a
+     * peer must route to, and a directory row whose {@code node_id} is blank sends cross-node
+     * messages to a stream nobody reads — with no error on either side. See
+     * {@code LocalEndpointProvider} and ADR-028.
+     */
     private void registerWithDirectory() {
         if (agentDirectory != null) {
             var descriptor = AgentDescriptor.builder(agentDescriptor.agentId())
@@ -717,6 +727,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
                     .capabilities(agentDescriptor.capabilities())  // From annotation
                     .metadata(agentDescriptor.metadata())  // From annotation
                     .status(AgentStatus.RUNNING)  // Update current status
+                    .endpoint(agentDescriptor.endpoint())  // How peers reach this node
                     .registeredAt(agentDescriptor.registeredAt())
                     .build();
 

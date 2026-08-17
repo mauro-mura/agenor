@@ -792,6 +792,56 @@ class AgenorRuntimeTest {
         assertThat(stored.endpoint().transportType()).isEqualTo("local");
     }
 
+    @Test
+    void shouldKeepTheAdvertisedEndpointAfterTheAgentStarts() {
+        // Given an agent registered with an endpoint-advertising dispatcher
+        var advertised = new AgentEndpoint("node-7", "redis", Map.of());
+        var directory = new InMemoryAgentDirectory();
+        runtimeUnderTest = AgenorRuntime.builder()
+                .messageDispatcher(new EndpointAdvertisingDispatcher(directory, advertised))
+                .agentRegistry(directory)
+                .agentResolver(directory)
+                .build();
+        runtimeUnderTest.registerAgent(new TestAgent("agent-1", "Agent 1"));
+
+        // When the runtime starts — BaseAgent re-registers itself as RUNNING at that point
+        runtimeUnderTest.start().join();
+
+        // Then the endpoint is still there. Asserting only after registerAgent() is what let a
+        // start() that rebuilt the descriptor without the endpoint go unnoticed: the directory
+        // row reverted to a blank node id and cross-node delivery went silently nowhere.
+        var stored = directory.findById("agent-1").join().orElseThrow();
+        assertThat(stored.endpoint()).isEqualTo(advertised);
+    }
+
+    @Test
+    void shouldGiveTheAgentTheDescriptorItWillReRegisterWith() {
+        // Given an agent whose metadata comes from its @Agent annotation
+        var directory = new InMemoryAgentDirectory();
+        runtimeUnderTest = AgenorRuntime.builder()
+                .agentRegistry(directory)
+                .agentResolver(directory)
+                .build();
+        runtimeUnderTest.registerAgent(new AnnotatedTypeAgent());
+
+        // When it starts and re-registers from its own descriptor
+        runtimeUnderTest.start().join();
+
+        // Then the annotation-derived type and capabilities survive. An agent left holding the
+        // bare default it builds in its constructor overwrites them with its class name.
+        var stored = directory.findById("annotated-agent").join().orElseThrow();
+        assertThat(stored.agentType()).isEqualTo("billing");
+        assertThat(stored.capabilities()).containsExactly("invoicing");
+    }
+
+    /** Agent whose type and capabilities exist only in the annotation, not in the constructor. */
+    @Agent(value = "annotated-agent", type = "billing", capabilities = {"invoicing"})
+    static class AnnotatedTypeAgent extends BaseAgent {
+        AnnotatedTypeAgent() {
+            super("annotated-agent", "Annotated Agent");
+        }
+    }
+
     /** Minimal dispatcher that advertises a fixed endpoint; only registration is exercised. */
     static class EndpointAdvertisingDispatcher extends InMemoryMessageDispatcher
             implements LocalEndpointProvider {
