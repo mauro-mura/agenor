@@ -38,9 +38,13 @@ import static dev.agenor.core.BehaviorType.CYCLIC;
  * <pre>
  *   docker run -d -p 6379:6379 valkey/valkey:8
  *
- *   # or with docker compose (valkey service defined in compose.yml):
- *   docker compose up valkey
+ *   # or with docker compose (valkey service defined in compose.yml at the repository root):
+ *   docker compose up -d valkey
  * </pre>
+ *
+ * <p>For the multi-node case this example only describes — two runtimes resolving each other
+ * through a shared directory — see
+ * {@link dev.agenor.examples.distributed.CrossRuntimeExample}.
  *
  * <p>Then run:
  * <pre>

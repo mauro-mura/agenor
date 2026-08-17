@@ -7,7 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`CrossRuntimeExample` and `CrossRuntimeDialogueIT`** (`agenor-examples`): two isolated
+  `AgenorRuntime` instances — separate dispatchers, directories and connection pools, sharing only
+  a PostgreSQL and a Valkey — exchanging a typed REQUEST/INFORM. Every dialogue test before this
+  used the in-memory dispatcher, where `sendTo` resolves the recipient in a local map and the
+  message never leaves the JVM; nothing exercised the path where the directory has to tell one
+  node how to reach another. That is precisely the gap the three defects below hid in.
+- **`docs/distributed-quick-start.md`** and a root **`compose.yml`** (PostgreSQL + Valkey). The
+  page states the rule that was written down nowhere: the transport's `nodeId` is what the
+  directory advertises and what peers route to, and any disagreement between the two loses
+  messages without an error. `docs/adapters/redis.md` and `RedisMessagingExample` referred to a
+  compose file that did not exist.
+
+### Changed
+
+- **Integration tests now actually run.** The build had no `maven-failsafe-plugin`, and surefire's
+  default includes do not match `*IT.java`, so the four existing integration tests
+  (`JdbcAgentDirectoryIT`, `JdbcApprovalGateIT`, `RedisMessageTransportIT`,
+  `RedisTopicPublisherIT`) had been compiled and never executed. Failsafe is now bound in the
+  parent POM. Each test keeps its `@EnabledIfSystemProperty(named = "integration.tests.enabled")`
+  guard, so `mvn verify` is unchanged; `mvn verify -Dintegration.tests.enabled=true` runs them and
+  requires Docker.
+- `DialogueCapability.request(...)` Javadoc corrected: it promised "first-reply, typically AGREE"
+  semantics, which stopped being true when ADR-026 moved resolution to the final `INFORM`/
+  `FAILURE`. The implementation was right; only the contract as documented was stale.
+
 ### Fixed
+
+- **An agent's endpoint was discarded the moment it started.** `AgenorRuntime.registerAgent`
+  stamped the dispatcher's endpoint onto the descriptor, but `BaseAgent.start()` re-registers
+  itself as `RUNNING` from its own descriptor, which it rebuilt field by field — without the
+  endpoint. The correct row survived milliseconds before being overwritten with a blank
+  `node_id`. Compounding it, `AgenorRuntime` never handed the descriptor it had just built to the
+  agent, so an agent registered as a plain instance (rather than created by `AgentFactory`) also
+  overwrote its annotation-derived `agentType` and capabilities with the bare defaults from its
+  constructor. `registerWithDirectory()` now carries the endpoint over, and `registerAgent` calls
+  `setAgentDescriptor(...)`. The pre-existing unit test passed throughout because it asserted the
+  directory contents after `registerAgent` and before `start()`.
+
+- **`JdbcAgentRegistry.register()` could not re-register an agent on PostgreSQL.** The upsert
+  attempts an `INSERT` and falls back to `UPDATE` on a unique violation, but PostgreSQL aborts the
+  entire transaction on any failed statement: the expected primary-key conflict poisoned the
+  connection, and the `UPDATE` — plus the capability sync after it — failed with *"current
+  transaction is aborted"*. Every re-registration therefore failed on the database the adapter
+  exists to support, while passing on the H2 used by the unit tests. The `INSERT` now runs inside
+  a savepoint. `JdbcAgentDirectoryIT.upsertOnDuplicate` covers exactly this and would have caught
+  it — it had never been executed, for the reason described under *Changed*.
 
 - **Cross-node delivery silently dropped every message when a persistent directory was combined
   with a networked transport.** Nothing in the registration path ever populated

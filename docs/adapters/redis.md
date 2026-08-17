@@ -22,9 +22,12 @@ Start a Valkey (or Redis-compatible) server before using this adapter:
 # Valkey via Docker — recommended for local development
 docker run -d -p 6379:6379 valkey/valkey:8
 
-# or with the compose file in this repo (if present)
-docker compose up valkey
+# or with compose.yml at the repository root
+docker compose up -d valkey
 ```
+
+For a two-node setup — Redis transport plus a shared JDBC directory — see the
+[Distributed Quick Start](../distributed-quick-start.md).
 
 ---
 

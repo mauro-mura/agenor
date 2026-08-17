@@ -368,21 +368,30 @@ public class DialogueCapability {
     // =========================================================================
 
     /**
-     * Sends a REQUEST to another agent and waits for the first reply.
+     * Sends a REQUEST to another agent and waits for the outcome.
      *
-     * <p><b>First-reply semantics</b>: the future resolves on the first reply whose
-     * {@code inReplyTo} matches the REQUEST id — typically {@code AGREE}. In a two-phase
-     * exchange the final {@code INFORM} arrives after the future is already resolved and
-     * is not captured. Collapse AGREE + INFORM into a single INFORM reply if you need
-     * the result directly, or use streaming for intermediate status updates.
+     * <p>The future resolves on the <strong>final</strong> reply — {@code INFORM} or
+     * {@code FAILURE}, or an immediate {@code REFUSE}. An intermediate {@code AGREE} that the
+     * protocol expects to be followed by one of those does <em>not</em> resolve it, so a
+     * two-phase exchange yields the result rather than the acknowledgement. To observe the
+     * AGREE as well, register a listener on the conversation id via
+     * {@link ConversationManager#onMessage(String, java.util.function.Consumer)}. See ADR-026.
+     *
+     * @param targetAgentId the agent to send the REQUEST to
+     * @param content       the request payload; any type the transport's codec can serialise
+     * @return a future completing with the final reply, or failing on timeout
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content) {
         return request(targetAgentId, content, DEFAULT_TIMEOUT);
     }
 
     /**
-     * Sends a REQUEST to another agent and waits for the first reply.
+     * Sends a REQUEST to another agent and waits for the outcome, with an explicit timeout.
      *
+     * @param targetAgentId the agent to send the REQUEST to
+     * @param content       the request payload
+     * @param timeout       how long to wait before the future fails
+     * @return a future completing with the final reply, or failing on timeout
      * @see #request(String, Object)
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {

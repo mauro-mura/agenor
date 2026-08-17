@@ -82,6 +82,7 @@ nav:
   - Coordination:
     - Messaging Guide: messaging.md
     - Agent Directory: directory.md
+    - Distributed Quick Start: distributed-quick-start.md
     - Message Filtering: message-filtering.md
     - Dialog Protocol: dialog-protocol.md
     - Memory Management: memory.md
