@@ -91,7 +91,15 @@ public class JdbcAgentRegistry implements AgentRegistry {
             var metadata = helper.toJson(descriptor.metadata());
             var status = descriptor.status() != null ? descriptor.status().name() : AgentStatus.UNKNOWN.name();
 
-            // Try INSERT first; fall back to UPDATE on PK conflict (see ADR-023)
+            // Try INSERT first; fall back to UPDATE on PK conflict (see ADR-023).
+            //
+            // The INSERT runs inside a savepoint because PostgreSQL aborts the entire
+            // transaction on any failed statement: without one, the expected PK conflict
+            // poisons the connection and every later command — the UPDATE below, and the
+            // capability sync after it — fails with "current transaction is aborted".
+            // Re-registering an existing agent would then be impossible on Postgres, while
+            // working fine on H2, which is why the unit tests never saw it.
+            var savepoint = conn.setSavepoint("agent_upsert");
             try {
                 List<Object> insertParams = new ArrayList<>();
                 insertParams.add(descriptor.agentId());
@@ -108,6 +116,7 @@ public class JdbcAgentRegistry implements AgentRegistry {
             } catch (SQLException e) {
                 if (!helper.isUniqueViolation(e)) throw e;
                 // PK conflict → agent already exists, update mutable fields
+                conn.rollback(savepoint);
                 List<Object> updateParams = new ArrayList<>();
                 updateParams.add(descriptor.agentName());
                 updateParams.add(descriptor.agentType());
