@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`@AgenorMessageHandler` direct delivery was dead on the Redis transport.** An agent
+  subscribes to its own recipient channel more than once — `BaseAgent.autoSubscribeDirectMessages()`
+  always, plus `DialogueCapability` when dialogue is enabled — and
+  `RedisMessageDispatcher.directHandlers` was a `Map<String, MessageHandler>` written with `put`.
+  Dialogue registers from a start hook, which runs *after* the agent's own subscription, so on
+  Redis it silently replaced `BaseAgent.handleDirectMessage`: every `@AgenorMessageHandler`
+  method on a dialogue-enabled agent stopped being invoked for direct messages. Unsubscribing
+  either capability also revoked whichever handler happened to hold the slot. The routing table
+  now holds a list per agent and delivers to every handler, matching `InMemoryMessageDispatcher`;
+  `unsubscribe()` removes only its own handler. Found while writing ADR-032, which removes the
+  double subscription entirely — this fix restores the documented contract in the meantime.
+
 - **An agent's endpoint was discarded the moment it started.** `AgenorRuntime.registerAgent`
   stamped the dispatcher's endpoint onto the descriptor, but `BaseAgent.start()` re-registers
   itself as `RUNNING` from its own descriptor, which it rebuilt field by field — without the

@@ -307,6 +307,55 @@ class RedisMessageDispatcherTest {
                     .havingCause()
                     .isInstanceOf(AgentNotFoundException.class);
         }
+
+        @Test
+        @DisplayName("a second subscription for the same agent does not replace the first")
+        void subscribeRecipient_twoHandlersForSameAgent_bothReceive() {
+            // Given - the arrangement every BaseAgent with a DialogueCapability creates:
+            // BaseAgent.autoSubscribeDirectMessages() first, DialogueCapability second.
+            var first  = new AtomicReference<Message>();
+            var second = new AtomicReference<Message>();
+
+            dispatcher.subscribeRecipient("agent-a", msg -> {
+                first.set(msg);
+                return CompletableFuture.completedFuture(null);
+            });
+            dispatcher.subscribeRecipient("agent-a", msg -> {
+                second.set(msg);
+                return CompletableFuture.completedFuture(null);
+            });
+
+            // When
+            var msg = Message.builder().receiverId("agent-a").content("x").build();
+            dispatcher.sendTo(msg).join();
+
+            // Then - both handlers see it, as the in-memory dispatcher already guarantees
+            assertThat(first).hasValue(msg);
+            assertThat(second).hasValue(msg);
+        }
+
+        @Test
+        @DisplayName("unsubscribing one handler leaves the other subscribed")
+        void subscribeRecipient_unsubscribeOne_otherSurvives() {
+            // Given
+            var surviving = new AtomicReference<Message>();
+
+            var doomed = dispatcher.subscribeRecipient("agent-a",
+                    m -> CompletableFuture.completedFuture(null));
+            dispatcher.subscribeRecipient("agent-a", m -> {
+                surviving.set(m);
+                return CompletableFuture.completedFuture(null);
+            });
+
+            // When
+            doomed.unsubscribe();
+            var msg = Message.builder().receiverId("agent-a").content("x").build();
+            dispatcher.sendTo(msg).join();
+
+            // Then - the local path is still live for the remaining handler
+            assertThat(surviving).hasValue(msg);
+            verify(agentResolver, never()).resolveEndpoint("agent-a");
+        }
     }
 
     @Nested

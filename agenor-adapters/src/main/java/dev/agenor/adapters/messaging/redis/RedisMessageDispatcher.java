@@ -12,11 +12,14 @@ import dev.agenor.core.messaging.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
 /**
@@ -53,8 +56,12 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
     private final Supplier<AgentResolver> resolverSupplier;
     private final RedisMessagingConfig config;
 
-    // agentId → handler for local routing of messages arriving on the node stream
-    private final Map<String, MessageHandler> directHandlers = new ConcurrentHashMap<>();
+    // agentId → handlers for local routing of messages arriving on the node stream.
+    // A list, not a single handler: an agent subscribes more than once to its own
+    // recipient channel (BaseAgent.autoSubscribeDirectMessages plus, when present,
+    // DialogueCapability), and every subscriber must receive the message — the same
+    // contract InMemoryMessageDispatcher provides.
+    private final Map<String, List<MessageHandler>> directHandlers = new ConcurrentHashMap<>();
 
     // Node-stream subscription — started lazily on first subscribeRecipient call
     private volatile Subscription nodeStreamSubscription;
@@ -112,9 +119,9 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
         }
 
         // Local fast-path: agent lives on this node
-        var localHandler = directHandlers.get(receiverId);
-        if (localHandler != null) {
-            return localHandler.handle(msg);
+        var localHandlers = directHandlers.get(receiverId);
+        if (localHandlers != null && !localHandlers.isEmpty()) {
+            return deliverLocally(localHandlers, msg);
         }
 
         // Remote path: resolve via AgentResolver then write to node stream
@@ -163,11 +170,21 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
      *
      * <p>On the first call this method starts a consumer loop on the local node stream
      * ({@code <prefix>:node:<nodeId>}). Subsequent calls add handlers to the local
-     * routing table; the single consumer loop dispatches each incoming message to the
-     * handler matching {@code receiverId}.
+     * routing table; the single consumer loop dispatches each incoming message to
+     * <strong>every</strong> handler registered for its {@code receiverId}.
      *
-     * @return a subscription whose {@code unsubscribe()} removes the handler from the
-     *         routing table (the node-stream consumer loop continues running)
+     * <p>Registering a second handler for the same agent does not replace the first —
+     * an agent normally has more than one (its own direct-message subscription and, when
+     * dialogue is enabled, {@code DialogueCapability}'s). This matches the behaviour of
+     * the in-memory dispatcher.
+     *
+     * @param localAgentId the agent id to route to, must not be null or blank
+     * @param handler      the handler to register, must not be null
+     * @return a subscription whose {@code unsubscribe()} removes <em>this</em> handler
+     *         from the routing table, leaving any others in place (the node-stream
+     *         consumer loop continues running)
+     * @throws NullPointerException     if localAgentId or handler is null
+     * @throws IllegalArgumentException if localAgentId is blank
      */
     @Override
     public Subscription subscribeRecipient(String localAgentId, MessageHandler handler) {
@@ -177,10 +194,17 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
             throw new IllegalArgumentException("localAgentId must not be blank");
         }
 
-        directHandlers.put(localAgentId, handler);
+        directHandlers.computeIfAbsent(localAgentId, id -> new CopyOnWriteArrayList<>()).add(handler);
         ensureNodeStreamRunning();
 
-        return Subscription.of(localAgentId, () -> directHandlers.remove(localAgentId));
+        return Subscription.of(localAgentId, () -> directHandlers.computeIfPresent(
+                localAgentId,
+                (id, handlers) -> {
+                    handlers.remove(handler);
+                    // Drop the entry entirely once the last handler goes, so sendTo falls
+                    // back to the resolver instead of matching an empty local route.
+                    return handlers.isEmpty() ? null : handlers;
+                }));
     }
 
     // -------------------------------------------------------------------------
@@ -206,11 +230,35 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
             log.warn("Direct message {} arrived with null receiverId — dropping", msg.id());
             return CompletableFuture.completedFuture(null);
         }
-        var handler = directHandlers.get(receiverId);
-        if (handler == null) {
+        var handlers = directHandlers.get(receiverId);
+        if (handlers == null || handlers.isEmpty()) {
             log.warn("No local handler for receiverId='{}' — dropping message {}", receiverId, msg.id());
             return CompletableFuture.completedFuture(null);
         }
-        return handler.handle(msg);
+        return deliverLocally(handlers, msg);
+    }
+
+    /**
+     * Invokes every handler subscribed for a local agent and completes when all of them do.
+     *
+     * <p>Each handler is invoked even if an earlier one fails, so one misbehaving subscriber
+     * cannot suppress delivery to the others; the returned future still reports the failure.
+     *
+     * @param handlers the subscribed handlers, must not be null or empty
+     * @param msg      the message to deliver, must not be null
+     * @return a future completing when every handler has completed
+     */
+    private CompletableFuture<Void> deliverLocally(List<MessageHandler> handlers, Message msg) {
+        // Iterate, not index: the list is copy-on-write, so only its iterator is a
+        // stable snapshot against a concurrent unsubscribe.
+        var futures = new ArrayList<CompletableFuture<Void>>();
+        for (var handler : handlers) {
+            try {
+                futures.add(handler.handle(msg));
+            } catch (RuntimeException e) {
+                futures.add(CompletableFuture.failedFuture(e));
+            }
+        }
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 }
