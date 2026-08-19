@@ -20,8 +20,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link JdbcAgentRegistry}, {@link JdbcAgentDiscovery}, and
@@ -337,6 +339,25 @@ class JdbcAgentDirectoryTest {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    @Test
+    void register_failedInsertIsReportedRatherThanSwallowed() {
+        // Given a descriptor whose agentType is null, which the NOT NULL column rejects
+        var invalid = AgentDescriptor.builder("no-type")
+                .agentName("No Type")
+                .status(AgentStatus.RUNNING)
+                .endpoint(AgentEndpoint.local("test-node-id"))
+                .build();
+
+        // When it is registered / Then the failure surfaces instead of being reported as a
+        // successful write. It used to be swallowed: `isUniqueViolation` matched the whole
+        // ANSI 23 class, so a NOT NULL violation (23502) looked like "the row already
+        // exists", the fallback UPDATE matched nothing, and the transaction committed empty.
+        assertThatThrownBy(() -> registry.register(invalid).join())
+                .isInstanceOf(CompletionException.class);
+
+        assertThat(discovery.findById("no-type").join()).isEmpty();
+    }
 
     private AgentDescriptor descriptor(String agentId, String agentType, AgentStatus status,
                                        Set<String> capabilities, Map<String, String> metadata) {

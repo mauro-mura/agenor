@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A failed agent registration could be reported as a success.** `JdbcAgentRegistry.register`
+  inserts first and falls back to an `UPDATE` when the row already exists, and it asked
+  `JdbcHelper.isUniqueViolation` whether the failure was a duplicate key. That method matched the
+  entire ANSI `23xxx` integrity-constraint class, so a NOT NULL violation (`23502`) or a foreign-key
+  violation (`23503`) also looked like "the agent is already registered": the insert failed, the
+  fallback update matched no rows, the transaction committed empty, and the returned future
+  completed normally. Registering a descriptor without an `agentType` — a NOT NULL column — stored
+  nothing and told nobody. The check is now a duplicate-key check: `23505` on PostgreSQL and H2, or
+  `23000` with vendor code 1062/1586 on MySQL, which collapses the whole class into one SQLState.
+  Genuine constraint failures now surface as a failed future. Found while writing the JDBC presence
+  tests for ADR-028.
+
 - **`@AgenorMessageHandler` direct delivery was dead on the Redis transport.** An agent
   subscribes to its own recipient channel more than once — `BaseAgent.autoSubscribeDirectMessages()`
   always, plus `DialogueCapability` when dialogue is enabled — and

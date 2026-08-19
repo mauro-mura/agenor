@@ -142,10 +142,33 @@ public final class JdbcHelper {
     // Unique-constraint detection (portable across Postgres, MySQL, H2)
     // -------------------------------------------------------------------------
 
+    /**
+     * Reports whether {@code e} is a duplicate-key violation specifically, as opposed to any
+     * other integrity constraint failure.
+     *
+     * <p>The distinction matters because callers use it to mean "the row already exists" and
+     * fall back to an UPDATE. Treating the whole ANSI {@code 23xxx} class as a duplicate —
+     * which this method used to do — turns a NOT NULL or foreign-key violation into a silent
+     * no-op: the INSERT fails, the fallback UPDATE matches nothing, the transaction commits,
+     * and the caller is told the write succeeded.
+     *
+     * <p>PostgreSQL and H2 report {@code 23505} for duplicates and separate codes for the
+     * rest ({@code 23502} NOT NULL, {@code 23503} foreign key). MySQL collapses the class to
+     * the generic {@code 23000} and distinguishes by vendor code instead.
+     *
+     * @param e the exception to classify, must not be null
+     * @return true only if the failure is a duplicate key
+     */
     public boolean isUniqueViolation(SQLException e) {
         var state = e.getSQLState();
-        // ANSI SQLState 23xxx = integrity constraint violation
-        return state != null && state.startsWith("23");
+        if (state == null) {
+            return false;
+        }
+        if (state.equals("23505")) {
+            return true;
+        }
+        // MySQL: 1062 ER_DUP_ENTRY, 1586 ER_DUP_ENTRY_WITH_KEY_NAME
+        return state.equals("23000") && (e.getErrorCode() == 1062 || e.getErrorCode() == 1586);
     }
 
     // -------------------------------------------------------------------------
