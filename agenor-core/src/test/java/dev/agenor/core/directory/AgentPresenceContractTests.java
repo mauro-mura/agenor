@@ -13,6 +13,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Failure-detection latency and the staleness window are backend properties and are not
  * asserted here.
  *
+ * <p>What these tests deliberately do <em>not</em> prove is that a heartbeat has any effect.
+ * The capability exposes no timestamp, so a heartbeat's only observable consequence is a
+ * status that has not gone stale — which a backend with an unbounded window can never show.
+ * Each implementation asserts that effect for itself, where it is visible.
+ *
  * <p>Unlike the sibling registry, resolver and discovery suites, this one is typed on the
  * capability rather than on {@link AgentDirectory}, because a presence backend need not be a
  * directory — {@code JdbcAgentPresence} is a standalone class. Seeding therefore goes through
@@ -59,8 +64,8 @@ public interface AgentPresenceContractTests {
     }
 
     @Test
-    @DisplayName("[Presence] heartbeat transitions a STARTING agent to RUNNING")
-    default void heartbeat_setsRunning() {
+    @DisplayName("[Presence] heartbeat leaves the agent's status alone")
+    default void heartbeat_doesNotChangeStatus() {
         // Given an agent registered as still starting
         var fixture = createPresenceFixture();
         fixture.register("p1", AgentStatus.STARTING);
@@ -68,8 +73,20 @@ public interface AgentPresenceContractTests {
         // When it heartbeats
         fixture.presence().heartbeat("p1").join();
 
-        // Then its status reads RUNNING
-        assertThat(fixture.presence().getStatus("p1").join()).isEqualTo(AgentStatus.RUNNING);
+        // Then it is still STARTING — a heartbeat signals liveness, not progress (ADR-028 D-1)
+        assertThat(fixture.presence().getStatus("p1").join()).isEqualTo(AgentStatus.STARTING);
+    }
+
+    @Test
+    @DisplayName("[Presence] heartbeat for an unknown agent is ignored, not an error")
+    default void heartbeat_unknownAgentIsIgnored() {
+        // Given a store that has never seen this agent
+        var presence = createPresenceFixture().presence();
+
+        // When it is heartbeated / Then nothing is thrown and it stays unknown
+        presence.heartbeat("nobody").join();
+
+        assertThat(presence.getStatus("nobody").join()).isEqualTo(AgentStatus.UNKNOWN);
     }
 
     @Test

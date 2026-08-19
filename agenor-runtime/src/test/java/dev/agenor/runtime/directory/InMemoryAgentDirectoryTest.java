@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -269,12 +270,34 @@ class InMemoryAgentDirectoryTest {
     class AgentPresenceTests {
 
         @Test
-        @DisplayName("heartbeat updates status to RUNNING")
-        void heartbeatSetsRunning() {
-            directory.register(builder("agent-h").status(AgentStatus.STARTING).build()).join();
+        @DisplayName("heartbeat refreshes lastSeen without touching status")
+        void heartbeatRefreshesLastSeenOnly() {
+            // Given an agent that registered a minute ago and has not finished starting
+            var registeredAt = Instant.now().minusSeconds(60);
+            directory.register(builder("agent-h")
+                    .status(AgentStatus.STARTING)
+                    .lastSeen(registeredAt)
+                    .build()).join();
+
+            // When it heartbeats
             directory.heartbeat("agent-h").join();
 
-            assertThat(directory.getStatus("agent-h").join()).isEqualTo(AgentStatus.RUNNING);
+            // Then lastSeen moved forward and the status did not (ADR-028 D-1)
+            assertThat(directory.findById("agent-h").join())
+                    .get()
+                    .satisfies(d -> {
+                        assertThat(d.lastSeen()).isAfter(registeredAt);
+                        assertThat(d.status()).isEqualTo(AgentStatus.STARTING);
+                    });
+        }
+
+        @Test
+        @DisplayName("heartbeat for an unregistered agent is a no-op")
+        void heartbeatUnknownAgentIsNoOp() {
+            // Given no such agent / When heartbeated / Then nothing is thrown or created
+            directory.heartbeat("ghost").join();
+
+            assertThat(directory.findById("ghost").join()).isEmpty();
         }
 
         @Test

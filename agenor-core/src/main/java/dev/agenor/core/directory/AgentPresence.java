@@ -23,7 +23,15 @@ import java.util.concurrent.CompletableFuture;
 public interface AgentPresence {
 
     /**
-     * Records a heartbeat for the given agent, updating its {@code lastSeen} timestamp.
+     * Records a heartbeat for the given agent, refreshing its {@code lastSeen} timestamp.
+     *
+     * <p>A heartbeat signals liveness and nothing else: it does <em>not</em> change the
+     * agent's {@link AgentStatus}. Use {@link AgentRegistry#updateStatus} for that. An
+     * implementation backed by key expiry has no status to promote, so a heartbeat that
+     * also wrote a status could not mean the same thing across backends.
+     *
+     * <p>A heartbeat for an agent the implementation does not know is ignored rather than
+     * rejected — it is a race with unregistration, not an error.
      *
      * @param agentId the unique agent identifier, must not be null
      * @return a future that completes when the heartbeat is recorded
@@ -34,9 +42,15 @@ public interface AgentPresence {
     /**
      * Returns the current status of the given agent.
      *
+     * <p>The answer is {@link AgentStatus#UNKNOWN} when the agent is not registered, and
+     * also when it has not been seen within the implementation's staleness window. That
+     * window is a property of the implementation, not of this contract: an
+     * <em>unbounded</em> window is a legal value, and means the backend never expires a
+     * status.
+     *
      * @param agentId the unique agent identifier, must not be null
      * @return a future containing the agent's status, or
-     *         {@link dev.agenor.core.AgentStatus#UNKNOWN} if not registered
+     *         {@link AgentStatus#UNKNOWN} if it is unregistered or stale
      * @throws NullPointerException if agentId is null
      */
     CompletableFuture<AgentStatus> getStatus(String agentId);

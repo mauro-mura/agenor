@@ -86,12 +86,21 @@ public interface AgentDirectory extends AgentRegistry, AgentResolver, AgentDisco
     /**
      * {@inheritDoc}
      *
-     * <p>Default: calls {@link #updateStatus(String, AgentStatus)} with
-     * {@link AgentStatus#RUNNING}.
+     * <p>Default: reads the agent's current status and writes it back, which refreshes
+     * {@code lastSeen} without changing the status (ADR-028 D-1). It used to write
+     * {@link AgentStatus#RUNNING} unconditionally.
+     *
+     * <p>This bridge is read-then-write and therefore not atomic: a heartbeat racing a real
+     * status change can write back the status it read. That is still strictly better than
+     * the unconditional {@code RUNNING} it replaces, and this interface is deprecated —
+     * implement {@link dev.agenor.core.directory.AgentPresence} directly for an atomic
+     * touch.
      */
     @Override
     default CompletableFuture<Void> heartbeat(String agentId) {
-        return updateStatus(agentId, AgentStatus.RUNNING);
+        return findById(agentId).thenCompose(opt -> opt
+                .map(d -> updateStatus(agentId, d.status()))
+                .orElseGet(() -> CompletableFuture.completedFuture(null)));
     }
 
     /**

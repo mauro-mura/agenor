@@ -135,18 +135,7 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
     public CompletableFuture<Void> updateStatus(String agentId, AgentStatus status) {
         Objects.requireNonNull(agentId, "agentId");
         Objects.requireNonNull(status, "status");
-        agents.computeIfPresent(agentId, (id, d) ->
-                AgentDescriptor.builder(d.agentId())
-                        .agentName(d.agentName())
-                        .agentType(d.agentType())
-                        .status(status)
-                        .capabilities(d.capabilities())
-                        .metadata(d.metadata())
-                        .endpoint(d.endpoint())
-                        .registeredAt(d.registeredAt())
-                        .lastSeen(Instant.now())
-                        .build()
-        );
+        agents.computeIfPresent(agentId, (id, d) -> touched(d, status));
         log.debug("Updated status for agent '{}' to {}", agentId, status);
         return CompletableFuture.completedFuture(null);
     }
@@ -223,10 +212,26 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
     // AgentPresence
     // -------------------------------------------------------------------------
 
+    /**
+     * Refreshes the agent's {@code lastSeen} timestamp, leaving its status alone.
+     *
+     * <p>A heartbeat is a liveness signal and nothing more (ADR-028 D-1). It used to be
+     * {@code updateStatus(agentId, RUNNING)}, which meant an agent stuck in {@code STARTING}
+     * was promoted by the mere fact of being alive. A backend with key expiry cannot
+     * implement that, so the three implementations would have disagreed.
+     *
+     * <p>Unknown agent ids are ignored rather than rejected: a heartbeat for an agent that
+     * has just unregistered is a race, not an error.
+     *
+     * @param agentId the agent to touch, must not be null
+     * @return a future completing when the timestamp is refreshed
+     * @throws NullPointerException if agentId is null
+     */
     @Override
     public CompletableFuture<Void> heartbeat(String agentId) {
         Objects.requireNonNull(agentId, "agentId");
-        return updateStatus(agentId, AgentStatus.RUNNING);
+        agents.computeIfPresent(agentId, (id, d) -> touched(d, d.status()));
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -241,6 +246,31 @@ public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.A
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
+
+    /**
+     * Rebuilds a descriptor with the given status and a fresh {@code lastSeen}.
+     *
+     * <p>{@link AgentDescriptor} is immutable and has no wither, so every field has to be
+     * copied by hand. Doing that in one place rather than two is deliberate: a field
+     * forgotten in one copy but not the other is exactly how the endpoint was silently
+     * dropped in {@code BaseAgent.registerWithDirectory} (ADR-028 Part 1).
+     *
+     * @param d      the descriptor to copy, must not be null
+     * @param status the status to store, must not be null
+     * @return a new descriptor, never null
+     */
+    private static AgentDescriptor touched(AgentDescriptor d, AgentStatus status) {
+        return AgentDescriptor.builder(d.agentId())
+                .agentName(d.agentName())
+                .agentType(d.agentType())
+                .status(status)
+                .capabilities(d.capabilities())
+                .metadata(d.metadata())
+                .endpoint(d.endpoint())
+                .registeredAt(d.registeredAt())
+                .lastSeen(Instant.now())
+                .build();
+    }
 
     private static Predicate<AgentDescriptor> buildPredicate(AgentQuery query) {
         Predicate<AgentDescriptor> p = d -> true;
