@@ -2,6 +2,7 @@
 
 **Status**: Accepted
 **Date**: 2026-08-15
+**Last Modified**: 2026-08-18
 **Authors**: Project Team
 **References**: ADR-009 (Agent Dialogue Protocol), ADR-026 (REQUEST Protocol Final-Resolution
 Semantics), ADR-002 (Interface-First Architecture)
@@ -265,3 +266,37 @@ produces no violation warning.
   D6 fixes the protocol definition both rely on.
 - **ADR-002** (Interface-First Architecture): the reason option 3 was rejected —
   `DialogueCapability` must work for any `Agent`, not only for `BaseAgent`.
+- **ADR-032** (Agent Mailbox — a Single Inbound Path per Agent): removes the double
+  subscription this ADR identified, reuses D1's classifier as the routing predicate of the
+  mailbox drain, and amends D3 in scope — see below.
+
+## Amendment — 2026-08-18: D3's fallthrough superseded by ADR-032
+
+**Scope: D3 only.** D1, D2 and D4–D6 are untouched and remain in force, and this ADR's
+Status stays `Accepted`. This is not a replacement.
+
+D3 decided that only the dialogue path applies the classifier, and accepted as a
+consequence that "a dialogue message still reaches `onDirectMessage()`". The stated reason
+was that `BaseAgent` "has no way to know whether dialogue is active without a coupling that
+does not exist today and that this ADR is not willing to introduce".
+
+ADR-032 introduces a single per-agent mailbox that owns the only `subscribeRecipient` for
+that agent, with `BaseAgent`'s dispatch and `DialogueCapability` as consumers of its drain.
+Routing therefore happens once, at a point that already sees both consumers — so the
+knowledge D3 lacked becomes available **without** the coupling D3 refused. Under the drain,
+a dialogue message is routed to the dialogue path and no longer falls through to
+`onDirectMessage()`.
+
+D3 anticipated exactly this:
+
+> Because D1 is a pure function, moving to a symmetric rule later is a one-line change if
+> this trade-off ever stops being acceptable.
+
+What changes for users: an agent that overrides `onDirectMessage()` and relies on observing
+its own dialogue traffic there will stop receiving it. D3 documented that fallthrough as an
+accepted cost and told such agents to filter with `isDialogueMessage()`, so code may depend
+on it. The migration is to use a `@DialogueHandler` instead.
+
+What does **not** change: `isDialogueMessage()` keeps its exact semantics (performative
+header present and naming a known `Performative`), `fromMessage()` stays lenient, and
+validation still warns rather than throws.
