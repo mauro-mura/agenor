@@ -7,15 +7,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Capability for agent liveness signalling and status queries.
  *
- * <p>Presence is intentionally separated from {@link AgentRegistry} because liveness
- * has different access patterns (high write frequency from heartbeats) and different
- * backend fitness (Redis TTL keys, Consul session leases) compared to registration
- * data (low-frequency writes, relational storage).
+ * <p>Presence is kept separate from {@link AgentRegistry} because the two have different
+ * access patterns, and therefore different backend fitness. Registration data is written
+ * rarely and read by query; liveness is written continuously by every live agent and read
+ * by point lookup. Keeping the capabilities separate lets a deployment back each with the
+ * store that suits it, instead of forcing one choice on the other.
  *
- * <p>The JDBC agent directory ({@code agenor-adapters-persistence}) deliberately does
- * <em>not</em> implement this interface. Heartbeat-over-JDBC amplifies write load and
- * Postgres is not the right tool for liveness. The runtime uses in-memory presence by
- * default and a dedicated backend (Redis TTL — future) for multi-node liveness.
+ * <p>How quickly an implementation can tell that an agent has stopped signalling — and
+ * any staleness window that implies — is a property of that implementation, documented
+ * there rather than fixed by this contract.
  *
  * @since 0.20.0
  * @see AgentDirectory

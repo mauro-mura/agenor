@@ -11,9 +11,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Reusable contract tests for {@link dev.agenor.core.directory.AgentPresence}.
  *
- * <p>Note: the JDBC directory adapter deliberately does <em>not</em> implement this
- * capability (see ADR-020). Only backends that provide liveness semantics need to
- * extend this contract.
+ * <p>Every backend that provides liveness semantics is expected to satisfy these tests.
+ * Failure-detection latency and the staleness window are backend properties and are not
+ * asserted here.
  *
  * @since 0.20.0
  */
