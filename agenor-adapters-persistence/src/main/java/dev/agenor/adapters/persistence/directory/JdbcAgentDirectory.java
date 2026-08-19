@@ -6,15 +6,16 @@ import dev.agenor.adapters.persistence.JdbcHelper;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 
 import java.io.Closeable;
+import java.time.Duration;
 import java.util.Objects;
 
 /**
  * Factory and lifecycle holder for JDBC-backed agent directory capabilities.
  *
  * <p>Creates and owns the HikariCP connection pool, runs Flyway schema migrations on
- * construction, and exposes the three JDBC capability implementations. Presence
- * ({@link dev.agenor.core.directory.AgentPresence}) is intentionally omitted — see
- * its Javadoc for rationale (heartbeat-over-JDBC amplifies write load unnecessarily).
+ * construction, and exposes all four JDBC capability implementations. Presence arrived with
+ * ADR-028 Phase A, which amended ADR-023's exclusion of it; see {@link JdbcAgentPresence}
+ * for the staleness window it needs and for what has to drive its heartbeats.
  *
  * <p>Typical usage in a Spring Boot application:
  *
@@ -26,6 +27,7 @@ import java.util.Objects;
  *     .agentRegistry(dir.registry())
  *     .agentDiscovery(dir.discovery())
  *     .agentResolver(dir.resolver())
+ *     .agentPresence(dir.presence())
  *     .build();
  * }</pre>
  *
@@ -37,18 +39,27 @@ import java.util.Objects;
 public final class JdbcAgentDirectory implements Closeable {
 
     private final HikariDataSource dataSource;
+    private final JdbcHelper helper;
+    private final AgenorTelemetry telemetry;
     private final JdbcAgentRegistry registry;
     private final JdbcAgentDiscovery discovery;
     private final JdbcAgentResolver resolver;
+    private final JdbcAgentPresence presence;
 
     private JdbcAgentDirectory(HikariDataSource dataSource,
+                                JdbcHelper helper,
+                                AgenorTelemetry telemetry,
                                 JdbcAgentRegistry registry,
                                 JdbcAgentDiscovery discovery,
-                                JdbcAgentResolver resolver) {
+                                JdbcAgentResolver resolver,
+                                JdbcAgentPresence presence) {
         this.dataSource = dataSource;
+        this.helper     = helper;
+        this.telemetry  = telemetry;
         this.registry   = registry;
         this.discovery  = discovery;
         this.resolver   = resolver;
+        this.presence   = presence;
     }
 
     /**
@@ -92,10 +103,11 @@ public final class JdbcAgentDirectory implements Closeable {
 
         var helper = new JdbcHelper(ds);
         return new JdbcAgentDirectory(
-                ds,
+                ds, helper, t,
                 new JdbcAgentRegistry(helper, t),
                 new JdbcAgentDiscovery(helper, t),
-                new JdbcAgentResolver(helper, t));
+                new JdbcAgentResolver(helper, t),
+                new JdbcAgentPresence(helper, t, JdbcAgentPresence.DEFAULT_STALENESS_WINDOW));
     }
 
     /**
@@ -123,6 +135,38 @@ public final class JdbcAgentDirectory implements Closeable {
      */
     public JdbcAgentResolver resolver() {
         return resolver;
+    }
+
+    /**
+     * Returns the JDBC-backed {@link dev.agenor.core.directory.AgentPresence}, using
+     * {@link JdbcAgentPresence#DEFAULT_STALENESS_WINDOW}.
+     *
+     * <p>The default window expires a status after 90 seconds without a heartbeat, so it is
+     * only meaningful if something is heartbeating. Where nothing does, ask for
+     * {@link JdbcAgentPresence#UNBOUNDED_STALENESS_WINDOW} via {@link #presence(Duration)}.
+     *
+     * @return the presence backend; never null
+     */
+    public JdbcAgentPresence presence() {
+        return presence;
+    }
+
+    /**
+     * Returns a JDBC-backed {@link dev.agenor.core.directory.AgentPresence} with a chosen
+     * staleness window.
+     *
+     * <p>Unlike the other accessors this builds a new instance per call, because the window
+     * is a property of the view rather than of the connection pool. The instances are
+     * stateless and share this directory's pool.
+     *
+     * @param stalenessWindow how long an agent may go unseen before its status reads
+     *                        {@code UNKNOWN}; must not be null or negative
+     * @return a presence backend using that window; never null
+     * @throws NullPointerException     if stalenessWindow is null
+     * @throws IllegalArgumentException if stalenessWindow is negative
+     */
+    public JdbcAgentPresence presence(Duration stalenessWindow) {
+        return new JdbcAgentPresence(helper, telemetry, stalenessWindow);
     }
 
     /**
