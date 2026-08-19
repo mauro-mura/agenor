@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-05-17  
+**Last Modified**: 2026-08-19  
 **Authors**: Project Team  
 **References**: ADR-001 (Virtual Threads), ADR-002 (Interface-First Architecture),
 ADR-004 (Progressive Complexity), ADR-019 (OpenTelemetry Instrumentation),
@@ -37,6 +38,11 @@ The JDBC implementation covers three of the four capabilities defined in ADR-020
 | `AgentPresence` | **No** | See below |
 
 ### Why `AgentPresence` is not implemented
+
+> **Amended 2026-08-19 by ADR-028.** This section is superseded: the JDBC module
+> now implements `AgentPresence`, opt-in and at a coarse cadence. The heartbeat
+> interval this section reasons from was never implemented. See the amendment at
+> the end of this document.
 
 `AgentPresence.heartbeat` is called by every agent on a regular interval (default: every
 10 seconds). At 100 agents this is 10 writes/second to a single table; at 1 000 agents it is
@@ -381,3 +387,33 @@ accidental coupling.
 - ADR-020: Core API refactor — `AgentRegistry`, `AgentDiscovery`, `AgentResolver`, `AgentPresence`
   are the interfaces this ADR reasons about; contract test suites are reused from ADR-020
 - ADR-022: Module split — placement rationale for `agenor-adapters-persistence`
+- ADR-028: Agent Presence — amends this ADR's presence exclusion in scope; reuses this
+  ADR's schema unchanged, adding no table, column or migration
+
+---
+
+## Amendment — 2026-08-19: `AgentPresence` over JDBC, superseded by ADR-028
+
+**Scope: the section "Why `AgentPresence` is not implemented" only.** Every other decision in
+this ADR — the three implemented capabilities, the schema, the pure-JDBC data access strategy,
+the rejection of multi-endpoint routing — is untouched and remains in force. This ADR's Status
+stays `Accepted`; it is not replaced.
+
+**Superseded**: the conclusion that the JDBC module will not implement `AgentPresence`. ADR-028
+Phase A implements it, opt-in and at a coarse cadence.
+
+**Corrected**, because a later reader would otherwise take them as descriptions of the code:
+
+- "called by every agent on a regular interval (default: every 10 seconds)", and the 10 and
+  100 writes/second figures derived from it, describe a mechanism that was never built. At the
+  time of writing, `AgentPresence.heartbeat` had exactly one production call site in the whole
+  repository — `CompositeAgentDirectory:111-113`, a pure delegation — and nothing called it on
+  any schedule. The arithmetic is right for a 10-second cadence; the cadence was hypothetical.
+- "Attempting to configure `agenor.directory.presence: jdbc` yields a clear startup error
+  (`UnsupportedCapabilityException`)" is not true. No such exception type exists and
+  `agenor.directory.presence` was never a property the starter read, so setting it did nothing.
+
+The engineering judgement underneath — that a relational store is a poor fit for
+*high-frequency* liveness — stands. ADR-028 bounds it to the frequency it was actually about,
+recommends a 15–30 second cadence, and makes the heartbeat driver opt-in precisely so that no
+existing deployment starts writing without asking.

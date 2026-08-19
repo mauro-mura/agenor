@@ -33,16 +33,15 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-025](ADR-025-agenor-rebrand.md)                                | Agenor Rebrand — Naming, Compat, Versioning | Accepted | 2026-05-28 |
 | [ADR-026](ADR-026-request-protocol-final-resolution.md)            | REQUEST Protocol Final-Resolution Semantics | Accepted | 2026-07-23 |
 | [ADR-027](ADR-027-minimal-runtime-llm-generic-split.md)             | Minimal Runtime Core — LLM / Generic-MAS Module Split | Accepted | 2026-08-03 |
-| ADR-028                                                             | Agent Presence — JDBC and Redis          | Reserved | —          |
+| [ADR-028](ADR-028-agent-presence-jdbc-and-redis.md)                 | Agent Presence — a Driven Liveness Signal, JDBC First | Accepted | 2026-08-19 |
 | [ADR-029](ADR-029-protocol-validation-and-dialogue-message-classification.md) | Protocol Validation Enforcement and Dialogue Message Classification | Accepted | 2026-08-15 |
 | [ADR-030](ADR-030-message-content-typing-across-transports.md)      | `Message.content` Typing Across Transports | Accepted | 2026-08-16 |
 | [ADR-031](ADR-031-conversation-state-durability.md)                 | Conversation-State Durability            | Accepted | 2026-08-16 |
 | [ADR-032](ADR-032-agent-mailbox-single-inbound-path.md)             | Agent Mailbox — a Single Inbound Path per Agent | Proposed | 2026-08-18 |
 
 > **Rows without a link are claimed numbers, not written documents.** They are listed so that two
-> parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide.
-> **ADR-028** is reserved for Agent Presence (JDBC + Redis) and is not written yet; the number
-> stays reserved even though 029, 030 and 031 landed first. Do not reuse it for anything else.
+> parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide. There are
+> none at present: ADR-028, the last reserved number, was written on 2026-08-19.
 
 ---
 
@@ -194,6 +193,7 @@ graph TD
 - **ADR-025** (Agenor Rebrand) builds on ADR-002, ADR-003, ADR-006, ADR-016, ADR-020 — affects naming and Maven coordinates for the entire project
 - **ADR-026** (REQUEST Protocol Final-Resolution Semantics) resolves the "Known Limitations" gap left open by ADR-009
 - **ADR-027** (Minimal Runtime Core — LLM/Generic-MAS Module Split) builds on ADR-002, ADR-004, ADR-018, ADR-020
+- **ADR-028** (Agent Presence — a Driven Liveness Signal, JDBC First) builds on **ADR-020**, which established `AgentPresence` as a capability, and on **ADR-022** / **ADR-023**, whose module and schema it reuses without adding a table, column or migration. It amends ADR-023's presence exclusion in scope, having found that the write-volume objection was quantified against a heartbeat interval that was never implemented — nothing in the tree ever called `heartbeat()` on a schedule, which is why this ADR adds an opt-in driver rather than only a backend. It gives presence the rung **ADR-004**'s ladder was missing, and discharges **ADR-027**'s C1 and C2 by adding neither a runtime accessor nor a sixth SPI. Phase B is designed against **ADR-021**'s Redis dependency under **ADR-018**'s optional-adapter pattern, and deliberately not built here
 - **ADR-029** (Protocol Validation Enforcement and Dialogue Message Classification) builds on ADR-002 and ADR-009, and generalises the sender-perspective reading of `allowedPerformatives()` that ADR-026 introduced
 - **ADR-030** (`Message.content` Typing Across Transports) amends **ADR-005** with a scoped note on receiving-side typing; the defect it fixes manifests only on ADR-021's transport, and the silent break it removes is the one ADR-004 promises cannot happen
 - **ADR-031** (Conversation-State Durability) fills the dialogue rung ADR-004's ladder was missing — deliberately at the first step — and bounds ADR-009's model; it depends on ADR-030, because affirming cross-runtime dialogue is only honest once non-`String` payloads survive the transport
