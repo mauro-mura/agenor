@@ -21,6 +21,16 @@
             <artifactId>agenor-core</artifactId>
         </dependency>
 
+        <!-- Capability contract suites (ADR-028 D-6). Version is explicit because the BOM
+             manages the main artifact only; the test-jar stays internal to the reactor. -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-core</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Configuration -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>

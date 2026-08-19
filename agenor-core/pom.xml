@@ -42,6 +42,22 @@
 	                    </manifestEntries>
 	                </archive>
 	            </configuration>
+	            <executions>
+	                <!-- Publishes the reusable capability contract suites so other modules can
+	                     prove their own implementations against them (ADR-028 D-6). Only those
+	                     interfaces are packaged; core's own unit tests stay private. -->
+	                <execution>
+	                    <id>contract-test-jar</id>
+	                    <goals>
+	                        <goal>test-jar</goal>
+	                    </goals>
+	                    <configuration>
+	                        <includes>
+	                            <include>dev/agenor/core/directory/*ContractTests*.class</include>
+	                        </includes>
+	                    </configuration>
+	                </execution>
+	            </executions>
 	        </plugin>
 	    </plugins>
 	</build>

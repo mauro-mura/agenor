@@ -1,7 +1,6 @@
-package dev.agenor.runtime.directory;
+package dev.agenor.core.directory;
 
 import dev.agenor.core.AgentDescriptor;
-import dev.agenor.core.directory.AgentDirectory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
