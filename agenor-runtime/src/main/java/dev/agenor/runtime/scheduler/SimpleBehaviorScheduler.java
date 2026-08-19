@@ -21,8 +21,15 @@ import dev.agenor.core.Behavior;
 import dev.agenor.core.BehaviorScheduler;
 
 /**
- * Simple implementation of BehaviorScheduler using ScheduledExecutorService.
- * Uses virtual threads for behavior execution.
+ * Simple implementation of {@link BehaviorScheduler} backed by a
+ * {@link ScheduledThreadPoolExecutor}.
+ *
+ * <p><strong>Platform threads, not virtual ones.</strong> The pool holds
+ * {@code threadPoolSize} platform threads — four by default — shared by every behavior of
+ * every agent in the runtime, and {@code executeBehavior} calls {@code execute().join()},
+ * so a running behavior occupies its thread until it completes. Enough concurrently
+ * blocking behaviors will therefore stall the rest of the runtime. Size the pool for the
+ * expected concurrency, or keep behaviors non-blocking.
  */
 public class SimpleBehaviorScheduler implements BehaviorScheduler {
 
