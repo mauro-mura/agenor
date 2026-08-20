@@ -47,6 +47,7 @@ import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.annotation.AgentAnnotationProcessor;
 import dev.agenor.runtime.config.DefaultConfigurationLoader;
+import dev.agenor.runtime.directory.AgentHeartbeatDriver;
 import dev.agenor.runtime.directory.CompositeAgentDirectory;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.lifecycle.LifecycleListener;
@@ -88,6 +89,9 @@ public class AgenorRuntime {
     private final AgentAnnotationProcessor annotationProcessor;
 
     private final LifecycleManager lifecycleManager;
+
+    /** Null unless a heartbeat interval was configured — the driver is opt-in (ADR-028 D-3). */
+    private final AgentHeartbeatDriver heartbeatDriver;
 
     // Configuration
     private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);
@@ -163,6 +167,12 @@ public class AgenorRuntime {
         // Add default lifecycle listener
         this.lifecycleManager.addLifecycleListener(LifecycleListener.logging());
 
+        // Heartbeat driver: only when an interval was asked for (ADR-028 D-3). The supplier is
+        // evaluated on every beat, so agents started or stopped after this point are followed.
+        this.heartbeatDriver = builder.heartbeatInterval == null ? null
+                : new AgentHeartbeatDriver(agentDirectory, this::runningAgentIds,
+                        builder.heartbeatInterval);
+
         this.serviceInstances.putAll(builder.serviceInstances);
 
         // Register additional services with the factory
@@ -210,6 +220,11 @@ public class AgenorRuntime {
                 // Start all agents
                 startAllAgents();
 
+                // Heartbeats only after the agents exist, so no beat names an unknown agent
+                if (heartbeatDriver != null) {
+                    heartbeatDriver.start();
+                }
+
                 running = true;
                 log.info("Agenor Runtime started successfully with {} agents", agents.size());
 
@@ -235,6 +250,11 @@ public class AgenorRuntime {
 
         return CompletableFuture.runAsync(() -> {
             try {
+                // Before the agents go, so a beat can never outlive the registration it names
+                if (heartbeatDriver != null) {
+                    heartbeatDriver.stop();
+                }
+
                 // Stop all agents
                 List<CompletableFuture<Void>> stopFutures = new ArrayList<>();
                 for (dev.agenor.core.Agent agent : agents.values()) {
@@ -644,6 +664,20 @@ public class AgenorRuntime {
     /**
      * Start all registered agents
      */
+    /**
+     * The ids of the agents this runtime is currently running — what the heartbeat driver
+     * beats for. Agents that failed to start, or have stopped, are not alive and must not be
+     * reported as such.
+     *
+     * @return the running agents' ids, never null
+     */
+    private List<String> runningAgentIds() {
+        return agents.values().stream()
+                .filter(dev.agenor.core.Agent::isRunning)
+                .map(dev.agenor.core.Agent::getAgentId)
+                .toList();
+    }
+
     private void startAllAgents() {
         List<CompletableFuture<Void>> startFutures = new ArrayList<>();
 
@@ -756,6 +790,7 @@ public class AgenorRuntime {
         private AgentResolver agentResolver;
         private AgentDiscovery agentDiscovery;
         private AgentPresence agentPresence;
+        private Duration heartbeatInterval;
         private BehaviorScheduler behaviorScheduler;
         private MemoryStore memoryStore;
         private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
@@ -885,6 +920,28 @@ public class AgenorRuntime {
          */
         public Builder agentPresence(AgentPresence presence) {
             this.agentPresence = presence;
+            return this;
+        }
+
+        /**
+         * Turns on periodic heartbeats for the agents this runtime runs (ADR-028 D-3).
+         *
+         * <p>Off unless called. A presence backend that expires entries needs this — or an
+         * unbounded staleness window — or it will report every agent as
+         * {@link dev.agenor.core.AgentStatus#UNKNOWN} one window after start-up. The
+         * recommended cadence is 15–30 seconds, roughly a third of the backend's window.
+         *
+         * @param interval the cadence between heartbeats; must be positive
+         * @return this builder
+         * @throws IllegalArgumentException if {@code interval} is zero or negative
+         * @since 0.26.0
+         */
+        public Builder heartbeatInterval(Duration interval) {
+            if (interval != null && (interval.isZero() || interval.isNegative())) {
+                throw new IllegalArgumentException(
+                        "heartbeat interval must be positive: " + interval);
+            }
+            this.heartbeatInterval = interval;
             return this;
         }
 
