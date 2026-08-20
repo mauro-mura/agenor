@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -27,6 +28,7 @@ class RedisTopicPublisherIT {
     @Container
     static GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:8")
             .withExposedPorts(6379)
+            .waitingFor(Wait.forLogMessage(".*Ready to accept connections.*", 1))
             .withStartupTimeout(Duration.ofSeconds(60));
 
     private RedisMessagingFactory factory;

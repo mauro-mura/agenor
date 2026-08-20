@@ -1,8 +1,7 @@
-package dev.agenor.runtime.messaging;
+package dev.agenor.core.messaging;
 
 import dev.agenor.core.Message;
 import dev.agenor.core.exceptions.AgentNotFoundException;
-import dev.agenor.core.messaging.MessageDispatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +20,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Implement this interface in any test class that exercises a {@code MessageDispatcher}
  * backend. The concrete class provides the dispatcher via {@link #createDispatcher()} and
  * a way to pre-register an agent via {@link #registerAgent(String)}.
+ *
+ * <p>It lives in {@code agenor-core}, and is published in that module's {@code test-jar}, so
+ * that every backend can reach it — the in-memory one in {@code agenor-runtime} and the Redis
+ * one in {@code agenor-adapters} alike. The directory capability suites moved here first, for
+ * the same reason (ADR-028 D-6).
  *
  * @since 0.20.0
  */

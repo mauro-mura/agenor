@@ -2,6 +2,7 @@ package dev.agenor.runtime.messaging;
 
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.messaging.MessageDispatcher;
+import dev.agenor.core.messaging.MessageDispatcherContractTests;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,8 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 /**
  * Proves that {@link InMemoryMessageDispatcher} satisfies the {@link MessageDispatcherContractTests}.
  *
- * <p>Future adapters (Redis, …) follow the same pattern: implement the contract interface
- * and wire the backend under test in the factory methods.
+ * <p>The suite lives in {@code agenor-core}'s test-jar, so other backends are held to the same
+ * rules from one source: {@code RedisMessageDispatcherContractIT} in {@code agenor-adapters} is
+ * the other implementor.
  *
  * @since 0.20.0
  */
