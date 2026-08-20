@@ -36,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`agenor.directory.provider=jdbc` never started a Spring context.** The Spring Boot starter
+  exposes the runtime's `AgentDirectory` as a bean, and `AgentDirectory` extends all four
+  capability interfaces — so it also answers to `AgentRegistry`, `AgentDiscovery` and
+  `AgentResolver`. Alongside the JDBC capability beans that gave two candidates for every
+  capability, and the JDBC runtime factory could not be constructed: the context failed to refresh
+  with `NoUniqueBeanDefinitionException`, before a single agent existed. The JDBC beans are now
+  `@Primary`, resolving injection in favour of the backend the user configured. Nothing had ever
+  exercised the property — the starter's only JDBC test covered the HITL queue — so ADR-023's
+  headline feature had never worked from Spring. Found while wiring ADR-028's presence property.
+
 - **A failed agent registration could be reported as a success.** `JdbcAgentRegistry.register`
   inserts first and falls back to an `UPDATE` when the row already exists, and it asked
   `JdbcHelper.isUniqueViolation` whether the failure was a duplicate key. That method matched the

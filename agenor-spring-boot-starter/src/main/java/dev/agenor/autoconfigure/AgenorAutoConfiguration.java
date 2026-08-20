@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * Spring Boot auto-configuration for Agenor.
@@ -472,7 +473,22 @@ public class AgenorAutoConfiguration {
                     config, telemetry.getIfAvailable(AgenorTelemetry::noop));
         }
 
+        /**
+         * The JDBC capability beans below are {@link Primary}, and must stay that way.
+         *
+         * <p>{@link #AgenorAgentDirectory} exposes the runtime's directory, and
+         * {@code AgentDirectory} extends all four capability interfaces — so it answers to
+         * {@code AgentRegistry} as well. With a second registry bean present, every injection
+         * by capability type has two candidates, and the runtime factory below cannot be
+         * constructed at all: the context fails to refresh with
+         * {@code NoUniqueBeanDefinitionException}. Marking the JDBC beans primary settles it
+         * in favour of the backend the user actually asked for.
+         *
+         * @param dir the JDBC directory owning the connection pool
+         * @return the JDBC registry capability
+         */
         @Bean
+        @Primary
         @ConditionalOnMissingBean
         public dev.agenor.core.directory.AgentRegistry jdbcAgentRegistry(
                 dev.agenor.adapters.persistence.directory.JdbcAgentDirectory dir) {
@@ -480,6 +496,7 @@ public class AgenorAutoConfiguration {
         }
 
         @Bean
+        @Primary
         @ConditionalOnMissingBean
         public dev.agenor.core.directory.AgentDiscovery jdbcAgentDiscovery(
                 dev.agenor.adapters.persistence.directory.JdbcAgentDirectory dir) {
@@ -487,6 +504,7 @@ public class AgenorAutoConfiguration {
         }
 
         @Bean
+        @Primary
         @ConditionalOnMissingBean
         public dev.agenor.core.directory.AgentResolver jdbcAgentResolver(
                 dev.agenor.adapters.persistence.directory.JdbcAgentDirectory dir) {
