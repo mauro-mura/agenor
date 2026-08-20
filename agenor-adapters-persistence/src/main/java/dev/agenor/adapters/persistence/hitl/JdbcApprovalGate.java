@@ -281,21 +281,35 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
                 Duration.between(Instant.now(), request.expiresAt()).toMillis());
 
         scheduler.schedule(() -> {
-            boolean timedOut = future.completeExceptionally(new ApprovalTimeoutException(request));
-            if (timedOut) {
-                markExpired(request.requestId());
-                log.warn("Approval request timed out: requestId={}, agentId={}, action={}",
-                        request.requestId(), request.agentId(), request.action());
+            // The row decides, and it decides first. Its UPDATE only matches a request still
+            // PENDING, so a decision submitted just before the deadline wins and no timeout is
+            // reported for it. Completing the future first would instead release the caller
+            // while the row still said PENDING — a reader that trusted the exception could see
+            // the store disagree with it for as long as the UPDATE took.
+            if (!markExpired(request.requestId())) {
+                return;
             }
+            future.completeExceptionally(new ApprovalTimeoutException(request));
+            log.warn("Approval request timed out: requestId={}, agentId={}, action={}",
+                    request.requestId(), request.agentId(), request.action());
         }, delayMs, TimeUnit.MILLISECONDS);
     }
 
-    private void markExpired(String requestId) {
+    /**
+     * Marks one request expired, but only while it is still pending.
+     *
+     * @param requestId the request to expire
+     * @return true if this call is the one that expired it; false if it had already been
+     *         decided or expired, in which case the caller must not act as though it timed out
+     */
+    private boolean markExpired(String requestId) {
+        var updated = new java.util.concurrent.atomic.AtomicInteger();
         jdbc.inTransaction(conn ->
-                jdbc.update(conn,
+                updated.set(jdbc.update(conn,
                         "UPDATE agenor_hitl_requests SET status = ?"
                         + " WHERE request_id = ? AND status = ?",
-                        List.of(STATUS_EXPIRED, requestId, STATUS_PENDING)));
+                        List.of(STATUS_EXPIRED, requestId, STATUS_PENDING))));
+        return updated.get() > 0;
     }
 
     // -------------------------------------------------------------------------

@@ -13,12 +13,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import javax.sql.DataSource;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -152,6 +157,90 @@ class JdbcApprovalGateTest {
             Thread.sleep(500);
 
             assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_EXPIRED);
+        }
+
+        @Test
+        @DisplayName("the row is marked EXPIRED before the caller learns of the timeout")
+        void timeout_dbIsWrittenBeforeTheFutureCompletes() throws Exception {
+            // This asserts an ordering, so it holds the write open rather than racing it. A
+            // timing-based version cannot do the job: with the write second, H2 in-process
+            // closes the window fast enough that the test passes anyway — which is exactly how
+            // the defect survived, green here and red only under a loaded full build.
+            var blocked = new CountDownLatch(1);
+            var release = new CountDownLatch(1);
+            var armed = new AtomicBoolean(false);
+            var slowScheduler = Executors.newSingleThreadScheduledExecutor();
+
+            var slowGate = new JdbcApprovalGate(
+                    new JdbcHelper(blockingDataSource(armed, blocked, release)),
+                    new ObjectMapper(), slowScheduler, false, null);
+            try {
+                // Given a request whose deadline is about to pass
+                var request = req(Duration.ofMillis(300));
+                CompletableFuture<ApprovalDecision> future = slowGate.requestApproval(request);
+
+                // When the timeout fires and its UPDATE is held open
+                armed.set(true);
+                assertThat(blocked.await(5, TimeUnit.SECONDS))
+                        .as("the timeout task reached the database").isTrue();
+
+                // Then the caller has not been told anything yet. Releasing it first would
+                // hand out an ApprovalTimeoutException while the row still read PENDING.
+                assertThat(future).isNotDone();
+
+                // And once the write goes through, both agree
+                release.countDown();
+                assertThatThrownBy(() -> future.get(5, TimeUnit.SECONDS))
+                        .isInstanceOf(ExecutionException.class)
+                        .cause().isInstanceOf(ApprovalTimeoutException.class);
+                assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_EXPIRED);
+            } finally {
+                release.countDown();
+                slowGate.close();
+                slowScheduler.shutdownNow();
+            }
+        }
+
+        /**
+         * Wraps the shared {@link DataSource} so that, once armed, the next connection request
+         * blocks. The timeout task acquires its connection inside {@code markExpired}, so this
+         * suspends the gate precisely between deciding to expire and having expired.
+         */
+        private DataSource blockingDataSource(AtomicBoolean armed,
+                                              CountDownLatch blocked,
+                                              CountDownLatch release) {
+            return (DataSource) Proxy.newProxyInstance(
+                    getClass().getClassLoader(), new Class<?>[]{DataSource.class},
+                    (proxy, method, args) -> {
+                        if ("getConnection".equals(method.getName())
+                                && armed.compareAndSet(true, false)) {
+                            blocked.countDown();
+                            release.await(5, TimeUnit.SECONDS);
+                        }
+                        try {
+                            return method.invoke(dataSource, args);
+                        } catch (InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                    });
+        }
+
+        @Test
+        @DisplayName("a decision submitted before the deadline is not expired afterwards")
+        void decisionBeatsTheDeadline() throws Exception {
+            // Given a request decided while still pending
+            var request = req(Duration.ofMillis(300));
+            CompletableFuture<ApprovalDecision> future = gate.requestApproval(request);
+            gate.submit(request.requestId(), new ApprovalDecision.Approved());
+
+            // When its deadline passes anyway
+            Thread.sleep(600);
+
+            // Then the timeout does not overwrite the decision — the conditional UPDATE no
+            // longer matches, so nothing is expired and the caller keeps its answer
+            assertThat(future.get(1, TimeUnit.SECONDS))
+                    .isInstanceOf(ApprovalDecision.Approved.class);
+            assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_APPROVED);
         }
 
         @Test

@@ -36,6 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A timed-out HITL approval could be reported before the store agreed.**
+  `JdbcApprovalGate.scheduleTimeout` completed the caller's future exceptionally and *then*
+  marked the row `EXPIRED`. The write is synchronous, but it runs on the scheduler thread
+  after the caller has already been released, so anyone who read the request straight after
+  catching `ApprovalTimeoutException` could still see `PENDING` — and on another node, so
+  could a reader with no exception to go on. The row now decides, and decides first: a
+  conditional `UPDATE ... WHERE status = 'PENDING'` runs before the future is completed, and
+  the timeout is only reported if that update matched. A decision submitted just before the
+  deadline therefore wins outright instead of racing. Surfaced by `JdbcApprovalGateIT` under
+  a loaded full build, where the window widens enough to lose.
+
 - **The PostgreSQL integration tests did not wait for PostgreSQL.** All three used
   `GenericContainer` with the default wait strategy, which only checks that the port is
   listening. The container's entrypoint runs a temporary server for `initdb` first, so a
