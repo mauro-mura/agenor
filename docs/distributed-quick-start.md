@@ -76,7 +76,9 @@ var runtime = AgenorRuntime.builder()
         .agentRegistry(directory.registry())
         .agentDiscovery(directory.discovery())
         .agentResolver(directory.resolver())
-        // presence falls back to in-memory — see ADR-023
+        // presence falls back to in-memory, so each node sees only its own agents.
+        // Add .agentPresence(directory.presence()) and .heartbeatInterval(...) for a
+        // cross-node answer — see docs/adapters/jdbc-directory.md
         .build();
 
 runtime.registerAgent(new MyAgent());

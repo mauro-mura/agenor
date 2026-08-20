@@ -142,12 +142,44 @@ For `InMemoryAgentDirectory`, all endpoints have `transportType="local"`. Future
 ## Presence and Heartbeats
 
 ```java
-// Send a heartbeat (updates lastSeen and sets status to RUNNING)
+// Report that the agent is still alive — refreshes lastSeen, leaves status alone
 directory.heartbeat("my-agent").join();
 
 // Query current status
 AgentStatus status = directory.getStatus("my-agent").join();
 ```
+
+**A heartbeat is liveness, not progress.** It says the agent is still there; it does not
+say the agent is working. An agent stuck in `STARTING` keeps reporting `STARTING` however
+many heartbeats it sends. Use `updateStatus` to change status.
+
+Before 0.26.0 `heartbeat` promoted the agent to `RUNNING`, which meant a single heartbeat
+could report an agent as running before it had finished starting. If you relied on that,
+call `updateStatus(agentId, RUNNING)` explicitly (ADR-028).
+
+**Something has to send the heartbeats.** Nothing does by default. Set a heartbeat interval
+and the runtime starts a driver that beats for every agent it is running:
+
+```java
+AgenorRuntime.builder()
+    .heartbeatInterval(Duration.ofSeconds(30))   // off unless set
+    .build();
+```
+
+```yaml
+agenor:
+  directory:
+    heartbeat-interval: 30s
+```
+
+The driver uses a single daemon thread, separate from the behavior scheduler, and never
+blocks on the backend.
+
+**Staleness is backend-specific.** `getStatus` answers `UNKNOWN` for an agent not seen
+within the backend's staleness window. `InMemoryAgentDirectory` has no window — a status
+never expires — so on the default runtime this makes no difference. Backends that do expire,
+such as [JDBC presence](adapters/jdbc-directory.md#presence-and-heartbeats), need the driver
+above running, or every agent reads `UNKNOWN` one window after start-up.
 
 ## AgentDescriptor
 
