@@ -5,6 +5,7 @@ import dev.agenor.runtime.AgenorRuntime;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -163,6 +164,8 @@ public record AgenorProperties(
      * agenor:
      *   directory:
      *     provider: jdbc
+     *     presence: jdbc
+     *     heartbeat-interval: 30s
      *     jdbc:
      *       url: jdbc:postgresql://localhost:5432/mydb
      *       username: agenor
@@ -170,12 +173,25 @@ public record AgenorProperties(
      *       pool-size: 10
      * }</pre>
      *
-     * @param provider agent directory implementation: {@code local} (default), {@code inmemory},
-     *                 or {@code jdbc}
-     * @param jdbc     JDBC-specific configuration; only read when {@code provider=jdbc}
+     * @param provider          agent directory implementation: {@code local} (default),
+     *                          {@code inmemory}, or {@code jdbc}
+     * @param presence          presence implementation: {@code inmemory} (default) or
+     *                          {@code jdbc}. Independent of {@code provider}, because presence
+     *                          is written far more often than the rest of the directory is and
+     *                          may reasonably live elsewhere (ADR-028)
+     * @param heartbeatInterval how often the runtime reports its agents alive, for example
+     *                          {@code 30s}. Absent means no heartbeats are sent at all
+     * @param stalenessWindow   how long an agent may go unseen before its status reads
+     *                          {@code UNKNOWN}. Absent means three times
+     *                          {@code heartbeatInterval}, or — when nothing is heartbeating —
+     *                          no expiry at all, which is what the in-memory backend does
+     * @param jdbc              JDBC-specific configuration; only read when {@code provider=jdbc}
      */
     public record Directory(
             @DefaultValue("local") String provider,
+            @DefaultValue("inmemory") String presence,
+            Duration heartbeatInterval,
+            Duration stalenessWindow,
             Jdbc jdbc
     ) {
         /**

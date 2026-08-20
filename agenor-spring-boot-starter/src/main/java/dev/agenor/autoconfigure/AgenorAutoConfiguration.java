@@ -83,9 +83,29 @@ public class AgenorAutoConfiguration {
             log.debug("Wiring ApprovalGate '{}' into AgenorRuntime", gate.getClass().getSimpleName());
             builder.approvalGate(gate);
         });
+        applyHeartbeatInterval(builder, props);
 
         log.debug("Building AgenorRuntime (in-memory messaging): runtime.name={}", props.runtime().name());
         return builder.build();
+    }
+
+    /**
+     * Turns on the runtime's heartbeat driver when {@code agenor.directory.heartbeat-interval}
+     * is set (ADR-028 D-3).
+     *
+     * <p>Applied to every runtime this class can build, not only the JDBC one: which backend
+     * stores presence is a separate question from whether anything reports liveness into it.
+     *
+     * @param builder the runtime builder being assembled
+     * @param props   configuration properties
+     */
+    private static void applyHeartbeatInterval(AgenorRuntime.Builder builder,
+                                               AgenorProperties props) {
+        var interval = props.directory().heartbeatInterval();
+        if (interval != null) {
+            log.debug("Enabling agent heartbeats every {}", interval);
+            builder.heartbeatInterval(interval);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -427,6 +447,7 @@ public class AgenorAutoConfiguration {
             llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
             builder.telemetry(telemetry.getIfAvailable(AgenorTelemetry::noop));
             approvalGate.ifAvailable(builder::approvalGate);
+            applyHeartbeatInterval(builder, props);
             log.debug("Building AgenorRuntime (Redis messaging): runtime.name={}", props.runtime().name());
             return builder.build();
         }
@@ -444,9 +465,11 @@ public class AgenorAutoConfiguration {
      * </ul>
      *
      * <p>The factory bean holds the HikariCP pool and is closed automatically on context
-     * shutdown via {@code destroyMethod}. The three JDBC capability beans ({@code AgentRegistry},
+     * shutdown via {@code destroyMethod}. The JDBC capability beans ({@code AgentRegistry},
      * {@code AgentDiscovery}, {@code AgentResolver}) are wired into the runtime using the
-     * per-capability builder setters; presence falls back to the default in-memory implementation.
+     * per-capability builder setters. Presence joins them only when
+     * {@code agenor.directory.presence=jdbc} is set as well; otherwise it stays in-memory,
+     * so choosing a JDBC directory never silently starts writing on every heartbeat.
      *
      * @since 0.22.0
      */
@@ -512,11 +535,65 @@ public class AgenorAutoConfiguration {
         }
 
         /**
+         * Creates the JDBC presence capability when {@code agenor.directory.presence=jdbc}
+         * (ADR-028 Phase A). Opt-in separately from {@code provider}: presence is written on
+         * every heartbeat, so nobody should acquire that write volume by choosing a JDBC
+         * directory alone.
+         *
+         * <p>The bean's declared type is the implementation rather than
+         * {@link dev.agenor.core.directory.AgentPresence}. The runtime factory below looks it
+         * up through an {@link ObjectProvider}, and the framework-level {@code AgentPresence}
+         * bean is derived from the runtime — asking for the interface there would let that
+         * bean satisfy the lookup and close a cycle through the runtime being built.
+         *
+         * @param props configuration properties
+         * @param dir   the JDBC directory owning the connection pool
+         * @return the JDBC presence view with the effective staleness window
+         */
+        @Bean
+        @Primary
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(prefix = "agenor.directory", name = "presence", havingValue = "jdbc")
+        public dev.agenor.adapters.persistence.directory.JdbcAgentPresence jdbcAgentPresence(
+                AgenorProperties props,
+                dev.agenor.adapters.persistence.directory.JdbcAgentDirectory dir) {
+            var window = stalenessWindow(props.directory());
+            log.debug("Creating JdbcAgentPresence (stalenessWindow={})", window);
+            return dir.presence(window);
+        }
+
+        /**
+         * Decides how long an agent may go unseen before its status reads {@code UNKNOWN}.
+         *
+         * <p>An explicit {@code staleness-window} wins. Otherwise the window follows the
+         * heartbeat interval at three times its length, which tolerates two missed beats.
+         *
+         * <p>When nothing is configured to heartbeat, the window is <em>unbounded</em>. A
+         * bounded window with no driver behind it is a silent failure: every agent reads
+         * {@code UNKNOWN} one window after start-up on a perfectly healthy cluster, and
+         * nothing in the logs says why. Unbounded instead reports what the registry last
+         * wrote, which is exactly what the in-memory backend has always done — enabling JDBC
+         * presence alone changes storage, not semantics.
+         *
+         * @param directory the directory properties
+         * @return the window to give {@code JdbcAgentPresence}; never null
+         */
+        private static java.time.Duration stalenessWindow(AgenorProperties.Directory directory) {
+            if (directory.stalenessWindow() != null) {
+                return directory.stalenessWindow();
+            }
+            var interval = directory.heartbeatInterval();
+            return interval != null
+                    ? interval.multipliedBy(3)
+                    : dev.agenor.adapters.persistence.directory.JdbcAgentPresence
+                            .UNBOUNDED_STALENESS_WINDOW;
+        }
+
+        /**
          * Creates the {@link AgenorRuntime} wired with JDBC directory capabilities.
          *
-         * <p>Registry, discovery, and resolver are backed by the JDBC store.
-         * Presence uses the default in-memory implementation (see
-         * {@link dev.agenor.core.directory.AgentPresence} Javadoc for rationale).
+         * <p>Registry, discovery, and resolver are backed by the JDBC store. Presence joins
+         * them only when {@code agenor.directory.presence=jdbc}; otherwise it stays in-memory.
          */
         @Bean("AgenorRuntime")
         @ConditionalOnMissingBean(AgenorRuntime.class)
@@ -525,6 +602,8 @@ public class AgenorAutoConfiguration {
                 dev.agenor.core.directory.AgentRegistry agentRegistry,
                 dev.agenor.core.directory.AgentDiscovery agentDiscovery,
                 dev.agenor.core.directory.AgentResolver agentResolver,
+                ObjectProvider<dev.agenor.adapters.persistence.directory.JdbcAgentPresence>
+                        jdbcAgentPresence,
                 ObjectProvider<LLMProvider> llmProvider,
                 ObjectProvider<AgenorTelemetry> telemetry,
                 ObjectProvider<ApprovalGate> approvalGate) {
@@ -533,6 +612,8 @@ public class AgenorAutoConfiguration {
                     .agentRegistry(agentRegistry)
                     .agentDiscovery(agentDiscovery)
                     .agentResolver(agentResolver);
+            jdbcAgentPresence.ifAvailable(builder::agentPresence);
+            applyHeartbeatInterval(builder, props);
             llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
             builder.telemetry(telemetry.getIfAvailable(AgenorTelemetry::noop));
             approvalGate.ifAvailable(builder::approvalGate);
