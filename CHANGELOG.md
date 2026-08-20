@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Agent presence over JDBC, and something to drive it (ADR-028 Phase A).**
+  `JdbcAgentPresence` completes the JDBC directory's fourth capability, so a deployment can
+  be entirely JDBC-backed instead of pairing durable registration with an in-memory presence
+  that dies with the node. No new table, column or migration: `agenor_agents` already carries
+  `status` and `last_seen`. `heartbeat` touches only `last_seen`; `getStatus` answers
+  `UNKNOWN` when the row is missing **or** older than the staleness window, checked at read
+  time because a relational store has no key expiry. Reach it via
+  `JdbcAgentDirectory.presence()` (90-second window) or `presence(Duration)`.
+
+  Nothing in the framework had ever called `heartbeat` — one delegating call site and no
+  scheduler anywhere — so a backend that expires entries would have reported `UNKNOWN` for
+  every agent one window after start-up. `AgentHeartbeatDriver` closes the loop: one daemon
+  thread per runtime, beating for the agents it is actually running, and **off unless an
+  interval is configured**. Heartbeats are writes, and turning them on for every existing
+  deployment unasked is the write volume ADR-023 objected to.
+
+  ```java
+  AgenorRuntime.builder()
+      .agentPresence(dir.presence())
+      .heartbeatInterval(Duration.ofSeconds(30))   // required, or presence goes UNKNOWN
+      .build();
+  ```
+
+  ```yaml
+  agenor:
+    directory:
+      provider: jdbc
+      presence: jdbc            # opt-in, separate from provider
+      heartbeat-interval: 30s
+      staleness-window: 90s     # optional; see below
+  ```
+
+  An unset `staleness-window` is derived: three times the heartbeat interval, or —
+  when nothing is configured to heartbeat — **unbounded**. That default is deliberate. A
+  bounded window with no driver behind it fails silently, reporting every agent as `UNKNOWN`
+  on a healthy cluster with nothing in the logs to explain it; unbounded instead reports what
+  the registry last wrote, exactly as the in-memory backend always has. Programmatically, the
+  same escape hatch is `JdbcAgentPresence.UNBOUNDED_STALENESS_WINDOW`.
+
+  Detection is coarse by construction — tens of seconds, not milliseconds — and only as
+  trustworthy as the clock agreement between the writing and reading nodes. A `last_seen` in
+  the future reads as fresh, so a fast clock costs visibility rather than producing a false
+  liveness claim. Redis TTL presence is designed in ADR-028 Phase B and not built.
+  See [ADR-028](docs/adr/ADR-028-agent-presence-jdbc-and-redis.md) and
+  [the JDBC directory guide](docs/adapters/jdbc-directory.md#presence-and-heartbeats).
+
+- **The four directory contract suites moved to `agenor-core`** and are published as a
+  `test-jar` (ADR-028 D-6). `InMemoryAgentDirectoryContractTest` promised that "future
+  adapters (Redis, JDBC) follow the same pattern", but the suites lived in `agenor-runtime`
+  and no `test-jar` existed anywhere in the reactor, so no adapter could keep that promise.
+  `AgentPresenceContractTests` is now typed on the capability rather than on `AgentDirectory`,
+  and `JdbcAgentPresenceTest` runs it — one source of truth for what presence means.
+
 - **`CrossRuntimeExample` and `CrossRuntimeDialogueIT`** (`agenor-examples`): two isolated
   `AgenorRuntime` instances — separate dispatchers, directories and connection pools, sharing only
   a PostgreSQL and a Valkey — exchanging a typed REQUEST/INFORM. Every dialogue test before this
@@ -22,6 +75,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compose file that did not exist.
 
 ### Changed
+
+- **BREAKING — a heartbeat signals liveness, not progress (ADR-028 D-1).**
+  `AgentPresence.heartbeat` used to promote the agent to `RUNNING`:
+  `InMemoryAgentDirectory.heartbeat` was literally `updateStatus(agentId, RUNNING)`. It now
+  refreshes `lastSeen` and leaves `status` untouched, so an agent stuck in `STARTING` keeps
+  reporting `STARTING` however many heartbeats it sends — which is the truth, and the whole
+  point of asking. A single heartbeat could previously report an agent as running before it
+  had finished starting.
+
+  **Migration**: call `updateStatus(agentId, AgentStatus.RUNNING)` explicitly wherever a
+  heartbeat was relied on to make that transition. The deprecated `AgentDirectory` facade's
+  default `heartbeat` was changed the same way. Nothing in this repository depended on the old
+  behaviour; the only assertion that did was the contract test that specified it.
+
+- **`getStatus` may now answer `UNKNOWN` for a registered agent.** Staleness is part of the
+  `AgentPresence` contract: an agent not seen within the backend's staleness window reads
+  `UNKNOWN`. `InMemoryAgentDirectory`'s window is unbounded, so the default runtime is
+  unaffected and behaves exactly as before — this is visible only on a backend that expires,
+  which today means JDBC presence with a heartbeat interval configured.
 
 - **Integration tests now actually run.** The build had no `maven-failsafe-plugin`, and surefire's
   default includes do not match `*IT.java`, so the four existing integration tests
