@@ -189,6 +189,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can be added later without changing agent code, so building it before an adopter needs it
   would buy nothing — and it would not fix the part that actually breaks on restart.
 
+### Deprecated
+
+- `DialogueCapability.initialize(MessageDispatcher)` (since 0.26.0, for removal) — use the
+  no-arg `initialize()`. The overload still honours the dispatcher passed to it, so existing
+  call sites keep working unchanged.
+
 ### Fixed
 
 - **A HITL decision could be announced to other nodes without being stored.**
@@ -365,12 +371,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warning. The scan now walks the class hierarchy, de-duplicating by signature so an
   override is registered once and wins over the method it overrides. `scan()` also clears
   its state first, so scanning twice can no longer double-dispatch.
-
-### Deprecated
-
-- `DialogueCapability.initialize(MessageDispatcher)` (since 0.26.0, for removal) — use the
-  no-arg `initialize()`. The overload still honours the dispatcher passed to it, so existing
-  call sites keep working unchanged.
 
 ### Migration Guide (0.25.x → 0.26.0)
 
