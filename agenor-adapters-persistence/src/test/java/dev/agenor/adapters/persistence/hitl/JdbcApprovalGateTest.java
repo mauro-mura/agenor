@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import javax.sql.DataSource;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.Statement;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -71,6 +75,90 @@ class JdbcApprovalGateTest {
 
     private ApprovalRequest req(Duration timeout) {
         return ApprovalRequest.of("agent-1", "test-action", "payload", timeout);
+    }
+
+    /**
+     * Wraps the shared {@link DataSource} so that, once armed, a chosen connection request
+     * blocks until released. This is how the ordering tests below suspend the gate at a precise
+     * point: every database call it makes starts by acquiring a connection.
+     *
+     * @param armed       set to true to arm; the first blocking acquisition disarms it again
+     * @param letThrough  how many acquisitions to allow after arming before blocking one. Zero
+     *                    blocks the very next; one lets a preceding read finish first
+     * @param blocked     counted down when the blocking acquisition is reached
+     * @param release     awaited by the blocked acquisition
+     * @return a DataSource delegating to the real one
+     */
+    private DataSource blockingDataSource(AtomicBoolean armed,
+                                          int letThrough,
+                                          CountDownLatch blocked,
+                                          CountDownLatch release) {
+        return blockingDataSource(armed, letThrough, blocked, release, null);
+    }
+
+    /**
+     * As above, and additionally records every statement executed through
+     * {@code Connection.createStatement()} into {@code executedSql} when it is non-null. The
+     * gate uses prepared statements everywhere except when emitting a Postgres {@code NOTIFY},
+     * so that list is effectively the log of notifications it tried to send.
+     *
+     * @param executedSql collects executed SQL, or null to record nothing
+     */
+    private DataSource blockingDataSource(AtomicBoolean armed,
+                                          int letThrough,
+                                          CountDownLatch blocked,
+                                          CountDownLatch release,
+                                          List<String> executedSql) {
+        var remaining = new java.util.concurrent.atomic.AtomicInteger(letThrough);
+        return (DataSource) Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{DataSource.class},
+                (proxy, method, args) -> {
+                    if ("getConnection".equals(method.getName())
+                            && armed.get() && remaining.getAndDecrement() <= 0
+                            && armed.compareAndSet(true, false)) {
+                        blocked.countDown();
+                        release.await(5, TimeUnit.SECONDS);
+                    }
+                    Object result;
+                    try {
+                        result = method.invoke(dataSource, args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                    if (executedSql != null && result instanceof Connection conn) {
+                        return recordingConnection(conn, executedSql);
+                    }
+                    return result;
+                });
+    }
+
+    /** Wraps a connection so statements created on it report the SQL they execute. */
+    private Connection recordingConnection(Connection delegate, List<String> executedSql) {
+        return (Connection) Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    Object result;
+                    try {
+                        result = method.invoke(delegate, args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                    if ("createStatement".equals(method.getName()) && result instanceof Statement st) {
+                        return Proxy.newProxyInstance(
+                                getClass().getClassLoader(), new Class<?>[]{Statement.class},
+                                (p2, m2, a2) -> {
+                                    if ("execute".equals(m2.getName()) && a2 != null && a2.length > 0) {
+                                        executedSql.add(String.valueOf(a2[0]));
+                                    }
+                                    try {
+                                        return m2.invoke(st, a2);
+                                    } catch (InvocationTargetException e) {
+                                        throw e.getCause();
+                                    }
+                                });
+                    }
+                    return result;
+                });
     }
 
     // -------------------------------------------------------------------------
@@ -172,7 +260,7 @@ class JdbcApprovalGateTest {
             var slowScheduler = Executors.newSingleThreadScheduledExecutor();
 
             var slowGate = new JdbcApprovalGate(
-                    new JdbcHelper(blockingDataSource(armed, blocked, release)),
+                    new JdbcHelper(blockingDataSource(armed, 0, blocked, release)),
                     new ObjectMapper(), slowScheduler, false, null);
             try {
                 // Given a request whose deadline is about to pass
@@ -199,30 +287,6 @@ class JdbcApprovalGateTest {
                 slowGate.close();
                 slowScheduler.shutdownNow();
             }
-        }
-
-        /**
-         * Wraps the shared {@link DataSource} so that, once armed, the next connection request
-         * blocks. The timeout task acquires its connection inside {@code markExpired}, so this
-         * suspends the gate precisely between deciding to expire and having expired.
-         */
-        private DataSource blockingDataSource(AtomicBoolean armed,
-                                              CountDownLatch blocked,
-                                              CountDownLatch release) {
-            return (DataSource) Proxy.newProxyInstance(
-                    getClass().getClassLoader(), new Class<?>[]{DataSource.class},
-                    (proxy, method, args) -> {
-                        if ("getConnection".equals(method.getName())
-                                && armed.compareAndSet(true, false)) {
-                            blocked.countDown();
-                            release.await(5, TimeUnit.SECONDS);
-                        }
-                        try {
-                            return method.invoke(dataSource, args);
-                        } catch (InvocationTargetException e) {
-                            throw e.getCause();
-                        }
-                    });
         }
 
         @Test
@@ -253,6 +317,71 @@ class JdbcApprovalGateTest {
 
             assertThat(gate.getPendingRequests())
                     .noneMatch(r -> r.requestId().equals(request.requestId()));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Decisions that lose the race
+    // -------------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Late decisions")
+    class LateDecisionTests {
+
+        @Test
+        @DisplayName("a decision that loses to the deadline is not announced")
+        void decisionOverrunByTheDeadlineIsNotAnnounced() throws Exception {
+            // `submit` reads the row, finds it PENDING, and then writes. The timeout scheduler
+            // writes to the same row in between. Suspending `submit` between its read and its
+            // write reproduces that deterministically — a plain "submit after expiry" test
+            // would not, because it exits at the status guard before ever writing.
+            var blocked = new CountDownLatch(1);
+            var release = new CountDownLatch(1);
+            var armed = new AtomicBoolean(false);
+            List<String> executedSql = new CopyOnWriteArrayList<>();
+            var scheduler2 = Executors.newSingleThreadScheduledExecutor();
+            // postgresNotify on, with a null DataSource so no listener thread starts. H2 will
+            // reject the NOTIFY statement and the gate will swallow that, so the assertion is
+            // that the statement is never attempted — not that it succeeds.
+            var gate2 = new JdbcApprovalGate(
+                    new JdbcHelper(blockingDataSource(armed, 1, blocked, release, executedSql)),
+                    new ObjectMapper(), scheduler2, true, null);
+            var submitter = Executors.newSingleThreadExecutor();
+            try {
+                // Given a request whose deadline is close
+                var request = req(Duration.ofMillis(400));
+                CompletableFuture<ApprovalDecision> future = gate2.requestApproval(request);
+
+                // When a decision arrives, and is suspended after reading the row but before
+                // writing it — letting one acquisition through is exactly that gap
+                armed.set(true);
+                submitter.submit(() ->
+                        gate2.submit(request.requestId(), new ApprovalDecision.Approved()));
+                assertThat(blocked.await(5, TimeUnit.SECONDS))
+                        .as("submit reached its write").isTrue();
+
+                // And the deadline passes while it is held there
+                assertThatThrownBy(() -> future.get(5, TimeUnit.SECONDS))
+                        .isInstanceOf(ExecutionException.class)
+                        .cause().isInstanceOf(ApprovalTimeoutException.class);
+                release.countDown();
+
+                // Then the decision is dropped rather than announced. Its conditional UPDATE
+                // matched nothing, so the row stays EXPIRED — and a `submit` that ignored that
+                // would still have emitted a NOTIFY telling every other node the request was
+                // approved, a decision existing only as a notification.
+                Thread.sleep(300);
+                assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_EXPIRED);
+                assertThat(future).isCompletedExceptionally();
+                assertThat(executedSql)
+                        .as("no decision may be announced that was not stored")
+                        .noneMatch(sql -> sql.startsWith("NOTIFY"));
+            } finally {
+                release.countDown();
+                submitter.shutdownNow();
+                gate2.close();
+                scheduler2.shutdownNow();
+            }
         }
     }
 

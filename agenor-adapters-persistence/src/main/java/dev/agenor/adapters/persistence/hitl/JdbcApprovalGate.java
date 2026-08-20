@@ -161,7 +161,15 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
             return;
         }
 
-        persistDecision(requestId, decision);
+        // The row read above is a snapshot, and the timeout scheduler writes to the same row.
+        // Only the conditional UPDATE inside persistDecision knows whether the request was
+        // still pending when the decision actually landed — completing the future or emitting
+        // a notification without it would announce a decision that was never stored.
+        if (!persistDecision(requestId, decision)) {
+            log.debug("Decision ignored — request was decided or expired concurrently: "
+                    + "requestId={}", requestId);
+            return;
+        }
 
         var future = localFutures.get(requestId);
         if (future != null) {
@@ -233,7 +241,15 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
                         )));
     }
 
-    private void persistDecision(String requestId, ApprovalDecision decision) {
+    /**
+     * Writes a decision, but only while the request is still pending.
+     *
+     * @param requestId the request being decided
+     * @param decision  the decision to store
+     * @return true if this call stored the decision; false if the row had already moved on,
+     *         in which case the caller must not report the decision as taken
+     */
+    private boolean persistDecision(String requestId, ApprovalDecision decision) {
         var now = Timestamp.from(Instant.now());
         String type;
         String data;
@@ -252,12 +268,14 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
 
         String finalType = type;
         String finalData = data;
+        var updated = new java.util.concurrent.atomic.AtomicInteger();
         jdbc.inTransaction(conn ->
-                jdbc.update(conn,
+                updated.set(jdbc.update(conn,
                         "UPDATE agenor_hitl_requests"
                         + " SET status = ?, decision_type = ?, decision_data = ?, decided_at = ?"
                         + " WHERE request_id = ? AND status = ?",
-                        List.of(finalType, finalType, finalData, now, requestId, STATUS_PENDING)));
+                        List.of(finalType, finalType, finalData, now, requestId, STATUS_PENDING))));
+        return updated.get() > 0;
     }
 
     private record RowSummary(String requestId, String status) {}

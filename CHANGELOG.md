@@ -108,6 +108,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A HITL decision could be announced to other nodes without being stored.**
+  `JdbcApprovalGate.submit` reads the request, finds it `PENDING`, then writes — and the
+  timeout scheduler writes to the same row in between. The write itself was always guarded
+  (`UPDATE ... WHERE status = 'PENDING'`), but `submit` ignored whether it matched: it
+  completed the local future and emitted the Postgres `NOTIFY` regardless. The future was
+  safe by accident, since `CompletableFuture.complete` returns false on an already-completed
+  future, but every other node received an approval for a request whose row said `EXPIRED` —
+  a decision existing only as a notification — and the submitting caller was told nothing was
+  wrong. `persistDecision` now reports whether it matched and `submit` stops when it did not.
+
 - **A timed-out HITL approval could be reported before the store agreed.**
   `JdbcApprovalGate.scheduleTimeout` completed the caller's future exceptionally and *then*
   marked the row `EXPIRED`. The write is synchronous, but it runs on the scheduler thread
