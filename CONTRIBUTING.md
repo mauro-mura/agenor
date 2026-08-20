@@ -284,7 +284,8 @@ class WeatherCollectorAgentTest {
 
 ### Test Coverage
 
-- Maintain > 80% line coverage
+- Maintain > 80% line coverage. No build step checks this, so it is on you and on review:
+  `mvn verify` writes a JaCoCo report to `target/site/jacoco/index.html` in each module
 - Focus on business logic
 - Don't test trivial getters/setters
 - Test edge cases and error conditions
