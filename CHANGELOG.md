@@ -74,6 +74,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   messages without an error. `docs/adapters/redis.md` and `RedisMessagingExample` referred to a
   compose file that did not exist.
 
+
+- **`Message.getContent(Class<T>)` now actually converts** (ADR-030): it was an unchecked cast
+  that did nothing, so it read like the answer to the payload-typing problem and was not.
+  `Message.content` is declared `Object` and carries no type information on the wire, so the
+  in-memory dispatcher hands the receiver the sender's original object while a serialising
+  transport such as Redis hands it a `LinkedHashMap` rebuilt from JSON — a `ClassCastException`
+  that no in-memory test can reproduce and that every dialogue test therefore missed. The
+  accessor now returns the same reference when the content is already of the requested type
+  (no allocation, no Jackson), converts it when it arrived as a `Map`, and throws
+  `IllegalArgumentException` naming both types when it can do neither. `DialogueMessage` gains
+  `contentAs(Class<T>)`, delegating to the same implementation, and `toMessage()` writes the
+  payload's Java type into a `content-class` header — informational only, since conversion is
+  driven by the type the caller asks for and the wire format stays language-neutral.
+  Deliberately **not** named `content-type`: that key already means a domain label in ADR-005's
+  own example and an HTTP-style media type in `docs/message-filtering.md`.
+  **Limitation, by design**: conversion is lenient about unknown properties so that a receiver
+  keeps reading a payload whose sender added a field. Reading a post-transport payload as an
+  *unrelated* record therefore succeeds with null fields instead of throwing. The accessor
+  removes the `ClassCastException`, not the need to ask for the right type.
+  `MessageFilterBuilder.contentType(Class)` has the same root cause — it filters with
+  `instanceof` and silently stops matching after a serialising transport — and is knowingly
+  left unfixed until someone needs it.
+- **Optional-module diagnostics at startup** (ADR-027 § Amendment 2026-08-15): the ADR-027 seam
+  degrades silently — without `agenor-runtime-llm` a `@WithGuardrails` agent runs unguarded, and
+  nothing says so. `AgenorRuntime.start()` now logs one INFO line naming the optional modules that
+  resolved (`ServiceLoader` finding nothing looks exactly like finding everything from the
+  outside), and one aggregated WARN per annotation type that no loaded extension claims, naming
+  the affected agents. `AgentRegistrationExtension` gains a diagnostics-only default method
+  `handledAnnotations()`, so each module declares what it processes and the runtime needs no
+  annotation→artifact map; `agenor-core` contributes only `OPTIONAL_FEATURE_ANNOTATIONS`, a list
+  of its own types. Existing extensions keep compiling and claim nothing.
+  The shipped extensions also report the case the runtime cannot see: `@WithGuardrails` on an
+  agent that is not an `LLMAgent`, and `@RequiresApproval` on one that is not a `BaseAgent`, do
+  nothing even with the module present — each extension now says so.
+- **`LifecycleHooks` (`agenor-core`)**: `onStartHook`/`onStopHook` extracted from the
+  concrete `BaseAgent`, so framework capabilities can wire themselves to an agent's
+  lifecycle without downcasting. Deliberately kept out of the `Agent` interface — hook
+  support stays opt-in. `PersistenceManager` migrated to it, dropping its cross-module
+  `instanceof BaseAgent`.
+- **Injection seam for dialogue collaborators**: `DialogueCapability.builder(agent)` accepts
+  a `ConversationManagerFactory`, a `ProtocolRegistry` (so a custom `Protocol` can be
+  registered without bypassing `DialogueCapability`) and a `CommitmentTracker`. The
+  capability now stores and exposes the interfaces, not the default implementations, as
+  required by ADR-002 — a persistent or distributed `ConversationManager` no longer requires
+  forking the class. `ConversationManager` gains `getCommitmentTracker()` and
+  `CommitmentTracker` gains `getByMessageId(String)`.
+- **Commitment deadline violations are detected automatically**: `checkViolations()` existed
+  but nothing ever called it, so a commitment whose deadline passed stayed `ACTIVE` forever
+  unless the consumer wrote its own polling loop — "observable promises" that nobody observed.
+  The retention sweep introduced above now runs it, so an overdue commitment moves to
+  `VIOLATED` on its own and is logged at WARN naming performer, requester and conversation.
+  Detection is delayed by up to one sweep interval (default one minute), configurable via
+  `DialogueCapability.builder(agent).sweepInterval(...)`. The sweep prunes *before* it
+  violates, so a commitment marked violated survives at least one full interval and stays
+  observable through `get(commitmentId)`.
+
 ### Changed
 
 - **BREAKING — a heartbeat signals liveness, not progress (ADR-028 D-1).**
@@ -105,6 +161,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DialogueCapability.request(...)` Javadoc corrected: it promised "first-reply, typically AGREE"
   semantics, which stopped being true when ADR-026 moved resolution to the final `INFORM`/
   `FAILURE`. The implementation was right; only the contract as documented was stale.
+
+
+- **`DialogueCapability` wires itself into the agent lifecycle**: constructing it registers
+  `initialize()`/`shutdown()` on the agent's `LifecycleHooks` when the agent supports them
+  (`BaseAgent` does), so agents no longer need `onStart()`/`onStop()` overrides for dialogue.
+  Agents implementing `Agent` directly get a warning naming what leaks if they never call
+  `shutdown()`. `initialize()` is idempotent and resolves the dispatcher from the agent
+  itself. Every public method now fails with an actionable `IllegalStateException` instead
+  of a bare `NullPointerException` when the capability was never initialized, and
+  `shutdown()` clears the manager so a stopped agent can be started again.
+  `getCommitmentTracker()` returns `CommitmentTracker` rather than the concrete
+  `DefaultCommitmentTracker`.
+- Dialogue examples and the docs quick-starts no longer show manual `onStart()`/`onStop()`
+  dialogue wiring; `dialog-protocol.md` now states explicitly that conversation state is
+  per-agent, in-memory and node-local, and what an agent without `LifecycleHooks` must do.
+- **The durability contract for dialogue state is now written down** (ADR-031). It was
+  unspecified, and the "node-local" phrasing added above could be read as "dialogue only works
+  within one node" — which is false and now stated as such. The two axes are separated
+  explicitly: agents in **different runtimes can hold a dialogue** whenever the transport spans
+  them (Redis messaging, A2A), while an agent's **own conversation state does not survive its
+  own process** — by design, not by omission. `dialog-protocol.md` gains a restart/failover
+  section (the peer waits out its own timeout, in-flight commitments are lost and will never be
+  marked `VIOLATED`, a pending future cannot be recovered by any store), and `Conversation` and
+  `Commitment` carry the same contract in their Javadoc for anyone reading only the API. No
+  persistent `ConversationManager` is shipped: the factory seam added in this release means one
+  can be added later without changing agent code, so building it before an adopter needs it
+  would buy nothing — and it would not fix the part that actually breaks on restart.
 
 ### Fixed
 
@@ -282,91 +365,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warning. The scan now walks the class hierarchy, de-duplicating by signature so an
   override is registered once and wins over the method it overrides. `scan()` also clears
   its state first, so scanning twice can no longer double-dispatch.
-
-### Added
-
-- **`Message.getContent(Class<T>)` now actually converts** (ADR-030): it was an unchecked cast
-  that did nothing, so it read like the answer to the payload-typing problem and was not.
-  `Message.content` is declared `Object` and carries no type information on the wire, so the
-  in-memory dispatcher hands the receiver the sender's original object while a serialising
-  transport such as Redis hands it a `LinkedHashMap` rebuilt from JSON — a `ClassCastException`
-  that no in-memory test can reproduce and that every dialogue test therefore missed. The
-  accessor now returns the same reference when the content is already of the requested type
-  (no allocation, no Jackson), converts it when it arrived as a `Map`, and throws
-  `IllegalArgumentException` naming both types when it can do neither. `DialogueMessage` gains
-  `contentAs(Class<T>)`, delegating to the same implementation, and `toMessage()` writes the
-  payload's Java type into a `content-class` header — informational only, since conversion is
-  driven by the type the caller asks for and the wire format stays language-neutral.
-  Deliberately **not** named `content-type`: that key already means a domain label in ADR-005's
-  own example and an HTTP-style media type in `docs/message-filtering.md`.
-  **Limitation, by design**: conversion is lenient about unknown properties so that a receiver
-  keeps reading a payload whose sender added a field. Reading a post-transport payload as an
-  *unrelated* record therefore succeeds with null fields instead of throwing. The accessor
-  removes the `ClassCastException`, not the need to ask for the right type.
-  `MessageFilterBuilder.contentType(Class)` has the same root cause — it filters with
-  `instanceof` and silently stops matching after a serialising transport — and is knowingly
-  left unfixed until someone needs it.
-- **Optional-module diagnostics at startup** (ADR-027 § Amendment 2026-08-15): the ADR-027 seam
-  degrades silently — without `agenor-runtime-llm` a `@WithGuardrails` agent runs unguarded, and
-  nothing says so. `AgenorRuntime.start()` now logs one INFO line naming the optional modules that
-  resolved (`ServiceLoader` finding nothing looks exactly like finding everything from the
-  outside), and one aggregated WARN per annotation type that no loaded extension claims, naming
-  the affected agents. `AgentRegistrationExtension` gains a diagnostics-only default method
-  `handledAnnotations()`, so each module declares what it processes and the runtime needs no
-  annotation→artifact map; `agenor-core` contributes only `OPTIONAL_FEATURE_ANNOTATIONS`, a list
-  of its own types. Existing extensions keep compiling and claim nothing.
-  The shipped extensions also report the case the runtime cannot see: `@WithGuardrails` on an
-  agent that is not an `LLMAgent`, and `@RequiresApproval` on one that is not a `BaseAgent`, do
-  nothing even with the module present — each extension now says so.
-- **`LifecycleHooks` (`agenor-core`)**: `onStartHook`/`onStopHook` extracted from the
-  concrete `BaseAgent`, so framework capabilities can wire themselves to an agent's
-  lifecycle without downcasting. Deliberately kept out of the `Agent` interface — hook
-  support stays opt-in. `PersistenceManager` migrated to it, dropping its cross-module
-  `instanceof BaseAgent`.
-- **Injection seam for dialogue collaborators**: `DialogueCapability.builder(agent)` accepts
-  a `ConversationManagerFactory`, a `ProtocolRegistry` (so a custom `Protocol` can be
-  registered without bypassing `DialogueCapability`) and a `CommitmentTracker`. The
-  capability now stores and exposes the interfaces, not the default implementations, as
-  required by ADR-002 — a persistent or distributed `ConversationManager` no longer requires
-  forking the class. `ConversationManager` gains `getCommitmentTracker()` and
-  `CommitmentTracker` gains `getByMessageId(String)`.
-- **Commitment deadline violations are detected automatically**: `checkViolations()` existed
-  but nothing ever called it, so a commitment whose deadline passed stayed `ACTIVE` forever
-  unless the consumer wrote its own polling loop — "observable promises" that nobody observed.
-  The retention sweep introduced above now runs it, so an overdue commitment moves to
-  `VIOLATED` on its own and is logged at WARN naming performer, requester and conversation.
-  Detection is delayed by up to one sweep interval (default one minute), configurable via
-  `DialogueCapability.builder(agent).sweepInterval(...)`. The sweep prunes *before* it
-  violates, so a commitment marked violated survives at least one full interval and stays
-  observable through `get(commitmentId)`.
-
-### Changed
-
-- **`DialogueCapability` wires itself into the agent lifecycle**: constructing it registers
-  `initialize()`/`shutdown()` on the agent's `LifecycleHooks` when the agent supports them
-  (`BaseAgent` does), so agents no longer need `onStart()`/`onStop()` overrides for dialogue.
-  Agents implementing `Agent` directly get a warning naming what leaks if they never call
-  `shutdown()`. `initialize()` is idempotent and resolves the dispatcher from the agent
-  itself. Every public method now fails with an actionable `IllegalStateException` instead
-  of a bare `NullPointerException` when the capability was never initialized, and
-  `shutdown()` clears the manager so a stopped agent can be started again.
-  `getCommitmentTracker()` returns `CommitmentTracker` rather than the concrete
-  `DefaultCommitmentTracker`.
-- Dialogue examples and the docs quick-starts no longer show manual `onStart()`/`onStop()`
-  dialogue wiring; `dialog-protocol.md` now states explicitly that conversation state is
-  per-agent, in-memory and node-local, and what an agent without `LifecycleHooks` must do.
-- **The durability contract for dialogue state is now written down** (ADR-031). It was
-  unspecified, and the "node-local" phrasing added above could be read as "dialogue only works
-  within one node" — which is false and now stated as such. The two axes are separated
-  explicitly: agents in **different runtimes can hold a dialogue** whenever the transport spans
-  them (Redis messaging, A2A), while an agent's **own conversation state does not survive its
-  own process** — by design, not by omission. `dialog-protocol.md` gains a restart/failover
-  section (the peer waits out its own timeout, in-flight commitments are lost and will never be
-  marked `VIOLATED`, a pending future cannot be recovered by any store), and `Conversation` and
-  `Commitment` carry the same contract in their Javadoc for anyone reading only the API. No
-  persistent `ConversationManager` is shipped: the factory seam added in this release means one
-  can be added later without changing agent code, so building it before an adopter needs it
-  would buy nothing — and it would not fix the part that actually breaks on restart.
 
 ### Deprecated
 
