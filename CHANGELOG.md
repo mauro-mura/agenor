@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The PostgreSQL integration tests did not wait for PostgreSQL.** All three used
+  `GenericContainer` with the default wait strategy, which only checks that the port is
+  listening. The container's entrypoint runs a temporary server for `initdb` first, so a
+  client connecting in between is refused with `FATAL: the database system is starting up`.
+  They now wait for the real server's readiness line.
+
 - **`agenor.directory.provider=jdbc` never started a Spring context.** The Spring Boot starter
   exposes the runtime's `AgentDirectory` as a bean, and `AgentDirectory` extends all four
   capability interfaces — so it also answers to `AgentRegistry`, `AgentDiscovery` and

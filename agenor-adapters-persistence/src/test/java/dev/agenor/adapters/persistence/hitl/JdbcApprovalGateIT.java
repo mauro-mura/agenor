@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -40,6 +41,11 @@ class JdbcApprovalGateIT {
             .withEnv("POSTGRES_DB", "agenor_test")
             .withEnv("POSTGRES_USER", "agenor")
             .withEnv("POSTGRES_PASSWORD", "agenor_test")
+            // Postgres opens its port before it will accept connections: the entrypoint runs a
+            // temporary server for initdb first, and a client that connects in between is
+            // refused with "the database system is starting up". Wait for the second time the
+            // real server announces itself.
+            .waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*", 2))
             .withStartupTimeout(Duration.ofSeconds(60));
 
     private HikariDataSource dataSource;
