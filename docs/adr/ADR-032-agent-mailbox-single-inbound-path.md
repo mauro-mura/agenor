@@ -2,7 +2,8 @@
 
 **Status**: Accepted
 **Date**: 2026-08-18
-**Last Modified**: 2026-08-23 (accepted; see the scope note in D-1)
+**Last Modified**: 2026-08-23 (accepted; see the scope note in D-1, and D-1/D-5 on who
+owns a mailbox and what the contract carries)
 **Authors**: Project Team
 **References**: ADR-029 (Protocol Validation and Dialogue Message Classification),
 ADR-027 (Minimal Runtime Core — LLM / Generic-MAS Module Split), ADR-021 (Redis
@@ -107,9 +108,18 @@ letting an agent ask for a specific message. That was evaluated and **rejected**
 
 ### D-1 — One mailbox per agent, owning the only subscription
 
-Every agent gets a mailbox. It registers the **single** `subscribeRecipient` for that
-agent; `BaseAgent`'s dispatch and `DialogueCapability` become *consumers of its drain*
-rather than rival subscribers.
+A `BaseAgent` gets a mailbox. It registers the **single** persistent `subscribeRecipient`
+for that agent; `BaseAgent`'s dispatch and `DialogueCapability` become *consumers of its
+drain* rather than rival subscribers.
+
+The mailbox belongs to `BaseAgent` and not to the `Agent` interface, because the interface
+declares no message handling at all — only identity, lifecycle and behaviours. There is no
+second lane for a drain to route non-dialogue traffic into, so an agent implemented directly
+against `Agent` has no mailbox and keeps whatever inbound path it arranges for itself. For
+that case `DialogueCapability` still takes out its own subscription, which is also why its
+classifier guard stays. This matches where the rest of an agent's machinery already lives:
+the dispatcher, directory, scheduler, memory store, descriptor and annotated direct-message
+handlers are all `BaseAgent`'s.
 
 ```
 subscribeRecipient(agentId, mailbox::offer)      // the only subscription
@@ -208,6 +218,15 @@ The `AgentMailbox` contract and `MailboxConfig` go in **`agenor-core`**; the
 implementation goes in **`agenor-runtime`** alongside `BaseAgent` and
 `InMemoryMessageDispatcher`. It is core agent machinery, not an optional feature, so it
 does not belong in `agenor-runtime-ext`.
+
+The contract carries what its collaborators actually use: `offer`, `size`, `capacity`, the
+registration of the dialogue consumer — the drain's two lanes are the decision, so they are
+not an implementation detail — and `start`/`stop`, as `Agent` and `BehaviorScheduler` already
+do. `BaseAgent` builds its mailbox through a protected `createMailbox` hook alongside
+`mailboxConfig`, so the runtime's implementation is named in exactly one overridable place
+and an agent can supply its own without touching how the inbound path is wired. Anything
+narrower would leave the contract decorative, with collaborators bound to the concrete
+class — the coupling ADR-002 exists to prevent.
 
 ADR-027's amendment governs two points, and both are discharged:
 
