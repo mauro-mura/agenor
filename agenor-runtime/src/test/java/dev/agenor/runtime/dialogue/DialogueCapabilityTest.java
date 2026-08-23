@@ -324,9 +324,10 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldRouteEachInboundMessageToOnlyOnePathOnARealAgent() {
-        // Given a BaseAgent that both handles direct messages and speaks dialogue. It holds two
-        // subscriptions on its own recipient channel (its own, plus the capability's), which the
-        // mocked-dispatcher tests above cannot reproduce.
+        // Given a BaseAgent that both handles direct messages and speaks dialogue. Its mailbox
+        // holds the one subscription on its recipient channel and routes each message to a
+        // single consumer (ADR-032 D-1), which the mocked-dispatcher tests above cannot
+        // reproduce.
         var mixed = new MixedTrafficAgent("mixed-agent");
         var dispatcher = new InMemoryMessageDispatcher(
             new InMemoryAgentDirectory(), AgenorTelemetry.noop());
@@ -349,13 +350,16 @@ class DialogueCapabilityTest {
                 .build()
                 .toMessage());
 
-            // deliverToReceiver() starts a virtual thread per handler without awaiting them, so
-            // sendTo()'s future completes before the handlers have run: wait for the counters.
-            awaitUntil(() -> mixed.directMessages.get() == 2 && mixed.dialogueMessages.get() == 1);
+            // The mailbox drain hands each handler call to a virtual thread, so sendTo()'s
+            // future completes before the handlers have run: wait for the counters.
+            awaitUntil(() -> mixed.directMessages.get() == 1 && mixed.dialogueMessages.get() == 1);
 
-            // Then both reach the direct path — BaseAgent deliberately does not filter (D3)...
-            assertThat(mixed.directMessages.get()).isEqualTo(2);
-            // ...only the dialogue one reaches a @DialogueHandler...
+            // Then the plain message reaches the direct path and the dialogue message does not.
+            // ADR-029 D3 let dialogue traffic fall through to onDirectMessage() as well, because
+            // BaseAgent had no way to know dialogue was active; the drain knows, so ADR-032
+            // amends D3 in scope and routes each message exactly once.
+            assertThat(mixed.directMessages.get()).isEqualTo(1);
+            // ...the dialogue one reaches a @DialogueHandler instead...
             assertThat(mixed.dialogueMessages.get()).isEqualTo(1);
             // ...and exactly one conversation exists: the plain message fabricated none. This is
             // the assertion that covers the leak — a phantom conversation is never terminal, so

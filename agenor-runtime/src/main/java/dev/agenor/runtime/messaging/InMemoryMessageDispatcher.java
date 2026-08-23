@@ -261,6 +261,22 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
         );
     }
 
+    /**
+     * Returns how many handlers are currently subscribed to one agent's recipient channel.
+     *
+     * <p>Exposed so that a test can assert who owns an agent's inbound path directly, rather
+     * than inferring it from the fact that delivery happens to work.
+     *
+     * @param agentId the recipient channel to inspect; must not be null
+     * @return the number of registered handlers, zero if none
+     * @since 0.27.0
+     */
+    public int receiverSubscriptionCount(String agentId) {
+        Objects.requireNonNull(agentId, "agentId");
+        var handlers = receiverSubscriptions.get(agentId);
+        return handlers == null ? 0 : handlers.size();
+    }
+
     // -------------------------------------------------------------------------
     // Internal delivery helpers
     // -------------------------------------------------------------------------

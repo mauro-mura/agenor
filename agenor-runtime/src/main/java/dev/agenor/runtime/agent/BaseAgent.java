@@ -24,6 +24,7 @@ import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
+import dev.agenor.core.mailbox.MailboxConfig;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.memory.MemoryEntry;
@@ -32,6 +33,7 @@ import dev.agenor.core.memory.MemoryScope;
 import dev.agenor.core.memory.MemoryStats;
 import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.runtime.behavior.BaseBehavior;
+import dev.agenor.runtime.mailbox.DefaultAgentMailbox;
 
 /**
  * Base implementation for all agents in the Agenor framework.
@@ -88,6 +90,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
 
     private dev.agenor.core.messaging.Subscription directMessageSubscription;
+    private volatile DefaultAgentMailbox mailbox;
     private final Map<String, List<MessageHandler>> directTopicHandlers = new ConcurrentHashMap<>();
 
     // Lifecycle hooks - thread-safe collections
@@ -491,8 +494,12 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     }
 
     /**
-     * Automatically subscribe to direct messages addressed to this agent.
-     * Called during agent start.
+     * Opens this agent's inbound path: one mailbox, holding the agent's only persistent
+     * recipient subscription.
+     *
+     * <p>Called during agent start, and deliberately <em>before</em> start hooks run, so
+     * that a {@code DialogueCapability} registering from a start hook finds a mailbox to
+     * join as a consumer instead of taking out a rival subscription of its own (ADR-032).
      */
     private void autoSubscribeDirectMessages() {
         if (messageDispatcher == null) {
@@ -501,9 +508,17 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         }
 
         try {
+            var box = new DefaultAgentMailbox(
+                    getAgentId(),
+                    mailboxConfig(),
+                    MessageHandler.sync(this::handleDirectMessage)
+            );
+            box.start();
+            mailbox = box;
+
             directMessageSubscription = messageDispatcher.subscribeRecipient(
                     getAgentId(),
-                    MessageHandler.sync(this::handleDirectMessage)
+                    MessageHandler.sync(box::offer)
             );
 
             log.debug("Agent '{}' auto-subscribed for direct messages", agentId);
@@ -512,6 +527,31 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
             log.error("Failed to auto-subscribe direct messages for agent '{}': {}",
                     agentId, e.getMessage());
         }
+    }
+
+    /**
+     * Returns the bounds and overflow behaviour for this agent's mailbox.
+     *
+     * <p>Override to give one agent a different capacity or overflow policy. Read once, when
+     * the agent starts.
+     *
+     * @return a non-null configuration; {@link MailboxConfig#defaults()} unless overridden
+     */
+    protected MailboxConfig mailboxConfig() {
+        return MailboxConfig.defaults();
+    }
+
+    /**
+     * Returns this agent's mailbox, the owner of its inbound path.
+     *
+     * <p>Present only while the agent is started and a message dispatcher is set. Intended
+     * for components that consume the agent's inbound traffic, such as the dialogue layer.
+     *
+     * @return the mailbox, or an empty optional if the agent is not started
+     * @since 0.27.0
+     */
+    public java.util.Optional<DefaultAgentMailbox> mailbox() {
+        return java.util.Optional.ofNullable(mailbox);
     }
 
     /**
@@ -527,6 +567,13 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
                 log.error("Error unsubscribing direct messages for agent '{}': {}",
                         agentId, e.getMessage());
             }
+        }
+        // Closed after the subscription, and after stop hooks have already run, so nothing
+        // is still being offered to a mailbox whose drain is going away.
+        var box = mailbox;
+        if (box != null) {
+            mailbox = null;
+            box.stop();
         }
     }
 

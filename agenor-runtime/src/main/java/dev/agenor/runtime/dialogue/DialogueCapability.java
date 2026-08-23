@@ -11,6 +11,7 @@ import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.ConversationManager;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,7 @@ public class DialogueCapability {
 
     private volatile ConversationManager conversationManager;
     private Subscription subscription;
+    private boolean attachedToMailbox;
     private ScheduledExecutorService reaper;
 
     /**
@@ -155,6 +157,7 @@ public class DialogueCapability {
      */
     public void initialize() {
         if (conversationManager != null) {
+            reattachToMailboxIfNeeded();
             return;
         }
         MessageDispatcher dispatcher = agent.getMessageDispatcher();
@@ -180,6 +183,7 @@ public class DialogueCapability {
     public void initialize(MessageDispatcher dispatcher) {
         Objects.requireNonNull(dispatcher, "dispatcher cannot be null");
         if (conversationManager != null) {
+            reattachToMailboxIfNeeded();
             return;
         }
         doInitialize(dispatcher);
@@ -187,6 +191,7 @@ public class DialogueCapability {
 
     private synchronized void doInitialize(MessageDispatcher dispatcher) {
         if (conversationManager != null) {
+            reattachToMailboxIfNeeded();
             return; // also protects handlerRegistry.scan() from double-registration
         }
         var manager = conversationManagerFactory.create(
@@ -196,14 +201,62 @@ public class DialogueCapability {
             commitmentTracker
         );
         handlerRegistry.scan(agent);
-        subscription = dispatcher.subscribeRecipient(
-            agent.getAgentId(),
-            MessageHandler.sync(this::handleIncomingMessage)
-        );
+        subscription = subscribeInbound(dispatcher);
         this.conversationManager = manager;
         startReaper();
         log.info("Dialogue capability initialized for agent {} with {} handlers",
             agent.getAgentId(), handlerRegistry.size());
+    }
+
+    /**
+     * Attaches this capability to the agent's inbound path.
+     *
+     * <p>Where the agent owns a mailbox, dialogue is one of its consumers: the mailbox holds
+     * the agent's only persistent recipient subscription and routes each message to exactly
+     * one consumer (ADR-032). An agent that is not a {@link BaseAgent} has no mailbox, and
+     * still needs its own subscription — which is also why
+     * {@link #handleIncomingMessage(Message)} keeps its own classifier guard.
+     *
+     * @param dispatcher the dispatcher to subscribe to when there is no mailbox
+     * @return the handle that detaches this capability again
+     */
+    private Subscription subscribeInbound(MessageDispatcher dispatcher) {
+        var handler = MessageHandler.sync(this::handleIncomingMessage);
+        if (agent instanceof BaseAgent base) {
+            var box = base.mailbox();
+            if (box.isPresent()) {
+                attachedToMailbox = true;
+                return box.get().registerDialogueConsumer(handler);
+            }
+        }
+        attachedToMailbox = false;
+        return dispatcher.subscribeRecipient(agent.getAgentId(), handler);
+    }
+
+    /**
+     * Moves an existing dispatcher subscription onto the agent's mailbox once one exists.
+     *
+     * <p>Covers initialization ahead of the agent's own start, which the documentation calls
+     * safe: at that point a {@code BaseAgent} has no mailbox yet, so the first attachment goes
+     * to the dispatcher. Leaving it there would put the agent back where ADR-032 found it —
+     * two subscriptions on one channel, with dialogue traffic routed to the direct path
+     * because the mailbox has no dialogue consumer to hand it to.
+     */
+    private synchronized void reattachToMailboxIfNeeded() {
+        if (attachedToMailbox || !(agent instanceof BaseAgent base)) {
+            return;
+        }
+        var box = base.mailbox();
+        if (box.isEmpty()) {
+            return;
+        }
+        if (subscription != null) {
+            subscription.unsubscribe();
+        }
+        subscription = box.get().registerDialogueConsumer(
+            MessageHandler.sync(this::handleIncomingMessage));
+        attachedToMailbox = true;
+        log.debug("Dialogue for agent {} moved onto the agent's mailbox", agent.getAgentId());
     }
 
     /**
@@ -237,6 +290,7 @@ public class DialogueCapability {
             subscription.unsubscribe();
             subscription = null;
         }
+        attachedToMailbox = false;
         stopReaper();
         conversationManager = null;
         log.debug("Dialogue capability shut down for agent {}", agent.getAgentId());
@@ -323,11 +377,12 @@ public class DialogueCapability {
     /**
      * Handles an incoming message, converting to DialogueMessage and dispatching.
      *
-     * <p>An agent's recipient channel carries every direct message sent to it, not only dialogue
-     * traffic — a {@code BaseAgent} with dialogue holds two subscriptions on it. Anything that is
-     * not a dialogue message is left to the other one: converting it here would fabricate an
-     * {@code INFORM} in a conversation nobody started, which would then never reach a terminal
-     * state and never be swept. See ADR-029.
+     * <p>The guard stays even though a mailbox now routes by the same predicate before calling
+     * this method: an {@link dev.agenor.core.Agent} that is not a {@link BaseAgent} has no
+     * mailbox, subscribes to its recipient channel directly, and so still sees traffic that is
+     * not dialogue. Converting such a message here would fabricate an {@code INFORM} in a
+     * conversation nobody started, which would then never reach a terminal state and never be
+     * swept. See ADR-029 and ADR-032.
      */
     private void handleIncomingMessage(Message message) {
         if (!DialogueMessage.isDialogueMessage(message)) {
