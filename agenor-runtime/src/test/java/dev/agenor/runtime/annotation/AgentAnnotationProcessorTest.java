@@ -258,6 +258,58 @@ class AgentAnnotationProcessorTest {
     }
 
     // =========================================================================
+    // INHERITED ANNOTATIONS
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should register an @AgenorMessageHandler declared on a base class")
+    void shouldRegisterInheritedMessageHandler() {
+        // Given an agent whose only handler is declared on its abstract base
+        InheritingAgent agent = spy(new InheritingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then it is subscribed — scanning only the declared methods found nothing here,
+        // and an agent that receives nothing is a silent failure
+        verify(topicSubscriber).subscribeTopic(eq("inherited.topic"), any(MessageHandler.class));
+    }
+
+    @Test
+    @DisplayName("Should register a @Behavior declared on a base class")
+    void shouldRegisterInheritedBehavior() {
+        // Given
+        InheritingAgent agent = spy(new InheritingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
+    }
+
+    @Test
+    @DisplayName("Should register an overridden handler once, at its most-derived declaration")
+    void shouldRegisterOverriddenHandlerOnce() {
+        // Given an agent that overrides its base class's annotated handler and re-annotates it
+        OverridingAgent agent = spy(new OverridingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then one subscription, not two: the override and the method it overrides are the
+        // same handler, and registering both would deliver every message twice
+        verify(topicSubscriber, times(1))
+            .subscribeTopic(eq("inherited.topic"), any(MessageHandler.class));
+
+        // And the subclass's version is the one invoked, since dispatch stays virtual
+        ArgumentCaptor<MessageHandler> captor = ArgumentCaptor.forClass(MessageHandler.class);
+        verify(topicSubscriber).subscribeTopic(eq("inherited.topic"), captor.capture());
+        captor.getValue().handle(Message.builder().topic("inherited.topic").content("x").build()).join();
+        assertThat(agent.handledBy).isEqualTo("subclass");
+    }
+
+    // =========================================================================
     // ERROR HANDLING TESTS
     // =========================================================================
 
@@ -451,6 +503,49 @@ class AgentAnnotationProcessorTest {
         @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
         private void privateMethod() {
             // Private method will cause issues
+        }
+    }
+
+    /** Declares both annotations, so a subclass inherits them. */
+    abstract static class AnnotatedBaseAgent extends BaseAgent {
+        String handledBy = "none";
+
+        protected AnnotatedBaseAgent(String id) {
+            super(id, id);
+        }
+
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
+        public void inheritedBehaviour() {
+            // Test method
+        }
+
+        @AgenorMessageHandler("inherited.topic")
+        public void handleInherited(Message msg) {
+            handledBy = "base";
+        }
+    }
+
+    /** Adds nothing: everything it has is inherited. */
+    static class InheritingAgent extends AnnotatedBaseAgent {
+        public InheritingAgent() {
+            super("inheriting-agent");
+        }
+    }
+
+    /**
+     * Overrides the inherited handler and re-annotates it, as {@code DialogueHandlerRegistry}'s
+     * {@code OverridingWorker} does. Java does not inherit method annotations, so the
+     * annotation has to be on the most-derived declaration for the scan to see it at all.
+     */
+    static class OverridingAgent extends AnnotatedBaseAgent {
+        public OverridingAgent() {
+            super("overriding-agent");
+        }
+
+        @Override
+        @AgenorMessageHandler("inherited.topic")
+        public void handleInherited(Message msg) {
+            handledBy = "subclass";
         }
     }
 }

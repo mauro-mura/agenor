@@ -78,6 +78,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   raise `capacity`. Blocking the producer is deliberately not offered: it may be a transport
   consumer loop serving an entire node.
 
+### Fixed
+
+- **`@Behavior` and `@AgenorMessageHandler` declared on a base class were silently ignored.**
+  `AgentAnnotationProcessor` scanned with `getDeclaredMethods()`, which stops at the class
+  itself, so an agent inheriting an annotated method from an abstract base got no behaviour and
+  no handler registered — with no warning, no error, and an agent that simply never receives
+  anything. Putting shared handlers on a base agent is the natural way to write a family of
+  agents, and it did not work.
+
+  This is the defect 0.26.0 fixed for `@DialogueHandler`; the other two annotations still had
+  it. The hierarchy walk that fix introduced is now extracted to
+  `dev.agenor.runtime.support.MethodHierarchy` and used by both, so the rule lives in one
+  place: the superclass chain is walked, each method is taken at its most-derived declaration,
+  and synthetic and bridge methods are skipped. An override is registered once and dispatch
+  stays virtual, so the subclass's version runs.
+
+  As before, and as Java requires — method annotations are not inherited — an override must
+  carry the annotation itself to be registered.
+
 ## [0.26.0] - 2026-08-23
 
 ### Added

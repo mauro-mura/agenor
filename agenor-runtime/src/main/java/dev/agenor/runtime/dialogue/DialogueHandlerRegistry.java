@@ -3,14 +3,13 @@ package dev.agenor.runtime.dialogue;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.runtime.support.MethodHierarchy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,21 +49,11 @@ public class DialogueHandlerRegistry {
         byPerformative.clear();
 
         Class<?> clazz = target.getClass();
-        var seenSignatures = new HashSet<String>();
 
-        for (Class<?> current = clazz; current != null && current != Object.class;
-                current = current.getSuperclass()) {
-            for (Method method : current.getDeclaredMethods()) {
-                if (method.isSynthetic() || method.isBridge()) {
-                    continue;
-                }
-                if (!seenSignatures.add(signatureOf(method))) {
-                    continue; // already seen on a more derived class
-                }
-                DialogueHandler annotation = method.getAnnotation(DialogueHandler.class);
-                if (annotation != null) {
-                    registerHandler(target, method, annotation);
-                }
+        for (Method method : MethodHierarchy.mostDerivedMethods(clazz)) {
+            DialogueHandler annotation = method.getAnnotation(DialogueHandler.class);
+            if (annotation != null) {
+                registerHandler(target, method, annotation);
             }
         }
 
@@ -76,14 +65,6 @@ public class DialogueHandlerRegistry {
             list.sort(Comparator.comparingInt(HandlerEntry::priority).reversed()));
 
         log.debug("Registered {} dialogue handlers for {}", handlers.size(), clazz.getSimpleName());
-    }
-
-    /**
-     * Identity of an overridable method: name plus parameter types, ignoring the declaring
-     * class, so that an override and the method it overrides collapse to one entry.
-     */
-    private static String signatureOf(Method method) {
-        return method.getName() + Arrays.toString(method.getParameterTypes());
     }
 
     /**

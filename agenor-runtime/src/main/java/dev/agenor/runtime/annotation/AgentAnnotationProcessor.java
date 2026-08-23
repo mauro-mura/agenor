@@ -1,5 +1,7 @@
 package dev.agenor.runtime.annotation;
 
+import dev.agenor.runtime.support.MethodHierarchy;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
@@ -67,12 +69,14 @@ public class AgentAnnotationProcessor {
     }
 
     /**
-     * Process @Behavior annotations
+     * Process @Behavior annotations.
+     *
+     * <p>The whole class hierarchy is scanned, so a behaviour declared on an abstract base
+     * agent runs for its concrete subclasses too; each method is taken at its most-derived
+     * declaration, so an override is registered once.
      */
     private void processBehaviorAnnotations(Agent agent, Class<?> agentClass) {
-        Method[] methods = agentClass.getDeclaredMethods();
-
-        for (Method method : methods) {
+        for (Method method : MethodHierarchy.mostDerivedMethods(agentClass)) {
             Behavior behaviorAnnotation = method.getAnnotation(Behavior.class);
 
             if (behaviorAnnotation != null) {
@@ -91,12 +95,13 @@ public class AgentAnnotationProcessor {
     }
 
     /**
-     * Process @AgenorMessageHandler annotations
+     * Process @AgenorMessageHandler annotations.
+     *
+     * <p>Scanned over the whole class hierarchy, on the same terms as
+     * {@link #processBehaviorAnnotations(Agent, Class)}.
      */
     private void processMessageHandlerAnnotations(Agent agent, Class<?> agentClass) {
-        Method[] methods = agentClass.getDeclaredMethods();
-
-        for (Method method : methods) {
+        for (Method method : MethodHierarchy.mostDerivedMethods(agentClass)) {
             AgenorMessageHandler handlerAnnotation = method.getAnnotation(AgenorMessageHandler.class);
 
             if (handlerAnnotation != null && handlerAnnotation.autoSubscribe()) {
