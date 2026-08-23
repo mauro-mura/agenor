@@ -27,7 +27,7 @@ classpath.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.26.0</version>
+    <version>0.27.0-SNAPSHOT</version>
 </dependency>
 <!-- PostgreSQL driver (or H2 for testing) -->
 <dependency>
