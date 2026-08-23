@@ -24,6 +24,7 @@ import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
+import dev.agenor.core.mailbox.AgentMailbox;
 import dev.agenor.core.mailbox.MailboxConfig;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.core.messaging.MessageDispatcher;
@@ -90,7 +91,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
 
     private dev.agenor.core.messaging.Subscription directMessageSubscription;
-    private volatile DefaultAgentMailbox mailbox;
+    private volatile AgentMailbox mailbox;
     private final Map<String, List<MessageHandler>> directTopicHandlers = new ConcurrentHashMap<>();
 
     // Lifecycle hooks - thread-safe collections
@@ -508,11 +509,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         }
 
         try {
-            var box = new DefaultAgentMailbox(
-                    getAgentId(),
-                    mailboxConfig(),
-                    MessageHandler.sync(this::handleDirectMessage)
-            );
+            var box = createMailbox(MessageHandler.sync(this::handleDirectMessage));
             box.start();
             mailbox = box;
 
@@ -527,6 +524,22 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
             log.error("Failed to auto-subscribe direct messages for agent '{}': {}",
                     agentId, e.getMessage());
         }
+    }
+
+    /**
+     * Creates this agent's mailbox.
+     *
+     * <p>The one place the runtime's own implementation is named. Override to hand the agent a
+     * different {@link AgentMailbox} — an instrumented one, or a different queueing strategy —
+     * without touching how the inbound path is wired. Called once, when the agent starts.
+     *
+     * @param pushConsumer receives every message the mailbox does not route to a dialogue
+     *                     consumer; must be passed to the mailbox unchanged
+     * @return a non-null mailbox, not yet started
+     * @since 0.27.0
+     */
+    protected AgentMailbox createMailbox(MessageHandler pushConsumer) {
+        return new DefaultAgentMailbox(getAgentId(), mailboxConfig(), pushConsumer);
     }
 
     /**
@@ -550,7 +563,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
      * @return the mailbox, or an empty optional if the agent is not started
      * @since 0.27.0
      */
-    public java.util.Optional<DefaultAgentMailbox> mailbox() {
+    public java.util.Optional<AgentMailbox> mailbox() {
         return java.util.Optional.ofNullable(mailbox);
     }
 

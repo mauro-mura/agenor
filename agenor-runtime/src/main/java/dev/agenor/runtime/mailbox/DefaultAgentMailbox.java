@@ -64,9 +64,7 @@ public final class DefaultAgentMailbox implements AgentMailbox {
         this.queue = new ArrayBlockingQueue<>(config.capacity());
     }
 
-    /**
-     * Starts the drain. Calling this on a started mailbox does nothing.
-     */
+    @Override
     public synchronized void start() {
         if (drain != null) {
             return;
@@ -78,12 +76,7 @@ public final class DefaultAgentMailbox implements AgentMailbox {
                 agentId, config.capacity(), config.overflowPolicy());
     }
 
-    /**
-     * Stops the drain and discards anything still queued.
-     *
-     * <p>Returns once the drain thread has finished, so a stopped agent leaves no thread
-     * behind. Calling this on a stopped mailbox does nothing.
-     */
+    @Override
     public void stop() {
         Thread toStop;
         synchronized (this) {
@@ -143,15 +136,11 @@ public final class DefaultAgentMailbox implements AgentMailbox {
     }
 
     /**
-     * Registers the consumer for dialogue messages. At most one is registered at a time;
-     * registering a second replaces the first.
+     * {@inheritDoc}
      *
-     * @param handler invoked for every claimed message carrying a known performative;
-     *                must not be null
-     * @return a subscription whose {@code unsubscribe()} deregisters this consumer, after
-     *         which dialogue messages fall to the push consumer
-     * @throws NullPointerException if {@code handler} is null
+     * <p>Registering a second consumer replaces the first.
      */
+    @Override
     public Subscription registerDialogueConsumer(MessageHandler handler) {
         Objects.requireNonNull(handler, "handler");
         dialogueConsumer.set(handler);

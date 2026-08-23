@@ -1,6 +1,8 @@
 package dev.agenor.core.mailbox;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.MessageHandler;
+import dev.agenor.core.messaging.Subscription;
 
 /**
  * The single inbound path of one agent.
@@ -57,4 +59,37 @@ public interface AgentMailbox {
      * @return a positive capacity
      */
     int capacity();
+
+    /**
+     * Registers the consumer for messages that carry a known performative.
+     *
+     * <p>The mailbox routes what it claims down one of two lanes: this consumer when the
+     * message is dialogue traffic, and the agent's own message handling otherwise. That split
+     * is the reason a mailbox exists, so it belongs here rather than on any one
+     * implementation. At most one dialogue consumer is registered at a time.
+     *
+     * <p>With no consumer registered — an agent that does not speak the dialogue protocol —
+     * every message goes to the agent's own handling, so the lane simply stays unused.
+     *
+     * @param handler invoked for each claimed dialogue message; must not be {@code null}
+     * @return a handle whose {@code unsubscribe()} withdraws the consumer, after which
+     *         dialogue traffic falls to the agent's own handling
+     * @throws NullPointerException if {@code handler} is {@code null}
+     */
+    Subscription registerDialogueConsumer(MessageHandler handler);
+
+    /**
+     * Opens the mailbox so that offered messages are claimed and routed.
+     *
+     * <p>Idempotent: starting an already-started mailbox does nothing.
+     */
+    void start();
+
+    /**
+     * Closes the mailbox, discarding anything still queued.
+     *
+     * <p>Returns once the mailbox has stopped claiming, so a stopped agent leaves nothing
+     * running behind it. Idempotent: stopping an already-stopped mailbox does nothing.
+     */
+    void stop();
 }

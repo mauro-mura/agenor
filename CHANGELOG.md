@@ -20,9 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   `AgentMailbox`, `MailboxConfig` and `OverflowPolicy` live in `agenor-core`;
   `DefaultAgentMailbox` in `agenor-runtime`. No new SPI and no runtime accessor (ADR-027 C1
-  and C2): the mailbox is reached through the agent that owns it, via
-  `BaseAgent.mailbox()`. Override `BaseAgent.mailboxConfig()` to give one agent a different
-  capacity or policy; it is read once, at start.
+  and C2): the mailbox is reached through the agent that owns it, via `BaseAgent.mailbox()`,
+  which is typed on the contract. Two protected hooks on `BaseAgent`, both read once at
+  start: `mailboxConfig()` for a different capacity or policy, and `createMailbox()` to
+  supply a different `AgentMailbox` altogether — the only place the runtime's implementation
+  is named.
+
+  The mailbox is `BaseAgent`'s. The `Agent` interface declares no message handling, so there
+  is no lane for a drain to route non-dialogue traffic into; an agent implemented directly
+  against `Agent` keeps whatever inbound path it arranges for itself, and `DialogueCapability`
+  still subscribes on its behalf. Nothing changes for such agents — the framework never gave
+  them a recipient subscription.
 
   ```java
   @Override

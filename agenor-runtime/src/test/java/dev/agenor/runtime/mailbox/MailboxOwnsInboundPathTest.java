@@ -1,6 +1,9 @@
 package dev.agenor.runtime.mailbox;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.MessageHandler;
+import dev.agenor.core.mailbox.AgentMailbox;
+import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -176,6 +179,51 @@ class MailboxOwnsInboundPathTest {
         }
     }
 
+    @Test
+    @Timeout(10)
+    @DisplayName("an agent can substitute its own AgentMailbox and the runtime uses it")
+    void createMailboxSubstitutesTheImplementation() {
+        // Given an agent that hands the runtime its own AgentMailbox implementation
+        var agent = new SubstitutedMailboxAgent();
+        agent.setMessageDispatcher(dispatcher);
+        agent.setAgentDirectory(directory);
+        agent.setBehaviorScheduler(scheduler);
+        new AgentAnnotationProcessor(dispatcher, Optional.empty()).processAnnotations(agent);
+        agent.start().join();
+
+        try {
+            // Then that instance is the agent's inbound path — not a DefaultAgentMailbox the
+            // runtime built behind its back
+            assertThat(agent.installed.get()).isNotNull();
+            assertThat(agent.mailbox()).containsSame(agent.installed.get());
+
+            // When traffic for both lanes arrives
+            dispatcher.sendTo(Message.builder()
+                    .topic("task.process")
+                    .senderId("coordinator")
+                    .receiverId("substituted-agent")
+                    .content("do work")
+                    .build());
+            dispatcher.sendTo(DialogueMessage.builder()
+                    .conversationId("conv-3")
+                    .senderId("coordinator")
+                    .receiverId("substituted-agent")
+                    .performative(Performative.REQUEST)
+                    .content("ask something")
+                    .build()
+                    .toMessage());
+
+            // Then it passed through the substitute, and both lanes still work
+            awaitUntil(() -> agent.annotated.get() != null && agent.dialogueMessages.get() == 1);
+            assertThat(agent.installed.get().offered.get()).isEqualTo(2);
+            assertThat(agent.annotated.get().content()).isEqualTo("do work");
+            assertThat(agent.dialogueMessages.get()).isEqualTo(1);
+            assertThat(agent.fallbacks.get()).isZero();
+        } finally {
+            agent.stop().join();
+        }
+    }
+
     /** An agent that receives on both inbound paths — the shape ADR-032 D-1 is about. */
     static class MixedAgent extends BaseAgent {
 
@@ -201,6 +249,90 @@ class MailboxOwnsInboundPathTest {
         @Override
         protected void onDirectMessage(Message message) {
             fallbacks.incrementAndGet();
+        }
+    }
+
+    /**
+     * Supplies its own mailbox through the factory hook, wrapping the runtime's default.
+     *
+     * <p>Declares its own handlers rather than inheriting {@link MixedAgent}'s: the annotation
+     * processor reads {@code getDeclaredMethods()}, so an inherited
+     * {@code @AgenorMessageHandler} is never registered.
+     */
+    static class SubstitutedMailboxAgent extends BaseAgent {
+
+        final DialogueCapability dialogue = new DialogueCapability(this);
+        final AtomicReference<CountingMailbox> installed = new AtomicReference<>();
+        final AtomicReference<Message> annotated = new AtomicReference<>();
+        final AtomicInteger dialogueMessages = new AtomicInteger();
+        final AtomicInteger fallbacks = new AtomicInteger();
+
+        SubstitutedMailboxAgent() {
+            super("substituted-agent", "Substituted Mailbox");
+        }
+
+        @Override
+        protected AgentMailbox createMailbox(MessageHandler pushConsumer) {
+            var box = new CountingMailbox(super.createMailbox(pushConsumer));
+            installed.set(box);
+            return box;
+        }
+
+        @AgenorMessageHandler("task.process")
+        public void handleTask(Message message) {
+            annotated.set(message);
+        }
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage message) {
+            dialogueMessages.incrementAndGet();
+        }
+
+        @Override
+        protected void onDirectMessage(Message message) {
+            fallbacks.incrementAndGet();
+        }
+    }
+
+    /** A decorator over whatever the default is — the shape a user extension would take. */
+    static final class CountingMailbox implements AgentMailbox {
+
+        private final AgentMailbox delegate;
+        final AtomicInteger offered = new AtomicInteger();
+
+        CountingMailbox(AgentMailbox delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean offer(Message message) {
+            offered.incrementAndGet();
+            return delegate.offer(message);
+        }
+
+        @Override
+        public int size() {
+            return delegate.size();
+        }
+
+        @Override
+        public int capacity() {
+            return delegate.capacity();
+        }
+
+        @Override
+        public Subscription registerDialogueConsumer(MessageHandler handler) {
+            return delegate.registerDialogueConsumer(handler);
+        }
+
+        @Override
+        public void start() {
+            delegate.start();
+        }
+
+        @Override
+        public void stop() {
+            delegate.stop();
         }
     }
 }
