@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Every `BaseAgent` now has a mailbox, and it owns the agent's inbound path (ADR-032).**
+  An agent that also spoke the dialogue protocol subscribed to its own recipient channel
+  **twice** — once from `BaseAgent.autoSubscribeDirectMessages()`, once from
+  `DialogueCapability.doInitialize()` — and what happened next depended on which dispatcher
+  was wired in. `DefaultAgentMailbox` registers the agent's single persistent
+  `subscribeRecipient` and drains it with one consumer: a message carrying a known
+  performative goes to `@DialogueHandler`, everything else to `@AgenorMessageHandler` /
+  `onDirectMessage()`. Routing happens once, in one place, and identically on every transport.
+
+  `AgentMailbox`, `MailboxConfig` and `OverflowPolicy` live in `agenor-core`;
+  `DefaultAgentMailbox` in `agenor-runtime`. No new SPI and no runtime accessor (ADR-027 C1
+  and C2): the mailbox is reached through the agent that owns it, via
+  `BaseAgent.mailbox()`. Override `BaseAgent.mailboxConfig()` to give one agent a different
+  capacity or policy; it is read once, at start.
+
+  ```java
+  @Override
+  protected MailboxConfig mailboxConfig() {
+      return new MailboxConfig(4096, OverflowPolicy.REJECT);
+  }
+  ```
+
+  Transient subscribers are unaffected: correlated request/reply helpers such as
+  `AgenorA2AAdapter.sendInternal()` still subscribe for the life of one request. The
+  invariant is one *persistent* subscription per agent, not one subscription ever.
+
+  See [ADR-032](docs/adr/ADR-032-agent-mailbox-single-inbound-path.md) and
+  [the mailbox guide](docs/mailbox.md).
+
+### Changed
+
+- **BREAKING — a dialogue message no longer reaches `onDirectMessage()`.** ADR-029 D3
+  accepted that fallthrough because `BaseAgent` "has no way to know whether dialogue is
+  active without a coupling that does not exist today". The drain creates that knowledge in a
+  legitimate place — it already sees both consumers — so each message is now routed to
+  exactly one of them. ADR-029 is amended **in scope**: its D1, D2 and D4–D6 are untouched and
+  its Status stays `Accepted`.
+
+  *Migration*: an agent that overrides `onDirectMessage()` and watches its own dialogue
+  traffic there will stop seeing it. Move that logic to a `@DialogueHandler`. Agents that
+  filtered with `isDialogueMessage()` inside `onDirectMessage()` can simply drop the filter
+  and the branch it guarded.
+
+- **Inbound messages are now claimed in arrival order.** In-memory delivery started a virtual
+  thread per handler per message with no sequencing, so two messages sent a microsecond apart
+  could be processed in either order, while the Redis transport was already FIFO per node —
+  the same program behaved differently depending on configuration. The drain claims one
+  message at a time.
+
+  The guarantee is **claim order, not completion order**: handler invocation is still
+  dispatched onto a virtual thread, so handlers may overlap and finish out of order. Agents
+  must keep guarding shared state. Running handlers on the drain thread would give full
+  ordering at the cost of letting one slow handler stall its agent's whole queue.
+
+- **A new failure mode: mailbox overflow.** The receive side is bounded for the first time —
+  1024 messages by default, dropping the oldest with a WARN. An agent whose producers outrun
+  it now drops messages visibly where it previously accumulated an unbounded backlog. Set
+  `OverflowPolicy.REJECT` to fail the sender with `MailboxOverflowException` instead, or
+  raise `capacity`. Blocking the producer is deliberately not offered: it may be a transport
+  consumer loop serving an entire node.
+
 ## [0.26.0] - 2026-08-23
 
 ### Added

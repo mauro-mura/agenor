@@ -81,6 +81,7 @@ nav:
       - Human-In-The-Loop: behaviors/hitl.md
   - Coordination:
     - Messaging Guide: messaging.md
+    - Agent Mailbox: mailbox.md
     - Agent Directory: directory.md
     - Distributed Quick Start: distributed-quick-start.md
     - Message Filtering: message-filtering.md

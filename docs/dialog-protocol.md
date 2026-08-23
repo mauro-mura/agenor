@@ -102,9 +102,25 @@ public class MyAgent extends BaseAgent {
 > `Agent` directly (or one that overrides `start()`/`stop()` wholesale instead of
 > `onStart()`/`onStop()`) must do the wiring itself: call `dialogue.initialize()` from
 > its `start()` and `dialogue.shutdown()` from its `stop()`. Skipping `shutdown()`
-> leaks the agent's recipient subscription and its retention sweep thread for the
-> lifetime of the process. Calling `initialize()` twice is harmless — it is idempotent,
-> so mixing automatic and manual wiring is safe.
+> leaks its inbound registration and its retention sweep thread for the lifetime of the
+> process. Calling `initialize()` twice is harmless — it is idempotent, so mixing
+> automatic and manual wiring is safe.
+
+### How dialogue receives messages
+
+Since **0.27.0**, dialogue does not hold a subscription of its own on a `BaseAgent`. The
+agent's [mailbox](mailbox.md) owns the single subscription to its recipient channel and
+routes each message to exactly one consumer: anything carrying a known performative goes to
+dialogue, everything else goes to the direct-message path. `initialize()` registers that
+consumer and `shutdown()` withdraws it.
+
+Two consequences worth knowing:
+
+- **A dialogue message no longer also reaches `onDirectMessage()`.** ADR-029 D3 allowed that
+  fallthrough; ADR-032 amends it in scope. An agent that watched its own dialogue traffic from
+  `onDirectMessage()` must use a `@DialogueHandler` instead.
+- **An agent that is not a `BaseAgent` has no mailbox**, so dialogue subscribes to the
+  recipient channel directly, exactly as before, and its own classifier guard still applies.
 
 ### Handlers on a base class
 
