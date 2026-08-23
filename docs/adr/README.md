@@ -37,7 +37,7 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-029](ADR-029-protocol-validation-and-dialogue-message-classification.md) | Protocol Validation Enforcement and Dialogue Message Classification | Accepted | 2026-08-15 |
 | [ADR-030](ADR-030-message-content-typing-across-transports.md)      | `Message.content` Typing Across Transports | Accepted | 2026-08-16 |
 | [ADR-031](ADR-031-conversation-state-durability.md)                 | Conversation-State Durability            | Accepted | 2026-08-16 |
-| [ADR-032](ADR-032-agent-mailbox-single-inbound-path.md)             | Agent Mailbox — a Single Inbound Path per Agent | Proposed | 2026-08-18 |
+| [ADR-032](ADR-032-agent-mailbox-single-inbound-path.md)             | Agent Mailbox — a Single Inbound Path per Agent | Accepted | 2026-08-23 |
 
 > **Rows without a link are claimed numbers, not written documents.** They are listed so that two
 > parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide. There are

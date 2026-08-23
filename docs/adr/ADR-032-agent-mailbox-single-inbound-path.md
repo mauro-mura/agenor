@@ -1,7 +1,8 @@
 # ADR-032: Agent Mailbox — a Single Inbound Path per Agent
 
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2026-08-18
+**Last Modified**: 2026-08-23 (accepted; see the scope note in D-1)
 **Authors**: Project Team
 **References**: ADR-029 (Protocol Validation and Dialogue Message Classification),
 ADR-027 (Minimal Runtime Core — LLM / Generic-MAS Module Split), ADR-021 (Redis
@@ -15,7 +16,9 @@ Architecture)
 
 An agent's inbound message path has no owner. Two components subscribe to the same
 recipient channel independently, and what happens next depends on which dispatcher is
-wired in. Three consequences follow, and the third is a live defect.
+wired in. Three consequences follow. The second of them was a live defect in shipped
+code; it was fixed directly and released in 0.26.0, but the fix left the structure that
+produced it standing — see §2.
 
 ### 1. Every agent registers two rival subscriptions
 
@@ -125,6 +128,24 @@ this is that router. No new classification logic is introduced.
 
 The mailbox is not optional and has no modes. An agent without a `DialogueCapability`
 simply has a drain whose rule 1 never matches.
+
+#### Scope note (2026-08-23, at acceptance)
+
+"The only subscription" means the only **persistent, framework-owned** one. Reconnaissance
+before implementation found two further call sites that subscribe to a live agent's own
+recipient channel for the duration of a single request and then unsubscribe:
+
+- `AgenorA2AAdapter.sendInternal()` subscribes to `replyTo`, which for an internal agent is
+  that agent's own id, to await the final reply (ADR-026).
+- `OrderOrchestratorAgent.requestReply()` in the examples subscribes to `getAgentId()` and
+  correlates on `correlationId`.
+
+Both are correlated request/reply helpers, not selective receive, and both keep working:
+the dispatchers fan out to every registered handler per recipient id. They are therefore
+**not** required to move behind the mailbox. Routing them through the drain would mean
+giving the mailbox a correlation-aware claim API — the pull API this ADR rejects on
+evidence — so the invariant an implementation must hold, and a test must assert, is *one
+persistent subscription per agent after start*, not *one subscription ever*.
 
 ### D-2 — Bounded, with an explicit overflow policy
 
