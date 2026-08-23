@@ -309,6 +309,49 @@ class AgentAnnotationProcessorTest {
         assertThat(agent.handledBy).isEqualTo("subclass");
     }
 
+    @Test
+    @DisplayName("Should register an @AgenorMessageHandler declared as an interface default method")
+    void shouldRegisterHandlerFromInterfaceDefaultMethod() {
+        // Given an agent whose handler comes from an interface it implements
+        InterfaceImplementingAgent agent = spy(new InterfaceImplementingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then
+        verify(topicSubscriber).subscribeTopic(eq("interface.topic"), any(MessageHandler.class));
+    }
+
+    @Test
+    @DisplayName("Should register a @Behavior declared as an interface default method")
+    void shouldRegisterBehaviorFromInterfaceDefaultMethod() {
+        // Given
+        InterfaceImplementingAgent agent = spy(new InterfaceImplementingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then
+        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
+    }
+
+    @Test
+    @DisplayName("A class declaration wins over the interface default method it overrides")
+    void classDeclarationWinsOverInterfaceDefault() {
+        // Given an agent that overrides the interface's default handler and re-annotates it
+        InterfaceOverridingAgent agent = spy(new InterfaceOverridingAgent());
+
+        // When
+        processor.processAnnotations(agent);
+
+        // Then one subscription, and it is the class's implementation that runs — the same
+        // most-derived-declaration rule that governs a subclass override
+        ArgumentCaptor<MessageHandler> captor = ArgumentCaptor.forClass(MessageHandler.class);
+        verify(topicSubscriber, times(1)).subscribeTopic(eq("interface.topic"), captor.capture());
+        captor.getValue().handle(Message.builder().topic("interface.topic").content("x").build()).join();
+        assertThat(agent.handledBy).isEqualTo("class");
+    }
+
     // =========================================================================
     // ERROR HANDLING TESTS
     // =========================================================================
@@ -546,6 +589,56 @@ class AgentAnnotationProcessorTest {
         @AgenorMessageHandler("inherited.topic")
         public void handleInherited(Message msg) {
             handledBy = "subclass";
+        }
+    }
+
+    /** Carries both annotations on default methods — shared behaviour without a base class. */
+    interface AnnotatedCapability {
+
+        void record(String who);
+
+        @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
+        default void interfaceBehaviour() {
+            // Test method
+        }
+
+        @AgenorMessageHandler("interface.topic")
+        default void handleFromInterface(Message msg) {
+            record("interface");
+        }
+    }
+
+    /** Takes both from the interface, declaring neither itself. */
+    static class InterfaceImplementingAgent extends BaseAgent implements AnnotatedCapability {
+        String handledBy = "none";
+
+        public InterfaceImplementingAgent() {
+            super("interface-agent", "Interface Agent");
+        }
+
+        @Override
+        public void record(String who) {
+            handledBy = who;
+        }
+    }
+
+    /** Overrides the interface's default handler and re-annotates it. */
+    static class InterfaceOverridingAgent extends BaseAgent implements AnnotatedCapability {
+        String handledBy = "none";
+
+        public InterfaceOverridingAgent() {
+            super("interface-overriding-agent", "Interface Overriding Agent");
+        }
+
+        @Override
+        public void record(String who) {
+            handledBy = who;
+        }
+
+        @Override
+        @AgenorMessageHandler("interface.topic")
+        public void handleFromInterface(Message msg) {
+            handledBy = "class";
         }
     }
 }

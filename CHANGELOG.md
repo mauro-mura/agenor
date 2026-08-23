@@ -80,22 +80,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`@Behavior` and `@AgenorMessageHandler` declared on a base class were silently ignored.**
+- **Annotated methods inherited from a base class or an interface were silently ignored.**
   `AgentAnnotationProcessor` scanned with `getDeclaredMethods()`, which stops at the class
-  itself, so an agent inheriting an annotated method from an abstract base got no behaviour and
-  no handler registered — with no warning, no error, and an agent that simply never receives
-  anything. Putting shared handlers on a base agent is the natural way to write a family of
-  agents, and it did not work.
+  itself, so an agent inheriting a `@Behavior` or an `@AgenorMessageHandler` from an abstract
+  base got neither registered — with no warning, no error, and an agent that simply never
+  receives anything. Putting shared handlers on a base agent is the natural way to write a
+  family of agents, and it did not work.
 
   This is the defect 0.26.0 fixed for `@DialogueHandler`; the other two annotations still had
   it. The hierarchy walk that fix introduced is now extracted to
-  `dev.agenor.runtime.support.MethodHierarchy` and used by both, so the rule lives in one
-  place: the superclass chain is walked, each method is taken at its most-derived declaration,
-  and synthetic and bridge methods are skipped. An override is registered once and dispatch
-  stays virtual, so the subclass's version runs.
+  `dev.agenor.runtime.support.MethodHierarchy` and used by both scanners, so the rule lives in
+  one place — and it now covers **interface `default` methods** as well, which the original
+  fix did not: a capability interface carrying shared handlers works for `@DialogueHandler`,
+  `@Behavior` and `@AgenorMessageHandler` alike.
 
-  As before, and as Java requires — method annotations are not inherited — an override must
-  carry the annotation itself to be registered.
+  The order is classes first, most-derived first, then interfaces, most-derived first, with
+  each method taken once at the first declaration found and synthetic and bridge methods
+  skipped. So a class declaration wins over an interface default it overrides, a subclass
+  override wins over the method it overrides, nothing is registered twice, and dispatch stays
+  virtual — even a base-class or interface `Method` runs the most-derived implementation.
+
+  One rule follows from that, and Java rather than Agenor imposes it: **the most-derived
+  declaration decides**. Method annotations are not inherited, so overriding an annotated
+  method without re-annotating it removes it from the scan's view, whether it came from a base
+  class or an interface. Only `default` methods are taken from interfaces: an abstract one has
+  no body, and its implementation is seen first anyway.
 
 ## [0.26.0] - 2026-08-23
 

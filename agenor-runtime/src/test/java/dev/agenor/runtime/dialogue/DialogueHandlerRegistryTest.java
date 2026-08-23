@@ -159,6 +159,24 @@ class DialogueHandlerRegistryTest {
     }
 
     @Test
+    void shouldRegisterAHandlerDeclaredAsAnInterfaceDefaultMethod() {
+        // Given a handler that comes from an interface rather than a base class
+        var handler = new InterfaceWorker();
+        registry.scan(handler);
+
+        // When
+        registry.dispatch(DialogueMessage.builder()
+            .senderId("sender")
+            .performative(Performative.REQUEST)
+            .content("task")
+            .build());
+
+        // Then it fired: the scan follows interfaces, not only the superclass chain
+        assertThat(registry.size()).isEqualTo(1);
+        assertThat(handler.defaultCalls.get()).isEqualTo(1);
+    }
+
+    @Test
     void shouldNotDoubleRegisterWhenScannedTwice() {
         var handler = new TestHandler();
         registry.scan(handler);
@@ -193,6 +211,26 @@ class DialogueHandlerRegistryTest {
         @DialogueHandler(performatives = Performative.REQUEST)
         public void handleRequest(DialogueMessage msg) {
             overrideCalls.incrementAndGet();
+        }
+    }
+
+    // Shared handler on an interface - the other natural way to share one
+    interface WorkerCapability {
+
+        void countDefaultCall();
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        default void handleRequest(DialogueMessage msg) {
+            countDefaultCall();
+        }
+    }
+
+    static class InterfaceWorker implements WorkerCapability {
+        final AtomicInteger defaultCalls = new AtomicInteger();
+
+        @Override
+        public void countDefaultCall() {
+            defaultCalls.incrementAndGet();
         }
     }
 
