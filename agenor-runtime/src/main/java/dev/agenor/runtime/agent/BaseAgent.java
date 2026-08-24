@@ -513,9 +513,12 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
             box.start();
             mailbox = box;
 
+            // box::offer is handed over unwrapped on purpose: its future completes when the
+            // handler completes, so a transport that acknowledges on completion acknowledges
+            // after processing rather than at enqueue (ADR-033 D-1).
             directMessageSubscription = messageDispatcher.subscribeRecipient(
                     getAgentId(),
-                    MessageHandler.sync(box::offer)
+                    box::offer
             );
 
             log.debug("Agent '{}' auto-subscribed for direct messages", agentId);
@@ -618,13 +621,28 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
 
         List<MessageHandler> handlers = message.topic() == null ? null : directTopicHandlers.get(message.topic());
         if (handlers != null && !handlers.isEmpty()) {
+            // Every handler runs even when an earlier one fails, but a failure is not
+            // swallowed: it is rethrown so the mailbox can fail this message's outcome and the
+            // transport can decline to acknowledge it (ADR-033 D-5). Logging and returning
+            // normally, as this did before, was the second place the delivery chain ended.
+            RuntimeException failure = null;
             for (var handler : handlers) {
                 try {
                     handler.handle(message).join();
                 } catch (Exception e) {
                     log.error("Error executing @AgenorMessageHandler for topic '{}' on direct message to '{}': {}",
                             message.topic(), agentId, e.getMessage(), e);
+                    if (failure == null) {
+                        failure = new IllegalStateException(
+                                "@AgenorMessageHandler failed for topic '" + message.topic()
+                                        + "' on agent '" + agentId + "'", e);
+                    } else {
+                        failure.addSuppressed(e);
+                    }
                 }
+            }
+            if (failure != null) {
+                throw failure;
             }
             return;
         }

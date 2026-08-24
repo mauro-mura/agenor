@@ -4,6 +4,8 @@ import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.Subscription;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * The single inbound path of one agent.
  *
@@ -30,20 +32,33 @@ import dev.agenor.core.messaging.Subscription;
 public interface AgentMailbox {
 
     /**
-     * Hands a message to this mailbox.
+     * Hands a message to this mailbox, and reports what became of it.
      *
-     * <p>When the mailbox is full, the configured {@link OverflowPolicy} decides the
-     * outcome. This method does not block.
+     * <p>The returned future completes when the <em>handler</em> for this message completes,
+     * and completes exceptionally when that handler throws. It is not a queueing
+     * acknowledgement: a transport that acknowledges on completion therefore acknowledges
+     * after processing, which is what keeps its redelivery and dead-letter chain intact
+     * through the mailbox (ADR-033 D-1).
+     *
+     * <p>A message dropped under {@link OverflowPolicy#DROP_OLDEST} or
+     * {@link OverflowPolicy#DROP_NEWEST} completes exceptionally with
+     * {@link dev.agenor.core.exceptions.MailboxOverflowException}, so a dropped message is
+     * one the transport has not acknowledged rather than one that vanished with a log line.
+     * Under {@link OverflowPolicy#DROP_OLDEST} that applies to the evicted message too.
+     *
+     * <p>This method does not block on the handler. It may block briefly while the mailbox is
+     * saturated, which is the backpressure described in ADR-033 D-2.
      *
      * @param message the message to enqueue; must not be {@code null}
-     * @return {@code true} if the message was accepted, {@code false} if it was dropped
+     * @return a future completing when the message has been handled, or completing
+     *         exceptionally if the handler failed or the message was dropped
      * @throws NullPointerException                                  if {@code message} is
      *                                                               {@code null}
      * @throws dev.agenor.core.exceptions.MailboxOverflowException   if the mailbox is full
      *                                                               and the policy is
      *                                                               {@link OverflowPolicy#REJECT}
      */
-    boolean offer(Message message);
+    CompletableFuture<Void> offer(Message message);
 
     /**
      * Returns the number of messages currently queued.
@@ -88,8 +103,11 @@ public interface AgentMailbox {
     /**
      * Closes the mailbox, discarding anything still queued.
      *
-     * <p>Returns once the mailbox has stopped claiming, so a stopped agent leaves nothing
-     * running behind it. Idempotent: stopping an already-stopped mailbox does nothing.
+     * <p>Waits for handlers already in flight to finish before discarding what is left, so a
+     * stopped agent leaves nothing running behind it and nothing half-processed. Anything
+     * still queued is completed exceptionally, so a transport that acknowledges on completion
+     * does not acknowledge it (ADR-033 D-3). Idempotent: stopping an already-stopped mailbox
+     * does nothing.
      */
     void stop();
 }

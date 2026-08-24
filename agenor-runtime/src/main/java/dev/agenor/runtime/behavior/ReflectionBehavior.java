@@ -49,7 +49,14 @@ import java.util.function.Supplier;
  * @see ReflectionConfig
  *
  * @since 0.12.0
+ *
+ * @deprecated since 0.27.0, for removal in 0.29.0. No code names this class except
+ *             {@code ReflectionExample}, which exists to demonstrate it — six user-facing
+ *             pages describe a behaviour nobody builds. Compose the critique loop in an
+ *             agent method with {@link ReflectionStrategy} directly, which is where the
+ *             judgement actually lives.
  */
+@Deprecated(since = "0.27.0", forRemoval = true)
 public class ReflectionBehavior extends OneShotBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(ReflectionBehavior.class);

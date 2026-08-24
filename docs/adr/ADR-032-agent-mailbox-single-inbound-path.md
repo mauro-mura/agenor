@@ -388,8 +388,8 @@ Three assertions carry the substance of this ADR and must exist:
 Plus the ADR-029 amendment: a dialogue message reaches `@DialogueHandler` and **not**
 `onDirectMessage()`.
 
-Implementation is sequenced in `work-plan-g1-agent-mailbox-20260818.md`, whose tasks are
-gated on this ADR being `Accepted`.
+Implemented in 0.27.0. Its work plan was deleted once this ADR became the record; the
+delivery semantics it left implicit are settled in ADR-033.
 
 ## Related ADRs
 

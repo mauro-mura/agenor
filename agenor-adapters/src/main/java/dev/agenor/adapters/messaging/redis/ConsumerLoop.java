@@ -5,6 +5,7 @@ import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import io.lettuce.core.Consumer;
 import io.lettuce.core.StreamMessage;
+import io.lettuce.core.XAutoClaimArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.slf4j.Logger;
@@ -104,11 +105,23 @@ final class ConsumerLoop {
         var offset   = XReadArgs.StreamOffset.<String>lastConsumed(streamKey);
         var cmds     = conn.sync();
 
+        long lastClaimAt = System.currentTimeMillis();
+
         while (running.get() && !Thread.currentThread().isInterrupted()) {
             try {
                 var messages = cmds.xreadgroup(consumer, readArgs, offset);
                 if (messages != null) {
                     for (var m : messages) processMessage(m);
+                }
+
+                // XREADGROUP with lastConsumed only ever returns entries nobody has read yet.
+                // Anything left unacknowledged sits in the Pending Entries List and would stay
+                // there forever without this pass, which is what made redelivery and the DLQ
+                // unreachable no matter what a handler did.
+                long now = System.currentTimeMillis();
+                if (now - lastClaimAt >= config.pendingEntriesTimeoutMs()) {
+                    lastClaimAt = now;
+                    reclaimPending(cmds);
                 }
             } catch (Exception e) {
                 if (!running.get() || Thread.currentThread().isInterrupted()) break;
@@ -122,6 +135,36 @@ final class ConsumerLoop {
             }
         }
         log.debug("Consumer loop stopped for stream '{}'", streamKey);
+    }
+
+    /**
+     * Reclaims entries this group left unacknowledged for longer than
+     * {@code pendingEntriesTimeoutMs} and puts them back through {@link #processMessage}, which
+     * is where the delivery-attempt count and the dead-letter hop live.
+     *
+     * <p>Reclaiming from {@code 0-0} each pass covers entries abandoned by a consumer that died
+     * as well as ones this consumer failed to handle, so a restarted node picks up its own
+     * pending work.
+     */
+    private void reclaimPending(io.lettuce.core.api.sync.RedisCommands<String, String> cmds) {
+        try {
+            var args = new XAutoClaimArgs<String>()
+                    .consumer(consumer)
+                    .minIdleTime(Duration.ofMillis(config.pendingEntriesTimeoutMs()))
+                    .startId("0-0")
+                    .count(10);
+            var claimed = cmds.xautoclaim(streamKey, args);
+            if (claimed == null || claimed.getMessages().isEmpty()) {
+                return;
+            }
+            log.debug("Reclaimed {} pending entr(ies) on '{}' idle longer than {}ms",
+                    claimed.getMessages().size(), streamKey, config.pendingEntriesTimeoutMs());
+            for (var m : claimed.getMessages()) {
+                processMessage(m);
+            }
+        } catch (Exception e) {
+            log.warn("Pending-entry reclaim failed for '{}': {}", streamKey, e.getMessage());
+        }
     }
 
     // package-private for testing

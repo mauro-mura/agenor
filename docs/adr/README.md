@@ -38,6 +38,7 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-030](ADR-030-message-content-typing-across-transports.md)      | `Message.content` Typing Across Transports | Accepted | 2026-08-16 |
 | [ADR-031](ADR-031-conversation-state-durability.md)                 | Conversation-State Durability            | Accepted | 2026-08-16 |
 | [ADR-032](ADR-032-agent-mailbox-single-inbound-path.md)             | Agent Mailbox — a Single Inbound Path per Agent | Accepted | 2026-08-23 |
+| [ADR-033](ADR-033-mailbox-delivery-semantics.md)                    | Mailbox Delivery Semantics — the Mailbox Carries the Chain | Accepted | 2026-08-24 |
 
 > **Rows without a link are claimed numbers, not written documents.** They are listed so that two
 > parallel efforts cannot both pick "the next free number in `docs/adr/`" and collide. There are
@@ -198,6 +199,7 @@ graph TD
 - **ADR-030** (`Message.content` Typing Across Transports) amends **ADR-005** with a scoped note on receiving-side typing; the defect it fixes manifests only on ADR-021's transport, and the silent break it removes is the one ADR-004 promises cannot happen
 - **ADR-031** (Conversation-State Durability) fills the dialogue rung ADR-004's ladder was missing — deliberately at the first step — and bounds ADR-009's model; it depends on ADR-030, because affirming cross-runtime dialogue is only honest once non-`String` payloads survive the transport
 - **ADR-032** (Agent Mailbox — a Single Inbound Path per Agent) gives the inbound path an owner: one mailbox holds the only recipient subscription per agent, so `BaseAgent` dispatch and ADR-009's `DialogueCapability` become consumers of one drain rather than rival subscribers. It removes the double subscription **ADR-029** identified but left in place, reuses that ADR's pure classifier as its routing predicate, and amends its D3 in scope. It defers delivery semantics to **ADR-021**'s at-least-once transport and discharges **ADR-027**'s C1 and C2 conventions by adding neither a runtime accessor nor a sixth SPI. The claim ordering, backpressure and receive-side interception point it establishes are the **ADR-004** promise that dispatcher-dependent behaviour was breaking. It deliberately adds no pull API — see its *Alternatives considered*
+- **ADR-033** (Mailbox Delivery Semantics) closes what **ADR-032** left implicit. ADR-032's D-3 placed delivery semantics out of scope on the reading that the mailbox added none; what it did was *terminate* the at-least-once chain **ADR-021** provides, by acknowledging at enqueue. The mailbox now reports the outcome of processing, so a failing handler is redelivered and dead-lettered as `docs/adapters/redis.md` always promised. It bounds concurrent handlers — the backpressure ADR-032 claimed but did not deliver, since its queue bound sat in front of an unbounded thread spawn — without reintroducing the head-of-line blocking ADR-032 refused. It restores the **ADR-004** promise that moving to a durable backend needs no code change, which option (b), best-effort past the mailbox boundary, would have quietly broken
 
 ---
 

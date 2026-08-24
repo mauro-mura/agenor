@@ -29,6 +29,7 @@ Start here. Every example fits in a single file and introduces one concept.
 
 | Example | Main class | Concept |
 |---------|-----------|---------|
+| `QuickStartExample` | `dev.agenor.examples.QuickStartExample` | **Start here.** One agent asks, another answers — six concepts |
 | `PingPongExample` | `dev.agenor.examples.PingPongExample` | Two agents exchanging messages |
 | `WeatherStationExample` | `dev.agenor.examples.WeatherStationExample` | Cyclic behavior + topic pub/sub |
 | `TaskManagerExample` | `dev.agenor.examples.TaskManagerExample` | Agent state + task lifecycle |

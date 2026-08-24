@@ -72,7 +72,14 @@ import dev.agenor.runtime.behavior.BaseBehavior;
  * @param <T> the type of result produced by the protected action
  *
  * @since 0.2.0
+ *
+ * @deprecated since 0.27.0, for removal in 0.29.0. No code names this class except
+ *             {@code CircuitBreakerExample}, which exists to demonstrate it. Circuit
+ *             breaking is a resilience pattern, not an agent concept, and Resilience4j
+ *             does it better; wrap the call inside your behaviour instead of extending a
+ *             framework class for it.
  */
+@Deprecated(since = "0.27.0", forRemoval = true)
 public abstract class CircuitBreakerBehavior<T> extends BaseBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(CircuitBreakerBehavior.class);

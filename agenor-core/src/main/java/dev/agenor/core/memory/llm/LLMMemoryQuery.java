@@ -56,7 +56,13 @@ import java.util.Objects;
  * @param formatAsMessages whether to format results as LLM messages
  *
  * @since 0.6.0
+ *
+ * @deprecated since 0.27.0, for removal in 0.29.0. Nothing references this record — not
+ *             framework code, not an example, not a test. It is the only type in the API
+ *             census with a zero in every column. Build the query arguments at the call
+ *             site instead; {@code LLMMemoryManager} never accepted this type.
  */
+@Deprecated(since = "0.27.0", forRemoval = true)
 public record LLMMemoryQuery(
     String query,
     int maxTokens,

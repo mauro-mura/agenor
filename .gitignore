@@ -80,5 +80,9 @@ $RECYCLE.BIN/
 CLAUDE.md
 .claude/
 
+## Working notes — direction, open-finding registers, generated reports.
+## Addressed to the maintainer, not to the public; see working/README.md.
+working/
+
 ## Graphify
 graphify-out/

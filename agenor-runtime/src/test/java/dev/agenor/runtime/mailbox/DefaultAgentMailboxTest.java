@@ -101,14 +101,16 @@ class DefaultAgentMailboxTest {
         mailbox = new DefaultAgentMailbox("agent-a",
                 new MailboxConfig(2, OverflowPolicy.DROP_OLDEST),
                 MessageHandler.sync(received::add));
-        mailbox.offer(plain("first"));
+        var first = mailbox.offer(plain("first"));
         mailbox.offer(plain("second"));
 
         // When a third arrives
         var accepted = mailbox.offer(plain("third"));
 
-        // Then it was taken, the oldest was dropped, and the bound held
-        assertThat(accepted).isTrue();
+        // Then it was taken, the oldest was dropped, and the bound held. The dropped message
+        // fails rather than vanishing, so its transport never acknowledges it (ADR-033 D-1).
+        assertThat(accepted).isNotCompletedExceptionally();
+        assertThat(first).isCompletedExceptionally();
         assertThat(mailbox.size()).isEqualTo(2);
 
         mailbox.start();
@@ -131,8 +133,8 @@ class DefaultAgentMailboxTest {
         // When
         var accepted = mailbox.offer(plain("third"));
 
-        // Then
-        assertThat(accepted).isFalse();
+        // Then the refused message fails, so its transport does not acknowledge it
+        assertThat(accepted).isCompletedExceptionally();
         assertThat(mailbox.size()).isEqualTo(2);
 
         mailbox.start();

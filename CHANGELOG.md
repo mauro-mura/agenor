@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A first-agent path that fits in fifteen minutes.** `QuickStartExample` plus
+  [Your First Agent](docs/first-agent.md): one agent asks, another answers, and the page states
+  the number of concepts it costs — six — so that the count can be defended rather than
+  assumed. `docs/getting-started.md` now sends a newcomer there instead of to a
+  production-style FSM orchestration example.
+
+- **`tools/api-census.sh`** — counts, for every public type in the runtime modules, who names it
+  in code and who documents it, and separates a *use* from a *demonstration*: an example whose
+  only reason to exist is to show an API off is not evidence anyone needs it. It reads the tree
+  only — no build, no network — and writes its report to stdout.
+
 - **Every `BaseAgent` now has a mailbox, and it owns the agent's inbound path (ADR-032).**
   An agent that also spoke the dialogue protocol subscribed to its own recipient channel
   **twice** — once from `BaseAgent.autoSubscribeDirectMessages()`, once from
@@ -48,6 +59,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A handler that throws is now retried instead of being swallowed (ADR-033).** ADR-032 gave
+  the mailbox the agent's inbound path and placed delivery semantics out of scope, on the
+  reading that the mailbox added none. What it did was *end* the chain the Redis adapter
+  provides and documents: `BaseAgent` handed the consumer loop
+  `MessageHandler.sync(box::offer)`, which returns as soon as the message is queued, so every
+  message was acknowledged at enqueue and a failing handler ran on a detached thread where its
+  exception was logged and forgotten. With the default `DROP_OLDEST` policy, an overflowing
+  mailbox acknowledged and discarded messages with only a warning.
+
+  `AgentMailbox.offer` now returns `CompletableFuture<Void>` completing when the *handler*
+  completes, so the transport acknowledges after processing. A failing handler is redelivered
+  and reaches the dead-letter stream; so does a message dropped by overflow. Two further
+  changes come with it: concurrent handlers per agent are bounded
+  (`MailboxConfig.maxConcurrentHandlers`, default 64) — which is the backpressure the queue
+  bound alone never provided, since it sat in front of an unbounded thread spawn — and `stop()`
+  waits for handlers already running before discarding what is left.
+
+  `BaseAgent.handleDirectMessage` also stopped swallowing `@AgenorMessageHandler` failures; it
+  was the second place the chain ended, and without it the headline case stayed broken.
+
+  *Migration*: **make handlers idempotent** — a failing one will see the same message again. An
+  agent that wants a failure contained should catch it in the handler. `AgentMailbox` and
+  `MailboxConfig` were introduced in this same unreleased version, so no published API changes.
+
+  See [ADR-033](docs/adr/ADR-033-mailbox-delivery-semantics.md).
+
 - **BREAKING — a dialogue message no longer reaches `onDirectMessage()`.** ADR-029 D3
   accepted that fallthrough because `BaseAgent` "has no way to know whether dialogue is
   active without a coupling that does not exist today". The drain creates that knowledge in a
@@ -78,7 +115,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   raise `capacity`. Blocking the producer is deliberately not offered: it may be a transport
   consumer loop serving an entire node.
 
+### Deprecated
+
+- **`ReflectionBehavior`, `CircuitBreakerBehavior`, `PipelineBehavior` and `LLMMemoryQuery`**,
+  for removal in 0.29.0. The API census (`tools/api-census.sh`) found no code naming the three
+  behaviours except the example written to demonstrate each one, while six to eight user-facing
+  pages describe them; `LLMMemoryQuery` is referenced by nothing at all.
+  Circuit breaking is a resilience pattern rather than an agent concept and dedicated libraries
+  do it better; `SequentialBehavior`, which has real callers, already covers ordered stages.
+  Each demonstration example is removed together with the API it demonstrates, in 0.29.0.
+
 ### Fixed
+
+- **Redis redelivery had never worked; `pendingEntriesTimeoutMs` was read by nothing.**
+  `ConsumerLoop` issued `XREADGROUP` with a `lastConsumed` offset and nothing else, which
+  returns only entries nobody has read yet. An unacknowledged entry therefore stayed in the
+  Pending Entries List forever: `XAUTOCLAIM` was called nowhere in the adapter, so
+  `maxDeliveryAttempts` and the dead-letter hop in `processMessage` were unreachable — reaching
+  them requires seeing the same entry twice, and nothing ever delivered an entry twice. The
+  documented failure-mode chain in `docs/adapters/redis.md` described behaviour that did not
+  exist, before ADR-032 as much as after.
+
+  The loop now runs a reclaim pass, no more often than `pendingEntriesTimeoutMs`, issuing
+  `XAUTOCLAIM` from `0-0` with `minIdleTime = pendingEntriesTimeoutMs` and reprocessing what it
+  reclaims. This also delivers the restart recovery the adapter already promised: a node picks
+  up its own pending entries again after a crash.
+
+  Found by writing the integration test for ADR-033 first — repairing only the mailbox would
+  have restored a chain whose far end was missing.
 
 - **Annotated methods inherited from a base class or an interface were silently ignored.**
   `AgentAnnotationProcessor` scanned with `getDeclaredMethods()`, which stops at the class

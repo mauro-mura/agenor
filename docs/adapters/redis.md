@@ -166,7 +166,7 @@ thread-safe double-checked locking). Subsequent registrations share the same loo
 
 | Property | Behaviour |
 |----------|-----------|
-| Guarantee | **At-least-once** — messages are redelivered until `XACK`'d |
+| Guarantee | **At-least-once** — messages are redelivered until `XACK`'d, including into agent handlers (ADR-033) |
 | Durability | Persisted in the Redis stream; survives broker restart with AOF/RDB |
 | Order | Per-stream FIFO within a consumer group |
 | Fan-out | Each subscription receives every message exactly once (within that subscription) |
@@ -182,6 +182,19 @@ If a handler throws or its returned `CompletableFuture` completes exceptionally,
 consumer loop does **not** call `XACK`. The message enters the Pending Entries List (PEL) and
 is redelivered after `pendingEntriesTimeoutMs` (default 30 s) by the same consumer loop
 on the next claim pass.
+
+This chain runs all the way to your agent's code. An `@AgenorMessageHandler` or
+`onDirectMessage()` that throws leaves the entry unacknowledged, so the message is redelivered
+and eventually dead-lettered — the agent's mailbox reports the outcome of *processing*, not of
+queueing (ADR-033). Two consequences worth planning for:
+
+- **Handlers must be idempotent**, since a failing one will see the same message again.
+- **A message dropped by mailbox overflow is also unacknowledged**, so it is redelivered and
+  ends up in the DLQ rather than disappearing. An agent whose producers outrun it shows up
+  here. See [Agent Mailbox](../mailbox.md#4-an-overloaded-agent-drops-messages-visibly).
+
+An agent that wants a handler failure contained rather than retried should catch it inside the
+handler.
 
 ### Maximum delivery attempts
 
@@ -203,8 +216,13 @@ There is no built-in replay API; the DLQ is intentionally kept simple.
 
 ### Consumer loop crash / JVM restart
 
-Pending entries older than `pendingEntriesTimeoutMs` are reclaimed by the next consumer
-loop startup. A restarted JVM will find its own PEL and retry delivery automatically.
+Each consumer loop runs a reclaim pass — `XAUTOCLAIM` from `0-0` with
+`minIdleTime = pendingEntriesTimeoutMs` — no more often than that same interval. Entries idle
+for longer, whether this consumer failed to handle them or another consumer died holding them,
+are claimed and reprocessed. A restarted JVM picks up its own pending entries automatically.
+
+Delivery attempts are counted per consumer-loop instance, in memory. A restart resets the
+count, so an entry that had already failed twice starts again from one.
 
 ### Network partition
 

@@ -58,6 +58,7 @@ nav:
   - Home: index.md
   - Guides:
     - Getting Started: getting-started.md
+    - Your First Agent: first-agent.md
     - Architecture: architecture.md
     - Configuration: configuration.md
     - Agent Development: agent-development.md

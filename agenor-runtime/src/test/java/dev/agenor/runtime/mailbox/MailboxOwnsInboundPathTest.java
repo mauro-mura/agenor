@@ -305,7 +305,7 @@ class MailboxOwnsInboundPathTest {
         }
 
         @Override
-        public boolean offer(Message message) {
+        public java.util.concurrent.CompletableFuture<Void> offer(Message message) {
             offered.incrementAndGet();
             return delegate.offer(message);
         }

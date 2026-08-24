@@ -52,7 +52,14 @@ import dev.agenor.runtime.behavior.BaseBehavior;
  *
  * @param <I> The input type for the pipeline
  * @param <O> The output type from the pipeline
+ *
+ * @deprecated since 0.27.0, for removal in 0.29.0. No code names this class except
+ *             {@code PipelineExample}, which exists to demonstrate it. {@link
+ *             dev.agenor.runtime.behavior.composite.SequentialBehavior} covers ordered
+ *             stages and has real callers; two ways to sequence work, one of them unused,
+ *             is one too many.
  */
+@Deprecated(since = "0.27.0", forRemoval = true)
 public class PipelineBehavior<I, O> extends BaseBehavior {
 
     private final Class<I> inputType;

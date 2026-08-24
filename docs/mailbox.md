@@ -1,83 +1,70 @@
 # Agent Mailbox
 
-Every `BaseAgent` has a mailbox, introduced in **0.27.0** by
-[ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md). It owns the agent's inbound path:
-one subscription, one queue, one consumer deciding where each message goes.
+Every `BaseAgent` has a mailbox. You never create one, wire one, or call into one — it opens
+when the agent starts and closes when it stops.
 
-You do not create or wire a mailbox. It opens when the agent starts and closes when it stops.
-This page explains what it guarantees, because two of those guarantees are narrower than they
-look.
+This page is short on purpose. The mailbox is infrastructure, and infrastructure you have to
+read about has failed at its job. What follows is only the part that reaches your code: four
+things that change what your agent does.
 
-## Who owns the inbound path
+## 1. A dialogue message no longer reaches `onDirectMessage()`
 
-Before 0.27.0, an agent that also spoke the dialogue protocol subscribed to its own recipient
-channel **twice** — once from `BaseAgent`, once from `DialogueCapability` — and what happened
-next depended on which dispatcher was configured. The mailbox dissolves that: it registers the
-agent's single persistent subscription, and both former subscribers become consumers of its
-drain.
+Each message goes to exactly one place: `@DialogueHandler` if it carries a performative,
+`@AgenorMessageHandler` or `onDirectMessage()` otherwise.
 
-```
-subscribeRecipient(agentId, mailbox::offer)      the only persistent subscription
+If your agent overrides `onDirectMessage()` and watches its own dialogue traffic there, that
+logic will stop running. Move it to a `@DialogueHandler`. If you filtered with
+`isDialogueMessage()` inside `onDirectMessage()`, drop the filter and the branch it guarded.
 
-drain, one message at a time:
-  1. carries a known performative?  ->  @DialogueHandler
-  2. otherwise                      ->  @AgenorMessageHandler / onDirectMessage()
-```
+*Changed in 0.27.0.*
 
-Rule 1 uses `DialogueMessage.isDialogueMessage(Message)`, the same pure classifier the dialogue
-layer already used. Routing now happens **once**, in one place, and the same way on every
-transport.
+## 2. Your handlers may overlap
 
-An agent with no `DialogueCapability` simply has a drain whose first rule never matches. An
-`Agent` implemented directly against the interface, rather than by extending `BaseAgent`, has no
-mailbox at all and keeps its own subscription.
+Messages are **claimed** in arrival order, one at a time. They are not **handled** one at a
+time: each handler runs on its own virtual thread, so handlers may overlap and finish out of
+order.
 
-### A dialogue message no longer reaches `onDirectMessage()`
+Guard shared state exactly as you did before. "My agent has a mailbox" does not mean "my
+handlers are serialised" — that would let one slow handler stall everything else the agent has
+to do.
 
-This is a behaviour change. [ADR-029](adr/ADR-029-protocol-validation-and-dialogue-message-classification.md)
-D3 let dialogue traffic fall through to the direct path as well, because `BaseAgent` had no way
-to know dialogue was active. The drain knows, so each message is now routed to exactly one
-consumer.
+Up to 64 handlers run at once per agent by default. Past that the agent applies backpressure to
+whatever is delivering to it.
 
-If your agent overrides `onDirectMessage()` and relies on observing its own dialogue traffic
-there, move that logic to a `@DialogueHandler`.
+## 3. A handler that throws is retried
 
-## Ordering: claim order, not completion order
+If your handler throws, the message is **not** acknowledged. On a transport with redelivery —
+Redis Streams — it comes back, and after `maxDeliveryAttempts` it lands in the dead-letter
+stream. See [Redis Messaging](adapters/redis.md#failure-modes-and-recovery).
 
-The drain claims messages **in arrival order, one at a time**. That guarantee is new — in-memory
-delivery previously started a virtual thread per handler per message with no sequencing, so two
-messages sent a microsecond apart could be processed in either order, while the Redis transport
-was already FIFO per node. The same program now behaves the same way on both.
+This is the behaviour to design for, and it has one practical consequence: **make your handlers
+idempotent**, because the same message may arrive more than once.
 
-**Handler invocation is still concurrent.** Once the drain has routed a message it hands the
-handler call to a virtual thread and moves on. So:
+If you want a failure contained rather than retried, catch it in the handler. That decision
+belongs in your code, where it is visible, rather than in a framework that quietly swallows it.
 
-- messages are *claimed* in the order they arrived;
-- handlers may still *run* and *finish* in any order, and may overlap.
+*Changed in 0.27.0.*
 
-An agent must not read "my agent has a mailbox" as "my handlers run one at a time". Running
-handlers on the drain thread would give full end-to-end ordering, but one slow handler would
-then stall its agent's entire queue — a much larger decision than removing a transport
-discrepancy, and not one this design makes for you. Guard shared state as you did before.
+## 4. An overloaded agent drops messages, visibly
 
-## Bounds and overflow
-
-The mailbox is bounded. This is the receive side's first backpressure of any kind: before it,
-nothing anywhere limited how much inbound work could pile up for one agent.
+The mailbox is bounded. An agent whose producers outrun it does not accumulate an unbounded
+backlog any more — it drops.
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `capacity` | 1024 | messages held before the policy applies |
-| `overflowPolicy` | `DROP_OLDEST` | what happens to a message arriving at a full mailbox |
+| `overflowPolicy` | `DROP_OLDEST` | what happens when a message arrives at a full mailbox |
+| `maxConcurrentHandlers` | 64 | how many of this agent's handlers run at once |
 
 | Policy | Behaviour |
 |---|---|
-| `DROP_OLDEST` | discards the head to make room, logs a warning — the agent stays responsive to current traffic |
-| `DROP_NEWEST` | discards the arrival, logs a warning — the queued backlog is preserved |
-| `REJECT` | throws `MailboxOverflowException` at the sender instead of dropping silently |
+| `DROP_OLDEST` | discards the head to make room — the agent stays responsive to current traffic |
+| `DROP_NEWEST` | discards the arrival — the queued backlog is preserved |
+| `REJECT` | fails the send with `MailboxOverflowException` instead of dropping |
 
-Blocking the producer is deliberately not offered: the producer may be a transport consumer loop
-serving an entire node, and stalling it would turn one slow agent into a node-wide outage.
+A dropped message is **not acknowledged**, so on a transport with redelivery it is retried and
+eventually dead-lettered. Overflow shows up where you already look for lost work, not only as a
+warning in a log.
 
 Override the defaults for one agent:
 
@@ -97,33 +84,24 @@ public class BusyAgent extends BaseAgent {
 
 `mailboxConfig()` is read once, when the agent starts.
 
-## Scope
-
-The mailbox is **node-local and in-memory**. It holds nothing across a restart: it is a hand-off
-buffer in front of dispatch, not a store. Everything claimed is routed immediately — there is no
-retention, no sweep, and deliberately **no pull API**: no `receive(selector, timeout)`, no
-selector type. An agent waiting for a specific reply uses the dialogue protocol's
-`request()` / `query()` / `callForProposals()` futures.
-
-Where the transport is at-least-once — as Redis Streams consumer groups are — the same message
-may be offered twice. **The mailbox does not deduplicate.** Applications needing idempotence must
-still provide it.
-
-## Observing it
-
-`AgentMailbox` exposes `size()` and `capacity()`, and `BaseAgent.mailbox()` returns the mailbox
-while the agent is started:
+## Watching one
 
 ```java
 agent.mailbox().ifPresent(box ->
     log.info("{} queued of {}", box.size(), box.capacity()));
 ```
 
-Overflow is logged at WARN with the agent id and the capacity that was reached, so a mailbox
-under pressure says so rather than silently losing traffic.
+## Two things it is not
+
+- **Not a store.** It holds nothing across a restart and retains nothing awaiting a request.
+  There is no pull API by design: an agent waiting for a specific reply uses the dialogue
+  protocol's `request()` / `query()` / `callForProposals()` futures.
+- **Not a deduplicator.** Where the transport is at-least-once, the same message may arrive
+  twice. See point 3.
 
 ## See also
 
-- [Messaging](messaging.md) — the dispatcher interfaces the mailbox subscribes through
-- [Dialog Protocol](dialog-protocol.md) — the other consumer of the drain
-- [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md) — the decision and its trade-offs
+- [Messaging](messaging.md) — the dispatcher interfaces underneath
+- [Dialog Protocol](dialog-protocol.md) — the other destination a message can reach
+- [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md) — why the inbound path has one owner
+- [ADR-033](adr/ADR-033-mailbox-delivery-semantics.md) — why a failed handler is retried, and what it costs
