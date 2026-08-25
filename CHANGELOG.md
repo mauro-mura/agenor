@@ -170,6 +170,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   class or an interface. Only `default` methods are taken from interfaces: an abstract one has
   no body, and its implementation is seen first anyway.
 
+- **An Ollama integration test reported a failed model pull as a success.** `pullModel` checked
+  only the status code of `POST /api/pull`, and Ollama answers 200 even when the pull fails —
+  the failure arrives in the body. A failed pull therefore printed "Model pull initiated
+  successfully", the helper slept a fixed 30 seconds, and the test that followed died on
+  `model 'qwen2.5:0.5b' not found`, accusing `OllamaProvider` of a defect that belonged to the
+  pull. The cost is not the red test: the failure stops the reactor before the integration
+  tests a release is actually about ever run, so a release can be "verified" by a suite that
+  never executed.
+
+  The request now asks for `stream=false`, so the response arrives when the pull has finished
+  rather than when it has started. The body is checked for an error, the model is confirmed
+  present via `/api/tags` before returning, and a failure throws with the URI and the cause
+  instead of being printed to stderr and swallowed. The helper also returns early when the
+  model is already there, so its five callers no longer each pay for it: the class runs in 50s
+  where it took 207s.
+
 ## [0.26.0] - 2026-08-23
 
 ### Added
