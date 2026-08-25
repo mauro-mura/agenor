@@ -7,6 +7,10 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +37,8 @@ class OllamaProviderIntegrationTest {
     static GenericContainer<?> ollama = new GenericContainer<>("ollama/ollama:latest")
             .withExposedPorts(11434)
             .withStartupTimeout(Duration.ofMinutes(5));
+
+    private static final HttpClient HTTP = HttpClient.newHttpClient();
 
     @Test
     void shouldCommunicateWithRealOllamaInstance() throws Exception {
@@ -229,40 +235,61 @@ class OllamaProviderIntegrationTest {
     }
 
     /**
-     * Helper method to pull a model in Ollama using REST API
+     * Ensures {@code modelName} is present on the Ollama instance, pulling it if it is not.
+     *
+     * <p>Ollama answers {@code POST /api/pull} with HTTP 200 even when the pull fails — the
+     * failure arrives in the body — so the status code on its own proves nothing. Asking for
+     * {@code stream=false} makes the response arrive when the pull has <em>finished</em>
+     * rather than when it has started, which is what removes the need to sleep and hope. The
+     * model is confirmed present before returning, so a test that gets past this point cannot
+     * fail with "model not found".
      */
     private void pullModel(String ollamaUrl, String modelName) {
+        if (modelIsPresent(ollamaUrl, modelName)) {
+            return;
+        }
+
+        System.out.println("Pulling model: " + modelName + " from " + ollamaUrl);
+
+        HttpResponse<String> response = send(HttpRequest.newBuilder()
+                .uri(URI.create(ollamaUrl + "/api/pull"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        String.format("{\"model\":\"%s\",\"stream\":false}", modelName)))
+                .timeout(Duration.ofMinutes(10))
+                .build());
+
+        if (response.statusCode() != 200 || response.body().contains("\"error\"")) {
+            throw new IllegalStateException("Failed to pull " + modelName + ": HTTP "
+                    + response.statusCode() + " " + response.body());
+        }
+        if (!modelIsPresent(ollamaUrl, modelName)) {
+            throw new IllegalStateException(
+                    "Ollama reported a successful pull but does not list " + modelName);
+        }
+
+        System.out.println("Model pulled: " + modelName);
+    }
+
+    /** Answers whether {@code /api/tags} lists the model, which is what "pulled" means here. */
+    private boolean modelIsPresent(String ollamaUrl, String modelName) {
+        HttpResponse<String> response = send(HttpRequest.newBuilder()
+                .uri(URI.create(ollamaUrl + "/api/tags"))
+                .GET()
+                .timeout(Duration.ofSeconds(30))
+                .build());
+
+        return response.statusCode() == 200 && response.body().contains("\"" + modelName + "\"");
+    }
+
+    private HttpResponse<String> send(HttpRequest request) {
         try {
-            System.out.println("Pulling model: " + modelName + " from " + ollamaUrl);
-
-            // Use HTTP client to pull model via Ollama API
-            // POST /api/pull with {"name": modelName}
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-
-            String requestBody = String.format("{\"name\":\"%s\"}", modelName);
-
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(ollamaUrl + "/api/pull"))
-                    .header("Content-Type", "application/json")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
-                    .timeout(Duration.ofMinutes(10))
-                    .build();
-
-            java.net.http.HttpResponse<String> response = client.send(request,
-                    java.net.http.HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                System.err.println("Failed to pull model: " + response.body());
-            } else {
-                System.out.println("Model pull initiated successfully");
-            }
-
-            // Give some time for the model to download
-            Thread.sleep(30000); // 30 seconds for small models
-
+            return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted calling " + request.uri(), e);
         } catch (Exception e) {
-            System.err.println("Error pulling model: " + e.getMessage());
-            // Don't fail the test, the model might already exist
+            throw new IllegalStateException("Failed calling " + request.uri(), e);
         }
     }
 }
