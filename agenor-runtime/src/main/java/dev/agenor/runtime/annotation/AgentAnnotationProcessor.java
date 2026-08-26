@@ -207,11 +207,17 @@ public class AgentAnnotationProcessor {
 
     private dev.agenor.core.Behavior createOneShotBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
+        Duration initialDelay = parseOptionalDuration(annotation.initialDelay());
 
         return new OneShotBehavior(behaviorId) {
             @Override
             protected void action() {
                 invokeMethod(agent, method);
+            }
+
+            @Override
+            public Duration getInitialDelay() {
+                return initialDelay;
             }
         };
     }
@@ -219,8 +225,14 @@ public class AgentAnnotationProcessor {
     private dev.agenor.core.Behavior createCyclicBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         Duration interval = parseDuration(annotation.interval());
+        Duration initialDelay = parseOptionalDuration(annotation.initialDelay());
 
         return new CyclicBehavior(behaviorId, interval) {
+            @Override
+            public Duration getInitialDelay() {
+                return initialDelay;
+            }
+
             @Override
             protected void action() {
                 invokeMethod(agent, method);
@@ -228,6 +240,7 @@ public class AgentAnnotationProcessor {
         };
     }
 
+    @SuppressWarnings("removal")  // WAKER and EVENT_DRIVEN stay wired until 0.30.0
     private dev.agenor.core.Behavior createWakerBehavior(Agent agent, Method method, Behavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         Duration initialDelay = parseDuration(annotation.initialDelay());
@@ -236,6 +249,7 @@ public class AgentAnnotationProcessor {
         return WakerBehavior.wakeAfter(initialDelay, () -> invokeMethod(agent, method));
     }
 
+    @SuppressWarnings("removal")  // WAKER and EVENT_DRIVEN stay wired until 0.30.0
     private dev.agenor.core.Behavior createEventDrivenBehavior(Agent agent, Method method, Behavior annotation) {
         // Event-driven behaviors typically need a topic - for now, use method name as topic
         String topic = method.getName().toLowerCase();
@@ -253,8 +267,14 @@ public class AgentAnnotationProcessor {
         // Custom behaviors use the interval as their execution pattern
         String behaviorId = generateBehaviorId(agent, method);
         Duration interval = parseDuration(annotation.interval());
+        Duration initialDelay = parseOptionalDuration(annotation.initialDelay());
 
         return new CyclicBehavior(behaviorId, interval) {
+            @Override
+            public Duration getInitialDelay() {
+                return initialDelay;
+            }
+
             @Override
             protected void action() {
                 invokeMethod(agent, method);
@@ -273,6 +293,23 @@ public class AgentAnnotationProcessor {
 
     private String generateBehaviorId(Agent agent, Method method) {
         return agent.getAgentId() + "." + method.getName();
+    }
+
+    /**
+     * Parses an optional duration, where "absent" is a meaningful answer.
+     *
+     * <p>{@link #parseDuration} answers a blank string with one second, which is the right
+     * default for {@code interval} and the wrong one for {@code initialDelay} — it would push
+     * every behavior a second into the future for saying nothing.
+     *
+     * @param durationString the annotation value, possibly blank
+     * @return the parsed duration, or null when the value is absent
+     */
+    private Duration parseOptionalDuration(String durationString) {
+        if (durationString == null || durationString.isBlank()) {
+            return null;
+        }
+        return parseDuration(durationString);
     }
 
     private Duration parseDuration(String durationString) {

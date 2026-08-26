@@ -183,11 +183,24 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     }
 
     private void scheduleOneShot(Behavior behavior) {
-        ScheduledFuture<?> future = scheduler.schedule(() -> executeBehavior(behavior), 0,
+        long delay = initialDelayMillis(behavior);
+        ScheduledFuture<?> future = scheduler.schedule(() -> executeBehavior(behavior), delay,
             java.util.concurrent.TimeUnit.MILLISECONDS);
 
         scheduledBehaviors.put(behavior.getBehaviorId(), future);
-        log.debug("Scheduled one-shot behavior: {}", behavior.getBehaviorId());
+        log.debug("Scheduled one-shot behavior: {} (initial delay {}ms)",
+            behavior.getBehaviorId(), delay);
+    }
+
+    /**
+     * The delay before a behavior's first execution, in milliseconds.
+     *
+     * <p>A null or negative {@link Behavior#getInitialDelay()} means "start now", which is what
+     * every behavior that does not declare one gets.
+     */
+    private long initialDelayMillis(Behavior behavior) {
+        Duration delay = behavior.getInitialDelay();
+        return delay == null || delay.isNegative() ? 0L : delay.toMillis();
     }
 
     private void scheduleCyclic(Behavior behavior) {
@@ -210,7 +223,7 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                     cancel(behavior.getBehaviorId());
                 }
             },
-            0,
+            initialDelayMillis(behavior),
             interval.toMillis(),
             java.util.concurrent.TimeUnit.MILLISECONDS
         );

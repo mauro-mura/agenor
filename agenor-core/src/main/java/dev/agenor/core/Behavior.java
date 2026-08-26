@@ -586,4 +586,20 @@ public interface Behavior {
      * @see BehaviorScheduler#schedule(Behavior)
      */
     Duration getInterval();
+
+    /**
+     * Returns how long the scheduler should wait before the first execution.
+     *
+     * <p>Applies to every scheduled behavior: a {@link BehaviorType#ONE_SHOT} behavior fires
+     * once after the delay, a {@link BehaviorType#CYCLIC} one waits before its first tick and
+     * then keeps its interval. The delay is the scheduler's business, not the behavior's —
+     * <em>when</em> work runs is what a scheduler is for.
+     *
+     * @return the delay before the first execution, or null to start immediately (the default)
+     * @since 0.28.0
+     * @see BehaviorScheduler#schedule(Behavior)
+     */
+    default Duration getInitialDelay() {
+        return null;
+    }
 }

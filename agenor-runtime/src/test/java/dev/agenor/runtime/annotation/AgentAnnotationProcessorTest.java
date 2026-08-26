@@ -1,5 +1,6 @@
 package dev.agenor.runtime.annotation;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import dev.agenor.core.*;
@@ -88,6 +89,44 @@ class AgentAnnotationProcessorTest {
     // =========================================================================
     // CYCLIC BEHAVIOR TESTS
     // =========================================================================
+
+    @Test
+    @DisplayName("initialDelay reaches the behavior, on ONE_SHOT and on CYCLIC")
+    void initialDelayReachesTheBehavior() {
+        // The element was read only by createWakerBehavior, so it was documented for two
+        // types and honoured by neither.
+        DelayedOneShotAgent oneShot = spy(new DelayedOneShotAgent());
+        processor.processAnnotations(oneShot);
+
+        ArgumentCaptor<dev.agenor.core.Behavior> captor =
+            ArgumentCaptor.forClass(dev.agenor.core.Behavior.class);
+        verify(oneShot).addBehavior(captor.capture());
+        assertThat(captor.getValue().getInitialDelay()).isEqualTo(Duration.ofSeconds(5));
+
+        DelayedCyclicAgent cyclic = spy(new DelayedCyclicAgent());
+        processor.processAnnotations(cyclic);
+
+        ArgumentCaptor<dev.agenor.core.Behavior> cyclicCaptor =
+            ArgumentCaptor.forClass(dev.agenor.core.Behavior.class);
+        verify(cyclic).addBehavior(cyclicCaptor.capture());
+        assertThat(cyclicCaptor.getValue().getInitialDelay()).isEqualTo(Duration.ofMillis(250));
+        assertThat(cyclicCaptor.getValue().getInterval()).isEqualTo(Duration.ofSeconds(1));
+    }
+
+    @Test
+    @DisplayName("Saying nothing about initialDelay means start now, not start in a second")
+    void absentInitialDelayMeansImmediateStart() {
+        // parseDuration answers a blank string with one second, which is the right default for
+        // interval and would silently postpone every behavior that never asked to be delayed.
+        CyclicTestAgent agent = spy(new CyclicTestAgent());
+
+        processor.processAnnotations(agent);
+
+        ArgumentCaptor<dev.agenor.core.Behavior> captor =
+            ArgumentCaptor.forClass(dev.agenor.core.Behavior.class);
+        verify(agent).addBehavior(captor.capture());
+        assertThat(captor.getValue().getInitialDelay()).isNull();
+    }
 
     @Test
     @DisplayName("Should create Cyclic behavior with interval")
@@ -393,6 +432,26 @@ class AgentAnnotationProcessorTest {
 
         @dev.agenor.core.annotations.Behavior(type = BehaviorType.ONE_SHOT)
         public void doOnce() {
+        }
+    }
+
+    static class DelayedOneShotAgent extends BaseAgent {
+        public DelayedOneShotAgent() {
+            super("delayed-oneshot", "Delayed OneShot Agent");
+        }
+
+        @Behavior(type = BehaviorType.ONE_SHOT, initialDelay = "5s")
+        public void once() {
+        }
+    }
+
+    static class DelayedCyclicAgent extends BaseAgent {
+        public DelayedCyclicAgent() {
+            super("delayed-cyclic", "Delayed Cyclic Agent");
+        }
+
+        @Behavior(type = BehaviorType.CYCLIC, interval = "1s", initialDelay = "250ms")
+        public void periodic() {
         }
     }
 

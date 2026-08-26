@@ -25,6 +25,68 @@ class SimpleBehaviorSchedulerTest {
     }
 
     @Test
+    void oneShotWaitsForItsInitialDelayBeforeFiring() throws InterruptedException {
+        // Given a one-shot that declares a delay, the way @Behavior(initialDelay = "...") does.
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OneShotBehavior behavior = new OneShotBehavior("delayed-oneshot") {
+            @Override
+            protected void action() {
+                latch.countDown();
+            }
+
+            @Override
+            public Duration getInitialDelay() {
+                return Duration.ofMillis(400);
+            }
+        };
+
+        // When
+        scheduler.schedule(behavior).join();
+
+        // Then it has not run yet, which is the whole point of the delay...
+        assertThat(latch.await(150, TimeUnit.MILLISECONDS))
+                .as("fired before its initial delay elapsed")
+                .isFalse();
+
+        // ...and it does run once the delay elapses.
+        assertThat(latch.await(3, TimeUnit.SECONDS))
+                .as("never fired after its initial delay elapsed")
+                .isTrue();
+    }
+
+    @Test
+    void cyclicWaitsForItsInitialDelayBeforeTheFirstTick() throws InterruptedException {
+        // Given
+        AtomicInteger executeCount = new AtomicInteger(0);
+
+        CyclicBehavior behavior = new CyclicBehavior("delayed-cyclic", Duration.ofMillis(100)) {
+            @Override
+            protected void action() {
+                executeCount.incrementAndGet();
+            }
+
+            @Override
+            public Duration getInitialDelay() {
+                return Duration.ofMillis(400);
+            }
+        };
+
+        // When
+        scheduler.schedule(behavior).join();
+        Thread.sleep(150);
+
+        // Then
+        assertThat(executeCount.get()).as("ticked before its initial delay elapsed").isZero();
+
+        Thread.sleep(600);
+        assertThat(executeCount.get())
+                .as("never ticked after its initial delay elapsed").isPositive();
+
+        scheduler.cancel(behavior.getBehaviorId());
+    }
+
+    @Test
     void shouldScheduleOneShotBehavior() throws InterruptedException {
         // Given
         CountDownLatch latch = new CountDownLatch(1);
