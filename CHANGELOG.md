@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- **The behaviour taxonomy keeps the three types that have users.** `tools/api-census.sh` now
+  counts `BehaviorType` constants as well as types, because a user writes
+  `@Behavior(type = THROTTLED)` and never names `ThrottledBehavior` — so every annotation-driven
+  behaviour had been scoring zero example references for a reason unrelated to whether anyone
+  used it. Across the 90 example files, `CYCLIC` is named by 18, `ONE_SHOT` and `FSM` by two
+  each, and the other twelve constants by their own demonstration or by nothing.
+
+  The usage count is not the whole argument, and on its own it would not justify removing a
+  concept rather than waiting for a user. `SchedulingHint` has said the rest since 0.14.0: the
+  scheduler consults it *"instead of relying on `BehaviorType` alone"* because
+  *"control-flow composites (`RETRY`, `CIRCUIT_BREAKER`, `FSM`, `PIPELINE`) are wrappers
+  triggered by external events."* A wrapper is a decorator, not a schedule, and `BehaviorType`
+  had been answering two questions at once. Classifying by that criterion reaches the same three
+  survivors the usage count does.
+
+  Deprecated for removal in 0.30.0: `EVENT_DRIVEN`, `WAKER`, `CUSTOM`, `PIPELINE`,
+  `CIRCUIT_BREAKER`, `PARALLEL`, `SEQUENTIAL`, `CONDITIONAL`, `THROTTLED`, `BATCH`, `RETRY`,
+  `SCHEDULED`, together with the eleven `@Behavior` elements that exist only to parameterise
+  them (`condition`, `rateLimit`, `batchSize`, `maxWaitTime`, `maxRetries`, `backoff`, `cron`,
+  `stepTimeout`, `parallelStrategy`, `requiredCompletions`, `childTimeout`) and the eight
+  behaviour classes nothing else names. Each constant's Javadoc names where its concern belongs
+  instead: a resilience library for retry, circuit breaking and outbound rate limiting; the
+  mailbox drain for inbound shaping (ADR-032, ADR-033); `CompositeBehavior` with its
+  `SchedulingHint` for composition; a strategy on `LLMAgent` for LLM reasoning patterns, as
+  reflection already is.
+
+  `SequentialBehavior`, `ParallelBehavior` and `CompositeBehavior` remain as classes — only
+  their annotation route goes. `OrderOrchestratorAgent` composes them directly, which is the
+  supported way.
+
+  **Two of the twelve never worked.** `EVENT_DRIVEN` built a behaviour subscribed to a topic
+  derived from the method name and to nothing else, and `SimpleBehaviorScheduler` skips
+  event-driven behaviours on purpose, so nothing ever called it. `WAKER` is a polling behaviour
+  that the scheduler drove exactly once, at registration, when its wake condition was by
+  construction still false — so through the annotation it never woke. Both had unit tests; both
+  were tested at the class and never through the wiring.
+
+- **Seven types nothing in the repository references**, for removal in 0.30.0: `PredicateFilter`
+  and `CompositeFilter` (superseded by `MessageFilter.of` and `MessageFilter.and/or/negate` in
+  `agenor-core`, which have users), `SlidingWindowRateLimiter`, `JsonSchemaOutputGuardrail`,
+  `TokenBudgetManager`, `WebhookApprovalNotifier` — whose only mention in the tree is the
+  `@RequiresApproval` Javadoc snippet offering it — and `MessageException`, an exception nothing
+  throws, catches or declares.
+
+The public surface scheduled for removal goes from 7 to 45: **20 types, 12 enum constants and
+13 members**. Nothing is removed in this release, and every deprecated API keeps working until
+0.30.0.
+
+### Fixed
+
+- **`initialDelay` was documented for two behaviour types and honoured by neither.** The
+  `@Behavior` element advertised itself as *"applicable to CYCLIC and SCHEDULED"*, and
+  `createOneShotBehavior` and `createCyclicBehavior` both ignored it: the only reader was
+  `createWakerBehavior`, whose behaviour never fired. The delay now lives where a delay belongs
+  — `Behavior.getInitialDelay()` is read by `SimpleBehaviorScheduler` for both one-shot and
+  cyclic scheduling, so `@Behavior(type = ONE_SHOT, initialDelay = "10s")` runs once after ten
+  seconds and a cyclic behaviour waits before its first tick and then keeps its interval. An
+  absent `initialDelay` still means *start now*: `parseDuration` answers a blank string with one
+  second, which is the right default for `interval` and would have postponed every behaviour
+  that never asked to be delayed.
+
+### Changed
+
+- **A `@Behavior(type = ONE_SHOT, initialDelay = "5s")` that ran immediately now waits five
+  seconds.** The element was ignored before, so this moves from silently wrong to documented —
+  but it is observable, and it is the one behaviour change in this release.
+
+- **The documentation stops offering plumbing as surface.** `docs/architecture.md` listed types
+  by module in §1, §3, §4 and §16; 55 of the 112 types the census reported as *documented but
+  named by no user code* were named by that one page. Its inventories are replaced by the seams
+  a user actually names, and the behaviour section now points at the guide. Eleven behaviour
+  pages are removed with their nav entries, `docs/behaviors/README.md` covers the three
+  surviving types plus what is deliberately not a behaviour, and the filtering guide is written
+  against `MessageFilter`'s own combinators rather than the ext duplicates.
+
+- **`CONTRIBUTING.md` taught an API removed at 0.22.0.** Its canonical "Good" sample and the
+  test beneath it both called `messageService.send(...)`; no `MessageService` type has existed
+  in the tree for six releases. Both are rewritten against `MessageDispatcher`.
+
+### Removed
+
+- `AgentContextExample` and `WebConsoleExample`, whose only reason to exist was to demonstrate a
+  type that the framework itself depends on. The types stay; the demonstrations were the census's
+  *plumbing with a demo* verdict, and deleting them is what that verdict asks for. The
+  demonstrations of the newly deprecated behaviours stay until 0.30.0, with the APIs they show.
+
+
 ## [0.27.0] - 2026-08-25
 
 ### Added
