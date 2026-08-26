@@ -14,7 +14,13 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Sliding window algorithm implementation for rate limiting.
  * Tracks requests in a time window and enforces limit.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0. Nothing in the tree names this class —
+ *             not even the rate limiting the framework does itself, which goes through
+ *             {@link TokenBucketRateLimiter}. Two implementations of a contract with no
+ *             callers is one more than the contract needed.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class SlidingWindowRateLimiter implements RateLimiter {
 
     private static final Logger log = LoggerFactory.getLogger(SlidingWindowRateLimiter.class);

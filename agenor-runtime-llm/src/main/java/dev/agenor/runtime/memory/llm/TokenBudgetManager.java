@@ -39,7 +39,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * </ul>
  *
  * @since 0.7.0
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0. Nothing in the tree names this class.
+ *             Token budgets reach users through {@code LLMMemoryManager} and the context-window
+ *             strategies, which are the pieces that have callers.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class TokenBudgetManager {
 
     /**

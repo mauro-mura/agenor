@@ -42,7 +42,13 @@ import java.util.Objects;
  *
  * @see ApprovalNotifier
  * @since 0.13.0
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0. The only mention of this class in the
+ *             tree is the {@code @RequiresApproval} Javadoc snippet that offers it, which is
+ *             documentation citing itself rather than a use. Implement {@code ApprovalNotifier}
+ *             against whatever your deployment actually notifies.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class WebhookApprovalNotifier implements ApprovalNotifier {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookApprovalNotifier.class);

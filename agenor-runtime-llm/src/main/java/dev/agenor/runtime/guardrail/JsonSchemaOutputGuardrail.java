@@ -56,7 +56,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * }</pre>
  *
  * @since 0.13.0
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0. Nothing in the tree names this class.
+ *             Schema validation of a model's output is a job for a JSON-schema library applied
+ *             inside an {@code OutputGuardrail} you write, not a guardrail the framework ships
+ *             and nobody wires up.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class JsonSchemaOutputGuardrail implements OutputGuardrail {
 
     static final int DEFAULT_MAX_REPROMPT_ATTEMPTS = 1;

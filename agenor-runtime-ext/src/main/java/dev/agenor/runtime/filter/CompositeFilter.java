@@ -8,7 +8,12 @@ import java.util.List;
 
 /**
  * Combine multiple filters with AND/OR/NOT logic
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0. Nothing in the tree names this class.
+ *             {@code MessageFilter.and/or/negate} and {@code MessageFilterBuilder} in
+ *             {@code agenor-core} already compose filters, and those have users.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class CompositeFilter implements MessageFilter {
 
     private final List<MessageFilter> filters;
