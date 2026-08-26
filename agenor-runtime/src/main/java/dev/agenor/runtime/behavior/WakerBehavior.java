@@ -8,7 +8,15 @@ import java.util.function.Supplier;
 
 /**
  * Behavior that wakes up based on specific conditions or time.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#WAKER}. This is a polling behavior and the
+ *             scheduler drove it exactly once, at registration, when its wake condition was by
+ *             construction still false — so through the annotation it never woke. Use
+ *             {@code ONE_SHOT} with {@code @Behavior(initialDelay = "...")}, where the delay is
+ *             the scheduler's, which is where a delay belongs.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class WakerBehavior extends BaseBehavior {
 
     private final Supplier<Boolean> wakeCondition;

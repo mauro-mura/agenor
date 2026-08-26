@@ -9,7 +9,14 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Behavior that responds to messages/events.
  * Does not execute on a schedule but reacts to incoming messages.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#EVENT_DRIVEN}. Nothing ever called this:
+ *             the annotation processor subscribed it to a topic derived from the method name
+ *             and to nothing else, and the scheduler skips event-driven behaviors on purpose.
+ *             Use {@code @AgenorMessageHandler}.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class EventDrivenBehavior extends BaseBehavior implements MessageHandler {
 
     private final String topic;

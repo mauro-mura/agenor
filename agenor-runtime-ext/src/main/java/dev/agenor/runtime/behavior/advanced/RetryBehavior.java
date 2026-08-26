@@ -56,7 +56,13 @@ import java.util.function.Predicate;
  * @param <T> the type of result produced by the retried action
  *
  * @since 0.2.0
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#RETRY}. Retrying wraps a call. Resilience4j
+ *             and Failsafe do it better and compose with the timeouts and bulkheads that arrive
+ *             with the same problem.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class RetryBehavior<T> extends BaseBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(RetryBehavior.class);

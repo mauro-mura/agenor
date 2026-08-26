@@ -12,7 +12,13 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Behavior with rate limiting to control execution frequency.
  * Prevents overwhelming external resources or APIs.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#THROTTLED}. Rate limiting wraps a call rather
+ *             than scheduling one. Use a resilience library outbound; inbound, the mailbox drain
+ *             is where receive-side policy belongs (ADR-032, ADR-033).
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class ThrottledBehavior extends BaseBehavior {
 
     private final RateLimiter rateLimiter;

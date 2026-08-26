@@ -26,6 +26,11 @@ import dev.agenor.runtime.behavior.composite.SequentialBehavior;
  *
  * @since 0.25.0
  */
+// Six of the seven types this extension wires are deprecated for removal in 0.30.0, and it
+// keeps honouring every one of them until then — a deprecation is a signal, not a removal.
+// After that it delivers FSM alone, which is when whether an SPI is the right shape for one
+// type becomes a real question.
+@SuppressWarnings("removal")
 public final class ExtBehaviorAnnotationExtension implements BehaviorAnnotationExtension {
 
     private static final Logger log = LoggerFactory.getLogger(ExtBehaviorAnnotationExtension.class);

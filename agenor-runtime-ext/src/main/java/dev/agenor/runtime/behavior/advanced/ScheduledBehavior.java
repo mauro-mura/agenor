@@ -37,7 +37,13 @@ import java.util.function.Consumer;
  * * * * * * *
  * </pre>
  *
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#SCHEDULED}. Cron is a scheduling concern:
+ *             drive the agent from whatever already owns your schedule, or use {@code CYCLIC}
+ *             when the cadence is fixed.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class ScheduledBehavior extends BaseBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(ScheduledBehavior.class);

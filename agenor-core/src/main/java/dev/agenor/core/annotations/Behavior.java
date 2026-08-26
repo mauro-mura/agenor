@@ -20,22 +20,21 @@ import java.lang.annotation.Target;
  * @Behavior(type = CYCLIC, interval = "30s")
  * public void pollExternalService() { ... }
  *
- * // Scheduled behavior — runs at the top of every hour
- * @Behavior(type = SCHEDULED, cron = "0 0 * * * *")
- * public void generateHourlyReport() { ... }
+ * // Cyclic behavior that waits before its first tick
+ * @Behavior(type = CYCLIC, interval = "30s", initialDelay = "5s")
+ * public void pollAfterWarmup() { ... }
  *
- * // Retry behavior — up to 5 attempts with exponential backoff
- * @Behavior(type = RETRY, maxRetries = 5, backoff = "exponential")
- * public void callUnreliableApi() { ... }
+ * // One-shot behavior — runs once, ten seconds after the agent starts
+ * @Behavior(type = ONE_SHOT, initialDelay = "10s")
+ * public void announceReady() { ... }
  *
- * // Throttled behavior — max 10 executions per second
- * @Behavior(type = THROTTLED, rateLimit = "10/s")
- * public void handleIncomingEvent() { ... }
- *
- * // Batch behavior — collect up to 50 items or flush after 5 seconds
- * @Behavior(type = BATCH, batchSize = 50, maxWaitTime = "5s")
- * public void processBatch() { ... }
+ * // FSM behavior — a state machine that decides its own transitions
+ * @Behavior(type = FSM, fsmInitialState = "START", stateTimeout = "30s")
+ * public void advanceOrder() { ... }
  * }</pre>
+ *
+ * <p>The parameters below that carry a deprecation belong to behavior types deprecated in
+ * 0.28.0. They keep working until 0.30.0, and each names what to use instead.
  *
  * @since 0.1.0
  * @see BehaviorType
@@ -54,8 +53,7 @@ public @interface Behavior {
      * The execution pattern for this behavior.
      *
      * <p>Defaults to {@link BehaviorType#ONE_SHOT}, which executes the method once
-     * when the agent starts. For repetitive work, use {@link BehaviorType#CYCLIC}
-     * or {@link BehaviorType#SCHEDULED}.
+     * when the agent starts. For repetitive work, use {@link BehaviorType#CYCLIC}.
      *
      * @return the behavior type
      */
@@ -74,8 +72,10 @@ public @interface Behavior {
     /**
      * Delay before the first execution.
      *
-     * <p>Accepted formats: {@code "5s"}, {@code "1m"}. When empty, the behavior
-     * starts immediately. Applicable to CYCLIC and SCHEDULED behaviors.
+     * <p>Accepted formats: {@code "5s"}, {@code "1m"}. When empty, the behavior starts
+     * immediately. Honoured by {@link BehaviorType#ONE_SHOT} — which fires once when the
+     * delay elapses — and by {@link BehaviorType#CYCLIC}, which waits before its first tick
+     * and then keeps its {@link #interval()}.
      *
      * @return the initial delay string, or empty string for immediate start
      */
@@ -105,7 +105,12 @@ public @interface Behavior {
      *
      * @return condition expression, or empty string if not applicable
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Gating is a property of a behavior, not a kind of one: test the
+     *              condition where the work happens.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String condition() default "";
 
     // -------------------------------------------------------------------------
@@ -121,7 +126,12 @@ public @interface Behavior {
      *
      * @return rate limit specification, or empty string if not applicable
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Rate limiting wraps a call rather than scheduling one — a
+     *              resilience library outbound, the mailbox drain inbound.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String rateLimit() default "";
 
     // -------------------------------------------------------------------------
@@ -133,7 +143,12 @@ public @interface Behavior {
      *
      * @return maximum batch size (default 10)
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Buffering inbound messages is the mailbox's concern since
+     *              ADR-032; batching your own data belongs in your handler.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     int batchSize() default 10;
 
     /**
@@ -143,7 +158,11 @@ public @interface Behavior {
      *
      * @return max wait time string (default {@code "5s"})
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     *             parameterises. See {@link #batchSize()}.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String maxWaitTime() default "5s";
 
     // -------------------------------------------------------------------------
@@ -157,7 +176,12 @@ public @interface Behavior {
      *
      * @return maximum retry attempts (default 3)
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Retrying wraps a call: Resilience4j and Failsafe do it better and
+     *              compose with the timeouts that arrive with the same problem.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     int maxRetries() default 3;
 
     /**
@@ -168,7 +192,11 @@ public @interface Behavior {
      *
      * @return backoff strategy name (default {@code "exponential"})
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     *             parameterises. See {@link #maxRetries()}.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String backoff() default "exponential";
 
     // -------------------------------------------------------------------------
@@ -183,7 +211,12 @@ public @interface Behavior {
      *
      * @return cron expression, or empty string if not applicable
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Cron is a scheduling concern: drive the agent from whatever
+     *              already owns your schedule, or use {@code CYCLIC} for a fixed cadence.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String cron() default "";
 
     // -------------------------------------------------------------------------
@@ -201,7 +234,13 @@ public @interface Behavior {
      *
      * @return per-step timeout string, or empty string for no timeout (default)
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Build a {@code SequentialBehavior} and add it with {@code
+     *              agent.addBehavior()}; its {@code SchedulingHint} tells the scheduler what the
+     *              annotation cannot.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String stepTimeout() default "";
 
     // -------------------------------------------------------------------------
@@ -221,7 +260,12 @@ public @interface Behavior {
      *
      * @return completion strategy name (default {@code "ALL"})
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     * parameterises. Build a {@code ParallelBehavior} and add it with {@code
+     *              agent.addBehavior()}.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String parallelStrategy() default "ALL";
 
     /**
@@ -230,7 +274,11 @@ public @interface Behavior {
      *
      * @return required completions count (default 0, meaning use ALL strategy)
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     *             parameterises. See {@link #parallelStrategy()}.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     int requiredCompletions() default 0;
 
     /**
@@ -240,7 +288,11 @@ public @interface Behavior {
      *
      * @return per-child timeout string, or empty string for no timeout (default)
      * @since 0.2.0
+     *
+     * @deprecated since 0.28.0, for removal in 0.30.0, with the behavior type it
+     *             parameterises. See {@link #parallelStrategy()}.
      */
+    @Deprecated(since = "0.28.0", forRemoval = true)
     String childTimeout() default "";
 
     // -------------------------------------------------------------------------

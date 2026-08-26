@@ -12,7 +12,12 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Behavior that executes only when a condition is satisfied.
  * Can wrap any action and evaluate condition before execution.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#CONDITIONAL}. Gating is a property of a
+ *             behavior rather than a kind of one: test the condition where the work happens.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class ConditionalBehavior extends BaseBehavior {
 
     private final Condition condition;

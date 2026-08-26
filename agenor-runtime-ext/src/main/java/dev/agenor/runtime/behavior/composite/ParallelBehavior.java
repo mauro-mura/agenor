@@ -21,7 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * fires all children in parallel immediately after registration via
  * {@code agent.addBehavior()}, waits for the configured completion strategy,
  * then marks the behavior inactive.
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0 as an annotation target
+ *             ({@link dev.agenor.core.BehaviorType#PARALLEL}). No code outside this class names
+ *             it. Building the composite directly and adding it with {@code agent.addBehavior()}
+ *             keeps working, and is how {@code OrderOrchestratorAgent} uses its sibling.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public class ParallelBehavior extends CompositeBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(ParallelBehavior.class);

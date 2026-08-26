@@ -125,6 +125,7 @@ public class SequentialBehavior extends CompositeBehavior {
     // -------------------------------------------------------------------------
 
     @Override
+    @SuppressWarnings("removal")  // the class outlives the constant; see 0.30.0 removal
     public BehaviorType getType() {
         return BehaviorType.SEQUENTIAL;
     }

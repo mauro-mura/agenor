@@ -28,7 +28,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * </ul>
  *
  * @param <T> The type of items to batch
+ *
+ * @deprecated since 0.28.0, for removal in 0.30.0, together with
+ *             {@link dev.agenor.core.BehaviorType#BATCH}. Buffering inbound messages became the
+ *             mailbox's concern in ADR-032; batching your own data belongs in your handler.
  */
+@Deprecated(since = "0.28.0", forRemoval = true)
 public abstract class BatchBehavior<T> extends BaseBehavior {
 
     private final int maxBatchSize;
