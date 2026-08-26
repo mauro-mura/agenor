@@ -132,7 +132,6 @@ End-to-end examples that combine multiple patterns.
 | Example | Main class | Tool |
 |---------|-----------|------|
 | `CLIExample` | `dev.agenor.examples.cli.CLIExample` | Web console + CLI (`agenor list`, `agenor status`, `agenor logs -f`) |
-| `WebConsoleExample` | `dev.agenor.examples.console.WebConsoleExample` | Embedded Jetty dashboard |
 | `A2AIntegrationExample` | `dev.agenor.examples.a2a.A2AIntegrationExample` | Agent-to-Agent HTTP protocol |
 | `UserPreferenceMemoryExample` | `dev.agenor.examples.memory.UserPreferenceMemoryExample` | Agent memory / persistence |
 
@@ -164,7 +163,6 @@ dev.agenor.examples
 ├── support/                   SupportChatbotExample  (see support/README.md)
 ├── eval/                      EvaluationFrameworkExample
 ├── cli/                       CLIExample
-├── console/                   WebConsoleExample
 ├── a2a/                       A2AIntegrationExample
 └── memory/                    UserPreferenceMemoryExample
 ```
