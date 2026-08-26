@@ -19,7 +19,6 @@ User input
 |-------|-----------|-------------|
 | `PiiRedactionGuardrail` | Input + Output | Detects and redacts PII (email, phone IT, CF, IBAN, credit card) |
 | `ContentPolicyGuardrail` | Input + Output | Blocks content matching a YAML blocklist (patterns + topics) |
-| `JsonSchemaOutputGuardrail` | Output | Validates JSON output against a schema; re-prompts on violation |
 | `MaxTokensInputGuardrail` | Input | Truncates input that exceeds a token budget (3 strategies) |
 
 ---
@@ -117,41 +116,6 @@ content-policy:
 
 `blocked-patterns` accepts full Java regex (inline flags like `(?i)` are honoured).
 `blocked-topics` are matched as case-insensitive substrings; `*` is the only wildcard.
-
----
-
-## JsonSchemaOutputGuardrail
-
-Validates LLM JSON output against a JSON Schema (Draft 7 subset: `type`, `required`,
-`properties`, `items`).
-
-```java
-String schema = """
-    {
-      "type": "object",
-      "required": ["name", "score"],
-      "properties": {
-        "name":  { "type": "string" },
-        "score": { "type": "number" }
-      }
-    }
-    """;
-
-// Default: 1 re-prompt attempt before blocking
-new JsonSchemaOutputGuardrail(schema)
-
-// Custom attempt cap
-new JsonSchemaOutputGuardrail(schema, 2)
-```
-
-| Situation | Result |
-|-----------|--------|
-| Valid JSON, schema ok | `Passed` |
-| Non-JSON output | `Blocked` (immediate) |
-| Schema violation, attempts remaining | `Modified(repromptInstruction)` |
-| Schema violation after max attempts | `Blocked` |
-
-Call `guardrail.resetAttempts()` between agent invocations to allow re-prompting again.
 
 ---
 

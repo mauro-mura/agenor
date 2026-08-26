@@ -31,22 +31,11 @@ New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
 
 | Document | Type |
 |----------|------|
-| [Behaviors Overview](behaviors/README.md) | All behavior types at a glance |
+| [Behaviors Overview](behaviors/README.md) | When work runs, and what is deliberately not a behavior |
+| [OneShotBehavior](behaviors/OneShotBehavior.md) | Execute once, immediately or after a delay |
 | [CyclicBehavior](behaviors/CyclicBehavior.md) | Repeat at fixed interval |
-| [OneShotBehavior](behaviors/OneShotBehavior.md) | Execute once and stop |
-| [EventDrivenBehavior](behaviors/EventDrivenBehavior.md) | React to messages |
-| [WakerBehavior](behaviors/WakerBehavior.md) | Wake on condition or time |
-| [ScheduledBehavior](behaviors/ScheduledBehavior.md) | Cron-based scheduling |
-| [SequentialBehavior](behaviors/SequentialBehavior.md) | Step-by-step execution |
-| [ParallelBehavior](behaviors/ParallelBehavior.md) | Concurrent child behaviors |
 | [FSMBehavior](behaviors/FSMBehavior.md) | Finite State Machine |
-| [ConditionalBehavior](behaviors/ConditionalBehavior.md) | Gate on a condition |
-| [ThrottledBehavior](behaviors/ThrottledBehavior.md) | Rate-limited execution |
-| [RetryBehavior](behaviors/RetryBehavior.md) | Automatic retry with back-off |
-| [BatchBehavior](behaviors/BatchBehavior.md) | Bulk item processing |
-| [CircuitBreakerBehavior](behaviors/CircuitBreakerBehavior.md) | Fault-tolerance pattern |
-| [PipelineBehavior](behaviors/PipelineBehavior.md) | Multi-stage transformation |
-| [ReflectionBehavior](behaviors/ReflectionBehavior.md) | LLM output reflection loop |
+| [SequentialBehavior](behaviors/SequentialBehavior.md) | Step-by-step execution |
 | [Human-In-The-Loop](behaviors/hitl.md) | Human-in-the-Loop Checkpoint |
 
 ## Adapters

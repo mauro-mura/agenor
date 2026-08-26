@@ -47,13 +47,11 @@ The sealed interface enforces exhaustive `switch` at compile time.
 
 ## Programmatic usage — HumanCheckpointBehavior
 
-Use directly when the notifier requires configuration (e.g. a webhook URL):
+Use directly when the notifier requires configuration — implement `ApprovalNotifier` against
+whatever your deployment actually notifies:
 
 ```java
-var notifier = WebhookApprovalNotifier.builder()
-        .url("https://approval.example.com/hitl")
-        .header("Authorization", "Bearer " + token)
-        .build();
+ApprovalNotifier notifier = request -> postToOurApprovalService(request);
 
 var checkpoint = new HumanCheckpointBehavior<>(
         "payment-checkpoint",
@@ -79,7 +77,7 @@ Declare the checkpoint on a behavior class. `AgenorRuntime` wraps it automatical
 at registration time:
 
 ```java
-@RequiresApproval(timeout = "30m", notifier = WebhookApprovalNotifier.class)
+@RequiresApproval(timeout = "30m", notifier = OurApprovalNotifier.class)
 public class DeleteRecordBehavior extends OneShotBehavior {
 
     @Override
@@ -218,4 +216,3 @@ No external services required.
 
 - `ADR-015` — architectural decisions: `CompletableFuture` vs `SynchronousQueue` vs Reactor
 - `InMemoryApprovalGate` — virtual thread park/unpark implementation
-- `WebhookApprovalNotifier` — HTTP POST with retry and exponential backoff

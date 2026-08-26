@@ -81,21 +81,22 @@ Follow our coding standards:
 // Good: Clear, concise, with proper documentation
 @Agent("weather-collector")
 public class WeatherCollectorAgent extends BaseAgent {
-    
+
     private final WeatherService weatherService;
-    
+
     public WeatherCollectorAgent(WeatherService weatherService) {
+        super("weather-collector", "Weather Collector");
         this.weatherService = requireNonNull(weatherService);
     }
-    
+
     /**
      * Collects weather data every 30 seconds
      */
     @Behavior(type = CYCLIC, interval = "30s")
     public void collectWeatherData() {
         var data = weatherService.getCurrentWeather();
-        
-        messageService.send(Message.builder()
+
+        getMessageDispatcher().publish(Message.builder()
             .topic("weather.data")
             .content(data)
             .build());
@@ -115,14 +116,16 @@ void shouldSendWeatherDataPeriodically() {
     var weatherData = new WeatherData("sunny", 25.0);
     when(mockWeatherService.getCurrentWeather()).thenReturn(weatherData);
     
+    var dispatcher = mock(MessageDispatcher.class);
     var agent = new WeatherCollectorAgent(mockWeatherService);
-    
+    agent.setMessageDispatcher(dispatcher);
+
     // When
     agent.collectWeatherData();
-    
+
     // Then
-    verify(messageService).send(argThat(message -> 
-        "weather.data".equals(message.topic()) && 
+    verify(dispatcher).publish(argThat(message ->
+        "weather.data".equals(message.topic()) &&
         weatherData.equals(message.content())
     ));
 }

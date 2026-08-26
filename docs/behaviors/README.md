@@ -1,73 +1,73 @@
 # Agenor Behaviors — Overview
 
-Behaviors are the primary mechanism for implementing agent logic. Every behavior belongs to exactly one agent and runs under the control of the `BehaviorScheduler`.
+A behavior is a unit of an agent's work, and its type answers one question: **when does this
+run?** Every behavior belongs to exactly one agent and is driven by the `BehaviorScheduler`.
 
-## Core Behaviors (`agenor-runtime`)
+Three types answer that question, and you will not need a fourth for most agents.
 
-No extra dependency beyond `agenor-core` + `agenor-runtime`.
+| Type | Class | Runs |
+|------|-------|------|
+| `ONE_SHOT` | `OneShotBehavior` | once — immediately, or after `initialDelay` |
+| `CYCLIC` | `CyclicBehavior` | repeatedly at `interval`, after an optional `initialDelay` |
+| `FSM` | `FSMBehavior` | as a state machine that decides its own transitions (`agenor-runtime-ext`) |
 
-| Type | Class | Description |
-|------|-------|-------------|
-| `ONE_SHOT` | `OneShotBehavior` | Executes once, then stops |
-| `CYCLIC` | `CyclicBehavior` | Executes repeatedly at a fixed interval |
-| `EVENT_DRIVEN` | `EventDrivenBehavior` | Reacts to incoming messages on a topic |
-| `WAKER` | `WakerBehavior` | Wakes up when a condition or time is met |
-| `ONE_SHOT` | `ReflectionBehavior` | Generate → Critique → Revise loop; the built-in `DefaultReflectionStrategy` implementation requires `agenor-runtime-llm`, see [ReflectionBehavior](ReflectionBehavior.md) |
-
-## Extended Behaviors (`agenor-runtime-ext`, ADR-027)
-
-A pure multi-agent-system consumer never needs these. Add the module to use them:
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-runtime-ext</artifactId>
-</dependency>
-```
-
-| Type | Class | Description |
-|------|-------|-------------|
-| `SCHEDULED` | `ScheduledBehavior` | Cron-based time scheduling |
-| `PARALLEL` | `ParallelBehavior` | Runs child behaviors concurrently |
-| `SEQUENTIAL` | `SequentialBehavior` | Runs child behaviors one after another |
-| `FSM` | `FSMBehavior` | Finite State Machine with guarded transitions |
-| `CONDITIONAL` | `ConditionalBehavior` | Executes only when a `Condition` is satisfied |
-| `THROTTLED` | `ThrottledBehavior` | Rate-limited execution via token bucket |
-| `BATCH` | `BatchBehavior` | Collects items into batches, flushes on size or timeout |
-| `RETRY` | `RetryBehavior` | Automatic retry with configurable back-off |
-| `CIRCUIT_BREAKER` | `CircuitBreakerBehavior` | Fault-tolerance circuit breaker pattern |
-| `PIPELINE` | `PipelineBehavior` | Multi-stage sequential data transformation |
-| — | `HumanCheckpointBehavior` | Human-In-The-Loop Checkpoint, see [hitl.md](hitl.md) |
-
-`CONDITIONAL`, `THROTTLED`, `BATCH`, `RETRY`, `SEQUENTIAL`, `PARALLEL`, and `FSM` can be declared via
-`@Behavior`; without `agenor-runtime-ext` on the classpath this fails at `AgenorRuntime.start()`
-with `IllegalStateException`. `SCHEDULED`, `PIPELINE`, and `CIRCUIT_BREAKER` have no annotation
-shortcut and must be constructed programmatically — without the module, referencing code simply
-won't compile.
-
-## Quick Reference
-
-### Annotation-based (recommended)
+## Annotation-based
 
 ```java
 @Agent("my-agent")
 public class MyAgent extends BaseAgent {
 
-    @Behavior(type = CYCLIC, interval = "30s")
-    public void poll() { ... }
-
     @Behavior(type = ONE_SHOT)
     public void init() { ... }
+
+    @Behavior(type = ONE_SHOT, initialDelay = "10s")
+    public void announceReady() { ... }
+
+    @Behavior(type = CYCLIC, interval = "30s", initialDelay = "5s")
+    public void poll() { ... }
 }
 ```
 
-### Programmatic
+`FSM` is declared the same way and requires `agenor-runtime-ext` on the classpath; without it,
+startup fails at `AgenorRuntime.start()` with `IllegalStateException`.
+
+## Programmatic
 
 ```java
-agent.addBehavior(CyclicBehavior.from("poller", Duration.ofSeconds(30), this::poll));
 agent.addBehavior(OneShotBehavior.from("init", this::init));
-agent.addBehavior(EventDrivenBehavior.from("orders", msg -> handleOrder(msg)));
+agent.addBehavior(CyclicBehavior.from("poller", Duration.ofSeconds(30), this::poll));
 ```
+
+## Composing behaviors
+
+When work has several steps, compose rather than reach for a new type. `SequentialBehavior` runs
+children in order and `ParallelBehavior` runs them together; both live in `agenor-runtime-ext`,
+and both tell the scheduler how they want to be driven through
+[`SchedulingHint`](../architecture.md) rather than through their type.
+
+```java
+agent.addBehavior(new SequentialBehavior("fulfil", List.of(reserve, charge, ship)));
+```
+
+`HumanCheckpointBehavior` pauses a flow for a human decision — see
+[Human-In-The-Loop](hitl.md).
+
+## What is deliberately not here
+
+Retrying, rate limiting, batching, circuit breaking and cron scheduling are **not** behavior
+types. They wrap a call or shape a stream rather than answering when work runs, and each has a
+better home:
+
+| Concern | Where it belongs |
+|---|---|
+| retry, circuit breaking, outbound rate limiting | a resilience library (Resilience4j, Failsafe) around the call |
+| inbound throttling and batching | the agent mailbox, which owns the receive path |
+| cron | whatever already owns your schedule, or `CYCLIC` for a fixed cadence |
+| gating on a condition | a check where the work happens |
+| LLM reasoning patterns such as reflection | a strategy on `LLMAgent` — see `setReflectionStrategy` |
+
+The annotation constants for these were deprecated in 0.28.0 and are removed in 0.30.0. They
+keep working until then, and each names its replacement in its own Javadoc.
 
 ## Lifecycle
 
@@ -77,23 +77,13 @@ addBehavior() → [active=true] → execute() loops → stop() → [active=false
                                               activate() resets active=true
 ```
 
-`BaseBehavior.activate()` (since 0.4.0) allows a stopped behavior to be rescheduled — used internally by the agent restart mechanism.
+`BaseBehavior.activate()` (since 0.4.0) allows a stopped behavior to be rescheduled — used
+internally by the agent restart mechanism.
 
-## Documentation
+## Pages
 
 - [OneShotBehavior](OneShotBehavior.md)
 - [CyclicBehavior](CyclicBehavior.md)
-- [EventDrivenBehavior](EventDrivenBehavior.md)
-- [WakerBehavior](WakerBehavior.md)
-- [ScheduledBehavior](ScheduledBehavior.md)
-- [ConditionalBehavior](ConditionalBehavior.md)
-- [ThrottledBehavior](ThrottledBehavior.md)
 - [FSMBehavior](FSMBehavior.md)
-- [ParallelBehavior](ParallelBehavior.md)
 - [SequentialBehavior](SequentialBehavior.md)
-- [BatchBehavior](BatchBehavior.md)
-- [CircuitBreakerBehavior](CircuitBreakerBehavior.md)
-- [PipelineBehavior](PipelineBehavior.md)
-- [RetryBehavior](RetryBehavior.md)
-- [ReflectionBehavior](ReflectionBehavior.md)
 - [Human-In-The-Loop](hitl.md)

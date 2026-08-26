@@ -59,6 +59,6 @@ static OneShotBehavior from(String name, Runnable action)
 
 ## See Also
 
-- [WakerBehavior](WakerBehavior.md) - Delayed / condition-triggered one-shot
+- [CyclicBehavior](CyclicBehavior.md) - Repeat at a fixed interval
 - [CyclicBehavior](CyclicBehavior.md) - Repeated execution
 - [Behavior Overview](README.md)

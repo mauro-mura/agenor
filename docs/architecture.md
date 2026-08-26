@@ -11,17 +11,17 @@ This document describes Agenor's architecture: an interface-first, Java 21+ mult
 
 Agenor embraces an interface‑first, modular architecture. Core contracts live in agenor-core, while minimal, ready‑to‑use implementations live in agenor-runtime. Per ADR-027, LLM-aware pieces, extended behaviors/persistence, and classpath scanning were split out of agenor-runtime into agenor-runtime-llm, agenor-runtime-ext, and agenor-runtime-scanning respectively — each depends only on agenor-runtime, so a pure multi-agent-system consumer can depend on agenor-core + agenor-runtime alone. Adapters (LLM providers, A2A) live in agenor-adapters.
 
-| agenor-core (interfaces) | agenor-runtime (in-memory impls) | agenor-runtime-llm / -ext / -scanning | agenor-adapters (integrations) |
-|--------------------------|----------------------------------|----------------------------------------|--------------------------------|
-| Agent                    | BaseAgent                        | LLMAgent (llm)                         | OpenAIProvider                 |
-| Message                  | InMemoryMessageDispatcher        | DefaultLLMMemoryManager (llm)          | AnthropicProvider              |
-| MessageDispatcher        | InMemoryAgentDirectory           | Guardrails (llm)                       | OllamaProvider                 |
-| directory.AgentDirectory | SimpleBehaviorScheduler          | InMemoryStore (ext)                    | LLMProviderFactory             |
-| Behavior                 | Behaviors (Cyclic…)              | Filters, RateLimiters (ext)            | A2A Adapter                    |
-| BehaviorScheduler        | Dialogue                         | Conditions, HITL (ext)                 | AgenorA2AClient                |
-| LLMProvider              |                                   | AgentScanner, AgentFactory (scanning)  | AgenorAgentExecutor            |
-| MemoryStore              |                                   |                                         |                                |
-| Condition                |                                   |                                         |                                |
+| Module | Holds | You name |
+|--------|-------|----------|
+| agenor-core | every contract, as an interface or a record | `Agent`, `Message`, `MessageDispatcher`, `directory.AgentDirectory` |
+| agenor-runtime | the in-memory implementation of those contracts | `AgenorRuntime`, `BaseAgent` |
+| agenor-runtime-llm | LLM-aware pieces (ADR-027) | `LLMAgent` |
+| agenor-runtime-ext | extended pieces: store, HITL, composites (ADR-027) | `InMemoryStore`, `FSMBehavior` |
+| agenor-runtime-scanning | classpath scanning, isolated for native-image (ADR-027) | — reached through `scanPackages` |
+| agenor-adapters | LLM providers, MCP, A2A | `LLMProviderFactory` |
+
+The right-hand column is the point: most of the framework is reached through something else, and
+a type you never name is not a concept you had to learn.
 
 
 Design goals:
@@ -47,17 +47,22 @@ Design goals:
 
 ## 3. Core Abstractions (agenor-core)
 
-- Agent: Lifecycle contract for autonomous entities; exposes id, status, and context.
-- Behavior: Unit of work associated with an Agent. Types include CYCLIC, ONE_SHOT, EVENT_DRIVEN, WAKER.
-- Message: Transport‑agnostic payload record (topic, headers, content, metadata).
-- **MessageDispatcher** (since 0.20.0): Composite interface for topic publish/subscribe and direct agent-to-agent messaging. Composed of `TopicPublisher`, `TopicSubscriber`, `DirectMessenger`, `DirectReceiver`. `FilterableSubscriber` is a separate capability for predicate-based subscriptions.
-- **directory.AgentDirectory** (since 0.20.0): Composite directory interface. Composed of `AgentRegistry`, `AgentResolver`, `AgentDiscovery`, `AgentPresence`. Designed for distributed backends.
-- `AgentEndpoint` / `Page<T>` / `PageRequest` (since 0.20.0): Records supporting transport routing and paginated discovery.
-- BehaviorScheduler: Schedules and executes behaviors per their semantics and policy.
-- LLMProvider: Provider-agnostic contract for LLM interaction (`chat`, `chatStream`, `getAvailableModels`).
-- MemoryStore: Interface for agent memory (short-term and long-term entries).
-- Condition: `Predicate<Agent>`-like interface used to gate behavior execution.
-- Annotations: `@Agent`, `@Behavior`, `@AgenorMessageHandler`, `@Persist`, `@PersistenceConfig`, `@DialogueHandler`.
+Five contracts carry the framework. Everything else in `agenor-core` supports one of them, and
+is reached through it rather than named directly.
+
+- **Agent**: Lifecycle contract for autonomous entities; exposes id, status, and context.
+- **Behavior**: Unit of work owned by an Agent. Its type says when the work runs — `ONE_SHOT`,
+  `CYCLIC`, `FSM` — and `BehaviorScheduler` drives it.
+- **Message**: Transport-agnostic payload record (topic, headers, content, metadata).
+- **MessageDispatcher** (since 0.20.0): Topic publish/subscribe and direct agent-to-agent
+  messaging. Split into `TopicPublisher`, `TopicSubscriber`, `DirectMessenger` and
+  `DirectReceiver` so a distributed backend can implement one capability at a time;
+  `FilterableSubscriber` is a separate capability for predicate-based subscriptions.
+- **directory.AgentDirectory** (since 0.20.0): Registration, resolution, discovery and presence,
+  split the same way and for the same reason.
+
+Annotations: `@Agent`, `@Behavior`, `@AgenorMessageHandler`, `@Persist`, `@PersistenceConfig`,
+`@DialogueHandler`.
 
 These are deliberately small to keep adapters swappable without breaking user code.
 
@@ -70,65 +75,38 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ### Behaviors
 
-Base behaviors (`agenor-runtime`):
-- CyclicBehavior: executes at fixed intervals
-- OneShotBehavior: runs once and completes
-- EventDrivenBehavior: reacts to incoming messages/events
-- WakerBehavior: runs after a delay or when a Condition becomes true
-
-Composite/advanced behaviors (`agenor-runtime-ext`, optional — see [AgentAnnotationProcessor / ExtBehaviorAnnotationExtension](#agent-directory-and-scheduler) below):
-- Sequential, Parallel, FSMBehavior: composite execution patterns
-- ConditionalBehavior: gates execution on a `Condition`
-- ThrottledBehavior: wraps any behavior with a `RateLimiter`
-- BatchBehavior, RetryBehavior, CircuitBreakerBehavior, PipelineBehavior, ScheduledBehavior
+A behavior's type answers when its work runs: `ONE_SHOT`, `CYCLIC`, and `FSM` for a state machine
+that decides its own transitions. `SequentialBehavior` and `ParallelBehavior` compose children and
+tell the scheduler how to drive them through `SchedulingHint` rather than through their type —
+which is why that enum exists. See [Behaviors](behaviors/README.md), which also lists the concerns
+that are deliberately not behavior types.
 
 ### Messaging
 
 - **InMemoryMessageDispatcher** (since 0.20.0): Production implementation of `MessageDispatcher` and `FilterableSubscriber`. Delivers messages using virtual threads. Routes `sendTo` calls via `AgentResolver`; throws `AgentNotFoundException` for unknown agents. Emits `message.send` OTel spans. See [Messaging](messaging.md).
-- **InMemoryMessageService** (removed at 0.22.0): Use `InMemoryMessageDispatcher`.
 
 ### Agent Directory and Scheduler
 
 - **InMemoryAgentDirectory** (since 0.20.0): Implements `dev.agenor.core.directory.AgentDirectory` (all four capability interfaces). Assigns `AgentEndpoint.local(nodeId)` to newly registered agents automatically. Emits `directory.resolve` OTel spans. See [Agent Directory](directory.md).
-- **SimpleBehaviorScheduler**: Virtual‑thread friendly scheduler.
+- **SimpleBehaviorScheduler**: drives every scheduled behavior, honouring the initial delay a behavior declares before its first execution.
 - **AgentScanner + AgentFactory** (`agenor-runtime-scanning`, optional): classpath scanning and DI-based construction for `createAgent(Class)`/`scanPackage(...)`.
-- **AgentAnnotationProcessor** (`agenor-runtime`) + **ExtBehaviorAnnotationExtension** (`agenor-runtime-ext`, optional): wire `@Behavior`/`@AgenorMessageHandler` on any registered agent, independent of classpath scanning. Runs unconditionally; ext-only behavior types (CONDITIONAL, THROTTLED, BATCH, RETRY, SEQUENTIAL, PARALLEL, FSM) fail loudly if `agenor-runtime-ext` is absent.
+- **AgentAnnotationProcessor** (`agenor-runtime`) + **ExtBehaviorAnnotationExtension** (`agenor-runtime-ext`, optional): wire `@Behavior`/`@AgenorMessageHandler` on any registered agent, independent of classpath scanning. Runs unconditionally; behavior types implemented in `agenor-runtime-ext` fail loudly if that module is absent.
 - **AgenorRuntime**: Entry point to bootstrap, start, and stop the agent system.
 
 ### Memory
 
 - **InMemoryStore** (`agenor-runtime-ext`): Thread-safe `MemoryStore` implementation backed by `ConcurrentHashMap`. Stores `MemoryEntry` objects with topic, scope (`SHORT_TERM` / `LONG_TERM`), content, and optional TTL. Does not persist to disk.
-- **DefaultLLMMemoryManager** (`agenor-runtime-llm`): Bridges a `MemoryStore` (e.g. `InMemoryStore`) and the LLM conversation history. Supports three context window strategies:
-  - `FixedWindow` — keeps the N most recent messages
-  - `SlidingWindow` — keeps messages within a rolling token budget (default)
-  - `Summarization` — auto-summarizes old messages using an LLM call
-- **TokenBudgetManager** and **ModelTokenLimits** (`agenor-runtime-llm`): Helpers for token estimation and model-specific limits.
+- **DefaultLLMMemoryManager** (`agenor-runtime-llm`): Bridges a `MemoryStore` and the LLM conversation history. Three context window strategies: `FixedWindow` keeps the N most recent messages, `SlidingWindow` keeps messages within a rolling token budget (the default), `Summarization` auto-summarizes older messages with an LLM call. See [Memory Management](memory.md).
 
-### Message Filters (`agenor-runtime-ext`)
+### Filters, rate limiting and conditions (`agenor-runtime-ext`)
 
-All filters implement `MessageFilter` (package `dev.agenor.runtime.filter`). Used with `FilterableSubscriber.subscribeFiltered`:
+Filters select which messages a subscription receives — build them from `MessageFilter` in
+`agenor-core` and pass them to `FilterableSubscriber.subscribeFiltered`. See
+[Message Filtering](message-filtering.md).
 
-- **TopicFilter**: `exact`, `startsWith`, `endsWith`, `wildcard`, `regex`
-- **HeaderFilter**: `exists`, `equals`, `matches`, `in`, `startsWith`
-- **ContentFilter**: `ofType`, `notNull`, `matching`
-- **PredicateFilter**: arbitrary `Predicate<Message>` with optional description
-- **CompositeFilter**: `and`, `or`, `not` combinators
-
-### Rate Limiters (`agenor-runtime-ext`)
-
-Package `dev.agenor.runtime.ratelimit`, both implement `RateLimiter`:
-
-- **SlidingWindowRateLimiter**: tracks request timestamps in a rolling time window
-- **TokenBucketRateLimiter**: classic token-bucket with configurable refill rate
-
-### Conditions (`agenor-runtime-ext`)
-
-Package `dev.agenor.runtime.condition`, all produce `Condition` instances:
-
-- **AgentCondition**: `isRunning`, `hasStatus`, `idMatches`, `nameContains`
-- **SystemCondition**: `cpuBelow/Above`, `memoryBelow/Above`, `availableMemoryAbove`, `threadsBelow`, `systemHealthy`, `systemUnderLoad` — reads `SystemMetrics.current()`
-- **TimeCondition**: `businessHours`, `weekday`, `weekend`, `afterHour`, `beforeHour`
-- **ConditionEvaluator**: evaluates a `Condition` against an `Agent` with error containment
+Rate limiting and `Condition` gating exist to serve behavior types deprecated in 0.28.0. Neither
+is offered as surface a user reaches for directly; see [Behaviors](behaviors/README.md) for where
+those concerns belong instead.
 
 ### Dialogue
 
@@ -273,7 +251,7 @@ Guidelines:
 
 ## 11. Error Handling & Observability
 
-- Exceptions derive from AgenorException hierarchy (AgentException, MessageException, LLMException).
+- Exceptions derive from AgenorException hierarchy (AgentException, LLMException).
 - Logging via SLF4J with pluggable backend (logback in tests/examples).
 - Planned: metrics for behavior execution, message throughput, and directory health.
 
@@ -308,7 +286,6 @@ User input
 | `GuardrailChain` | Fluent builder + sequential execution with short-circuit |
 | `PiiRedactionGuardrail` | Input + Output |
 | `ContentPolicyGuardrail` | Input + Output (YAML blocklist) |
-| `JsonSchemaOutputGuardrail` | Output (Jackson, re-prompt support) |
 | `MaxTokensInputGuardrail` | Input (3 truncation strategies) |
 | `GuardrailAnnotationProcessor` | Reads `@WithGuardrails`, injects chain at registration |
 
@@ -345,8 +322,7 @@ ApprovalRequest, ApprovalDecision (sealed), ApprovalGate, ApprovalNotifier,
 ApprovalTimeoutException, @RequiresApproval
 
 Implementations (agenor-runtime-ext / dev.agenor.runtime.hitl, split out of agenor-runtime per ADR-027):
-InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior,
-LoggingApprovalNotifier, WebhookApprovalNotifier, HitlAnnotationProcessor
+InMemoryApprovalGate, ApprovalService, HumanCheckpointBehavior, HitlAnnotationProcessor
 
 Access via: runtime.getApprovalService()
 See [Human-In-The-Loop guide](behaviors/hitl.md) for the full developer guide.
@@ -377,10 +353,9 @@ Agents are discovered, registered, and their behaviors scheduled automatically.
 ## 16. Glossary
 
 - Agent: Autonomous unit of computation and coordination.
-- Behavior: Scheduled unit of work owned by an Agent.
+- Behavior: Unit of work owned by an Agent; its type says when the work runs.
 - Message: Topic‑addressed payload exchanged between agents.
+- Mailbox: The single inbound path an agent's messages arrive on (ADR-032).
 - Directory: Registry that enables discovery and status tracking of agents.
-- Scheduler: Component responsible for behavior execution policy.
-- Condition: Predicate evaluated at runtime to gate behavior execution.
+- Scheduler: Component responsible for driving behaviors.
 - DialogueCapability: Composable component adding structured conversation support to an agent.
-- LLMMemoryManager: Component managing conversation history and context window budgeting for LLM agents.

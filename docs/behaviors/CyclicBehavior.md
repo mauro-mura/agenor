@@ -63,6 +63,5 @@ static CyclicBehavior from(String name, Duration interval, Runnable action)
 
 ## See Also
 
-- [ScheduledBehavior](ScheduledBehavior.md) - Cron-based scheduling
-- [ThrottledBehavior](ThrottledBehavior.md) - Rate-limited cyclic execution
+- [OneShotBehavior](OneShotBehavior.md) - Execute once, immediately or after a delay
 - [Behavior Overview](README.md)

@@ -123,5 +123,5 @@ return `SchedulingHint.ON_DEMAND` and remain unscheduled.
 
 ## See Also
 
-- [`ParallelBehavior`](ParallelBehavior.md) — concurrent fan-out, also auto-scheduled as ONCE
+- `ParallelBehavior` — concurrent fan-out, also auto-scheduled as ONCE
 - [`CyclicBehavior`](CyclicBehavior.md) — simpler periodic execution without child composition

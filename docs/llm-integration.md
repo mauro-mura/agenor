@@ -45,7 +45,6 @@ agenor-runtime-llm / dev.agenor.runtime.memory.llm
 ├── FixedWindowStrategy.java
 ├── SlidingWindowStrategy.java
 ├── SummarizationStrategy.java
-├── TokenBudgetManager.java
 ├── ModelTokenLimits.java        # Known model context sizes
 └── SimpleTokenEstimator.java
 ```
@@ -415,7 +414,7 @@ public class ImportanceStrategy implements ContextWindowStrategy {
 }
 ```
 
-### TokenBudgetManager and ModelTokenLimits
+### ModelTokenLimits
 
 `ModelTokenLimits` provides a registry of known model context window sizes:
 
@@ -427,8 +426,6 @@ int limit = ModelTokenLimits.getLimit("unknown");    // DEFAULT_LIMIT (4096)
 // Register a custom model
 ModelTokenLimits.register("my-fine-tuned-model", 16_384);
 ```
-
-`TokenBudgetManager` uses `ModelTokenLimits` and a `TokenEstimator` to compute safe allocation splits between conversation history and retrieved facts.
 
 ### Injecting LLMMemoryManager into the runtime
 
@@ -478,7 +475,7 @@ provider.chat(request).exceptionally(ex -> {
             }
             case NETWORK -> {
                 log.warn("Network error, retrying...");
-                // Use RetryBehavior or manual retry
+                // Retry around the call
             }
             case QUOTA_EXCEEDED -> {
                 log.error("Quota exhausted for provider: {}", llmEx.getProvider());
@@ -496,16 +493,17 @@ provider.chat(request).exceptionally(ex -> {
 
 ### Retry pattern
 
-Pair `LLMException` with `RetryBehavior` for automatic back-off:
+`ErrorType` is what makes a retry decision possible: `RATE_LIMIT` and `NETWORK` are worth
+retrying, `AUTHENTICATION` and `QUOTA_EXCEEDED` are not. Wrap the provider call in a resilience
+library — Resilience4j and Failsafe both take a predicate over the thrown exception — and let it
+own the back-off:
 
 ```java
-Behavior retrying = RetryBehavior.builder(myLLMBehavior)
-    .maxAttempts(3)
-    .backoff(Duration.ofSeconds(2))
-    .retryOn(ex -> ex.getCause() instanceof LLMException llmEx
-                   && llmEx.getErrorType() == LLMException.ErrorType.RATE_LIMIT)
-    .build();
-addBehavior(retrying);
+boolean worthRetrying(Throwable t) {
+    return t instanceof LLMException llmEx
+        && (llmEx.getErrorType() == LLMException.ErrorType.RATE_LIMIT
+         || llmEx.getErrorType() == LLMException.ErrorType.NETWORK);
+}
 ```
 
 ---

@@ -225,29 +225,26 @@ MessageFilter nonNull   = ContentFilter.notNull();
 MessageFilter custom    = ContentFilter.matching(obj -> obj instanceof String s && s.length() > 0);
 ```
 
-### PredicateFilter — arbitrary predicate on Message
+### Any predicate
 
 ```java
-MessageFilter recent = new PredicateFilter(
-    msg -> msg.timestamp().isAfter(Instant.now().minusSeconds(60)),
-    "recent-messages"
+MessageFilter recent = MessageFilter.of(
+    msg -> msg.timestamp().isAfter(Instant.now().minusSeconds(60))
 );
 ```
 
-### CompositeFilter — AND / OR / NOT
+### Combining filters
+
+Every `MessageFilter` combines with any other:
 
 ```java
-MessageFilter combined = CompositeFilter.and(
-    TopicFilter.startsWith("order."),
-    HeaderFilter.equals("priority", "HIGH")
-);
+MessageFilter combined = TopicFilter.startsWith("order.")
+    .and(HeaderFilter.equals("priority", "HIGH"));
 
-MessageFilter either = CompositeFilter.or(
-    TopicFilter.exact("alert"),
-    TopicFilter.exact("warning")
-);
+MessageFilter either = TopicFilter.exact("alert")
+    .or(TopicFilter.exact("warning"));
 
-MessageFilter notTest = CompositeFilter.not(HeaderFilter.equals("env", "test"));
+MessageFilter notTest = HeaderFilter.equals("env", "test").negate();
 ```
 
 ### Registering a filter on a subscription
@@ -257,107 +254,11 @@ Filters are applied at subscription time via `FilterableSubscriber.subscribeFilt
 ```java
 @Override
 protected void onStart() {
-    MessageFilter filter = CompositeFilter.and(
-        TopicFilter.startsWith("orders."),
-        HeaderFilter.equals("priority", "HIGH")
-    );
+    MessageFilter filter = TopicFilter.startsWith("orders.")
+        .and(HeaderFilter.equals("priority", "HIGH"));
     ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(filter, msg -> handleHighPriorityOrder(msg));
 }
 ```
-
-## Rate Limiting
-
-Agenor provides two `RateLimiter` implementations in `dev.agenor.runtime.ratelimit`.
-
-### SlidingWindowRateLimiter
-
-Tracks request timestamps in a rolling time window. Good for smooth traffic shaping.
-
-```java
-RateLimit limit = RateLimit.of(100, Duration.ofSeconds(60)); // 100 req / 60 s
-RateLimiter limiter = new SlidingWindowRateLimiter(limit);
-
-if (limiter.tryAcquire()) {
-    callApi();
-} else {
-    log.warn("Rate limit exceeded");
-}
-
-// Blocking acquire (waits until a permit is available)
-limiter.acquire().join();
-
-// Blocking with timeout
-boolean acquired = limiter.acquire(Duration.ofSeconds(5)).join();
-```
-
-### TokenBucketRateLimiter
-
-Classic token-bucket algorithm. Tokens refill at a steady rate, supporting short bursts.
-
-```java
-RateLimit limit = RateLimit.of(10, Duration.ofSeconds(1)); // 10 tokens/s
-RateLimiter limiter = new TokenBucketRateLimiter(limit);
-
-limiter.acquire().thenRun(this::processRequest);
-```
-
-### Integration with ThrottledBehavior
-
-The `ThrottledBehavior` wrapper applies a `RateLimiter` to any existing behavior:
-
-```java
-RateLimiter limiter = new TokenBucketRateLimiter(RateLimit.of(5, Duration.ofSeconds(1)));
-Behavior throttled = new ThrottledBehavior(myBehavior, limiter);
-addBehavior(throttled);
-```
-
-## Conditions
-
-Conditions are `Predicate<Agent>`-like objects (`dev.agenor.core.condition.Condition`) used to gate behavior execution at runtime. Agenor supplies three factory classes in `dev.agenor.runtime.condition`.
-
-### AgentCondition — based on agent state
-
-```java
-Condition running    = AgentCondition.isRunning();
-Condition hasStatus  = AgentCondition.hasStatus(AgentStatus.RUNNING);
-Condition idPattern  = AgentCondition.idMatches("worker-.*");
-Condition nameHas    = AgentCondition.nameContains("processor");
-```
-
-### SystemCondition — based on JVM / OS metrics
-
-```java
-Condition lowCpu    = SystemCondition.cpuBelow(70.0);     // CPU < 70 %
-Condition lowMem    = SystemCondition.memoryBelow(80.0);   // heap < 80 %
-Condition healthy   = SystemCondition.systemHealthy();     // cpu<80 && mem<80
-Condition overload  = SystemCondition.systemUnderLoad();   // cpu>70 || mem>70
-```
-
-### TimeCondition — based on wall-clock time
-
-```java
-Condition business = TimeCondition.businessHours(); // 09:00 – 17:00
-Condition weekday  = TimeCondition.weekday();
-Condition weekend  = TimeCondition.weekend();
-Condition morning  = TimeCondition.beforeHour(12);
-Condition evening  = TimeCondition.afterHour(18);
-```
-
-### Using Conditions with ConditionalBehavior and WakerBehavior
-
-```java
-// Only run during business hours on weekdays
-Condition condition = TimeCondition.businessHours().and(TimeCondition.weekday());
-
-Behavior conditional = new ConditionalBehavior(myBehavior, condition);
-addBehavior(conditional);
-
-// WakerBehavior: fire once when condition becomes true
-Behavior waker = new WakerBehavior(() -> notifyOnCall(), SystemCondition.systemHealthy());
-addBehavior(waker);
-```
-
-Conditions also compose with `and()`, `or()`, `negate()` (default methods on `Condition`).
 
 ## Dialogue and Protocols
 

@@ -83,7 +83,6 @@ The table below lists every span emitted by Agenor components. Spans marked
 | `hitl.approval` | `HumanCheckpointBehavior` | `hitl.request_id`, `hitl.action`, `hitl.decision`, `hitl.wait_ms` |
 | `behavior.execute` | `SimpleBehaviorScheduler` | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
 | `mcp.tool.call` | `AgenorMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
-| `reflection.iteration` | `ReflectionBehavior` | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
 | `message.send` | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
 | `directory.resolve` | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**) | `agent.id`, `endpoint.type` (`not-found` if missing) |
 | `directory.register` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |

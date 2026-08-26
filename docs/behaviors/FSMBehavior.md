@@ -183,6 +183,4 @@ Duration t    = fsm.getStateTimeout();
 ## See Also
 
 - [SequentialBehavior](https://www.agenor.dev/docs/behaviors/SequentialBehavior/) - Linear step-by-step execution
-- [ConditionalBehavior](https://www.agenor.dev/docs/behaviors/ConditionalBehavior/) - Single condition gate
-- [ParallelBehavior](https://www.agenor.dev/docs/behaviors/ParallelBehavior/) - Concurrent child execution
 - [Behavior Overview](https://www.agenor.dev/docs/behaviors/)

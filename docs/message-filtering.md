@@ -1,13 +1,10 @@
-# Message Filtering & Rate Limiting Guide
+# Message Filtering Guide
 
-This guide covers the full message filtering API and both rate limiting implementations available in Agenor.
+This guide covers the message filtering API: deciding which messages a subscription receives.
 
 The filtering subsystem spans two packages:
-- **`agenor-core` / `dev.agenor.core.filter`** — `MessageFilter` interface and `MessageFilterBuilder`
+- **`agenor-core` / `dev.agenor.core.filter`** — the `MessageFilter` interface, its combinators, and `MessageFilterBuilder`
 - **`agenor-runtime-ext` / `dev.agenor.runtime.filter`** — concrete filter implementations (split out of `agenor-runtime` per ADR-027)
-- **`agenor-core` / `dev.agenor.core.ratelimit`** — `RateLimit`, `RateLimiter`, `RateLimiterStats`
-- **`agenor-runtime-ext` / `dev.agenor.runtime.ratelimit`** — `SlidingWindowRateLimiter`, `TokenBucketRateLimiter` (split out of `agenor-runtime` per ADR-027)
-- **`agenor-runtime-ext` / `dev.agenor.runtime.behavior.advanced`** — `ThrottledBehavior` (split out of `agenor-runtime` per ADR-027)
 
 ---
 
@@ -112,48 +109,38 @@ ContentFilter.matching(obj ->
 );
 ```
 
-### PredicateFilter
+### Any predicate
 
-Wraps any `Predicate<Message>` with an optional description for logging.
+`MessageFilter.of` wraps any `Predicate<Message>`.
 
 ```java
-import dev.agenor.runtime.filter.PredicateFilter;
+import dev.agenor.core.filter.MessageFilter;
 
-MessageFilter filter = new PredicateFilter(
-    msg -> msg.senderId() != null && msg.senderId().startsWith("trusted-"),
-    "sender-trust-check"
+MessageFilter trusted = MessageFilter.of(
+    msg -> msg.senderId() != null && msg.senderId().startsWith("trusted-")
 );
-
-// Without description (defaults to "custom-predicate")
-MessageFilter filter = new PredicateFilter(
-    msg -> msg.topic() != null && !msg.topic().startsWith("internal.")
-);
-
-System.out.println(filter);  // PredicateFilter[sender-trust-check]
 ```
 
-### CompositeFilter
+### Combining filters
 
-Combines multiple filters with AND, OR, or NOT logic.
+Every `MessageFilter` combines with any other — no separate composite type is involved.
 
 ```java
-import dev.agenor.runtime.filter.CompositeFilter;
-import dev.agenor.runtime.filter.TopicFilter;
-import dev.agenor.runtime.filter.HeaderFilter;
-
 MessageFilter topic  = TopicFilter.startsWith("orders.");
 MessageFilter urgent = HeaderFilter.equals("priority", "HIGH");
 MessageFilter region = HeaderFilter.in("region", "eu-west", "eu-central");
 
-// AND — all filters must pass
-MessageFilter both = CompositeFilter.and(topic, urgent);
+// AND — both must pass
+MessageFilter both = topic.and(urgent);
 
-// OR — any filter may pass
-MessageFilter either = CompositeFilter.or(urgent, region);
+// OR — either may pass
+MessageFilter either = urgent.or(region);
 
-// NOT — inverts the first (and only) filter
-MessageFilter notInternal = CompositeFilter.not(TopicFilter.startsWith("internal."));
+// NOT — inverts
+MessageFilter notInternal = TopicFilter.startsWith("internal.").negate();
 ```
+
+`MessageFilter.acceptAll()` and `MessageFilter.rejectAll()` are the identity and empty filters.
 
 ---
 
@@ -210,11 +197,9 @@ MessageFilter.builder()
 Pass a `MessageFilter` (or any `Predicate<Message>`) to `FilterableSubscriber.subscribeFiltered()`. The in-memory dispatcher implements this capability:
 
 ```java
-// Using a concrete filter class
-MessageFilter filter = CompositeFilter.and(
-    TopicFilter.startsWith("orders."),
-    HeaderFilter.equals("priority", "HIGH")
-);
+// Using concrete filter classes
+MessageFilter filter = TopicFilter.startsWith("orders.")
+    .and(HeaderFilter.equals("priority", "HIGH"));
 
 FilterableSubscriber filterable = (FilterableSubscriber) dispatcher;
 filterable.subscribeFiltered(filter, message -> {
@@ -263,200 +248,7 @@ public void handleOrder(Message msg) {
 
 ---
 
-## Rate Limiting
-
-### RateLimit configuration
-
-`RateLimit` is a record that defines the limit parameters. All three constructors are immutable.
-
-```java
-import dev.agenor.core.ratelimit.RateLimit;
-
-// Factory methods
-RateLimit tenPerSecond   = RateLimit.perSecond(10);
-RateLimit hundredPerMin  = RateLimit.perMinute(100);
-RateLimit thousandPerHour = RateLimit.perHour(1000);
-
-// Explicit constructor
-RateLimit limit = new RateLimit(
-    50,                    // maxRequests
-    Duration.ofMinutes(1), // period
-    100                    // burstCapacity (for token bucket)
-);
-
-// Parse from string ("number/unit")
-RateLimit limit = RateLimit.parse("10/s");    // 10 per second
-RateLimit limit = RateLimit.parse("100/min"); // 100 per minute
-RateLimit limit = RateLimit.parse("500/h");   // 500 per hour
-
-// Override burst capacity
-RateLimit burst = RateLimit.perSecond(10).withBurst(30);  // 10 avg, burst of 30
-```
-
-### SlidingWindowRateLimiter
-
-Tracks requests in a rolling time window. Provides smooth traffic shaping — the rate is always measured over the most recent `period` ms, so no request can benefit from being made at the start of a fixed window.
-
-```java
-import dev.agenor.runtime.ratelimit.SlidingWindowRateLimiter;
-
-RateLimiter limiter = new SlidingWindowRateLimiter(RateLimit.perSecond(10));
-
-// Non-blocking: return immediately with true/false
-if (limiter.tryAcquire()) {
-    callExternalApi();
-} else {
-    log.warn("Rate limit exceeded, request dropped");
-}
-
-// Blocking: wait until a permit is available
-limiter.acquire().thenRun(this::callExternalApi);
-
-// Blocking with timeout: returns true if acquired, false if timed out
-boolean acquired = limiter.acquire(Duration.ofSeconds(2)).join();
-if (acquired) {
-    callExternalApi();
-}
-
-// Observe current capacity
-int permits = limiter.availablePermits();
-
-// Reset all counters and the timestamp queue
-limiter.reset();
-```
-
-**Best for:** APIs that must not be hit in bursts; smooth ingest pipelines; LLM API calls with strict RPM limits.
-
-### TokenBucketRateLimiter
-
-Implements the token bucket algorithm. Tokens are added to the bucket at a steady rate; each request consumes one token. The bucket has a `burstCapacity` ceiling, allowing temporary bursts above the average rate.
-
-```java
-import dev.agenor.runtime.ratelimit.TokenBucketRateLimiter;
-
-// 10 requests/second with burst of 30
-RateLimit limit   = RateLimit.perSecond(10).withBurst(30);
-RateLimiter limiter = new TokenBucketRateLimiter(limit);
-
-// Same API as SlidingWindowRateLimiter
-if (limiter.tryAcquire()) { ... }
-limiter.acquire().join();
-limiter.acquire(Duration.ofMillis(500)).join();
-
-// Refill happens automatically every ~100ms as tryAcquire() is called
-```
-
-**Best for:** event-driven processing that naturally produces bursts; webhook handlers; batch jobs that need burst tolerance.
-
-### Choosing between the two
-
-| Aspect | SlidingWindow | TokenBucket |
-|--------|---------------|-------------|
-| Burst tolerance | ❌ strict at all times | ✅ up to `burstCapacity` |
-| Traffic shape | smooth | bursty |
-| Memory cost | O(n) timestamps | O(1) |
-| Thread safety | ConcurrentLinkedQueue | AtomicInteger + lock |
-| Best for | rate-sensitive APIs | event-driven processing |
-
-### RateLimiterStats
-
-Both implementations expose statistics:
-
-```java
-RateLimiterStats stats = limiter.getStats();
-
-System.out.println("Total requests  : " + stats.totalRequests());
-System.out.println("Allowed         : " + stats.allowedRequests());
-System.out.println("Rejected        : " + stats.rejectedRequests());
-System.out.printf("Rejection rate  : %.1f%%%n", stats.rejectionRate());
-System.out.println("Current permits : " + stats.currentPermits());
-System.out.println("Last reset      : " + stats.lastReset());
-```
-
----
-
-## ThrottledBehavior — rate limiting for agent behaviors
-
-`ThrottledBehavior` (in `dev.agenor.runtime.behavior.advanced`) wraps any repeating action into a rate-limited behavior. Internally it uses `TokenBucketRateLimiter`.
-
-### Waiting mode — blocks until permit available
-
-```java
-import dev.agenor.runtime.behavior.advanced.ThrottledBehavior;
-
-Behavior apiBehavior = ThrottledBehavior.fromWaiting(
-    RateLimit.perSecond(5),
-    () -> callExternalApi()
-);
-addBehavior(apiBehavior);
-```
-
-### Skipping mode — skips execution when rate exceeded
-
-```java
-Behavior apiBehavior = ThrottledBehavior.fromSkipping(
-    RateLimit.perSecond(5),
-    () -> callExternalApi()
-);
-```
-
-### Cyclic mode — periodic with rate limiting
-
-```java
-// Execute at most 5 times/second, and no faster than every 500ms
-Behavior apiBehavior = ThrottledBehavior.cyclic(
-    RateLimit.perSecond(5),
-    Duration.ofMillis(500),
-    () -> pollQueue()
-);
-```
-
-### Subclassing (full control)
-
-```java
-@Agent("api-caller")
-public class ApiCallerAgent extends BaseAgent {
-
-    private final ThrottledBehavior apiPoller = new ThrottledBehavior(
-            "api-poller",
-            RateLimit.perSecond(5),
-            Duration.ofMillis(200),
-            true   // waitForPermit
-    ) {
-        @Override
-        protected void throttledAction() {
-            fetchAndProcess();
-        }
-
-        @Override
-        protected void onRateLimitExceeded() {
-            log.warn("API rate limit exceeded, backing off");
-        }
-    };
-
-    @Override
-    protected void onStart() {
-        addBehavior(apiPoller);
-    }
-}
-```
-
-### ThrottledBehavior API summary
-
-| Method | Description |
-|--------|-------------|
-| `fromWaiting(limit, action)` | Create blocking throttled behavior |
-| `fromSkipping(limit, action)` | Create non-blocking (skip on limit) behavior |
-| `cyclic(limit, interval, action)` | Periodic + throttled |
-| `getRateLimiterStats()` | Current rate limiter statistics |
-| `getThrottledExecutions()` | Successful execution count |
-| `getRejectedExecutions()` | Skipped execution count (skip mode only) |
-| `availablePermits()` | Current token count |
-| `resetRateLimiter()` | Reset limiter state |
-
----
-
-## Complete example: Filtered + throttled agent
+## Complete example: a filtered agent
 
 ```java
 @Agent("order-enricher")
@@ -465,27 +257,16 @@ public class OrderEnricherAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Only handle urgent orders from external sources
-        MessageFilter filter = CompositeFilter.and(
-            TopicFilter.startsWith("orders."),
-            HeaderFilter.equals("priority", "HIGH"),
-            CompositeFilter.not(TopicFilter.startsWith("orders.internal."))
-        );
+        MessageFilter filter = TopicFilter.startsWith("orders.")
+            .and(HeaderFilter.equals("priority", "HIGH"))
+            .and(TopicFilter.startsWith("orders.internal.").negate());
 
-        messageService.subscribe(filter, this::enqueueOrder);
-
-        // Enrich at most 20 times/second; burst of 40 allowed
-        addBehavior(ThrottledBehavior.fromWaiting(
-            RateLimit.perSecond(20).withBurst(40),
-            this::processNextFromQueue
-        ));
+        ((FilterableSubscriber) getMessageDispatcher())
+            .subscribeFiltered(filter, this::enrichOrder);
     }
 
-    private void enqueueOrder(Message msg) {
-        // Add to internal queue
-    }
-
-    private void processNextFromQueue() {
-        // Pull from queue and call enrichment API
+    private void enrichOrder(Message msg) {
+        // Call the enrichment API
     }
 }
 ```
@@ -496,4 +277,4 @@ public class OrderEnricherAgent extends BaseAgent {
 
 - [Agent Development Guide](agent-development.md) — `@AgenorMessageHandler`, behaviors
 - [Architecture Guide](architecture.md) — module overview
-- [LLM Integration Guide](llm-integration.md) — rate limiting for LLM API calls
+- [Behaviors](behaviors/README.md) — where rate limiting belongs now
