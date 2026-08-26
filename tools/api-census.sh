@@ -156,7 +156,7 @@ documented_in() {   # <TypeName> -> number of user-facing doc files naming it
 CENSUS_MODULE_LIST=$(printf '`%s`, ' "${CENSUS_MODULES[@]}"); CENSUS_MODULE_LIST="${CENSUS_MODULE_LIST%, }"
 
 rows=""
-declare -i n_total=0 n_keep=0 n_selfjust=0 n_offered=0 n_internal=0 n_dead=0 n_demo=0
+declare -i n_total=0 n_keep=0 n_selfjust=0 n_offered=0 n_internal=0 n_dead=0 n_demo=0 n_dep=0
 
 for module in "${CENSUS_MODULES[@]}"; do
     for own in "${ALL_FILES[@]}"; do
@@ -203,6 +203,11 @@ for module in "${CENSUS_MODULES[@]}"; do
 
         docs=$(documented_in "$simple")
 
+        # A type already scheduled for removal is a decision taken, not a candidate. Without
+        # this the report tells you to deprecate what you deprecated last release.
+        deprecated=""
+        grep -q "forRemoval = true" "$own" && { deprecated="**deprecated**"; n_dep+=1; }
+
         # Order matters. Being named by real user code settles it; everything below is a
         # different way of not being named.
         #
@@ -219,9 +224,66 @@ for module in "${CENSUS_MODULES[@]}"; do
         fi
         n_total+=1
 
-        rows+="| \`$simple\` | $module | $fw | $ex_total | $ex_incidental | $docs | $verdict | ${demos:--} |"$'\n'
+        rows+="| \`$simple\` | $module | $fw | $ex_total | $ex_incidental | $docs | $verdict | ${deprecated:--} | ${demos:--} |"$'\n'
     done
 done
+
+# ---------------------------------------------------------------------------------------
+# Behaviour types, counted as constants instead of as classes.
+#
+# The type census above cannot see this feature. A user reaches a behaviour by writing
+# @Behavior(type = THROTTLED) and never names ThrottledBehavior, so every annotation-driven
+# behaviour scores zero example references and lands in "documented, unnamed" for a reason
+# that has nothing to do with whether anyone uses it.
+#
+# For an annotation-driven feature the *constant* is the unit of decision: the class is
+# implementation the user never mentions, and deprecating it while the constant stays offered
+# retires nothing.
+#
+# There is no framework column here, deliberately. Every framework reference to a constant is
+# the switch arm that implements it — the feature's own weight, never evidence of demand.
+# ---------------------------------------------------------------------------------------
+BEHAVIOR_TYPE_FILE="agenor-core/src/main/java/dev/agenor/core/BehaviorType.java"
+
+crows=""
+declare -i c_total=0 c_keep=0 c_selfjust=0 c_offered=0 c_dead=0
+
+if [[ -f "$BEHAVIOR_TYPE_FILE" ]]; then
+    mapfile -t EXAMPLE_FILES < <(find "$EXAMPLES_PREFIX" -name "*.java" | sed 's|^\./||' | sort)
+
+    # Four spaces then an upper-case word: the constants. Javadoc lines carry a leading
+    # asterisk at a different indent and cannot match.
+    while IFS= read -r constant; do
+        behavior_class=$(constant_to_behavior "$constant")
+        ex_total=0; ex_incidental=0; demos=""
+
+        for f in "${EXAMPLE_FILES[@]}"; do
+            grep -qw -- "$constant" "$f" || continue
+            ex_total=$((ex_total + 1))
+            if is_dedicated "$f" "$behavior_class"; then
+                demos+="${demos:+, }$(basename "$f" .java)"
+            else
+                ex_incidental=$((ex_incidental + 1))
+            fi
+        done
+
+        docs=$(documented_in "$constant")
+        # The @Deprecated sits directly above the constant it applies to.
+        deprecated=""
+        if grep -B3 -E "^    $constant,?\$" "$BEHAVIOR_TYPE_FILE" | grep -q "forRemoval = true"; then
+            deprecated="**deprecated**"
+        fi
+
+        if   (( ex_incidental > 0 ));  then verdict="named by user code";       c_keep+=1
+        elif (( ex_total > 0 ));       then verdict="**self-justifying**";      c_selfjust+=1
+        elif (( docs > 0 ));           then verdict="**documented, unnamed**";  c_offered+=1
+        else                                verdict="**dead surface**";         c_dead+=1
+        fi
+        c_total+=1
+
+        crows+="| \`$constant\` | $ex_total | $ex_incidental | $docs | $verdict | ${deprecated:--} | ${demos:--} |"$'\n'
+    done < <(grep -oE '^    [A-Z][A-Z0-9_]*' "$BEHAVIOR_TYPE_FILE" | tr -d ' ')
+fi
 
 # ---------------------------------------------------------------------------------------
 # Output
@@ -294,11 +356,44 @@ unnecessary":
 | **dead surface** | $n_dead |
 | **Total** | $n_total |
 
+Of these, **$n_dep are already deprecated for removal** — decisions taken, not candidates. The
+verdict column reports what the tree looks like to a user; the *deprecated* column is what stops
+a later reader re-deciding something settled.
+
 ## Table
 
 Sorted by verdict, then module, then type.
 
-| Type | Module | Framework | Examples | Incidental | Docs | Verdict | Demonstrated by |
-|---|---|---|---|---|---|---|---|
+| Type | Module | Framework | Examples | Incidental | Docs | Verdict | Deprecated | Demonstrated by |
+|---|---|---|---|---|---|---|---|---|
 EOF
 printf '%s' "$rows" | sort -t'|' -k8,8 -k3,3 -k2,2
+
+cat <<EOF
+
+## Behaviour types, counted as constants
+
+The table above counts types. It cannot see this feature: a user writes
+\`@Behavior(type = THROTTLED)\` and never names \`ThrottledBehavior\`, so every annotation-driven
+behaviour scores zero example references for a reason unrelated to whether anyone uses it.
+
+**For an annotation-driven feature the constant is the unit of decision.** The class is
+implementation the user never mentions, and deprecating the class while the constant stays
+offered retires nothing.
+
+No framework column, deliberately: every framework reference to a constant is the switch arm
+that implements it — the feature's own weight, not evidence of demand. The **incidental**
+column decides here exactly as it does above.
+
+| Verdict | Count |
+|---|---|
+| named by user code | $c_keep |
+| **self-justifying** | $c_selfjust |
+| **documented, unnamed** | $c_offered |
+| **dead surface** | $c_dead |
+| **Total** | $c_total |
+
+| Constant | Examples | Incidental | Docs | Verdict | Deprecated | Demonstrated by |
+|---|---|---|---|---|---|---|
+EOF
+printf '%s' "$crows"
