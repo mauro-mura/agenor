@@ -35,12 +35,7 @@ import java.util.stream.Collectors;
  *
  * @since 0.20.0
  */
-/**
- * Implements both the new clean {@link AgentDirectory} and the backward-compatible
- * {@link dev.agenor.core.AgentDirectory} facade so this class can be used anywhere
- * either interface is expected.
- */
-public class InMemoryAgentDirectory implements AgentDirectory, dev.agenor.core.AgentDirectory {
+public class InMemoryAgentDirectory implements AgentDirectory {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryAgentDirectory.class);
 

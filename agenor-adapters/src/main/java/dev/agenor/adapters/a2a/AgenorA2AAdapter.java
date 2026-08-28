@@ -1,6 +1,6 @@
 package dev.agenor.adapters.a2a;
 
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.messaging.MessageDispatcher;

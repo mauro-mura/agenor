@@ -4,6 +4,7 @@ import dev.agenor.adapters.persistence.directory.JdbcAgentPresence;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.directory.AgentPresence;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.DisplayName;
@@ -169,7 +170,7 @@ class AgenorDirectoryPresenceAutoConfigurationTest {
         });
     }
 
-    private static Instant lastSeen(dev.agenor.core.AgentDirectory directory, String agentId) {
+    private static Instant lastSeen(AgentDirectory directory, String agentId) {
         return directory.findById(agentId).join().orElseThrow().lastSeen();
     }
 

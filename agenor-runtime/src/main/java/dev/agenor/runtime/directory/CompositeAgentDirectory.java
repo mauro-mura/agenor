@@ -33,8 +33,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 0.22.0
  */
-public class CompositeAgentDirectory
-        implements AgentDirectory, dev.agenor.core.AgentDirectory {
+public class CompositeAgentDirectory implements AgentDirectory {
 
     private final AgentRegistry registry;
     private final AgentDiscovery discovery;

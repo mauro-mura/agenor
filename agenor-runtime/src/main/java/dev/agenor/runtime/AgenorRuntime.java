@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import dev.agenor.core.*;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.context.AgentContext;
 import dev.agenor.core.telemetry.AgenorTelemetry;

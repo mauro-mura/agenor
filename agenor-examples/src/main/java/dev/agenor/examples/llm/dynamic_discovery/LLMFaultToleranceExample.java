@@ -1,6 +1,7 @@
 package dev.agenor.examples.llm.dynamic_discovery;
 
 import dev.agenor.core.*;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.annotations.*;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;

@@ -1,7 +1,7 @@
 package dev.agenor.adapters.a2a;
 
 import dev.agenor.core.AgentDescriptor;
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.Subscription;

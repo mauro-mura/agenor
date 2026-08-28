@@ -1,7 +1,7 @@
 package dev.agenor.runtime.support;
 
 import dev.agenor.core.AgentDescriptor;
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.memory.MemoryStore;

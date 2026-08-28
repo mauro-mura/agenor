@@ -1,6 +1,7 @@
 package dev.agenor.examples.ecommerce;
 
 import dev.agenor.core.*;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.Behavior;
 import dev.agenor.core.annotations.AgenorMessageHandler;

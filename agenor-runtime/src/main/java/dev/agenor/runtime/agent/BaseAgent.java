@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import dev.agenor.core.Agent;
 import dev.agenor.core.AgentDescriptor;
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.AgentStatus;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.BehaviorScheduler;

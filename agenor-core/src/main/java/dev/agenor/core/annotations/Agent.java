@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  *
  * <p>When package scanning is enabled on {@code AgenorRuntime}, all classes annotated
  * with {@code @Agent} are discovered, instantiated, and registered in the
- * {@link dev.agenor.core.AgentDirectory}. The runtime then calls {@code start()} on
+ * {@link dev.agenor.core.directory.AgentDirectory}. The runtime then calls {@code start()} on
  * each agent that has {@link #autoStart()} set to {@code true}.
  *
  * <p>Example usage:
@@ -47,7 +47,7 @@ public @interface Agent {
     /**
      * An optional type label used for grouping and querying agents.
      *
-     * <p>Types allow callers to query the {@link dev.agenor.core.AgentDirectory} for
+     * <p>Types allow callers to query the {@link dev.agenor.core.directory.AgentDirectory} for
      * all agents of a given type (e.g., {@code "processor"}, {@code "collector"},
      * {@code "monitor"}). The type has no effect on agent behavior.
      *

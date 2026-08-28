@@ -1,6 +1,6 @@
 package dev.agenor.core.context;
 
-import dev.agenor.core.AgentDirectory;
+import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.BehaviorScheduler;
 import dev.agenor.core.memory.MemoryStore;
 import dev.agenor.core.messaging.MessageDispatcher;
