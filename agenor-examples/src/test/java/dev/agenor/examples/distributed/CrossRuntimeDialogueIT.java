@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Testcontainers
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
+@EnabledIfDockerAvailable
 @DisplayName("Cross-runtime dialogue — integration tests (PostgreSQL + Valkey)")
 class CrossRuntimeDialogueIT {
 

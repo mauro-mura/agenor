@@ -11,6 +11,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.DriverManager;
@@ -47,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  */
 @Testcontainers
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
+@EnabledIfDockerAvailable
 @DisplayName("JdbcAgentPresence — integration tests (PostgreSQL)")
 class JdbcAgentPresenceIT {
 
