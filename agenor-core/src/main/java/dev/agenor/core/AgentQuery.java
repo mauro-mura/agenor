@@ -3,7 +3,8 @@ package dev.agenor.core;
 import java.util.Set;
 
 /**
- * Query object for searching agents in the {@link AgentDirectory}.
+ * Query object for searching agents in the
+ * {@link dev.agenor.core.directory.AgentDirectory}.
  *
  * <p>Combines multiple criteria (AND logic). A {@code null} value for any criterion
  * means "don't filter by this criterion".
