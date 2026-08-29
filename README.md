@@ -24,7 +24,9 @@ Agenor reimagines multi-agent systems with modern Java practices:
 
 ### Prerequisites
 
-- Java 21+ (LTS recommended)
+- A **JDK** 21+ (LTS recommended) — a JRE is not enough, the build runs `javac`.
+  Several distributions ship a headless JRE as the default `java`; the build fails
+  with `release version 21 not supported` if `JAVA_HOME` points at one.
 - Maven 3.9+
 
 ### Installation

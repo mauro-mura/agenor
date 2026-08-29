@@ -257,6 +257,19 @@
 			                    <requireUpperBoundDeps/>
 			                    <dependencyConvergence/>
 			                    <banDuplicatePomDependencyVersions/>
+			                    <!--
+			                      Java 21 is stated in the README and in CONTRIBUTING, and until now
+			                      nothing checked it. On a too-old JDK the build fails inside the
+			                      compiler with "release version 21 not supported", which names
+			                      neither the requirement nor the fix. This fails in validate, before
+			                      any module compiles, and says what to do.
+			                    -->
+			                    <requireJavaVersion>
+			                        <version>[21,)</version>
+			                        <message>Agenor builds with Java 21 or newer, and needs a JDK
+			                            rather than a JRE - the build invokes javac. Point JAVA_HOME
+			                            at a JDK 21+ installation.</message>
+			                    </requireJavaVersion>
 			                </rules>
 			            </configuration>
 			        </execution>
