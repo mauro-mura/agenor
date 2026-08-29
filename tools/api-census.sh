@@ -17,10 +17,132 @@
 #
 #   bash tools/api-census.sh > api-census-$(date +%Y%m%d).md
 #
+# With --check it does something else entirely: it skips the census and audits the removal
+# schedule, exiting non-zero if any deprecation is overdue or carries no target release at all.
+#
+#   bash tools/api-census.sh --check
+#
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+CHECK_ONLY=0
+case "${1:-}" in
+    --check) CHECK_ONLY=1 ;;
+    "")      ;;
+    *)       printf 'usage: %s [--check]\n' "$0" >&2; exit 2 ;;
+esac
+
+# ---------------------------------------------------------------------------------------
+# Removal schedule audit.
+#
+# CLAUDE.md makes `grep -c "forRemoval = true"` the phase's measure of progress on the
+# reasoning that it counts the public surface actually scheduled for removal. That reading
+# only holds while the schedule is honoured, and nothing was checking. It went unhonoured:
+# `dev.agenor.core.AgentDirectory` promised removal at 0.24.0 and was still shipping at
+# 0.28.0, four releases past its own date, because a passed date is invisible to every tool
+# and to every reader who is not looking for it.
+#
+# Two failures, not one, and the second is the worse:
+#
+#   overdue  - a declared release at or below the version being built;
+#   undated  - forRemoval = true with no declared release anywhere near it. This one can
+#              never *become* overdue, so no check will ever see it. Both of the tree's
+#              undated deprecations had sat that way for releases.
+#
+# The date is read from the Javadoc, not from the annotation: @Deprecated has a `since` but
+# no "until", so the target release lives in prose, and prose is where it has to be read
+# from. Two prepositions are in use ("removal at", "removal in") and the pattern tolerates
+# both rather than demanding a sweep of 44 Javadoc blocks.
+# ---------------------------------------------------------------------------------------
+DEPRECATION_WINDOW=10   # measured: the furthest date sits 7 lines above its annotation
+
+current_version() {
+    # The reactor version, minus -SNAPSHOT: a deprecation targeting the release being built
+    # is due now, not later. First <version> in the root pom is the project's own.
+    grep -m1 -oE "<version>[^<]+</version>" pom.xml \
+        | sed -E "s|</?version>||g; s/-SNAPSHOT$//"
+}
+
+# file|line|declared release (empty when none)|the declaration it sits on
+deprecation_sites() {
+    find . -path "*/src/main/*" -name "*.java" -print0 \
+        | xargs -0 awk -v W="$DEPRECATION_WINDOW" '
+        FNR == 1 { pending = 0 }
+        { buf[FNR] = $0 }
+        pending && $0 !~ /forRemoval = true/ {
+            subject = $0
+            gsub(/^[ \t]+|[ \t]+$/, "", subject)
+            if (subject != "" && substr(subject, 1, 1) != "@") {
+                # Trailing brace or semicolon ends a declaration; a trailing comma ends an
+                # enum constant. An *interior* comma does not - it separates an extends list,
+                # and cutting there reports half an interface name.
+                sub(/[ \t]*[{;].*$/, "", subject)
+                sub(/,[ \t]*$/, "", subject)
+                if (length(subject) > 64) subject = substr(subject, 1, 61) "..."
+                print FILENAME "|" pending "|" declared "|" subject
+                pending = 0
+            }
+        }
+        /forRemoval = true/ {
+            declared = ""
+            for (i = FNR - 1; i >= 1 && i > FNR - 1 - W; i--) {
+                if (match(buf[i], /removal (at|in) [0-9]+\.[0-9]+\.[0-9]+/)) {
+                    declared = substr(buf[i], RSTART, RLENGTH)
+                    sub(/removal (at|in) /, "", declared)
+                    break
+                }
+            }
+            pending = FNR
+        }
+    ' | sed 's|^\./||' | sort
+}
+
+version_le() {   # $1 <= $2
+    [[ "$1" == "$2" ]] || [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" == "$1" ]]
+}
+
+run_schedule_check() {
+    local version rows="" n_overdue=0 n_undated=0 file line declared subject
+    version="$(current_version)"
+
+    while IFS='|' read -r file line declared subject; do
+        [[ -n "$file" ]] || continue
+        if [[ -z "$declared" ]]; then
+            rows+="| \`$subject\` | $file:$line | **none declared** | undated |"$'\n'
+            n_undated=$((n_undated + 1))
+        elif version_le "$declared" "$version"; then
+            rows+="| \`$subject\` | $file:$line | $declared | **overdue** |"$'\n'
+            n_overdue=$((n_overdue + 1))
+        fi
+    done < <(deprecation_sites)
+
+    if (( n_overdue == 0 && n_undated == 0 )); then
+        printf 'Removal schedule clean at %s: every forRemoval names a later release.\n' "$version"
+        return 0
+    fi
+
+    cat <<REPORT
+## Overdue
+
+Building $version. $n_overdue past their declared release, $n_undated with no release declared.
+
+| Deprecation | Site | Declared | |
+|---|---|---|---|
+$rows
+An undated deprecation is the worse of the two: it can never *become* overdue, so nothing will
+ever flag it. Either remove these now, or move the date and say in the commit why the release
+they were promised to came and went.
+REPORT
+    return 1
+}
+
+if (( CHECK_ONLY )); then
+    # Explicit rather than leaning on set -e: the exit code is the point of this mode.
+    run_schedule_check || exit 1
+    exit 0
+fi
 
 CENSUS_MODULES=(agenor-core agenor-runtime agenor-runtime-ext agenor-runtime-llm agenor-runtime-scanning)
 EXAMPLES_PREFIX="agenor-examples/src/main"
