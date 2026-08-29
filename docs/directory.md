@@ -219,17 +219,25 @@ Fields:
 | `agent.id` | the queried agent ID |
 | `endpoint.type` | resolved transport type, or `"not-found"` |
 
-## Migration from AgentDirectory (0.19.x → 0.20.0)
+## Migration from AgentDirectory (0.19.x → 0.28.0)
 
-The old `dev.agenor.core.AgentDirectory` is deprecated in 0.20.0 and will be removed in 0.22.0.
+`dev.agenor.core.AgentDirectory` **was removed in 0.28.0**, having been deprecated at 0.22.0. The
+replacement carries the same simple name in a different package, so for most code the migration is
+the import line and nothing else.
 
 | Old API | New API |
 |---------|---------|
+| `dev.agenor.core.AgentDirectory` | `dev.agenor.core.directory.AgentDirectory` |
 | `directory.listAll()` | `directory.findAgents(AgentQuery.all(), PageRequest.first(n))` |
 | `directory.findAgents(query)` | `directory.findAgents(query, PageRequest.first(n))` |
-| `AgentDirectory` (injection point) | `dev.agenor.core.directory.AgentDirectory` |
 
-`InMemoryAgentDirectory` implements both interfaces, so existing code compiles without changes. Migrate at your own pace before 0.22.0.
+If you reach the directory through `AgenorRuntime.getAgentDirectory()`, it now returns the new type
+and there is nothing to change.
+
+One behavioural note. The removed interface supplied `heartbeat` as a `default` that read the
+descriptor and wrote its status back, which is not atomic — its own Javadoc said so. The
+implementations do the touch under a single compare-and-set, so removing the facade removed the
+race rather than leaving it to you (ADR-028).
 
 ## Custom Backends
 

@@ -175,9 +175,9 @@ public class DialogueCapability {
      *
      * @param dispatcher the message dispatcher to use
      * @since 0.20.0
-     * @deprecated since 0.26.0, use {@link #initialize()} — the capability resolves the
-     *             dispatcher from the agent, which is the only one the runtime holds. This
-     *             overload still honours the dispatcher passed to it.
+     * @deprecated since 0.26.0, for removal in 0.29.0. Use {@link #initialize()} — the
+     *             capability resolves the dispatcher from the agent, which is the only one the
+     *             runtime holds. This overload still honours the dispatcher passed to it.
      */
     @Deprecated(since = "0.26.0", forRemoval = true)
     public void initialize(MessageDispatcher dispatcher) {
