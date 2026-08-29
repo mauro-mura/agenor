@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.net.URI;
@@ -28,10 +29,17 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Note: These tests use small, widely available model:
  * - qwen2.5:0.5b (0.5B parameters, ~397MB)
+ *
+ * Named {@code *IT} since 0.29.0. As {@code OllamaProviderIntegrationTest} it matched
+ * surefire's default includes, so the suite's heaviest Docker test - it pulls the ollama
+ * image and a 397MB model - ran in the unit-test phase, discovered by a different
+ * convention from the nine tests it belongs with. The root pom says {@code *IT.java} means
+ * an integration test needing Docker; this one now says so in its name.
  */
 @Testcontainers
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
-class OllamaProviderIntegrationTest {
+@EnabledIfDockerAvailable
+class OllamaProviderIT {
 
     @Container
     static GenericContainer<?> ollama = new GenericContainer<>("ollama/ollama:latest")
