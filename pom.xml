@@ -183,6 +183,23 @@
                     <version>3.13.0</version>
                     <configuration>
                         <release>21</release>
+                        <compilerArgs>
+                            <!--
+                              javac validates the Javadoc while it compiles, so a broken
+                              {@link} fails `mvn compile` in seconds. It used not to fail
+                              anything: removing dev.agenor.core.AgentDirectory at 0.28.0 left
+                              an unqualified {@link AgentDirectory} in AgentQuery pointing at
+                              nothing, `mvn clean verify` stayed green through the whole
+                              release, and the break first surfaced in deploy-docs.yml - which
+                              runs on `release: published`, after the tag was pushed.
+
+                              -missing on purpose: this checks that what is written is correct,
+                              not that everything is documented. Turning on the missing group
+                              would report thousands of absent @param and @return tags and
+                              teach everyone to ignore the output.
+                            -->
+                            <arg>-Xdoclint:all,-missing</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
                 <plugin>

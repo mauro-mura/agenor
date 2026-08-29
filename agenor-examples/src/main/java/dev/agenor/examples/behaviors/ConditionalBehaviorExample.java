@@ -71,7 +71,7 @@ class ResourceAwareAgent extends BaseAgent {
     }
 
     /**
-     * Heavy task that executes only when CPU < 50% AND Memory < 70%
+     * Heavy task that executes only when CPU &lt; 50% AND Memory &lt; 70%
      * Runs every 3 seconds but only executes when condition is met
      */
     @Behavior(
@@ -167,7 +167,7 @@ class AdaptiveAgent extends BaseAgent {
 
     /**
      * Low-priority task that runs only when the system is VERY idle
-     * Executes every 4 seconds when CPU < 30% AND Memory < 50%
+     * Executes every 4 seconds when CPU &lt; 30% AND Memory &lt; 50%
      */
     @Behavior(
         type = BehaviorType.CONDITIONAL,
