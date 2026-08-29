@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Removing the `AgentDirectory` facade broke Javadoc, and 0.28.0 shipped that way.**
+  `AgentQuery` lives in `dev.agenor.core` and referred to `{@link AgentDirectory}` unqualified,
+  which resolved to the facade in its own package until the facade was removed. `mvn clean
+  verify` stayed green through the entire release — `verify` does not run javadoc, and neither
+  does `build.yml` — so the error first appeared in `deploy-docs.yml`, which runs on `release:
+  published`. The published API documentation for 0.28.0 was never generated. The reference is
+  now qualified; nothing about runtime behaviour was ever affected.
+
+  The pre-removal audit grepped for the fully-qualified name and missed this the same way it
+  missed `AgenorRuntime`: a name that resolves without being spelled out. There it was
+  `import dev.agenor.core.*`, here same-package resolution inside a Javadoc tag. The compiler
+  caught the first kind. Nothing caught this one, because Javadoc references are not compiled.
+
+- **Two tests in `agenor-runtime-ext` passed only under surefire's default invocation.**
+  `WebhookApprovalNotifierTest` registered `WireMockExtension` as a *static* field, binding its
+  lifecycle to the enclosing class — which has four `@Nested` children. Any `-Dtest=…` puts
+  surefire in specified-tests mode, where those are discovered as separate entries sharing the
+  one static object, so an `afterAll` from one stopped the server another still needed: 492
+  tests, one error, every time. An instance field binds per test method instead. Separately,
+  five approval tests called `execute()`, slept 50ms and took `getPendingRequests().getFirst()`
+  — a guess rather than a wait, which threw `NoSuchElementException` under load. They now poll.
+
+### Changed
+
+- **`javac` now rejects a broken Javadoc reference at compile time.**
+  `-Xdoclint:all,-missing` on `maven-compiler-plugin`. javac already parses the Javadoc while
+  compiling, so validating it costs nothing and moves the check from *"when the release is
+  published"* to `mvn compile`. The whole reactor compiles with zero diagnostics, so it needed
+  no cleanup campaign — only four unescaped `<` in one example's prose (`CPU < 50%`, which javac
+  reads as an opening tag). `-missing` stays off deliberately: it asks whether everything is
+  documented, a different question from whether what is written is correct, and would bury the
+  second under thousands of absent `@param` tags.
+
+- **The build fails in `validate` when `JAVA_HOME` is not a JDK 21+.** `README.md` and
+  `CONTRIBUTING.md` have always said "Java 21+" and nothing checked it; a wrong `JAVA_HOME` died
+  inside the compiler with `release version 21 not supported`, naming neither the requirement nor
+  the fix. `requireJavaVersion` joins the existing enforcer execution. A version number was never
+  the whole requirement, either — a JRE satisfies it and still has no `javac` — so both
+  prerequisite lists now say **JDK**, and the enforcer message says so too.
+
+- **The integration tests skip when Docker is absent instead of failing.**
+  `@EnabledIfSystemProperty(named = "integration.tests.enabled")` asks whether you requested
+  them, not whether the machine can run them. On a host with no reachable daemon the ten ITs
+  errored, Testcontainers cached the first failure (*"Will not retry"*), the reactor stopped in
+  `agenor-adapters`, and four ITs in later modules were never reached — four errors, six tests
+  silently not run, nothing wrong with the code. `@EnabledIfDockerAvailable` now asks the second
+  question: 49 tests skipped with the reason recorded, and the build reaches the last module.
+
+- **`OllamaProviderIntegrationTest` is now `OllamaProviderIT`.** Ending in `Test` matched
+  surefire's default includes, so the suite's heaviest Docker test — it pulls the ollama image
+  and a 397MB model — ran in the unit-test phase, discovered by a different convention from the
+  nine tests it belongs with. The root pom already says `*IT.java` means an integration test
+  needing Docker.
+
 ## [0.28.0] - 2026-08-29
 
 ### Deprecated
