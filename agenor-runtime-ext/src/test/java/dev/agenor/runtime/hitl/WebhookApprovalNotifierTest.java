@@ -17,8 +17,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("WebhookApprovalNotifier")
 class WebhookApprovalNotifierTest {
 
+    // Deliberately an instance field, not static. As a static field WireMockExtension binds to
+    // beforeAll/afterAll of the enclosing class, and this class has four @Nested children; when
+    // surefire enters specified-tests mode (any -Dtest=...) those are discovered as separate
+    // entries that share this one static object, so an afterAll from one stops the server another
+    // is still using. The outer builder test then failed with "Not listening on HTTP port" - every
+    // time, not intermittently. An instance field binds to beforeEach/afterEach instead: one
+    // server per test method, no lifecycle shared across containers. Seven tests, so the cost is
+    // noise.
     @RegisterExtension
-    static WireMockExtension wm = WireMockExtension.newInstance()
+    WireMockExtension wm = WireMockExtension.newInstance()
             .options(wireMockConfig().dynamicPort())
             .build();
 
