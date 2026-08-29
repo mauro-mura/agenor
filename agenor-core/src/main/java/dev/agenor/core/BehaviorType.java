@@ -107,10 +107,9 @@ public enum BehaviorType {
     /**
      * Circuit breaker pattern.
      *
-     * @deprecated since 0.28.0, for removal in 0.30.0, together with
-     *             {@code CircuitBreakerBehavior}, deprecated in 0.27.0. Circuit breaking is a
-     *             resilience pattern rather than an agent concept, and dedicated libraries do
-     *             it better.
+     * @deprecated since 0.28.0, for removal in 0.30.0. The behaviour class that served this
+     *             constant was removed in 0.29.0. Circuit breaking is a resilience pattern
+     *             rather than an agent concept, and dedicated libraries do it better.
      */
     @Deprecated(since = "0.28.0", forRemoval = true)
     CIRCUIT_BREAKER,
@@ -128,9 +127,9 @@ public enum BehaviorType {
     /**
      * Multi-stage pipeline processing.
      *
-     * @deprecated since 0.28.0, for removal in 0.30.0, together with {@code PipelineBehavior},
-     *             deprecated in 0.27.0. {@code SequentialBehavior} covers ordered stages and
-     *             has real callers.
+     * @deprecated since 0.28.0, for removal in 0.30.0. The behaviour class that served this
+     *             constant was removed in 0.29.0. {@code SequentialBehavior} covers ordered
+     *             stages and has real callers.
      */
     @Deprecated(since = "0.28.0", forRemoval = true)
     PIPELINE,

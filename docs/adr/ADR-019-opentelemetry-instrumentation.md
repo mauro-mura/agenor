@@ -101,7 +101,7 @@ agenor-adapters
 | `hitl.approval`        | `HumanCheckpointBehavior`       | `hitl.request_id`, `hitl.action`, `hitl.decision`, `hitl.wait_ms` |
 | `behavior.execute`     | `SimpleBehaviorScheduler`       | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
 | `mcp.tool.call`        | `AgenorMcpClientAdapter`        | `mcp.tool.name`, `mcp.transport` (sse/stdio) |
-| `reflection.iteration` | `ReflectionBehavior`            | `reflection.iteration`, `reflection.score`, `reflection.accepted` |
+| ~~`reflection.iteration`~~ | ~~`ReflectionBehavior`~~ | Emitted until 0.29.0, when `ReflectionBehavior` was removed. No source emits this span |
 | `message.send`         | `InMemoryMessageDispatcher`     | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
 | `directory.resolve`    | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**, @since 0.22.0) | `agent.id`, `endpoint.type` (`not-found` if missing) |
 | `directory.register`   | `JdbcAgentRegistry` (**JDBC adapter**, @since 0.22.0) | `agent.id` |

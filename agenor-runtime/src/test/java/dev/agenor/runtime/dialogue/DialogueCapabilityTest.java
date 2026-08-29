@@ -55,19 +55,20 @@ class DialogueCapabilityTest {
         when(messageService.sendTo(any(Message.class)))
             .thenReturn(CompletableFuture.completedFuture(null));
 
+        agent.setMessageDispatcher(messageService);
         capability = new DialogueCapability(agent);
     }
 
     @Test
     void shouldInitializeAndScanHandlers() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         verify(messageService).subscribeRecipient(eq("test-agent"), any());
     }
 
     @Test
     void shouldDispatchIncomingMessages() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         // Simulate incoming message
         var incomingMsg = Message.builder()
@@ -89,7 +90,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldIgnorePlainMessagesInsteadOfFabricatingAConversation() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         // Given a plain sendTo() message: no performative, no conversationId
         var plainMsg = Message.builder()
@@ -111,7 +112,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldIgnoreMessagesCarryingAnUnknownPerformative() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         // Given a peer speaking a dialect this runtime does not know
         var futureMsg = Message.builder()
@@ -132,7 +133,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldSendRequest() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         capability.request("remote-agent", "do something");
 
@@ -146,7 +147,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldSendQuery() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         capability.query("remote-agent", "what time?");
 
@@ -159,7 +160,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldReplyToMessage() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         var original = DialogueMessage.builder()
             .id("msg-1")
@@ -182,7 +183,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldProvideConvenienceReplyMethods() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         var original = DialogueMessage.builder()
             .senderId("remote").receiverId("test-agent")
@@ -198,7 +199,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldShutdownCleanly() {
-        capability.initialize(messageService);
+        capability.initialize();
         capability.shutdown();
         // subscription.unsubscribe() was called on the Subscription returned by subscribeRecipient
         verify(messageService).subscribeRecipient(eq("test-agent"), any());
@@ -206,7 +207,7 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldTrackActiveConversations() {
-        capability.initialize(messageService);
+        capability.initialize();
 
         capability.request("agent-1", "task1");
         capability.request("agent-2", "task2");
@@ -218,7 +219,7 @@ class DialogueCapabilityTest {
     void shouldStartReaperOnInitializeAndStopItOnShutdown() {
         assertThat(capability.isReaperRunning()).isFalse();
 
-        capability.initialize(messageService);
+        capability.initialize();
         assertThat(capability.isReaperRunning()).isTrue();
 
         capability.shutdown();
@@ -227,8 +228,8 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldNotStartASecondReaperWhenInitializedTwice() {
-        capability.initialize(messageService);
-        capability.initialize(messageService);
+        capability.initialize();
+        capability.initialize();
 
         capability.shutdown();
 
@@ -242,7 +243,7 @@ class DialogueCapabilityTest {
             .retention(Duration.ZERO)
             .sweepInterval(Duration.ofMillis(20))
             .build();
-        sweeping.initialize(messageService);
+        sweeping.initialize();
         try {
             sweeping.request("agent-1", "task");
             var conversationId = sweeping.getActiveConversations().get(0).getId();
@@ -270,7 +271,7 @@ class DialogueCapabilityTest {
             .commitmentTracker(tracker)
             .sweepInterval(Duration.ofMillis(20))
             .build();
-        sweeping.initialize(messageService);
+        sweeping.initialize();
         try {
             var commitment = tracker.createFromMessage(DialogueMessage.builder()
                 .senderId("requester")
@@ -403,17 +404,17 @@ class DialogueCapabilityTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    void shouldStillHonourTheDispatcherPassedToTheDeprecatedInitialize() {
-        // TestDialogueAgent.getMessageDispatcher() returns null, so the deprecated overload
-        // cannot delegate to the no-arg initialize() - it must use what it was given.
-        // Every other call in this class relies on the same guarantee.
-        assertThat(agent.getMessageDispatcher()).isNull();
+    void shouldFailWithActionableMessageWhenTheAgentHasNoDispatcher() {
+        // The only way in since initialize(MessageDispatcher) was removed at 0.29.0: an agent
+        // that was never registered with the runtime has no dispatcher to resolve.
+        var unregistered = new TestDialogueAgent("unregistered-agent");
+        var capabilityWithoutDispatcher = new DialogueCapability(unregistered);
 
-        capability.initialize(messageService);
-
-        verify(messageService).subscribeRecipient(eq("test-agent"), any());
-        assertThat(capability.getActiveConversations()).isEmpty();
+        assertThatThrownBy(capabilityWithoutDispatcher::initialize)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("unregistered-agent")
+            .hasMessageContaining("no MessageDispatcher available")
+            .hasMessageContaining("Register the agent with AgenorRuntime");
     }
 
     @Test
@@ -431,8 +432,8 @@ class DialogueCapabilityTest {
 
     @Test
     void shouldScanHandlersOnlyOnceWhenInitializedTwice() {
-        capability.initialize(messageService);
-        capability.initialize(messageService);
+        capability.initialize();
+        capability.initialize();
 
         var incoming = Message.builder()
             .id("msg-1")
@@ -454,7 +455,7 @@ class DialogueCapabilityTest {
             .conversationManagerFactory((id, dispatcher, protocols, commitments) -> stub)
             .build();
 
-        custom.initialize(messageService);
+        custom.initialize();
 
         assertThat(custom.getConversationManager()).isSameAs(stub);
     }
@@ -466,7 +467,7 @@ class DialogueCapabilityTest {
             .commitmentTracker(tracker)
             .build();
 
-        custom.initialize(messageService);
+        custom.initialize();
 
         assertThat(custom.getCommitmentTracker()).isSameAs(tracker);
     }
@@ -479,7 +480,7 @@ class DialogueCapabilityTest {
         registry.register(new FrozenRequestProtocol());
 
         var custom = DialogueCapability.builder(agent).protocolRegistry(registry).build();
-        custom.initialize(messageService);
+        custom.initialize();
 
         // When a request conversation starts
         custom.request("remote-agent", "task", Duration.ofSeconds(5));
@@ -555,8 +556,14 @@ class DialogueCapabilityTest {
         final AtomicInteger requestCount = new AtomicInteger();
         final AtomicInteger informCount = new AtomicInteger();
 
+        private dev.agenor.core.messaging.MessageDispatcher dispatcher;
+
         TestDialogueAgent(String id) {
             this.id = id;
+        }
+
+        void setMessageDispatcher(dev.agenor.core.messaging.MessageDispatcher dispatcher) {
+            this.dispatcher = dispatcher;
         }
 
         @Override public String getAgentId() { return id; }
@@ -566,7 +573,7 @@ class DialogueCapabilityTest {
         @Override public CompletableFuture<Void> stop() { return CompletableFuture.completedFuture(null); }
         @Override public void addBehavior(dev.agenor.core.Behavior behavior) { }
         @Override public void removeBehavior(String behaviorId) { }
-        @Override public dev.agenor.core.messaging.MessageDispatcher getMessageDispatcher() { return null; }
+        @Override public dev.agenor.core.messaging.MessageDispatcher getMessageDispatcher() { return dispatcher; }
 
         @DialogueHandler(performatives = Performative.REQUEST)
         public void handleRequest(DialogueMessage msg) {

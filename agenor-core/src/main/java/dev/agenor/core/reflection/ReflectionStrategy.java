@@ -7,7 +7,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>Implementations evaluate the quality of {@code originalOutput} with respect to
  * the given {@code task} and return a {@link CritiqueResult} that drives the
- * Generate → Critique → Revise loop in {@code ReflectionBehavior}.
+ * Generate → Critique → Revise loop.
  *
  * <p>This is a functional interface: single-method implementations can be supplied
  * as lambdas or method references.

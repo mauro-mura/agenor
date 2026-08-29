@@ -114,21 +114,6 @@ public record LLMRequest(
     }
 
     /**
-     * Create a new builder for the specified model.
-     *
-     * @param model the model to use (e.g., "gpt-4o"); may be {@code null} to defer to the provider
-     * @return a new builder instance
-     * @deprecated since 0.16.0, for removal in 0.29.0. Use {@link #builder()} and call
-     *             {@link Builder#model(String)} when an explicit per-request override is
-     *             needed. The model will be resolved from the provider's configured default
-     *             when not specified.
-     */
-    @Deprecated(since = "0.16.0", forRemoval = true)
-    public static Builder builder(String model) {
-        return new Builder(model);
-    }
-
-    /**
      * Builder for creating LLMRequest instances.
      */
     public static class Builder {
@@ -147,10 +132,6 @@ public record LLMRequest(
 
         private Builder() {
             this.model = null;
-        }
-
-        private Builder(String model) {
-            this.model = model;
         }
 
         /**

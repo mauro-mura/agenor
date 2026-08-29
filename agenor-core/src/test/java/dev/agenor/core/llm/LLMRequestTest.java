@@ -229,10 +229,9 @@ class LLMRequestTest {
 
     @Test
     @DisplayName("Should allow null model — deferred to provider")
-    @SuppressWarnings("deprecation")
     void testNullModel() {
-        // builder(null) is deprecated but must not throw; model is resolved at execution time
-        LLMRequest request = LLMRequest.builder(null)
+        // An explicit null must not throw; the model is resolved at execution time
+        LLMRequest request = LLMRequest.builder().model(null)
                 .userMessage("Hello")
                 .build();
         assertNull(request.model());

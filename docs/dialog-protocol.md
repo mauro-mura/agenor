@@ -510,6 +510,7 @@ DialogueCapability dialogue = DialogueCapability.builder(this)
 
 ## Version History
 
+- **0.29.0** - `initialize(MessageDispatcher)` removed; call `initialize()`
 - **0.26.0** - Lifecycle and resource-management hardening
   - `DialogueCapability` self-registers via `LifecycleHooks`; `initialize()` is idempotent
     and resolves the dispatcher from the agent (`initialize(MessageDispatcher)` deprecated)

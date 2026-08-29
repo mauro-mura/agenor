@@ -3,9 +3,8 @@ package dev.agenor.core.reflection;
 /**
  * Configuration for the Generate → Critique → Revise reflection loop.
  *
- * <p>Pass an instance of this record to {@link ReflectionStrategy#critique} and to
- * {@code ReflectionBehavior} to control iteration limits, quality thresholds, and
- * the critique prompt template.
+ * <p>Pass an instance of this record to {@link ReflectionStrategy#critique} to control
+ * iteration limits, quality thresholds, and the critique prompt template.
  *
  * <p>Use {@link #defaults()} for sensible out-of-the-box settings, or construct a
  * custom instance when fine-grained control is needed:

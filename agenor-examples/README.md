@@ -45,10 +45,8 @@ One behavior type per example, all self-contained.
 | `ThrottledExample` | `dev.agenor.examples.behaviors.ThrottledExample` | `@Behavior(type = THROTTLED)` rate limiting |
 | `ConditionalBehaviorExample` | `dev.agenor.examples.behaviors.ConditionalBehaviorExample` | `CONDITIONAL` — runs only when a condition is true |
 | `RetryExample` | `dev.agenor.examples.behaviors.RetryExample` | `RetryBehavior` with exponential/linear/jitter/fixed backoff |
-| `CircuitBreakerExample` | `dev.agenor.examples.behaviors.CircuitBreakerExample` | `CIRCUIT_BREAKER` — open/half-open/closed state machine |
 | `BatchProcessingExample` | `dev.agenor.examples.behaviors.BatchProcessingExample` | `BATCH` — buffer → drain → write |
 | `ScheduledExample` | `dev.agenor.examples.behaviors.ScheduledExample` | `ScheduledBehavior` cron expressions + timezone |
-| `PipelineExample` | `dev.agenor.examples.behaviors.PipelineExample` | `PIPELINE` — sequential processing stages |
 
 ---
 
@@ -108,7 +106,6 @@ selection logic used by every example below.
 | `LLMDirectMessagingExample` | `dev.agenor.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
 | `LLMCapabilityDiscoveryExample` | `dev.agenor.examples.llm.capabilities.LLMCapabilityDiscoveryExample` | `scanPackages` + `AgentDirectory` capability queries |
 | `LLMFaultToleranceExample` | `dev.agenor.examples.llm.dynamic_discovery.LLMFaultToleranceExample` | Dynamic discovery + fault tolerance (agent stops mid-run) |
-| `ReflectionExample` | `dev.agenor.examples.behaviors.ReflectionExample` | ReflectionBehavior — Generate → Critique → Revise loop |
 
 The three `LLM*` examples use the same research-team domain intentionally — comparing
 them side by side shows how the same problem is solved with different discovery patterns.
@@ -149,10 +146,8 @@ dev.agenor.examples
 │   ├── ThrottledExample
 │   ├── ConditionalBehaviorExample
 │   ├── RetryExample
-│   ├── CircuitBreakerExample
 │   ├── BatchProcessingExample
-│   ├── ScheduledExample
-│   └── PipelineExample
+│   └── ScheduledExample
 ├── agent/                     ChatAgentExample
 ├── filtering/                 MessageFilterExample
 ├── dialogue/                  ContractNet, Query, Request protocols

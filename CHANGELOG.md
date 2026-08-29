@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **The six deprecations whose removal was promised for this release are paid.** All six were
+  past their own date the moment `0.29.0-SNAPSHOT` opened, which is what
+  `tools/api-census.sh --check` exists to say out loud — it exited non-zero on every one of
+  them. Each had zero users outside its own test or its own demonstration, so the census
+  verdict and the removal are the same decision, taken twice.
+
+  BREAKING CHANGE:
+
+  - `LLMRequest.builder(String model)` — use `LLMRequest.builder()` and `.model(String)` when
+    a per-request override is actually needed. Deprecated since 0.16.0, thirteen releases. Its
+    only caller anywhere was the test asserting that `builder(null)` does not throw; the
+    equivalent guarantee on `builder().model(null)` is now what that test asserts.
+  - `LLMMemoryQuery` — build the query arguments at the call site. It was the only type in the
+    census with a zero in every column: no framework code, no example, no documentation page.
+  - `CircuitBreakerBehavior`, `PipelineBehavior`, `ReflectionBehavior` — with
+    `CircuitBreakerExample`, `PipelineExample` and `ReflectionExample`, which existed to
+    demonstrate them and were their only callers. Circuit breaking belongs to a resilience
+    library; `SequentialBehavior` already covers ordered stages and has real callers; compose
+    a critique loop with `ReflectionStrategy`, which survives and is where the judgement lives.
+  - `DialogueCapability.initialize(MessageDispatcher)` — call `initialize()`, which resolves
+    the dispatcher from the agent. No `src/main` file called the overload; the twenty-one call
+    sites were all in one test, whose fake agent returned `null` from `getMessageDispatcher()`
+    precisely so the overload had to be used. Giving the fake a dispatcher migrated all of them.
+
+  `BehaviorType.CIRCUIT_BREAKER` and `BehaviorType.PIPELINE` deliberately **stay** until their
+  own date of 0.30.0. A constant is what a user writes in `@Behavior(type = …)`, so it is the
+  unit of the deprecation contract; retiring it a release early to tidy up after the class
+  would break the promise the annotation made, in the release whose subject is keeping them.
+
+  Two consequences worth stating rather than discovering. `ReflectionBehavior` was the sole
+  emitter of the `reflection.iteration` span, so that span no longer exists — ADR-019's table
+  lists an instrument with no source. And ADR-012 remains **Accepted** and is unaffected: its
+  decision was to place `ReflectionStrategy` in `agenor-core`, and the strategy is what stayed.
+
+  This takes the surface scheduled for removal from 44 to 38, and `--check` from red to green.
+  The count going *down* is the point: it measures surface still scheduled, not work done.
+
 ### Fixed
 
 - **Removing the `AgentDirectory` facade broke Javadoc, and 0.28.0 shipped that way.**
