@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-08-29
+
 ### Deprecated
 
 - **The behaviour taxonomy keeps the three types that have users.** `tools/api-census.sh` now
@@ -54,8 +56,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   throws, catches or declares.
 
 The public surface scheduled for removal goes from 7 to 45: **20 types, 12 enum constants and
-13 members**. Nothing is removed in this release, and every deprecated API keeps working until
-0.30.0.
+13 members**. One removal does land — the `AgentDirectory` facade, below — and every other
+deprecated API keeps working until 0.29.0 or 0.30.0 as its Javadoc says.
+
+- **Two deprecations that named no release now name one.** `LLMRequest.builder(String)` has
+  carried `forRemoval = true` since 0.16.0 and
+  `DialogueCapability.initialize(MessageDispatcher)` since 0.26.0, neither with a target
+  release. Both are now scheduled for **0.29.0**. A deprecation with no declared release can
+  never *become* overdue, so nothing would ever have flagged it — which is how the
+  `AgentDirectory` facade outlived its own date by four releases unnoticed.
 
 ### Fixed
 
@@ -88,7 +97,35 @@ The public surface scheduled for removal goes from 7 to 45: **20 types, 12 enum 
   test beneath it both called `messageService.send(...)`; no `MessageService` type has existed
   in the tree for six releases. Both are rewritten against `MessageDispatcher`.
 
+- **`tools/api-census.sh --check` audits the removal schedule and exits non-zero.** It reports
+  two failures: a declared release at or below the version being built, and — the worse one —
+  `forRemoval = true` with no release declared anywhere, which can never become overdue and so
+  would never be flagged. The report the script prints without the flag is unchanged. Nothing
+  runs the check automatically; it is a command you can run, not a gate in CI.
+
 ### Removed
+
+- **`dev.agenor.core.AgentDirectory` is gone.** Change the import to
+  `dev.agenor.core.directory.AgentDirectory` — same simple name, same methods, same behaviour,
+  only the package path differs. This is the release's one breaking change.
+
+  It matters beyond the one interface. The facade was deprecated at 0.22.0 with a Javadoc
+  promising removal at 0.24.0, and it was still shipping at 0.28.0. This release takes the count
+  of surface scheduled for removal from 7 to 45 on the argument that the number measures a
+  decision rather than an intention; postponing an overdue removal a fifth time while making
+  that argument would have been the release contradicting its own thesis.
+
+  Nothing is lost with it. The five `default` bridge methods it carried are overridden concretely
+  in both `InMemoryAgentDirectory` and `CompositeAgentDirectory`, and
+  `JdbcAgent{Resolver,Discovery,Presence}` implement the capability interfaces directly — no
+  implementation ever inherited a default. Its `heartbeat` default was read-then-write and its
+  own Javadoc admitted the race; the implementations do that touch atomically under
+  `computeIfPresent` (ADR-028). Removing the facade removed a documented race rather than
+  introducing one.
+
+  If you reach the directory through `AgenorRuntime.getAgentDirectory()`, nothing changes for
+  you: the accessor returned the deprecated type only because `AgenorRuntime` imports
+  `dev.agenor.core.*`, and it now returns the replacement.
 
 - `AgentContextExample` and `WebConsoleExample`, whose only reason to exist was to demonstrate a
   type that the framework itself depends on. The types stay; the demonstrations were the census's
@@ -1595,7 +1632,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/mauro-mura/agenor/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/mauro-mura/agenor/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/mauro-mura/agenor/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/mauro-mura/agenor/compare/v0.24.1...v0.25.0
