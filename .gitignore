@@ -79,6 +79,8 @@ $RECYCLE.BIN/
 ## AI Coding Assistants ###
 CLAUDE.md
 .claude/
+## Machine-local MCP endpoints (an IDE's port on 127.0.0.1), not project configuration.
+.mcp.json
 
 ## Working notes — direction, open-finding registers, generated reports.
 ## Addressed to the maintainer, not to the public; see working/README.md.
