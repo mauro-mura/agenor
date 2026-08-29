@@ -82,6 +82,27 @@ class HumanCheckpointBehaviorTest {
         return b;
     }
 
+    /**
+     * Returns the pending request's id once the behavior has actually registered it.
+     *
+     * The five call sites below used {@code Thread.sleep(50)} and then {@code getFirst()}. That is
+     * a race, not a wait: {@code execute()} is asynchronous, and under load - a full reactor run,
+     * a busy machine - 50ms is not enough, at which point {@code getFirst()} throws
+     * NoSuchElementException on an empty list. It was observed failing during the 0.28.0
+     * integration-test run. Polling asks the question instead of guessing the answer.
+     */
+    private String awaitPendingRequestId() throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 5_000;
+        while (System.currentTimeMillis() < deadline) {
+            var pending = gate.getPendingRequests();
+            if (!pending.isEmpty()) {
+                return pending.getFirst().requestId();
+            }
+            Thread.sleep(10);
+        }
+        throw new AssertionError("no approval request was registered within 5s");
+    }
+
     // -------------------------------------------------------------------------
     // Approved
     // -------------------------------------------------------------------------
@@ -103,8 +124,7 @@ class HumanCheckpointBehaviorTest {
 
             // Submit approval asynchronously after behavior starts
             var future = b.execute();
-            Thread.sleep(50); // let behavior reach gate.requestApproval().join()
-            service.approve(gate.getPendingRequests().getFirst().requestId());
+            service.approve(awaitPendingRequestId());
             future.get(2, TimeUnit.SECONDS);
 
             assertThat(handlerCalled).isTrue();
@@ -135,8 +155,7 @@ class HumanCheckpointBehaviorTest {
             });
 
             var future = b.execute();
-            Thread.sleep(50);
-            service.reject(gate.getPendingRequests().getFirst().requestId(), "budget exceeded");
+            service.reject(awaitPendingRequestId(), "budget exceeded");
             future.get(2, TimeUnit.SECONDS);
 
             assertThat(received.get()).isInstanceOf(ApprovalDecision.Rejected.class);
@@ -168,8 +187,7 @@ class HumanCheckpointBehaviorTest {
             });
 
             var future = b.execute();
-            Thread.sleep(50);
-            service.modify(gate.getPendingRequests().getFirst().requestId(), "revised-payload");
+            service.modify(awaitPendingRequestId(), "revised-payload");
             future.get(2, TimeUnit.SECONDS);
 
             assertThat(usedPayload.get()).isEqualTo("revised-payload");
@@ -226,8 +244,7 @@ class HumanCheckpointBehaviorTest {
         void notifier_calledOnce() throws Exception {
             var b = behavior(Duration.ofMinutes(5), d -> {});
             var future = b.execute();
-            Thread.sleep(50);
-            service.approve(gate.getPendingRequests().getFirst().requestId());
+            service.approve(awaitPendingRequestId());
             future.get(2, TimeUnit.SECONDS);
 
             assertThat(notifier.callCount).isEqualTo(1);
@@ -247,8 +264,7 @@ class HumanCheckpointBehaviorTest {
             b.setAgent(new TestAgent());
 
             var future = b.execute();
-            Thread.sleep(50);
-            service.approve(gate.getPendingRequests().getFirst().requestId());
+            service.approve(awaitPendingRequestId());
             future.get(2, TimeUnit.SECONDS);
 
             assertThat(handlerCalled).isTrue();
