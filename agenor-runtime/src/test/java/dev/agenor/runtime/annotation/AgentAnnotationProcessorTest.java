@@ -262,6 +262,49 @@ class AgentAnnotationProcessorTest {
     }
 
     @Test
+    @DisplayName("Should reject a topic pattern instead of subscribing to something unreachable")
+    void shouldRejectWildcardTopic() {
+        // Until 0.29.0 the annotation's Javadoc advertised wildcards and its own example used
+        // one, while both delivery paths matched exactly: the handler was registered and never
+        // fired. The failure is now at registration, and says where patterns actually live.
+        WildcardTopicAgent agent = new WildcardTopicAgent();
+
+        assertThatThrownBy(() -> processor.processAnnotations(agent))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("orders.*")
+            .hasMessageContaining("matched exactly")
+            .hasMessageContaining("TopicFilter.wildcard");
+
+        verify(topicSubscriber, never()).subscribeTopic(anyString(), any(MessageHandler.class));
+    }
+
+    @Test
+    @DisplayName("Should reject a multi-segment '#' pattern on the same terms")
+    void shouldRejectHashTopic() {
+        HashTopicAgent agent = new HashTopicAgent();
+
+        assertThatThrownBy(() -> processor.processAnnotations(agent))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("#");
+    }
+
+    @Test
+    @DisplayName("Should release the topic subscription when the agent stops")
+    void shouldUnsubscribeTopicsOnStop() throws Exception {
+        // The Subscription used to be discarded, keeping only subscriptionId() for a log line,
+        // so nothing could ever cancel it and the subscription outlived the agent.
+        TestAgentWithAnnotations agent = new TestAgentWithAnnotations();
+        processor.processAnnotations(agent);
+        agent.start().get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        verify(subscription, never()).unsubscribe();
+
+        agent.stop().get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        verify(subscription).unsubscribe();
+    }
+
+    @Test
     @DisplayName("Should skip invalid message handler signature")
     void shouldSkipInvalidMessageHandler() {
         InvalidMessageHandlerAgent agent = new InvalidMessageHandlerAgent();
@@ -408,6 +451,28 @@ class AgentAnnotationProcessorTest {
     // =========================================================================
     // TEST HELPER CLASSES
     // =========================================================================
+
+    static class WildcardTopicAgent extends BaseAgent {
+        WildcardTopicAgent() {
+            super("wildcard-agent", "Wildcard Agent");
+        }
+
+        @AgenorMessageHandler("orders.*")
+        public void handleOrder(Message msg) {
+            // never reachable: topics are matched exactly
+        }
+    }
+
+    static class HashTopicAgent extends BaseAgent {
+        HashTopicAgent() {
+            super("hash-agent", "Hash Agent");
+        }
+
+        @AgenorMessageHandler("#")
+        public void handleAnything(Message msg) {
+            // never reachable: topics are matched exactly
+        }
+    }
 
     static class TestAgentWithAnnotations extends BaseAgent {
         public TestAgentWithAnnotations() {

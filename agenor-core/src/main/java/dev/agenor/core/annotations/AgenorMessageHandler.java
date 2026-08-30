@@ -12,11 +12,14 @@ import java.lang.annotation.Target;
  *
  * <p>The annotated method must be {@code public} and accept a single
  * {@link dev.agenor.core.Message} parameter. The runtime registers the method as a
- * subscriber on the agent's {@link MessageDispatcher} using the provided
- * topic pattern.
+ * subscriber on the agent's {@link MessageDispatcher} using the provided topic.
  *
- * <p>Topic patterns support wildcard matching: {@code "orders.*"} matches
- * {@code "orders.new"} and {@code "orders.cancelled"}; {@code "#"} matches any topic.
+ * <p>The topic is matched <b>exactly</b>. Both delivery paths resolve a handler by map
+ * lookup on {@link dev.agenor.core.Message#topic()} — the topic path in the dispatcher and
+ * the direct path in {@code BaseAgent} — so a value containing {@code *} or {@code #} matches
+ * nothing and is rejected when the agent is registered. For pattern matching, subscribe
+ * programmatically with a {@link dev.agenor.core.filter.MessageFilter}; {@code TopicFilter}
+ * in {@code agenor-runtime-ext} builds one from a wildcard with {@code TopicFilter.wildcard()}.
  *
  * <p>Example:
  * <pre>{@code
@@ -29,8 +32,8 @@ import java.lang.annotation.Target;
  *         reserveStock(order);
  *     }
  *
- *     @AgenorMessageHandler(value = "inventory.*", autoSubscribe = false)
- *     public void onInventoryEvent(Message message) {
+ *     @AgenorMessageHandler(value = "inventory.low-stock", autoSubscribe = false)
+ *     public void onLowStock(Message message) {
  *         // subscribed manually when needed
  *     }
  * }
@@ -46,13 +49,13 @@ import java.lang.annotation.Target;
 public @interface AgenorMessageHandler {
 
     /**
-     * The topic (or topic pattern) this handler subscribes to.
+     * The exact topic this handler subscribes to.
      *
-     * <p>The topic is matched against incoming {@link dev.agenor.core.Message#topic()} values.
-     * Wildcard support is implementation-dependent but typically follows MQTT-style
-     * patterns ({@code *} single segment, {@code #} multi-segment).
+     * <p>Compared for equality with the incoming {@link dev.agenor.core.Message#topic()}.
+     * No wildcard or pattern syntax is supported; see the type documentation for the
+     * filter-based alternative.
      *
-     * @return the topic or topic pattern, must not be empty
+     * @return the topic, must not be empty and must not contain {@code *} or {@code #}
      */
     String value();
 

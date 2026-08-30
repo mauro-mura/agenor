@@ -105,6 +105,7 @@ public class AgentAnnotationProcessor {
             AgenorMessageHandler handlerAnnotation = method.getAnnotation(AgenorMessageHandler.class);
 
             if (handlerAnnotation != null && handlerAnnotation.autoSubscribe()) {
+                rejectTopicPattern(handlerAnnotation.value(), agentClass, method);
                 try {
                     createMessageHandlerFromAnnotation(agent, method, handlerAnnotation);
                 } catch (Exception e) {
@@ -113,6 +114,33 @@ public class AgentAnnotationProcessor {
                 }
             }
         }
+    }
+
+    /**
+     * Rejects a topic that carries wildcard syntax.
+     *
+     * <p>Both delivery paths resolve a handler by exact map lookup — {@code deliverToTopic} in
+     * the dispatcher and {@code BaseAgent.handleDirectMessage} — so {@code "orders.*"} matches
+     * no topic at all. Until 0.29.0 the annotation's Javadoc advertised wildcards and its own
+     * example used one, so this failed by delivering nothing and saying nothing. Failing at
+     * registration costs a startup error; the alternative costs an afternoon.
+     *
+     * <p>Thrown rather than logged, and raised outside the per-handler {@code catch}: this is
+     * not one handler that failed to build, it is an agent whose declared contract cannot be
+     * honoured.
+     *
+     * @throws IllegalArgumentException if the topic contains {@code *} or {@code #}
+     */
+    private static void rejectTopicPattern(String topic, Class<?> agentClass, Method method) {
+        if (topic == null || (topic.indexOf('*') < 0 && topic.indexOf('#') < 0)) {
+            return;
+        }
+        throw new IllegalArgumentException(
+                "@AgenorMessageHandler(\"" + topic + "\") on " + agentClass.getName() + "."
+                        + method.getName() + " declares a topic pattern, and topics are matched "
+                        + "exactly — this handler would never fire. Subscribe to an exact topic, "
+                        + "or for pattern matching subscribe programmatically with a MessageFilter "
+                        + "(TopicFilter.wildcard(\"" + topic + "\") in agenor-runtime-ext).");
     }
 
     /**
@@ -192,17 +220,23 @@ public class AgentAnnotationProcessor {
             }
         });
 
-        String subscriptionId = topicSubscriber.subscribeTopic(topic, handler).subscriptionId();
+        var subscription = topicSubscriber.subscribeTopic(topic, handler);
 
         // Also wire the handler to direct (point-to-point) messages addressed to this
         // agent whose topic matches, so @AgenorMessageHandler works with sendTo()/receiverId
         // addressing, not just topic pub/sub (see BaseAgent#registerDirectTopicHandler).
+        //
+        // The Subscription is handed to the agent rather than discarded: it is what stopping
+        // the agent releases. Keeping only subscriptionId() for a log line left the topic
+        // subscription alive for the life of the process, which BaseAgent already avoids for
+        // its own direct subscription.
         if (agent instanceof BaseAgent baseAgent) {
             baseAgent.registerDirectTopicHandler(topic, handler);
+            baseAgent.registerTopicSubscription(subscription);
         }
 
         log.info("Subscribed agent '{}' to topic '{}' (method: {}, subscription: {})",
-                agent.getAgentName(), topic, method.getName(), subscriptionId);
+                agent.getAgentName(), topic, method.getName(), subscription.subscriptionId());
     }
 
     private dev.agenor.core.Behavior createOneShotBehavior(Agent agent, Method method, Behavior annotation) {

@@ -232,18 +232,27 @@ public class OrderProcessorAgent extends BaseAgent {
 
 ### With @AgenorMessageHandler and inline filtering
 
-`@AgenorMessageHandler` routes by topic. For additional conditions, combine it with a secondary filter check inside the handler, or use programmatic subscription as above:
+`@AgenorMessageHandler` routes by **exact** topic — it takes no pattern, and a value containing
+`*` or `#` is rejected when the agent is registered. For anything else, combine it with a guard
+inside the handler, or use programmatic subscription with a filter as above:
 
 ```java
-@AgenorMessageHandler("orders.*")
+@AgenorMessageHandler("orders.created")
 public void handleOrder(Message msg) {
-    // Topic already filtered by annotation pattern
-    // Extra guard for header check
+    // Topic matched exactly by the annotation; everything else is checked here
     if (!"HIGH".equals(msg.headers().get("priority"))) {
         return;
     }
     processOrder(msg.getContent(OrderData.class));
 }
+```
+
+To route on a topic *pattern*, subscribe programmatically with `TopicFilter.wildcard(...)` —
+the annotation has no equivalent:
+
+```java
+((FilterableSubscriber) getMessageDispatcher())
+    .subscribeFiltered(TopicFilter.wildcard("orders.*"), this::handleOrder);
 ```
 
 ---

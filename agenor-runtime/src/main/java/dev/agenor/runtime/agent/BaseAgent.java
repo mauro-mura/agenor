@@ -93,6 +93,8 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     private dev.agenor.core.messaging.Subscription directMessageSubscription;
     private volatile AgentMailbox mailbox;
     private final Map<String, List<MessageHandler>> directTopicHandlers = new ConcurrentHashMap<>();
+    private final List<dev.agenor.core.messaging.Subscription> topicSubscriptions =
+            new CopyOnWriteArrayList<>();
 
     // Lifecycle hooks - thread-safe collections
     private final List<Runnable> startHooks = new CopyOnWriteArrayList<>();
@@ -573,7 +575,30 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     /**
      * Unsubscribe from direct messages during agent shutdown.
      */
+    /**
+     * Releases the topic subscriptions created for this agent's {@code @AgenorMessageHandler}
+     * methods. One failing subscription must not keep the others alive, so each is cancelled
+     * independently.
+     */
+    private void unsubscribeAnnotationTopics() {
+        for (var subscription : topicSubscriptions) {
+            try {
+                subscription.unsubscribe();
+            } catch (Exception e) {
+                log.error("Error unsubscribing topic subscription {} for agent '{}': {}",
+                        subscription.subscriptionId(), agentId, e.getMessage());
+            }
+        }
+        if (!topicSubscriptions.isEmpty()) {
+            log.debug("Agent '{}' released {} annotation topic subscription(s)",
+                    agentId, topicSubscriptions.size());
+            topicSubscriptions.clear();
+        }
+        directTopicHandlers.clear();
+    }
+
     private void unsubscribeDirectMessages() {
+        unsubscribeAnnotationTopics();
         if (directMessageSubscription != null) {
             try {
                 directMessageSubscription.unsubscribe();
@@ -609,6 +634,22 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         Objects.requireNonNull(topic, "topic");
         Objects.requireNonNull(handler, "handler");
         directTopicHandlers.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(handler);
+    }
+
+    /**
+     * Hands this agent the topic subscription created for one of its
+     * {@code @AgenorMessageHandler} methods, so that stopping the agent releases it.
+     *
+     * <p>Used internally by the runtime's annotation processor. Without it the
+     * {@link dev.agenor.core.messaging.Subscription} has no owner and nothing can ever
+     * cancel it: the subscription outlives the agent for the life of the process.
+     *
+     * @param subscription the subscription to release when this agent stops
+     * @since 0.29.0
+     */
+    public void registerTopicSubscription(dev.agenor.core.messaging.Subscription subscription) {
+        Objects.requireNonNull(subscription, "subscription");
+        topicSubscriptions.add(subscription);
     }
 
     /**

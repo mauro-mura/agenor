@@ -255,18 +255,22 @@ public interface Agent {
      *
      * <p>Example:
      * <pre>{@code
-     * // Add a cyclic behavior that runs every 5 seconds
-     * agent.addBehavior(new CyclicBehavior("monitor",
-     *     () -> checkSystemHealth(),
-     *     Duration.ofSeconds(5)
-     * ));
+     * // Runs every 5 seconds
+     * agent.addBehavior(CyclicBehavior.from("monitor", Duration.ofSeconds(5),
+     *         () -> checkSystemHealth()));
      *
-     * // Add a message-triggered behavior
-     * agent.addBehavior(new MessageBehavior("order-handler",
-     *     message -> processOrder(message),
-     *     TopicFilter.matching("orders.*")
-     * ));
+     * // Runs once; subclass when the factories do not cover what you need
+     * agent.addBehavior(new OneShotBehavior("warm-cache") {
+     *     @Override
+     *     protected void action() {
+     *         preloadCatalogue();
+     *     }
+     * });
      * }</pre>
+     *
+     * <p>Reacting to a message is not a behavior: annotate a method with
+     * {@code @AgenorMessageHandler("orders.created")}, or subscribe through the agent's
+     * {@link dev.agenor.core.messaging.MessageDispatcher}.
      *
      * @param behavior the behavior to add, must not be null
      * @throws NullPointerException if behavior is null

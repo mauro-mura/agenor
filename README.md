@@ -8,7 +8,9 @@
 
 > **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
-Agenor is a contemporary multi-agent framework for building systems of autonomous agents that coordinate, negotiate, and execute — modernizing the concepts pioneered by JADE for the cloud-native era with Java 21 and virtual threads. LLM-backed reasoning (agenor-runtime-llm) is an optional module, not a prerequisite.
+**For Java developers who have a job to split across several independent workers, and need them to talk.** You write a class, annotate it, and start it; the framework handles discovery, addressing, delivery and lifecycle. It is a plain Java 21 library — no broker to install and no server to run before you see something work, and Redis or JDBC only when you outgrow a single process. LLM-backed reasoning (`agenor-runtime-llm`) is an optional module, not a prerequisite.
+
+Agenor modernizes the concepts pioneered by JADE for the cloud-native era, with virtual threads and records instead of the 2001 API.
 
 ## 🚀 Vision
 
