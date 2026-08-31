@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-08-31
+
 ### Changed
 
 - **`docs/mailbox.md` is gone; the two rules it held that change your code are in
@@ -1822,7 +1824,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/mauro-mura/agenor/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/mauro-mura/agenor/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/mauro-mura/agenor/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/mauro-mura/agenor/compare/v0.25.0...v0.26.0
