@@ -490,9 +490,14 @@ public interface Behavior {
      * change during the behavior's lifetime. This allows the scheduler to make
      * optimization decisions based on the type.
      *
-     * <p><strong>Custom Types:</strong>
-     * Use {@link BehaviorType#CUSTOM} for behaviors that don't fit standard
-     * patterns and implement custom scheduling logic.
+     * <p><strong>Behaviors that do not fit a standard pattern:</strong>
+     * answer with the type whose scheduling semantics you want. There is no constant
+     * meaning "none of these" — a behavior that runs on an interval is
+     * {@link BehaviorType#CYCLIC} and one that runs once is
+     * {@link BehaviorType#ONE_SHOT}, however it is implemented internally. A composite
+     * expresses what the type alone cannot through
+     * {@link dev.agenor.core.composite.CompositeBehavior#getSchedulingHint()}, which is
+     * what the scheduler inspects for it.
      *
      * @return the behavior type, never null
      * @see BehaviorType

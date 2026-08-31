@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * The {@link #handle(Message)} method returns a {@code CompletableFuture},
  * enabling non-blocking, asynchronous message processing. This is crucial for:
  * <ul>
- *   <li>Avoiding blocking the message service thread</li>
+ *   <li>Avoiding blocking the thread that delivers the message</li>
  *   <li>Processing multiple messages concurrently</li>
  *   <li>Chaining message processing operations</li>
  *   <li>Error handling and recovery</li>
@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * };
  *
  * // Subscribe
- * messageService.subscribe("notifications", handler);
+ * topicSubscriber.subscribeTopic("notifications", handler);
  * }</pre>
  *
  * <p><strong>Example - Method Reference:</strong>
@@ -49,9 +49,9 @@ import java.util.concurrent.CompletableFuture;
  *         return processOrderAsync(order);
  *     }
  *
- *     public void setupSubscription(MessageService messageService) {
+ *     public void setupSubscription(TopicSubscriber subscriber) {
  *         // Method reference as handler
- *         messageService.subscribe("orders", this::handleOrder);
+ *         subscriber.subscribeTopic("orders", this::handleOrder);
  *     }
  * }
  * }</pre>
@@ -87,12 +87,15 @@ import java.util.concurrent.CompletableFuture;
  * }</pre>
  *
  * <p><strong>Error Handling:</strong>
- * Handlers should handle errors gracefully. Unhandled exceptions will:
- * <ul>
- *   <li>Complete the returned future exceptionally</li>
- *   <li>Be logged by the message service</li>
- *   <li>Not affect other handlers or messages</li>
- * </ul>
+ * An unhandled exception completes the returned future exceptionally, and that outcome is
+ * the message's outcome: the mailbox does not acknowledge it, so on a transport with
+ * redelivery it is delivered again and eventually dead-lettered (ADR-033). Other handlers
+ * for the same message still run; the first failure is rethrown with the rest attached as
+ * suppressed exceptions.
+ *
+ * <p>A failure is therefore <em>not</em> contained by default. To contain one, catch it in
+ * the handler, where the decision is visible — and make handlers idempotent, because a
+ * redelivered message runs them again.
  *
  * <pre>{@code
  * MessageHandler resilientHandler = message -> {
@@ -226,8 +229,10 @@ public interface MessageHandler {
      * </ul>
      *
      * <p><strong>Error Handling:</strong>
-     * Exceptions thrown by the sync handler are caught and returned as a
-     * failed future, preventing propagation to the message service.
+     * An exception thrown by the sync handler is caught and returned as a failed future.
+     * That does not contain it: the failed future is how the failure reaches the mailbox,
+     * which then does not acknowledge the message (ADR-033). To contain a failure, catch
+     * it inside the handler body.
      *
      * <p><strong>Examples:</strong>
      *

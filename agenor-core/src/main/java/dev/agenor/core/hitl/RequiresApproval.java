@@ -19,8 +19,8 @@ import java.lang.annotation.Target;
  *
  * <p>Example:
  * <pre>{@code
- * @RequiresApproval(timeout = "30m", notifier = WebhookApprovalNotifier.class)
- * public class PaymentBehavior extends AgentBehavior {
+ * @RequiresApproval(timeout = "30m")
+ * public class PaymentBehavior extends OneShotBehavior {
  *     // ...
  * }
  * }</pre>

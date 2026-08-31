@@ -57,9 +57,8 @@ import java.util.concurrent.CompletableFuture;
  * // Creating a simple agent
  * Agent agent = new MyCustomAgent("agent-1", "My Agent");
  *
- * // Adding behaviors
- * agent.addBehavior(new CyclicBehavior("monitor", this::monitorSystem));
- * agent.addBehavior(new MessageBehavior("handler", this::handleMessage));
+ * // Adding a behavior: something the agent does on its own schedule
+ * agent.addBehavior(CyclicBehavior.from("monitor", Duration.ofSeconds(5), this::monitorSystem));
  *
  * // Starting the agent asynchronously
  * agent.start().thenRun(() -> {

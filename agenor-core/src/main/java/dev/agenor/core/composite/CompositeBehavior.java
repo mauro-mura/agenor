@@ -38,10 +38,11 @@ import java.util.List;
  *
  *     public MyComposite(String id) { super(id); }
  *
- *     @Override public BehaviorType getType() { return BehaviorType.CUSTOM; }
- *
  *     // Override to control auto-scheduling; default is ON_DEMAND.
  *     @Override public SchedulingHint getSchedulingHint() { return SchedulingHint.ONCE; }
+ *
+ *     // A composite has no type of its own: answer with the one its hint implies.
+ *     @Override public BehaviorType getType() { return BehaviorType.ONE_SHOT; }
  *
  *     @Override
  *     public CompletableFuture<Void> execute() {
