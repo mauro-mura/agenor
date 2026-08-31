@@ -9,40 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **The README's first paragraph names an audience instead of a lineage.** It opened with
-  *"a contemporary multi-agent framework … modernizing the concepts pioneered by JADE"*, which
-  answers *what this is* rather than *who it is for*. The JADE lineage is still there, one
-  paragraph down, where it informs rather than introduces.
+- **`docs/mailbox.md` is gone; the two rules it held that change your code are in
+  `docs/messaging.md`.** The mailbox is infrastructure — you never create one, wire one or call
+  into one — and a dedicated user-facing page for it was the case that the adoption phase's
+  "plumbing must stay invisible" criterion was written against. What survives is the part a
+  reader acts on: handlers for one agent may overlap and are not serialised, and a handler must
+  be idempotent because a transport with redelivery will run it again. Both now sit in
+  *Delivery Semantics*, where they correct two claims that had been false since 0.27.0 — that
+  page still said delivery was "at-most-once" and that there was "no backpressure", neither of
+  which survived ADR-032 and ADR-033. Why the inbound path is shaped this way stays in those
+  two ADRs, which is where a maintainer looks and a user does not.
 
-- **`javac` now rejects a broken Javadoc reference at compile time.**
-  `-Xdoclint:all,-missing` on `maven-compiler-plugin`. javac already parses the Javadoc while
-  compiling, so validating it costs nothing and moves the check from *"when the release is
-  published"* to `mvn compile`. The whole reactor compiles with zero diagnostics, so it needed
-  no cleanup campaign — only four unescaped `<` in one example's prose (`CPU < 50%`, which javac
-  reads as an opening tag). `-missing` stays off deliberately: it asks whether everything is
-  documented, a different question from whether what is written is correct, and would bury the
-  second under thousands of absent `@param` tags.
-
-- **The build fails in `validate` when `JAVA_HOME` is not a JDK 21+.** `README.md` and
-  `CONTRIBUTING.md` have always said "Java 21+" and nothing checked it; a wrong `JAVA_HOME` died
-  inside the compiler with `release version 21 not supported`, naming neither the requirement nor
-  the fix. `requireJavaVersion` joins the existing enforcer execution. A version number was never
-  the whole requirement, either — a JRE satisfies it and still has no `javac` — so both
-  prerequisite lists now say **JDK**, and the enforcer message says so too.
-
-- **The integration tests skip when Docker is absent instead of failing.**
-  `@EnabledIfSystemProperty(named = "integration.tests.enabled")` asks whether you requested
-  them, not whether the machine can run them. On a host with no reachable daemon the ten ITs
-  errored, Testcontainers cached the first failure (*"Will not retry"*), the reactor stopped in
-  `agenor-adapters`, and four ITs in later modules were never reached — four errors, six tests
-  silently not run, nothing wrong with the code. `@EnabledIfDockerAvailable` now asks the second
-  question: 49 tests skipped with the reason recorded, and the build reaches the last module.
-
-- **`OllamaProviderIntegrationTest` is now `OllamaProviderIT`.** Ending in `Test` matched
-  surefire's default includes, so the suite's heaviest Docker test — it pulls the ollama image
-  and a 397MB model — ran in the unit-test phase, discovered by a different convention from the
-  nine tests it belongs with. The root pom already says `*IT.java` means an integration test
-  needing Docker.
+  The mailbox itself is unchanged. Nothing was deprecated: `MailboxConfig`, `OverflowPolicy`
+  and `MailboxOverflowException` are still public and still supported. They now have no
+  documentation page and no user outside `src/main`, which is a question about them rather than
+  an answer, and it is recorded as such rather than settled by deleting them.
 
 ### Removed
 
@@ -84,6 +65,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The count going *down* is the point: it measures surface still scheduled, not work done.
 
 ### Fixed
+
+- **The core Javadoc taught a constant that is being removed.** `Behavior.getType()` said to
+  "use `BehaviorType.CUSTOM` for behaviors that don't fit standard patterns", and
+  `CompositeBehavior`'s implementation example returned it — while `CUSTOM` is deprecated for
+  removal in 0.30.0 with no user of any kind. Both now teach the answer that already exists in
+  the code: a composite has no type of its own and answers with the one its `getSchedulingHint()`
+  implies, `CYCLIC` when it has an interval and `ONE_SHOT` when it does not. Doing this before
+  the removal is what keeps that release mechanical instead of turning it into a redesign.
+
+- **`Agent`'s class Javadoc still contained both fictions that 0.29.0 had already fixed
+  twenty lines lower.** The fix to `addBehavior`'s example replaced an invented
+  `CyclicBehavior(String, Runnable)` constructor and a `MessageBehavior` type that exists
+  nowhere — and the class-level example above it used the same two. It now uses the real factory,
+  `CyclicBehavior.from(name, interval, action)`. A sweep of every type used *as a type* inside a
+  `{@code}` block across all of `src/main` — `new X(`, `extends X`, `X.method(`, `X var =` —
+  turned up one more: `@RequiresApproval`'s only example had a behaviour `extends AgentBehavior`,
+  which does not exist, and named `WebhookApprovalNotifier`, which is dead surface already
+  deprecated for removal.
+
+- **`MessageHandler`'s error-handling contract described the framework as it was before
+  ADR-033.** It promised an unhandled exception would "not affect other handlers or messages"
+  and would "be logged by the message service". The first is now the opposite of true — a failed
+  future is exactly how the failure reaches the mailbox, which then does not acknowledge the
+  message, so it is redelivered and eventually dead-lettered — and the second names
+  `MessageService`, a type removed at 0.22.0. `sync()`'s own note claimed it *prevented*
+  propagation, which inverts the mechanism ADR-033 D-5 depends on. `MessageService` also appeared
+  as a live type in two of the interface's code examples, one of them as a method parameter; both
+  now use `TopicSubscriber.subscribeTopic`, which is the API that exists.
+
+- **The README's first paragraph names an audience instead of a lineage.** It opened with
+  *"a contemporary multi-agent framework … modernizing the concepts pioneered by JADE"*, which
+  answers *what this is* rather than *who it is for*. The JADE lineage is still there, one
+  paragraph down, where it informs rather than introduces.
+
+- **`javac` now rejects a broken Javadoc reference at compile time.**
+  `-Xdoclint:all,-missing` on `maven-compiler-plugin`. javac already parses the Javadoc while
+  compiling, so validating it costs nothing and moves the check from *"when the release is
+  published"* to `mvn compile`. The whole reactor compiles with zero diagnostics, so it needed
+  no cleanup campaign — only four unescaped `<` in one example's prose (`CPU < 50%`, which javac
+  reads as an opening tag). `-missing` stays off deliberately: it asks whether everything is
+  documented, a different question from whether what is written is correct, and would bury the
+  second under thousands of absent `@param` tags.
+
+- **The build fails in `validate` when `JAVA_HOME` is not a JDK 21+.** `README.md` and
+  `CONTRIBUTING.md` have always said "Java 21+" and nothing checked it; a wrong `JAVA_HOME` died
+  inside the compiler with `release version 21 not supported`, naming neither the requirement nor
+  the fix. `requireJavaVersion` joins the existing enforcer execution. A version number was never
+  the whole requirement, either — a JRE satisfies it and still has no `javac` — so both
+  prerequisite lists now say **JDK**, and the enforcer message says so too.
+
+- **The integration tests skip when Docker is absent instead of failing.**
+  `@EnabledIfSystemProperty(named = "integration.tests.enabled")` asks whether you requested
+  them, not whether the machine can run them. On a host with no reachable daemon the ten ITs
+  errored, Testcontainers cached the first failure (*"Will not retry"*), the reactor stopped in
+  `agenor-adapters`, and four ITs in later modules were never reached — four errors, six tests
+  silently not run, nothing wrong with the code. `@EnabledIfDockerAvailable` now asks the second
+  question: 49 tests skipped with the reason recorded, and the build reaches the last module.
+
+- **`OllamaProviderIntegrationTest` is now `OllamaProviderIT`.** Ending in `Test` matched
+  surefire's default includes, so the suite's heaviest Docker test — it pulls the ollama image
+  and a 397MB model — ran in the unit-test phase, discovered by a different convention from the
+  nine tests it belongs with. The root pom already says `*IT.java` means an integration test
+  needing Docker.
+
 
 - **`@AgenorMessageHandler` documented a wildcard feature that does not exist, and used one in
   its own example.** The Javadoc promised that `"orders.*"` matches `"orders.new"` and that
