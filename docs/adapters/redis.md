@@ -191,7 +191,8 @@ queueing (ADR-033). Two consequences worth planning for:
 - **Handlers must be idempotent**, since a failing one will see the same message again.
 - **A message dropped by mailbox overflow is also unacknowledged**, so it is redelivered and
   ends up in the DLQ rather than disappearing. An agent whose producers outrun it shows up
-  here. See [Agent Mailbox](../mailbox.md#4-an-overloaded-agent-drops-messages-visibly).
+  here. See [ADR-032](../adr/ADR-032-agent-mailbox-single-inbound-path.md) for the bounds
+  and the overflow policy.
 
 An agent that wants a handler failure contained rather than retried should catch it inside the
 handler.

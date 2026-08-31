@@ -21,7 +21,6 @@ New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
 | [Memory Guide](memory.md) | `MemoryStore`, `MemoryScope`, `InMemoryStore`, `BaseAgent` memory API |
 | [Agent State Persistence Guide](persistence.md) | `Stateful`, `FilePersistenceService`, `@PersistenceConfig` |
 | [Messaging Guide](messaging.md) | MessageDispatcher, topics, direct messaging, subscriptions (since 0.20.0) |
-| [Agent Mailbox Guide](mailbox.md) | The single inbound path per agent: routing, claim ordering, bounds (since 0.27.0) |
 | [Agent Directory Guide](directory.md) | AgentRegistry, AgentDiscovery, AgentResolver, AgentPresence (since 0.20.0) |
 | [Dialogue Protocol](dialog-protocol.md) | A2A protocol, request/reply, CFP |
 | [Message Filtering Guide](message-filtering.md) | Filters, rate limiting |

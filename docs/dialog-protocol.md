@@ -109,7 +109,8 @@ public class MyAgent extends BaseAgent {
 ### How dialogue receives messages
 
 Since **0.27.0**, dialogue does not hold a subscription of its own on a `BaseAgent`. The
-agent's [mailbox](mailbox.md) owns the single subscription to its recipient channel and
+agent's mailbox ([ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md)) owns the
+single subscription to its recipient channel and
 routes each message to exactly one consumer: anything carrying a known performative goes to
 dialogue, everything else goes to the direct-message path. `initialize()` registers that
 consumer and `shutdown()` withdraws it.

@@ -151,9 +151,28 @@ Subscriptions are not automatically cleaned up on agent stop — call `unsubscri
 ## Delivery Semantics
 
 - **Virtual threads**: each handler invocation runs on a new virtual thread (Java 21)
-- **At-most-once**: delivery is not persistent; missed messages are not replayed
-- **Fire-and-forget**: `publish` and `sendTo` return `CompletableFuture<Void>` that completes when all handler invocations have been dispatched, not when they finish
-- **No backpressure**: the in-memory implementation does not throttle publishers
+- **Fire-and-forget**: `publish` and `sendTo` return `CompletableFuture<Void>` that completes
+  when all handler invocations have been dispatched, not when they finish
+- **Redelivery depends on the transport**: in-memory delivery is at-most-once and a missed
+  message is not replayed. Redis Streams redelivers a message whose handler did not acknowledge
+  it, and dead-letters it after `maxDeliveryAttempts`
+
+Two consequences reach the code you write.
+
+**Your handlers may overlap.** An agent claims its messages in arrival order, one at a time, but
+it does not *handle* them one at a time: each handler runs on its own virtual thread, so
+handlers may overlap and finish out of order. Guard shared state exactly as you would without
+an agent framework. Up to 64 of one agent's handlers run at once by default; past that the agent
+applies backpressure to whatever is delivering to it.
+
+**Make your handlers idempotent.** A handler that throws does not acknowledge its message, so on
+a transport with redelivery the same message arrives again — see
+[Redis Messaging](adapters/redis.md#failure-modes-and-recovery). If you want a failure contained
+rather than retried, catch it in the handler, where the decision is visible.
+
+Why the inbound path is shaped this way is
+[ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md); what a failed handler costs is
+[ADR-033](adr/ADR-033-mailbox-delivery-semantics.md).
 
 ## Observability
 
