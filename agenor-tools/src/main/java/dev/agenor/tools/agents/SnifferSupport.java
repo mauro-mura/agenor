@@ -141,6 +141,33 @@ public final class SnifferSupport {
     }
 
     /**
+     * Gets one conversation's messages, oldest first.
+     *
+     * @param runtime        the runtime holding the sniffer
+     * @param conversationId the conversation to collect
+     * @return the conversation in the order it happened, empty when no sniffer is registered
+     * @since 0.31.0
+     */
+    public static List<StoredMessage> findByConversation(AgenorRuntime runtime, String conversationId) {
+        return get(runtime)
+                .map(sniffer -> sniffer.findByConversation(conversationId))
+                .orElse(List.of());
+    }
+
+    /**
+     * Lists the conversations captured so far with each one's message count.
+     *
+     * @param runtime the runtime holding the sniffer
+     * @return conversation id to message count, empty when no sniffer is registered
+     * @since 0.31.0
+     */
+    public static java.util.Map<String, Integer> getConversations(AgenorRuntime runtime) {
+        return get(runtime)
+                .map(MessageSnifferAgent::getConversations)
+                .orElse(java.util.Map.of());
+    }
+
+    /**
      * Gets message count from sniffer.
      *
      * @param runtime the runtime

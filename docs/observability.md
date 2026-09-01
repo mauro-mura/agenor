@@ -120,6 +120,61 @@ that took part.
 
 ---
 
+## Watching a conversation
+
+A negotiation between agents is several messages across several agents, and reading it as a flat
+log is the difference between having telemetry and being able to use it. Every `agent.receive`
+span carries `conversation.id`, so the exchange is already grouped — you just have to ask for it.
+
+### Across nodes: filter on `conversation.id`
+
+This is the one that works in a distributed deployment, and it needs no code. Each node exports
+its own spans; the collector is the fan-out. In Jaeger, search on the tag:
+
+```
+conversation.id=<the id>
+```
+
+You get every message of that conversation, in order, across every agent that took part and
+whichever node each of them runs on — a contract net's CFP, the proposals, the acceptance and the
+result, as one trace. `mailbox.lane` tells you which inbound path each message took, and
+`agent.id` which agent handled it.
+
+The local Jaeger stack in [Local development](#local-development-jaeger-all-in-one-via-docker-compose)
+is enough to try this on a single machine with two runtimes.
+
+### Without a collector: the built-in console
+
+If you are not running OpenTelemetry, the web console can show the same grouping from the
+message sniffer's ring buffer:
+
+```
+GET /api/conversations           → { "conv-1": 4, "conv-2": 2 }   ids with message counts
+GET /api/conversations/{id}      → the conversation, oldest message first
+```
+
+Register the sniffer first — it is not started by default:
+
+```java
+SnifferSupport.register(runtime);
+```
+
+and the same data is available in code:
+
+```java
+List<StoredMessage> exchange = SnifferSupport.findByConversation(runtime, "conv-1");
+Map<String, Integer> all     = SnifferSupport.getConversations(runtime);
+```
+
+> **This route is in-memory only.** The sniffer captures by subscribing with a Java predicate
+> through `FilterableSubscriber`, which by design no remote backend implements — a predicate
+> cannot be evaluated server-side (ADR-020). Running against Redis, the sniffer logs
+> *"MessageDispatcher does not support predicate filtering — sniffer disabled"* at startup and
+> captures nothing. For a distributed deployment use the span route above, which goes through the
+> mailbox and is therefore transport-independent.
+
+---
+
 ## Metrics reference
 
 Metrics are emitted via the OTel Meter API when OTel is active. All metric names are

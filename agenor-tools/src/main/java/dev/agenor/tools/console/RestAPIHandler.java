@@ -84,6 +84,10 @@ public class RestAPIHandler extends HttpServlet {
                 handleGetAgent(req, resp, extractAgentId(path));
             } else if (path.equals("/messages")) {
                 handleGetMessages(req, resp);
+            } else if (path.equals("/conversations")) {
+                handleGetConversations(req, resp);
+            } else if (path.startsWith("/conversations/")) {
+                handleGetConversation(req, resp, path.substring("/conversations/".length()));
             } else if (path.equals("/stats")) {
                 handleGetStats(req, resp);
             } else if (path.equals("/health")) {
@@ -205,6 +209,35 @@ public class RestAPIHandler extends HttpServlet {
      *   <li>senderId - filter by sender ID</li>
      * </ul>
      */
+    /**
+     * Lists the conversations the sniffer has captured, with each one's message count.
+     *
+     * <p>What makes a flat message log readable is the conversation it belongs to. A dialogue
+     * message carries that id across the transport, so grouping needs no extra bookkeeping —
+     * only the header that is already there.
+     */
+    private void handleGetConversations(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        if (messageHistory == null) {
+            sendSuccess(resp, Map.of());
+            return;
+        }
+        sendSuccess(resp, messageHistory.conversationSummary());
+    }
+
+    /** One conversation, oldest message first — the exchange as it happened. */
+    private void handleGetConversation(HttpServletRequest req, HttpServletResponse resp,
+                                       String conversationId) throws IOException {
+        if (conversationId == null || conversationId.isBlank()) {
+            sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "conversation id required");
+            return;
+        }
+        if (messageHistory == null) {
+            sendSuccess(resp, List.of());
+            return;
+        }
+        sendSuccess(resp, messageHistory.findByConversation(conversationId));
+    }
+
     private void handleGetMessages(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         // Parse limit parameter
         int limit = 100;

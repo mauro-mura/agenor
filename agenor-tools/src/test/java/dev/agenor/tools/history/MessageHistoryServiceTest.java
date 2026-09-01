@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.dialogue.DialogueMessage;
+import dev.agenor.core.dialogue.Performative;
 
 
 @DisplayName("MessageHistoryService")
@@ -252,7 +254,77 @@ class MessageHistoryServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("Conversations")
+    class Conversations {
+
+        @Test
+        @DisplayName("groups a dialogue exchange by its conversation id, oldest first")
+        void shouldGroupOneConversationInOrder() throws InterruptedException {
+            service.store(dialogue("conv-a", "coordinator", "worker", Performative.CFP, "bid?"));
+            Thread.sleep(2);
+            service.store(dialogue("conv-b", "client", "server", Performative.REQUEST, "other"));
+            Thread.sleep(2);
+            service.store(dialogue("conv-a", "worker", "coordinator", Performative.PROPOSE, "10"));
+            Thread.sleep(2);
+            service.store(dialogue("conv-a", "coordinator", "worker", Performative.AGREE, "yes"));
+
+            var conversation = service.findByConversation("conv-a");
+
+            assertEquals(3, conversation.size());
+            assertEquals("bid?", conversation.get(0).payload());
+            assertEquals("10", conversation.get(1).payload());
+            assertEquals("yes", conversation.get(2).payload());
+        }
+
+        @Test
+        @DisplayName("ignores traffic that is not part of a dialogue")
+        void shouldIgnoreNonDialogueTraffic() {
+            service.store(createMessage("orders.new", "plain"));
+            service.store(dialogue("conv-a", "a", "b", Performative.REQUEST, "dialogue"));
+
+            assertEquals(1, service.findByConversation("conv-a").size());
+            assertEquals(Map.of("conv-a", 1), service.conversationSummary());
+        }
+
+        @Test
+        @DisplayName("returns nothing for a blank or unknown conversation")
+        void shouldReturnEmptyForUnknown() {
+            service.store(dialogue("conv-a", "a", "b", Performative.REQUEST, "x"));
+
+            assertTrue(service.findByConversation("nope").isEmpty());
+            assertTrue(service.findByConversation("").isEmpty());
+            assertTrue(service.findByConversation(null).isEmpty());
+        }
+
+        @Test
+        @DisplayName("summarises every conversation with its message count")
+        void shouldSummariseConversations() {
+            service.store(dialogue("conv-a", "a", "b", Performative.REQUEST, "1"));
+            service.store(dialogue("conv-a", "b", "a", Performative.AGREE, "2"));
+            service.store(dialogue("conv-b", "a", "c", Performative.QUERY, "3"));
+
+            var summary = service.conversationSummary();
+
+            assertEquals(2, summary.size());
+            assertEquals(2, summary.get("conv-a"));
+            assertEquals(1, summary.get("conv-b"));
+        }
+    }
+
     // Helper methods
+
+    private Message dialogue(String conversationId, String from, String to,
+                             Performative performative, Object content) {
+        return DialogueMessage.builder()
+                .conversationId(conversationId)
+                .senderId(from)
+                .receiverId(to)
+                .performative(performative)
+                .content(content)
+                .build()
+                .toMessage();
+    }
 
     private Message createMessage(String topic, Object content) {
         return Message.builder()

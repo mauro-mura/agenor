@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A conversation can now be read as a conversation, in two ways, and the documentation says
+  which one works where.** JADE's Sniffer is the thing people remember about it, and until now
+  Agenor could show you a flat list of messages and nothing above it.
+
+  *Across nodes, no code required.* Every `agent.receive` span carries `conversation.id`, so
+  filtering on that tag in any OpenTelemetry backend returns the whole exchange — CFP, proposals,
+  acceptance, result — across every agent and node that took part. The collector is the fan-out a
+  distributed sniffer would otherwise have to build. `docs/observability.md` now says so, with the
+  Jaeger stack it already shipped.
+
+  *Without a collector*, the web console groups the message sniffer's buffer:
+  `GET /api/conversations` lists the ids with their message counts, `GET /api/conversations/{id}`
+  returns one exchange oldest-first. Same data in code through
+  `SnifferSupport.findByConversation(runtime, id)` and `getConversations(runtime)`, and on
+  `MessageHistoryService` directly.
+
+  **The console route is in-memory only, and this is now written down where you meet it.** The
+  sniffer captures through `FilterableSubscriber`, which no remote backend implements by design
+  (ADR-020: a Java predicate cannot be evaluated server-side). Against Redis it logs
+  *"sniffer disabled"* at startup and captures nothing. That limit had never been stated
+  anywhere; the span route exists precisely because it does not have it.
+
+
 - **The mailbox emits an `agent.receive` span, so tracing an inbound message no longer depends
   on the transport that delivered it.** The Redis adapter emitted `message.receive` from its
   consumer loop; the in-memory dispatcher emitted nothing on the receive side. The same agent

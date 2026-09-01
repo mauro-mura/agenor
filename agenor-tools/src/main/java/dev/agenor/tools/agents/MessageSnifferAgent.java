@@ -215,6 +215,27 @@ public class MessageSnifferAgent extends BaseAgent {
     }
 
     /**
+     * Gets one conversation's messages, oldest first.
+     *
+     * @param conversationId the conversation to collect
+     * @return the conversation, in the order it happened
+     * @since 0.31.0
+     */
+    public List<StoredMessage> findByConversation(String conversationId) {
+        return history.findByConversation(conversationId);
+    }
+
+    /**
+     * Lists the conversations captured so far, with each one's message count.
+     *
+     * @return conversation id to message count, most recently active first
+     * @since 0.31.0
+     */
+    public java.util.Map<String, Integer> getConversations() {
+        return history.conversationSummary();
+    }
+
+    /**
      * Gets the current message count.
      */
     public int getMessageCount() {

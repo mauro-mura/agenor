@@ -1,6 +1,7 @@
 package dev.agenor.tools.history;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.dialogue.DialogueMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -240,6 +241,57 @@ public class MessageHistoryService {
         return messages.stream()
                 .filter(predicate)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets every stored message belonging to one conversation, oldest first.
+     *
+     * <p>A dialogue message carries its conversation in the
+     * {@link DialogueMessage#CONVERSATION_ID_HEADER} header, which survives the transport. This
+     * is what turns a flat message log into a readable exchange: one contract net, one
+     * request/reply, in the order it happened.
+     *
+     * <p>Ordering here is deliberately the opposite of the other queries, which return newest
+     * first. A conversation is read forwards.
+     *
+     * @param conversationId the conversation to collect; null or blank yields an empty list
+     * @return the conversation's messages, oldest first
+     * @since 0.31.0
+     */
+    public List<StoredMessage> findByConversation(String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return List.of();
+        }
+        return messages.stream()
+                .filter(m -> conversationId.equals(conversationOf(m)))
+                .sorted(Comparator.comparing(StoredMessage::timestamp))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lists the conversations present in the buffer with how many messages each holds, most
+     * recently active first.
+     *
+     * @return conversation id to message count
+     * @since 0.31.0
+     */
+    public Map<String, Integer> conversationSummary() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        messages.stream()
+                .sorted(Comparator.comparing(StoredMessage::timestamp).reversed())
+                .forEach(m -> {
+                    String id = conversationOf(m);
+                    if (id != null) {
+                        counts.merge(id, 1, Integer::sum);
+                    }
+                });
+        return counts;
+    }
+
+    /** The conversation a stored message belongs to, or null when it is not dialogue traffic. */
+    private static String conversationOf(StoredMessage m) {
+        Map<String, String> headers = m.headers();
+        return headers == null ? null : headers.get(DialogueMessage.CONVERSATION_ID_HEADER);
     }
 
     /**
