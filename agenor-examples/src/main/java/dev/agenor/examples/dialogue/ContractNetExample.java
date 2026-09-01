@@ -1,6 +1,7 @@
 package dev.agenor.examples.dialogue;
 
 import dev.agenor.core.annotations.Agent;
+import dev.agenor.core.dialogue.Commitment;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -11,6 +12,7 @@ import dev.agenor.runtime.dialogue.DialogueCapability;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -85,6 +87,9 @@ public class ContractNetExample {
 
         private final DialogueCapability dialogue = new DialogueCapability(this);
 
+        /** The commitment the accepted worker took on, so its outcome can be read back. */
+        private volatile String awaitedCommitmentId;
+
         @Override public String getAgentId() { return "manager"; }
         @Override public String getAgentName() { return "Manager"; }
 
@@ -128,7 +133,27 @@ public class ContractNetExample {
                         .orElseThrow();
 
                     System.out.println("\n[Manager] Selected: " + best.senderId());
-                    dialogue.reply(best, Performative.AGREE, "You win!");
+
+                    // The content of the AGREE becomes the content of the commitment, so accept
+                    // with the task rather than with a congratulation.
+                    dialogue.reply(best, Performative.AGREE, task);
+
+                    // Accepting a proposal creates a commitment, and the manager can read it
+                    // back: it is now owed this task by the worker it chose. Which party is
+                    // bound depends on the protocol — under Contract Net the AGREE binds its
+                    // receiver, not its sender — so the framework asks ContractNetProtocol
+                    // instead of guessing from the performative.
+                    Optional<Commitment> owed = dialogue.getCommitmentTracker()
+                        .getActiveAsRequester(getAgentId())
+                        .stream()
+                        .findFirst();
+
+                    owed.ifPresent(commitment -> {
+                        awaitedCommitmentId = commitment.getId();
+                        System.out.printf("[Manager] %s now owes me: %s (%s)%n",
+                            commitment.getPerformer(), commitment.getContent(),
+                            commitment.getState());
+                    });
 
                     return CompletableFuture.completedFuture(best.senderId());
                 });
@@ -137,6 +162,14 @@ public class ContractNetExample {
         @DialogueHandler(performatives = Performative.INFORM)
         public void onComplete(DialogueMessage msg) {
             System.out.println("[Manager] Task completed by " + msg.senderId() + ": " + msg.content());
+
+            if (awaitedCommitmentId != null) {
+                Optional<Commitment> settled =
+                    dialogue.getCommitmentTracker().get(awaitedCommitmentId);
+                settled.ifPresent(commitment ->
+                    System.out.printf("[Manager] Commitment by %s is now %s%n",
+                        commitment.getPerformer(), commitment.getState()));
+            }
         }
     }
 

@@ -395,7 +395,9 @@ See `agenor-examples/src/main/java/dev/agenor/examples/dialogue/`:
 
 - `RequestProtocolExample.java` - Request protocol (order processing)
 - `QueryProtocolExample.java` - Query protocol (knowledge base)
-- `ContractNetExample.java` - Contract-Net (multi-worker task allocation)
+- `ContractNetExample.java` - Contract-Net (multi-worker task allocation), and the one
+  example that reads a commitment back: the manager prints what the accepted worker now
+  owes it, and its state once the work is reported done
 
 ### Running Examples
 

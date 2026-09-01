@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`ContractNetExample` reads the commitment its negotiation creates.** Accepting a proposal
+  binds the winning worker, and the manager now prints what it is owed and by whom, then the
+  commitment's state once the work is reported done:
+
+  ```
+  [Manager] Selected: worker-2
+  [Manager] worker-2 now owes me: Task[type=data-processing, complexity=100] (ACTIVE)
+  [Manager] Task completed by worker-2: SUCCESS
+  [Manager] Commitment by worker-2 is now FULFILLED
+  ```
+
+  The manager also accepts with the task rather than with a congratulation, because the content
+  of the `AGREE` becomes the content of the commitment — accepting with `"You win!"` left the
+  tracker holding an obligation whose subject was a pleasantry.
+
 ### Fixed
 
 - **A commitment's performer and requester now come from the protocol, not from the performative
