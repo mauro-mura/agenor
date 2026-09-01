@@ -7,6 +7,9 @@ import dev.agenor.core.exceptions.MailboxOverflowException;
 import dev.agenor.core.mailbox.AgentMailbox;
 import dev.agenor.core.mailbox.MailboxConfig;
 import dev.agenor.core.messaging.Subscription;
+import dev.agenor.core.telemetry.AgenorTelemetry;
+import dev.agenor.core.telemetry.Span;
+import dev.agenor.core.telemetry.SpanStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +63,7 @@ public final class DefaultAgentMailbox implements AgentMailbox {
     private final MessageHandler pushConsumer;
     private final AtomicReference<MessageHandler> dialogueConsumer = new AtomicReference<>();
     private final Semaphore inFlight;
+    private final AgenorTelemetry telemetry;
 
     private volatile Thread drain;
 
@@ -74,9 +78,29 @@ public final class DefaultAgentMailbox implements AgentMailbox {
      * @throws IllegalArgumentException if {@code agentId} is blank
      */
     public DefaultAgentMailbox(String agentId, MailboxConfig config, MessageHandler pushConsumer) {
+        this(agentId, config, pushConsumer, AgenorTelemetry.noop());
+    }
+
+    /**
+     * Creates a mailbox for one agent, tracing what it hands to a handler.
+     *
+     * @param agentId      identifier of the owning agent; must not be null or blank
+     * @param config       bounds and overflow behaviour; must not be null
+     * @param pushConsumer receives every message that is not routed to the dialogue
+     *                     consumer; must not be null
+     * @param telemetry    emits the {@code agent.receive} span around each handler call;
+     *                     {@code null} uses {@link AgenorTelemetry#noop()}
+     * @throws NullPointerException     if {@code agentId}, {@code config} or
+     *                                  {@code pushConsumer} is null
+     * @throws IllegalArgumentException if {@code agentId} is blank
+     * @since 0.31.0
+     */
+    public DefaultAgentMailbox(String agentId, MailboxConfig config, MessageHandler pushConsumer,
+                               AgenorTelemetry telemetry) {
         this.agentId = Objects.requireNonNull(agentId, "agentId");
         this.config = Objects.requireNonNull(config, "config");
         this.pushConsumer = Objects.requireNonNull(pushConsumer, "pushConsumer");
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
         if (agentId.isBlank()) {
             throw new IllegalArgumentException("agentId must not be blank");
         }
@@ -236,20 +260,55 @@ public final class DefaultAgentMailbox implements AgentMailbox {
     private void route(Envelope envelope) {
         var message = envelope.message();
         var dialogue = dialogueConsumer.get();
-        var handler = (dialogue != null && DialogueMessage.isDialogueMessage(message))
-                ? dialogue
-                : pushConsumer;
+        boolean toDialogue = dialogue != null && DialogueMessage.isDialogueMessage(message);
+        var handler = toDialogue ? dialogue : pushConsumer;
+
         Thread.startVirtualThread(() -> {
-            try {
+            Span span = receiveSpan(message, toDialogue);
+            try (var scope = span.makeCurrent()) {
                 handler.handle(message).join();
+                span.setStatus(SpanStatus.OK);
                 envelope.outcome().complete(null);
             } catch (Exception e) {
+                span.recordException(e).setStatus(SpanStatus.ERROR);
                 log.error("Handler failed for message {} on agent '{}': {}",
                         message.id(), agentId, e.getMessage(), e);
                 envelope.outcome().completeExceptionally(e);
             } finally {
+                span.end();
                 inFlight.release();
             }
         });
+    }
+
+    /**
+     * The receive-side span ADR-032 reserved this point for.
+     *
+     * <p>It is emitted here rather than in a transport because this is the only place that sees
+     * every inbound message the same way: before it, whether an arriving message was traced
+     * depended on which transport delivered it — the Redis adapter emitted {@code
+     * message.receive} from its consumer loop and the in-memory dispatcher emitted nothing on
+     * the receive side at all. {@code agent.receive} is deliberately named apart from the
+     * transport's own span, so on a transport that traces its hop the two nest rather than
+     * collide.
+     *
+     * <p>{@code conversation.id} is what makes a whole exchange reassemblable from spans, and
+     * {@code mailbox.lane} records the routing decision only this class makes.
+     */
+    private Span receiveSpan(Message message, boolean toDialogue) {
+        return telemetry.spanBuilder("agent.receive")
+                .setAttribute("agent.id",               agentId)
+                .setAttribute("message.id",             orEmpty(message.id()))
+                .setAttribute("message.topic",          orEmpty(message.topic()))
+                .setAttribute("agent.sender",           orEmpty(message.senderId()))
+                .setAttribute("message.correlation_id", orEmpty(message.correlationId()))
+                .setAttribute("conversation.id",
+                        orEmpty(message.headers().get(DialogueMessage.CONVERSATION_ID_HEADER)))
+                .setAttribute("mailbox.lane", toDialogue ? "dialogue" : "push")
+                .startSpan();
+    }
+
+    private static String orEmpty(String s) {
+        return s != null ? s : "";
     }
 }

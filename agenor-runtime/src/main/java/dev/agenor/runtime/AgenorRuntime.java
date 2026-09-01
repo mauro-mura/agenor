@@ -331,6 +331,7 @@ public class AgenorRuntime {
             baseAgent.setMessageDispatcher(messageDispatcher);
             baseAgent.setAgentDirectory(agentDirectory);
             baseAgent.setBehaviorScheduler(behaviorScheduler);
+            baseAgent.setTelemetry(telemetry);
             if (memoryStore != null) {
                 baseAgent.setMemoryStore(memoryStore);
             }

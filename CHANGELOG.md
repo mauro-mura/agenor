@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The mailbox emits an `agent.receive` span, so tracing an inbound message no longer depends
+  on the transport that delivered it.** The Redis adapter emitted `message.receive` from its
+  consumer loop; the in-memory dispatcher emitted nothing on the receive side. The same agent
+  code was therefore observable on one transport and invisible on the other — the asymmetry
+  ADR-032 left when it designated the mailbox drain as the home for receive-side telemetry and
+  did not fill it.
+
+  The span carries `agent.id`, `message.id`, `message.topic`, `agent.sender`,
+  `message.correlation_id`, and two attributes available nowhere else: `mailbox.lane`
+  (`dialogue` or `push`), the routing decision only the mailbox makes, and `conversation.id`,
+  which is what lets a whole exchange be reassembled from spans. It is named apart from the
+  transport's own `message.receive` so that on Redis the two nest rather than collide.
+
+  Telemetry now reaches an agent the way its dispatcher and directory do:
+  `AgenorRuntime` calls `BaseAgent.setTelemetry(...)` at registration, and `createMailbox` passes
+  it on. An agent that is never registered, or a mailbox built with the three-argument
+  constructor, keeps the no-op and behaves exactly as before.
+
+  `DialogueMessage.CONVERSATION_ID_HEADER` and `PERFORMATIVE_HEADER` are now public constants.
+  The mailbox reads the conversation id off a `Message` without building a `DialogueMessage`,
+  and the key was a string literal repeated in four places.
+
 ### Changed
 
 - **`ContractNetExample` reads the commitment its negotiation creates.** Accepting a proposal

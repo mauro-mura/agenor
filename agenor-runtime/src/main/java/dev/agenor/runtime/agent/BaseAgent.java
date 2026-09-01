@@ -25,6 +25,7 @@ import dev.agenor.core.LifecycleHooks;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.mailbox.AgentMailbox;
+import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.mailbox.MailboxConfig;
 import dev.agenor.core.messaging.FilterableSubscriber;
 import dev.agenor.core.messaging.MessageDispatcher;
@@ -102,6 +103,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
 
     // Core services (injected by runtime)
     protected BehaviorScheduler behaviorScheduler;
+    private volatile AgenorTelemetry telemetry = AgenorTelemetry.noop();
     protected AgentDirectory agentDirectory;
 
     // Memory support (injected by runtime, optional - since 0.6.0)
@@ -331,6 +333,28 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     }
 
     /**
+     * Sets the telemetry this agent's inbound path reports to.
+     *
+     * <p>Set by the runtime at registration, alongside the dispatcher and the directory. An
+     * agent that is never registered keeps the no-op instance, so nothing here depends on
+     * having a telemetry backend.
+     *
+     * @param telemetry the telemetry instance; {@code null} restores the no-op
+     * @since 0.31.0
+     */
+    public void setTelemetry(AgenorTelemetry telemetry) {
+        this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
+    }
+
+    /**
+     * @return the telemetry wired into this agent; never {@code null}
+     * @since 0.31.0
+     */
+    public AgenorTelemetry getTelemetry() {
+        return telemetry;
+    }
+
+    /**
      * Get current agent status
      */
     public AgentStatus getStatus() {
@@ -544,7 +568,7 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
      * @since 0.27.0
      */
     protected AgentMailbox createMailbox(MessageHandler pushConsumer) {
-        return new DefaultAgentMailbox(getAgentId(), mailboxConfig(), pushConsumer);
+        return new DefaultAgentMailbox(getAgentId(), mailboxConfig(), pushConsumer, getTelemetry());
     }
 
     /**

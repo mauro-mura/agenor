@@ -371,13 +371,13 @@ public class DialogueCapability {
      */
     private void handleIncomingMessage(Message message) {
         if (!DialogueMessage.isDialogueMessage(message)) {
-            if (message.headers().containsKey("performative")) {
+            if (message.headers().containsKey(DialogueMessage.PERFORMATIVE_HEADER)) {
                 // A peer speaking a dialect this runtime does not know. Silently dropping it is
                 // the kind of thing that costs a day of debugging, so say so.
                 log.warn("Agent {} is not routing message {} from {} to dialogue: unknown "
                         + "performative '{}'",
                     agent.getAgentId(), message.id(), message.senderId(),
-                    message.headers().get("performative"));
+                    message.headers().get(DialogueMessage.PERFORMATIVE_HEADER));
             } else {
                 log.trace("Agent {} received a non-dialogue message {} from {}; left to the "
                         + "direct-message path",

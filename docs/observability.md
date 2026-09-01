@@ -84,6 +84,7 @@ The table below lists every span emitted by Agenor components. Spans marked
 | `behavior.execute` | `SimpleBehaviorScheduler` | `behavior.id`, `behavior.type`, `agent.id`, `behavior.duration_ms` |
 | `mcp.tool.call` | `AgenorMcpClientAdapter` | `mcp.tool.name`, `mcp.transport` (`sse`\|`stdio`) |
 | `message.send` | `InMemoryMessageDispatcher` | `message.topic` or `message.recipient`, `message.id`, `agent.sender` |
+| `agent.receive` | `DefaultAgentMailbox` | `agent.id`, `message.id`, `message.topic`, `agent.sender`, `message.correlation_id`, `conversation.id`, `mailbox.lane` (`dialogue`\|`push`) |
 | `directory.resolve` | `InMemoryAgentDirectory`, `JdbcAgentResolver` (**JDBC adapter**) | `agent.id`, `endpoint.type` (`not-found` if missing) |
 | `directory.register` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
 | `directory.unregister` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
@@ -99,6 +100,23 @@ Exceptions are recorded via `Span.recordException(Throwable)`.
 The `message.correlation_id` attribute on `message.receive` spans carries the same value
 set by the publisher, enabling correlation between `message.publish` and
 `message.receive` spans in your APM tool even without native OTel span links.
+
+### `agent.receive` is the transport-independent one
+
+`message.receive` is emitted by the Redis adapter's consumer loop, so it exists only on that
+transport: run the same agent on the in-memory dispatcher and nothing was traced on the receive
+side at all. Whether an arriving message showed up in your traces therefore depended on where it
+came from.
+
+`agent.receive` is emitted by the mailbox, which every inbound message goes through whatever
+delivered it. On Redis the two nest — the transport's hop around the agent's handling — which is
+why they carry different names rather than one name meaning two things.
+
+Two attributes are only available at this point. `mailbox.lane` records the routing decision
+between the dialogue consumer and the handlers reached by `@AgenorMessageHandler` and
+`onDirectMessage`. `conversation.id` is present for dialogue traffic and is what lets a whole
+exchange be reassembled: filter on it and you get one negotiation, in order, across every agent
+that took part.
 
 ---
 

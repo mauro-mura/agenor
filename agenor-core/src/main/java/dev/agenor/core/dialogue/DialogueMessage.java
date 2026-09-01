@@ -56,6 +56,24 @@ public record DialogueMessage(
      */
     public static final String CONTENT_CLASS_HEADER = "content-class";
 
+    /**
+     * Header carrying {@link #conversationId()} across a transport.
+     *
+     * <p>Public because the inbound path reads it without building a {@code DialogueMessage}:
+     * the mailbox tags its receive span with the conversation a message belongs to, which is
+     * what lets a whole exchange be reassembled from spans.
+     *
+     * @since 0.31.0
+     */
+    public static final String CONVERSATION_ID_HEADER = "conversationId";
+
+    /**
+     * Header carrying {@link #performative()} across a transport.
+     *
+     * @since 0.31.0
+     */
+    public static final String PERFORMATIVE_HEADER = "performative";
+
     public DialogueMessage {
         Objects.requireNonNull(id, "id cannot be null");
         Objects.requireNonNull(conversationId, "conversationId cannot be null");
@@ -226,8 +244,8 @@ public record DialogueMessage(
 
     private Map<String, String> buildHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("conversationId", conversationId);
-        headers.put("performative", performative.name());
+        headers.put(CONVERSATION_ID_HEADER, conversationId);
+        headers.put(PERFORMATIVE_HEADER, performative.name());
         if (protocol != null) headers.put("protocol", protocol);
         if (content != null) headers.put(CONTENT_CLASS_HEADER, content.getClass().getName());
         return headers;
@@ -240,7 +258,7 @@ public record DialogueMessage(
     }
 
     private static String extractConversationId(Message message) {
-        String convId = message.headers().get("conversationId");
+        String convId = message.headers().get(CONVERSATION_ID_HEADER);
         return convId != null ? convId : UUID.randomUUID().toString();
     }
 
@@ -257,7 +275,7 @@ public record DialogueMessage(
      * {@code "inform"}.
      */
     private static Optional<Performative> parsePerformative(Message message) {
-        String perf = message.headers().get("performative");
+        String perf = message.headers().get(PERFORMATIVE_HEADER);
         if (perf == null) {
             return Optional.empty();
         }
