@@ -267,20 +267,42 @@ mapfile -t DOC_FILES < <(
       ls README.md agenor-examples/README.md 2>/dev/null; } | sort -u
 )
 
-# A package tree or an architecture box fenced with ``` names a type the same way running code
-# does, but names nobody has to type — `docs/dialog-protocol.md` names `ProtocolRegistry` and
-# `ProtocolState` only inside its "Package Structure" file tree, and `ContractNetProtocol` and
-# `QueryProtocol` only inside that tree and the ASCII architecture diagram above it, never once
-# in prose. A fenced block is stripped whole, code-tagged or not: a ```java sample calls
-# `dialogue.getConversationManager()` and never spells the type as a standalone word, so nothing
-# real is lost by excluding it, and a diagram or a file listing is exactly what should be.
+# A package tree or an architecture box fenced with a bare ``` names a type the same way
+# running code does, but names nobody has to type — `docs/dialog-protocol.md` names
+# `ProtocolRegistry` and `ProtocolState` only inside its "Package Structure" file tree, and
+# `ContractNetProtocol` and `QueryProtocol` only inside that tree and the ASCII architecture
+# diagram above it, never once in prose. Only a *bare* fence is stripped, though: a ```java
+# sample is a real usage example and the strongest form prose offers — `docs/observability.md`
+# shows `SnifferSupport.findByConversation(runtime, id)` nowhere except inside one, and
+# stripping every fence indiscriminately (the first cut of this fix) took that down to
+# **dead surface** for a type with a working, tested caller. The convention this tree already
+# follows is what makes the split safe: a bare ``` is a diagram, a tree, or a log line; a
+# language-tagged one is compilable. A block's closing fence is always bare regardless of how
+# it opened, so the state machine tracks "currently inside a fence" apart from "which kind".
 DOC_STRIP_DIR="$(mktemp -d)"
 trap 'rm -rf "$DOC_STRIP_DIR"' EXIT
 
-declare -A DOC_STRIPPED   # doc file -> path to its fenced-block-stripped copy
+declare -A DOC_STRIPPED   # doc file -> path to its bare-fenced-block-stripped copy
 for f in "${DOC_FILES[@]}"; do
     stripped="$DOC_STRIP_DIR/$(printf '%s' "$f" | tr '/' '_')"
-    awk '/^```/ { fence = !fence; next } !fence' "$f" > "$stripped"
+    awk '
+        BEGIN { state = "none" }
+        state == "none" {
+            if ($0 ~ /^```[[:alpha:]]/) { state = "tagged"; next }
+            if ($0 ~ /^```[ \t]*$/)     { state = "bare";   next }
+            print
+            next
+        }
+        state == "tagged" {
+            if ($0 ~ /^```[ \t]*$/) { state = "none"; next }
+            print
+            next
+        }
+        state == "bare" {
+            if ($0 ~ /^```[ \t]*$/) { state = "none" }
+            next
+        }
+    ' "$f" > "$stripped"
     DOC_STRIPPED["$f"]="$stripped"
 done
 
@@ -460,10 +482,13 @@ could reach without ever writing the type's name — the verdict says so:
 verdict: nothing in the tree touches it at all, framework included, so there is no getter path
 left to check.
 
-A doc page's fenced \`\`\` blocks — a package-structure file tree, an ASCII architecture box, a
-sequence diagram — are stripped before this column is counted. Those name a type the same way
-running code does, but name nobody has to type; only prose, including an inline backtick
-reference outside a fence, counts as offering the type to a user.
+A doc page's *bare* \`\`\` fences — a package-structure file tree, an ASCII architecture box, a
+sequence diagram, a log line — are stripped before this column is counted. Those name a type the
+same way running code does, but name nobody has to type. A *language-tagged* fence
+(\`\`\`java and so on) is kept: it is a real usage sample, and \`SnifferSupport\` is named nowhere
+in \`docs/observability.md\` except inside one — stripping every fence alike took a documented,
+tested, callable type down to **dead surface**. Prose, including an inline backtick reference
+outside a fence, counts the same as a kept code sample.
 
 The census covers types, not methods. Method-level findings — \`BaseAgent.requestFrom\`,
 \`ConversationManager.onMessage\` — still need finding by hand.

@@ -89,12 +89,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   since ADR-029, because direction is a property of the protocol. A protocol you write yourself
   now participates without the tracker knowing about it.
 
+  `DefaultCommitmentTracker` takes the `ProtocolRegistry` that resolves a message's protocol, and
+  `DialogueCapability` hands it the same instance it uses itself. A tracker built without one
+  keeps the previous behaviour for every message.
+
+  Two related defects are recorded in ADR-009's amendment and deliberately not fixed here: the
+  commitment record is created by the sender only, so the party that took the work on holds
+  nothing; and although `Performative.createsCommitment()` reports four performatives,
+  commitments are created for `REQUEST` and `AGREE` only.
+
 - **`tools/api-census.sh` no longer reads a fenced package tree or ASCII architecture diagram as
   documentation.** `docs/dialog-protocol.md`'s "Package Structure" listing named
   `ProtocolState`, `ContractNetProtocol` and `QueryProtocol` nowhere except inside that box, so
   they scored **documented, unnamed** — a verdict whose two outcomes both point at removal — for
-  a reason unrelated to whether anyone reads about them. Only prose now counts toward the
-  **docs** column.
+  a reason unrelated to whether anyone reads about them. Only a *bare* fenced block is excluded,
+  though — a first cut stripped every fence alike, `` ```java `` samples included, and that took
+  `AgentContext` and `SimpleTokenEstimator` down to **plumbing** even though `docs/*.md` shows
+  working, tested code calling both. Only a bare fence (a diagram, a tree, a log line) is
+  excluded now; a language-tagged one is kept, because it is the strongest form prose offers.
 
   A **documented, unnamed** type that also has `framework > 0` can be reached through a getter
   an example never has to name; the census explained this in prose but the verdict itself did
@@ -104,15 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tools/api-census-diff.sh <before.md> <after.md>` compares two saved reports per type instead
   of by the summary counts, which a page deletion has fooled before. `CONTRIBUTING.md`'s release
   checklist now points to it where it already asked for the comparison.
-
-  `DefaultCommitmentTracker` takes the `ProtocolRegistry` that resolves a message's protocol, and
-  `DialogueCapability` hands it the same instance it uses itself. A tracker built without one
-  keeps the previous behaviour for every message.
-
-  Two related defects are recorded in ADR-009's amendment and deliberately not fixed here: the
-  commitment record is created by the sender only, so the party that took the work on holds
-  nothing; and although `Performative.createsCommitment()` reports four performatives,
-  commitments are created for `REQUEST` and `AGREE` only.
 
 ## [0.30.0] - 2026-09-01
 
