@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import dev.agenor.core.Agent;
+import dev.agenor.core.composite.CompositeBehavior;
 import dev.agenor.core.composite.SchedulingHint;
 import dev.agenor.core.console.ConsoleEventListener;
 import dev.agenor.core.telemetry.AgenorTelemetry;
@@ -71,6 +72,16 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                 return;
             }
 
+            // A composite says how it wants to be driven through SchedulingHint, which exists
+            // because BehaviorType cannot say it: a SequentialBehavior is cyclic or one-shot
+            // depending on whether it carries an interval, and a control-flow composite is
+            // neither. Ask the composite first, so the switch below never answers for a type
+            // that only a composite returns.
+            if (behavior instanceof CompositeBehavior composite) {
+                scheduleComposite(composite);
+                return;
+            }
+
             switch (behavior.getType()) {
                 case ONE_SHOT  -> scheduleOneShot(behavior);
                 case CYCLIC    -> scheduleCyclic(behavior);
@@ -83,19 +94,16 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                 case BATCH -> scheduleCustom(behavior);
                 // CONDITIONAL and THROTTLED carry their own interval inside execute().
                 case CONDITIONAL, THROTTLED, CUSTOM -> scheduleCustom(behavior);
-                // Workflow composites (SEQUENTIAL, PARALLEL) declare their scheduling intent
-                // via SchedulingHint; delegate to scheduleComposite() so that addBehavior()
-                // is sufficient — no manual execute() call required.
-                case SEQUENTIAL, PARALLEL -> scheduleComposite(behavior);
-                // Control-flow composites are on-demand: they wrap operations triggered
-                // externally and must NOT be auto-scheduled.
-                case RETRY, CIRCUIT_BREAKER, PIPELINE, FSM -> {
-                    log.debug("On-demand composite registered (not auto-scheduled): {}",
-                            behavior.getBehaviorId());
-                }
                 // SCHEDULED manages its own internal ScheduledExecutorService but needs
                 // execute() called once to start the cron loop.
                 case SCHEDULED -> scheduleOneShot(behavior);
+                // Only a composite returns one of these, and a composite was dispatched on its
+                // hint above. A plain Behavior naming one is registered and left alone rather
+                // than guessed at.
+                case SEQUENTIAL, PARALLEL, RETRY, CIRCUIT_BREAKER, PIPELINE, FSM -> {
+                    log.debug("On-demand behavior registered (not auto-scheduled): {}",
+                            behavior.getBehaviorId());
+                }
             }
         });
     }
@@ -109,34 +117,32 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
      *   <li>{@link SchedulingHint#ON_DEMAND} — only registers; caller must call {@code execute()} manually.</li>
      * </ul>
      *
+     * <p>This is the only path a composite takes: {@link #schedule(Behavior)} routes every
+     * {@link CompositeBehavior} here without consulting {@link dev.agenor.core.BehaviorType},
+     * so the hint is authoritative rather than a second opinion.
+     *
      * @throws IllegalStateException if hint is CYCLIC but {@code getInterval()} returns null.
      */
-    private void scheduleComposite(Behavior behavior) {
-        if (!(behavior instanceof dev.agenor.core.composite.CompositeBehavior composite)) {
-            // Fallback: if somehow a non-composite returns SEQUENTIAL/PARALLEL type, treat as one-shot.
-            scheduleOneShot(behavior);
-            return;
-        }
-
+    private void scheduleComposite(CompositeBehavior composite) {
         switch (composite.getSchedulingHint()) {
             case ONCE -> {
-                log.debug("Scheduling composite behavior as one-shot: {}", behavior.getBehaviorId());
-                scheduleOneShot(behavior);
+                log.debug("Scheduling composite behavior as one-shot: {}", composite.getBehaviorId());
+                scheduleOneShot(composite);
             }
             case CYCLIC -> {
-                if (behavior.getInterval() == null) {
+                if (composite.getInterval() == null) {
                     throw new IllegalStateException(
                             "Composite behavior '%s' has SchedulingHint.CYCLIC but getInterval() returned null. "
-                                    .formatted(behavior.getBehaviorId())
+                                    .formatted(composite.getBehaviorId())
                                     + "Provide an interval via the constructor: "
                                     + "new SequentialBehavior(id, true, stepTimeout, Duration.ofSeconds(1))");
                 }
                 log.debug("Scheduling composite behavior as cyclic (interval={}): {}",
-                        behavior.getInterval(), behavior.getBehaviorId());
-                scheduleCyclic(behavior);
+                        composite.getInterval(), composite.getBehaviorId());
+                scheduleCyclic(composite);
             }
             case ON_DEMAND -> log.debug("On-demand composite registered (not auto-scheduled): {}",
-                    behavior.getBehaviorId());
+                    composite.getBehaviorId());
         }
     }
 
