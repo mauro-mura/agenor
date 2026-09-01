@@ -391,6 +391,8 @@ cannot check against something is a formality.
 - [ ] **Documentation matches the tree** — every page naming a changed or removed API is
       updated. After a documentation change, re-run `bash tools/api-census.sh` and read which
       verdicts moved: one that improved because a page was deleted has not improved.
+      `tools/api-census-diff.sh <before.md> <after.md>` does the comparison per type instead of
+      by eye — save the report before the change, rerun, then diff the two.
 - [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
       changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
 

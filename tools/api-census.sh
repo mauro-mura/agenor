@@ -267,9 +267,26 @@ mapfile -t DOC_FILES < <(
       ls README.md agenor-examples/README.md 2>/dev/null; } | sort -u
 )
 
-documented_in() {   # <TypeName> -> number of user-facing doc files naming it
+# A package tree or an architecture box fenced with ``` names a type the same way running code
+# does, but names nobody has to type — `docs/dialog-protocol.md` names `ProtocolRegistry` and
+# `ProtocolState` only inside its "Package Structure" file tree, and `ContractNetProtocol` and
+# `QueryProtocol` only inside that tree and the ASCII architecture diagram above it, never once
+# in prose. A fenced block is stripped whole, code-tagged or not: a ```java sample calls
+# `dialogue.getConversationManager()` and never spells the type as a standalone word, so nothing
+# real is lost by excluding it, and a diagram or a file listing is exactly what should be.
+DOC_STRIP_DIR="$(mktemp -d)"
+trap 'rm -rf "$DOC_STRIP_DIR"' EXIT
+
+declare -A DOC_STRIPPED   # doc file -> path to its fenced-block-stripped copy
+for f in "${DOC_FILES[@]}"; do
+    stripped="$DOC_STRIP_DIR/$(printf '%s' "$f" | tr '/' '_')"
+    awk '/^```/ { fence = !fence; next } !fence' "$f" > "$stripped"
+    DOC_STRIPPED["$f"]="$stripped"
+done
+
+documented_in() {   # <TypeName> -> number of user-facing doc files naming it in prose
     # grep exits 1 on no match, which under `pipefail` would abort the whole census.
-    { grep -lw -- "$1" "${DOC_FILES[@]}" 2>/dev/null || true; } | grep -c . || true
+    { grep -lw -- "$1" "${DOC_STRIPPED[@]}" 2>/dev/null || true; } | grep -c . || true
 }
 
 # ---------------------------------------------------------------------------------------
@@ -340,6 +357,7 @@ for module in "${CENSUS_MODULES[@]}"; do
         if   (( ex_incidental > 0 ));            then verdict="named by user code";       n_keep+=1
         elif (( fw > 0 && ex_total > 0 ));       then verdict="**plumbing with a demo**";  n_demo+=1
         elif (( ex_total > 0 ));                 then verdict="**self-justifying**";       n_selfjust+=1
+        elif (( docs > 0 && fw > 0 ));            then verdict="**documented, unnamed — check getters**"; n_offered+=1
         elif (( docs > 0 ));                     then verdict="**documented, unnamed**";   n_offered+=1
         elif (( fw > 0 ));                       then verdict="plumbing";                  n_internal+=1
         else                                          verdict="**dead surface**";          n_dead+=1
@@ -433,7 +451,19 @@ had to learn. It is plumbing you reached through something else.
 So a zero here does not by itself mean "unused". It means "user code never has to name it",
 which is the input to two different conclusions: either the type is genuinely unused, or it is
 plumbing that user-facing documentation is presenting as surface (C-1). The **docs** column is
-what separates them.
+what separates them — except this rule states it and the verdict used to leave a reader to
+remember it. Three times a **documented, unnamed** row got read as "nothing touches this", when
+what it meant was "no *user* code names it". When a documented type also has \`framework > 0\` —
+the runtime holds or returns it somewhere, the exact shape of a getter path a newcomer's example
+could reach without ever writing the type's name — the verdict says so:
+**documented, unnamed — check getters**. A documented type with \`framework = 0\` gets the plain
+verdict: nothing in the tree touches it at all, framework included, so there is no getter path
+left to check.
+
+A doc page's fenced \`\`\` blocks — a package-structure file tree, an ASCII architecture box, a
+sequence diagram — are stripped before this column is counted. Those name a type the same way
+running code does, but name nobody has to type; only prose, including an inline backtick
+reference outside a fence, counts as offering the type to a user.
 
 The census covers types, not methods. Method-level findings — \`BaseAgent.requestFrom\`,
 \`ConversationManager.onMessage\` — still need finding by hand.
@@ -463,6 +493,7 @@ unnecessary":
 | **plumbing with a demo** | framework depends on it, but the only example is its own demonstration | delete the example, keep the type |
 | **self-justifying** | nothing depends on it; named only by its own demonstration | deprecate; the example goes with it |
 | **documented, unnamed** | user-facing docs name it, no user code does | decide: plumbing (stop documenting as surface) or unused (deprecate) |
+| **documented, unnamed — check getters** | same, and \`framework > 0\`: a getter path may reach it without naming it | check call sites for that path before deciding — see above |
 | plumbing | never named by user code, never documented as surface | — correctly invisible |
 | **dead surface** | named by nothing, documented nowhere | deprecate |
 

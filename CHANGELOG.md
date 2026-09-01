@@ -89,6 +89,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   since ADR-029, because direction is a property of the protocol. A protocol you write yourself
   now participates without the tracker knowing about it.
 
+- **`tools/api-census.sh` no longer reads a fenced package tree or ASCII architecture diagram as
+  documentation.** `docs/dialog-protocol.md`'s "Package Structure" listing named
+  `ProtocolState`, `ContractNetProtocol` and `QueryProtocol` nowhere except inside that box, so
+  they scored **documented, unnamed** — a verdict whose two outcomes both point at removal — for
+  a reason unrelated to whether anyone reads about them. Only prose now counts toward the
+  **docs** column.
+
+  A **documented, unnamed** type that also has `framework > 0` can be reached through a getter
+  an example never has to name; the census explained this in prose but the verdict itself did
+  not say so, and the same misreading recurred across independent reviews of the report. That
+  verdict now reads **documented, unnamed — check getters**.
+
+  `tools/api-census-diff.sh <before.md> <after.md>` compares two saved reports per type instead
+  of by the summary counts, which a page deletion has fooled before. `CONTRIBUTING.md`'s release
+  checklist now points to it where it already asked for the comparison.
+
   `DefaultCommitmentTracker` takes the `ProtocolRegistry` that resolves a message's protocol, and
   `DialogueCapability` hands it the same instance it uses itself. A tracker built without one
   keeps the previous behaviour for every message.
