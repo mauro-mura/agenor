@@ -2,6 +2,7 @@
 
 **Status**: Accepted
 **Date**: 2026-08-03
+**Last Modified**: 2026-08-15 (see Amendments below)
 **Authors**: Project Team
 **References**: ADR-002 (Interface-First Architecture), ADR-004 (Progressive Complexity
 Strategy), ADR-018 (Optional Adapter Dependencies Pattern), ADR-020 (Core API Refactor)
