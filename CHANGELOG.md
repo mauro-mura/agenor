@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-09-01
+
 ### Changed
 
 - **A composite behavior no longer declares a `BehaviorType`; it derives one from its
@@ -151,7 +153,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   `LLMDirectMessagingExample` was the shipped demonstration of the pattern that opts out — three
   researchers and a coordinator, each doing `llm.chat(...).thenAccept(...)` from a `void`
-  handler — and now returns its chains. The cross-transport case is in
+  handler — and now returns its chains. Running it shows the difference directly: an agent
+  stopped while its LLM call is still in flight now logs *"Mailbox … stopped with handlers still
+  running"*, where before the mailbox saw nothing running and shut down on a false all-clear. The cross-transport case is in
   `MailboxDeliverySemanticsIT`: a handler whose returned future fails is redelivered and reaches
   the dead-letter stream, exactly as one that throws. It cannot live in
   `MessageDispatcherContractTests` — that suite is in `agenor-core`, which cannot see
@@ -1981,7 +1985,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/mauro-mura/agenor/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/mauro-mura/agenor/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/mauro-mura/agenor/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/mauro-mura/agenor/compare/v0.26.0...v0.27.0
