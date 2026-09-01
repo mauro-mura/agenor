@@ -2,7 +2,6 @@ package dev.agenor.core.composite;
 
 import dev.agenor.core.Agent;
 import dev.agenor.core.Behavior;
-import dev.agenor.core.BehaviorType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -296,11 +295,6 @@ class CompositeBehaviorEdgeCasesTest {
 
         TestCompositeBehavior(String behaviorId) {
             super(behaviorId);
-        }
-
-        @Override
-        public BehaviorType getType() {
-            return BehaviorType.CUSTOM;
         }
 
         @Override

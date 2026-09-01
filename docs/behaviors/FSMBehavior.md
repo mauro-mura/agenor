@@ -157,9 +157,7 @@ Duration t    = fsm.getStateTimeout();
 |---|---|---|
 | `ONE_SHOT` | ✅ Yes | Executed once immediately |
 | `CYCLIC` | ✅ Yes | Repeated at fixed interval |
-| `EVENT_DRIVEN` | ❌ No | Registered, responds to messages |
-| `WAKER` | ✅ Yes | Checks wake condition periodically |
-| `FSM` | ❌ No | On-demand — requires explicit `CyclicBehavior` driver |
+| `FSM` | ❌ No | On-demand — the owner calls `execute()`, typically from a `CYCLIC` behavior |
 
 ---
 

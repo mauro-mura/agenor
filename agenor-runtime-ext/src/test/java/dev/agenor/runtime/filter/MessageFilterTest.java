@@ -232,16 +232,14 @@ class MessageFilterTest {
     }
 
     // =========================================================================
-    // COMPOSITE FILTER TESTS
+    // FILTER COMPOSITION TESTS
     // =========================================================================
 
     @Test
     @DisplayName("Should combine filters with AND")
     void shouldCombineWithAnd() {
-        MessageFilter filter = CompositeFilter.and(
-            TopicFilter.startsWith("order."),
-            HeaderFilter.equals("priority", "HIGH")
-        );
+        MessageFilter filter = TopicFilter.startsWith("order.")
+            .and(HeaderFilter.equals("priority", "HIGH"));
 
         Message match = Message.builder()
             .topic("order.created")
@@ -266,10 +264,8 @@ class MessageFilterTest {
     @Test
     @DisplayName("Should combine filters with OR")
     void shouldCombineWithOr() {
-        MessageFilter filter = CompositeFilter.or(
-            TopicFilter.exact("order.created"),
-            TopicFilter.exact("order.updated")
-        );
+        MessageFilter filter = TopicFilter.exact("order.created")
+            .or(TopicFilter.exact("order.updated"));
 
         Message match1 = Message.builder().topic("order.created").build();
         Message match2 = Message.builder().topic("order.updated").build();
@@ -283,9 +279,7 @@ class MessageFilterTest {
     @Test
     @DisplayName("Should negate filter with NOT")
     void shouldNegateFilter() {
-        MessageFilter filter = CompositeFilter.not(
-            TopicFilter.exact("order.created")
-        );
+        MessageFilter filter = TopicFilter.exact("order.created").negate();
 
         Message match = Message.builder().topic("order.updated").build();
         Message noMatch = Message.builder().topic("order.created").build();

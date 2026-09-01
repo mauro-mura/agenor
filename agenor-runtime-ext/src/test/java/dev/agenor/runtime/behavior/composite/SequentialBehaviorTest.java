@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.agenor.core.Behavior;
 import dev.agenor.core.BehaviorType;
+import dev.agenor.core.composite.SchedulingHint;
 
 @DisplayName("Sequential Behavior Tests")
 class SequentialBehaviorTest {
@@ -191,9 +192,19 @@ class SequentialBehaviorTest {
     // -------------------------------------------------------------------------
 
     @Test
-    @DisplayName("Should return SEQUENTIAL type")
-    void shouldReturnSequentialType() {
-        assertThat(sequentialBehavior.getType()).isEqualTo(BehaviorType.SEQUENTIAL);
+    @DisplayName("Should derive ONE_SHOT from its ONCE scheduling hint")
+    void shouldDeriveOneShotWithoutInterval() {
+        assertThat(sequentialBehavior.getSchedulingHint()).isEqualTo(SchedulingHint.ONCE);
+        assertThat(sequentialBehavior.getType()).isEqualTo(BehaviorType.ONE_SHOT);
+    }
+
+    @Test
+    @DisplayName("Should derive CYCLIC from its CYCLIC scheduling hint")
+    void shouldDeriveCyclicWithInterval() {
+        SequentialBehavior repeating = new SequentialBehavior("repeating", Duration.ofMillis(50));
+
+        assertThat(repeating.getSchedulingHint()).isEqualTo(SchedulingHint.CYCLIC);
+        assertThat(repeating.getType()).isEqualTo(BehaviorType.CYCLIC);
     }
 
     @Test

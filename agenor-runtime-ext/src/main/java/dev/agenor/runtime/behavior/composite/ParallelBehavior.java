@@ -1,7 +1,6 @@
 package dev.agenor.runtime.behavior.composite;
 
 import dev.agenor.core.Behavior;
-import dev.agenor.core.BehaviorType;
 import dev.agenor.core.composite.CompletionStrategy;
 import dev.agenor.core.composite.CompositeBehavior;
 import dev.agenor.core.composite.SchedulingHint;
@@ -22,12 +21,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@code agent.addBehavior()}, waits for the configured completion strategy,
  * then marks the behavior inactive.
  *
- * @deprecated since 0.28.0, for removal in 0.30.0 as an annotation target
- *             ({@link dev.agenor.core.BehaviorType#PARALLEL}). No code outside this class names
- *             it. Building the composite directly and adding it with {@code agent.addBehavior()}
- *             keeps working, and is how {@code OrderOrchestratorAgent} uses its sibling.
+ * <p>The {@code @Behavior(type = PARALLEL)} route to this class was removed in 0.30.0 with the
+ * constant that named it: an annotation cannot express a composite's children. Build it and add
+ * it with {@code agent.addBehavior()}, the way {@code OrderOrchestratorAgent} builds its sibling
+ * {@link SequentialBehavior}.
  */
-@Deprecated(since = "0.28.0", forRemoval = true)
 public class ParallelBehavior extends CompositeBehavior {
 
     private static final Logger log = LoggerFactory.getLogger(ParallelBehavior.class);
@@ -63,11 +61,6 @@ public class ParallelBehavior extends CompositeBehavior {
     // -------------------------------------------------------------------------
     // Scheduling contract
     // -------------------------------------------------------------------------
-
-    @Override
-    public BehaviorType getType() {
-        return BehaviorType.PARALLEL;
-    }
 
     /**
      * {@code ParallelBehavior} is a one-shot fan-out: fire all children in parallel,

@@ -38,15 +38,18 @@ Start here. Every example fits in a single file and introduces one concept.
 
 ### Level 1 — Core behaviors
 
-One behavior type per example, all self-contained.
+There are three behavior types, and one example covers all of them, because the point is how
+they differ.
 
 | Example | Main class | Behavior |
 |---------|-----------|---------|
-| `ThrottledExample` | `dev.agenor.examples.behaviors.ThrottledExample` | `@Behavior(type = THROTTLED)` rate limiting |
-| `ConditionalBehaviorExample` | `dev.agenor.examples.behaviors.ConditionalBehaviorExample` | `CONDITIONAL` — runs only when a condition is true |
-| `RetryExample` | `dev.agenor.examples.behaviors.RetryExample` | `RetryBehavior` with exponential/linear/jitter/fixed backoff |
-| `BatchProcessingExample` | `dev.agenor.examples.behaviors.BatchProcessingExample` | `BATCH` — buffer → drain → write |
-| `ScheduledExample` | `dev.agenor.examples.behaviors.ScheduledExample` | `ScheduledBehavior` cron expressions + timezone |
+| `CoreBehaviorsExample` | `dev.agenor.examples.behaviors.CoreBehaviorsExample` | `ONE_SHOT`, `CYCLIC` and `FSM` in one agent — annotated methods and a built composite side by side |
+
+Five examples used to live here, one per behavior type: `ThrottledExample`,
+`ConditionalBehaviorExample`, `RetryExample`, `BatchProcessingExample` and `ScheduledExample`.
+Those types were removed in 0.30.0 — retrying, rate limiting, batching, gating and cron are not
+kinds of schedule, so they were never behavior types. See
+[Behaviors Overview](../docs/behaviors/README.md) for where each one belongs instead.
 
 ---
 

@@ -364,9 +364,9 @@ Quick-start examples to run immediately:
 mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.PingPongExample"
 
-# Level 1 — retry behavior with backoff strategies
+# Level 1 — the three behavior types in one agent
 mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.behaviors.RetryExample"
+  -Dexec.mainClass="dev.agenor.examples.behaviors.CoreBehaviorsExample"
 
 # Level 2 — Contract-Net negotiation (CFP → propose → accept)
 mvn exec:java -pl agenor-examples \

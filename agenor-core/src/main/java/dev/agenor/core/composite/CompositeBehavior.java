@@ -2,6 +2,7 @@ package dev.agenor.core.composite;
 
 import dev.agenor.core.Agent;
 import dev.agenor.core.Behavior;
+import dev.agenor.core.BehaviorType;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,8 +21,8 @@ import java.util.List;
  * this to return {@link SchedulingHint#ONCE} or {@link SchedulingHint#CYCLIC}, so that
  * {@code agent.addBehavior()} is sufficient — no manual {@code execute()} call required.
  *
- * <p>Control-flow composites (FSM, Retry, CircuitBreaker, Pipeline) keep the default
- * {@link SchedulingHint#ON_DEMAND} because they are wrappers triggered by external events.
+ * <p>A control-flow composite such as {@code FSMBehavior} keeps the default
+ * {@link SchedulingHint#ON_DEMAND} because it is triggered by external events.
  *
  * <h2>Child management</h2>
  * <p>Children are added via {@link #addChildBehavior(Behavior)}. When {@link #setAgent(Agent)}
@@ -39,10 +40,8 @@ import java.util.List;
  *     public MyComposite(String id) { super(id); }
  *
  *     // Override to control auto-scheduling; default is ON_DEMAND.
+ *     // getType() follows from it and needs no override.
  *     @Override public SchedulingHint getSchedulingHint() { return SchedulingHint.ONCE; }
- *
- *     // A composite has no type of its own: answer with the one its hint implies.
- *     @Override public BehaviorType getType() { return BehaviorType.ONE_SHOT; }
  *
  *     @Override
  *     public CompletableFuture<Void> execute() {
@@ -107,6 +106,28 @@ public abstract class CompositeBehavior implements Behavior {
      */
     public SchedulingHint getSchedulingHint() {
         return SchedulingHint.ON_DEMAND;
+    }
+
+    /**
+     * The scheduling type implied by {@link #getSchedulingHint()}.
+     *
+     * <p>A composite has no type of its own to declare. What it does have is a hint, and the
+     * hint already says the only thing {@link BehaviorType} can say: a {@link
+     * SchedulingHint#CYCLIC} composite repeats, and one that runs {@link SchedulingHint#ONCE}
+     * or {@link SchedulingHint#ON_DEMAND} runs once per invocation. Deriving the answer here
+     * means no composite has to invent one, and no two of them can disagree.
+     *
+     * <p>Override only when the composite really is a different shape of work, as
+     * {@code FSMBehavior} does.
+     *
+     * @return {@link BehaviorType#CYCLIC} for a repeating composite, {@link
+     *         BehaviorType#ONE_SHOT} otherwise
+     */
+    @Override
+    public BehaviorType getType() {
+        return getSchedulingHint() == SchedulingHint.CYCLIC
+                ? BehaviorType.CYCLIC
+                : BehaviorType.ONE_SHOT;
     }
 
     @Override

@@ -20,9 +20,7 @@ import dev.agenor.core.spi.BehaviorAnnotationExtension;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.behavior.BaseBehavior;
 import dev.agenor.runtime.behavior.CyclicBehavior;
-import dev.agenor.runtime.behavior.EventDrivenBehavior;
 import dev.agenor.runtime.behavior.OneShotBehavior;
-import dev.agenor.runtime.behavior.WakerBehavior;
 
 /**
  * Processor for handling {@code @Behavior} and {@code @AgenorMessageHandler}
@@ -164,9 +162,6 @@ public class AgentAnnotationProcessor {
         dev.agenor.core.Behavior behavior = switch (annotation.type()) {
             case ONE_SHOT -> createOneShotBehavior(agent, method, annotation);
             case CYCLIC -> createCyclicBehavior(agent, method, annotation);
-            case WAKER -> createWakerBehavior(agent, method, annotation);
-            case EVENT_DRIVEN -> createEventDrivenBehavior(agent, method, annotation);
-            case CUSTOM -> createCustomBehavior(agent, method, annotation);
             default -> delegateToExtension(agent, method, annotation);
         };
 
@@ -257,48 +252,6 @@ public class AgentAnnotationProcessor {
     }
 
     private dev.agenor.core.Behavior createCyclicBehavior(Agent agent, Method method, Behavior annotation) {
-        String behaviorId = generateBehaviorId(agent, method);
-        Duration interval = parseDuration(annotation.interval());
-        Duration initialDelay = parseOptionalDuration(annotation.initialDelay());
-
-        return new CyclicBehavior(behaviorId, interval) {
-            @Override
-            public Duration getInitialDelay() {
-                return initialDelay;
-            }
-
-            @Override
-            protected void action() {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
-    @SuppressWarnings("removal")  // WAKER and EVENT_DRIVEN stay wired until 0.30.0
-    private dev.agenor.core.Behavior createWakerBehavior(Agent agent, Method method, Behavior annotation) {
-        String behaviorId = generateBehaviorId(agent, method);
-        Duration initialDelay = parseDuration(annotation.initialDelay());
-
-        // For now, treat waker as delayed one-shot
-        return WakerBehavior.wakeAfter(initialDelay, () -> invokeMethod(agent, method));
-    }
-
-    @SuppressWarnings("removal")  // WAKER and EVENT_DRIVEN stay wired until 0.30.0
-    private dev.agenor.core.Behavior createEventDrivenBehavior(Agent agent, Method method, Behavior annotation) {
-        // Event-driven behaviors typically need a topic - for now, use method name as topic
-        String topic = method.getName().toLowerCase();
-        String behaviorId = generateBehaviorId(agent, method);
-
-        return new EventDrivenBehavior(behaviorId, topic) {
-            @Override
-            protected void handleMessage(Message message) {
-                invokeMethod(agent, method);
-            }
-        };
-    }
-
-    private dev.agenor.core.Behavior createCustomBehavior(Agent agent, Method method, Behavior annotation) {
-        // Custom behaviors use the interval as their execution pattern
         String behaviorId = generateBehaviorId(agent, method);
         Duration interval = parseDuration(annotation.interval());
         Duration initialDelay = parseOptionalDuration(annotation.initialDelay());

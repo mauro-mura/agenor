@@ -83,27 +83,12 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
             }
 
             switch (behavior.getType()) {
-                case ONE_SHOT  -> scheduleOneShot(behavior);
-                case CYCLIC    -> scheduleCyclic(behavior);
-                case WAKER     -> scheduleWaker(behavior);
-                case EVENT_DRIVEN -> {
-                    // Event-driven behaviors respond to events; no scheduling needed.
-                    log.debug("Event-driven behavior registered: {}", behavior.getBehaviorId());
-                }
-                // BATCH needs continuous polling to drain its internal queue.
-                case BATCH -> scheduleCustom(behavior);
-                // CONDITIONAL and THROTTLED carry their own interval inside execute().
-                case CONDITIONAL, THROTTLED, CUSTOM -> scheduleCustom(behavior);
-                // SCHEDULED manages its own internal ScheduledExecutorService but needs
-                // execute() called once to start the cron loop.
-                case SCHEDULED -> scheduleOneShot(behavior);
-                // Only a composite returns one of these, and a composite was dispatched on its
-                // hint above. A plain Behavior naming one is registered and left alone rather
-                // than guessed at.
-                case SEQUENTIAL, PARALLEL, RETRY, CIRCUIT_BREAKER, PIPELINE, FSM -> {
-                    log.debug("On-demand behavior registered (not auto-scheduled): {}",
-                            behavior.getBehaviorId());
-                }
+                case ONE_SHOT -> scheduleOneShot(behavior);
+                case CYCLIC   -> scheduleCyclic(behavior);
+                // A state machine decides its own next step, so the scheduler registers it and
+                // leaves it alone; the owner drives it.
+                case FSM -> log.debug("On-demand behavior registered (not auto-scheduled): {}",
+                        behavior.getBehaviorId());
             }
         });
     }
@@ -237,33 +222,6 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
         scheduledBehaviors.put(behavior.getBehaviorId(), future);
         log.debug("Scheduled cyclic behavior: {} with interval: {}",
                  behavior.getBehaviorId(), interval);
-    }
-
-    private void scheduleWaker(Behavior behavior) {
-        // For MVP, treat waker behaviors like one-shot
-        // Future versions can add more sophisticated wake conditions
-        scheduleOneShot(behavior);
-    }
-
-    private void scheduleCustom(Behavior behavior) {
-        // For custom behaviors, delegate to the behavior itself
-        // This allows behaviors to define their own scheduling logic
-        CompletableFuture.runAsync(() -> {
-            while (behavior.isActive()) {
-                executeBehavior(behavior);
-
-                // Default interval for custom behaviors
-                try {
-                    Thread.sleep(behavior.getInterval() != null ?
-                        behavior.getInterval().toMillis() : 1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        });
-
-        log.debug("Scheduled custom behavior: {}", behavior.getBehaviorId());
     }
 
     private void executeBehavior(Behavior behavior) {

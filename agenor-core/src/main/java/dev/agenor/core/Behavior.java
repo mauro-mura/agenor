@@ -45,36 +45,16 @@ import java.util.concurrent.CompletableFuture;
  *     <td>Polling, monitoring, periodic checks</td>
  *   </tr>
  *   <tr>
- *     <td>{@link BehaviorType#EVENT_DRIVEN EVENT_DRIVEN}</td>
- *     <td>Execute when triggered by events/messages</td>
- *     <td>Message handlers, reactive behaviors</td>
- *   </tr>
- *   <tr>
- *     <td>{@link BehaviorType#WAKER WAKER}</td>
- *     <td>Execute at specific times or conditions</td>
- *     <td>Scheduled tasks, time-based triggers</td>
- *   </tr>
- *   <tr>
- *     <td>{@link BehaviorType#CONDITIONAL CONDITIONAL}</td>
- *     <td>Execute only when conditions are met</td>
- *     <td>Guarded operations, state-dependent logic</td>
- *   </tr>
- *   <tr>
- *     <td>{@link BehaviorType#SEQUENTIAL SEQUENTIAL}</td>
- *     <td>Execute child behaviors in sequence</td>
- *     <td>Workflows, multi-step processes</td>
- *   </tr>
- *   <tr>
- *     <td>{@link BehaviorType#PARALLEL PARALLEL}</td>
- *     <td>Execute child behaviors concurrently</td>
- *     <td>Parallel processing, concurrent tasks</td>
- *   </tr>
- *   <tr>
  *     <td>{@link BehaviorType#FSM FSM}</td>
  *     <td>State machine with transitions</td>
  *     <td>Complex state-based logic, protocols</td>
  *   </tr>
  * </table>
+ *
+ * <p>Two shapes of work are deliberately absent from that table. Reacting to a message is
+ * {@code @AgenorMessageHandler}'s job, not a behavior type's. Coordinating other behaviors is
+ * {@link dev.agenor.core.composite.CompositeBehavior}'s, and a composite tells the scheduler
+ * what to do through its {@link dev.agenor.core.composite.SchedulingHint}.
  *
  * <p><strong>Lifecycle States:</strong>
  * <ol>

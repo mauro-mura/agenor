@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.agenor.core.Behavior;
 import dev.agenor.core.BehaviorType;
+import dev.agenor.core.composite.SchedulingHint;
 import dev.agenor.core.composite.CompletionStrategy;
 
 @DisplayName("Parallel Behavior Tests")
@@ -213,9 +214,10 @@ class ParallelBehaviorTest {
     }
 
     @Test
-    @DisplayName("Should return PARALLEL type")
-    void shouldReturnParallelType() {
-        assertThat(parallelBehavior.getType()).isEqualTo(BehaviorType.PARALLEL);
+    @DisplayName("Should derive ONE_SHOT from its ONCE scheduling hint")
+    void shouldDeriveTypeFromSchedulingHint() {
+        assertThat(parallelBehavior.getSchedulingHint()).isEqualTo(SchedulingHint.ONCE);
+        assertThat(parallelBehavior.getType()).isEqualTo(BehaviorType.ONE_SHOT);
     }
 
     @Test

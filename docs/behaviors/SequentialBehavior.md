@@ -1,7 +1,7 @@
 # SequentialBehavior — Step-by-Step Execution
 
 **Since**: v0.3.0 | **Updated**: v0.14.0  
-**Type**: `BehaviorType.SEQUENTIAL` | **Package**: `dev.agenor.runtime.behavior.composite`
+**Package**: `dev.agenor.runtime.behavior.composite`
 
 > **Module**: `agenor-runtime-ext` (ADR-027) — not included in `agenor-runtime` alone.
 > ```xml
@@ -10,8 +10,9 @@
 >     <artifactId>agenor-runtime-ext</artifactId>
 > </dependency>
 > ```
-> Declaring `@Behavior(type = SEQUENTIAL)` without `agenor-runtime-ext` on the classpath fails at
-> `AgenorRuntime.start()` with `IllegalStateException`.
+> There is no `@Behavior` annotation for a sequence: build it and hand it to `addBehavior()`.
+> The `SEQUENTIAL` constant that used to name it was removed in 0.30.0, because an annotation
+> cannot carry the list of children that makes a composite one.
 
 ## Overview
 
@@ -117,9 +118,10 @@ The sequence never aborts mid-way due to a single-step failure.
 - `interval == null` → `SchedulingHint.ONCE` → scheduler calls `scheduleOneShot()`
 - `interval != null` → `SchedulingHint.CYCLIC` → scheduler calls `scheduleCyclic()`
 
-`SimpleBehaviorScheduler.scheduleComposite()` reads this hint and dispatches accordingly.
-Other composites that are genuinely on-demand (`FSM`, `RETRY`, `CIRCUIT_BREAKER`, `PIPELINE`)
-return `SchedulingHint.ON_DEMAND` and remain unscheduled.
+`SimpleBehaviorScheduler` routes every composite to `scheduleComposite()`, which reads this hint
+and dispatches accordingly — a composite's `BehaviorType` is never consulted, and is itself
+derived from the hint. A composite that is genuinely on-demand, such as `FSMBehavior`, returns
+`SchedulingHint.ON_DEMAND` and stays unscheduled until its owner calls `execute()`.
 
 ## See Also
 

@@ -1,7 +1,6 @@
 package dev.agenor.runtime.behavior.composite;
 
 import dev.agenor.core.Behavior;
-import dev.agenor.core.BehaviorType;
 import dev.agenor.core.composite.CompositeBehavior;
 import dev.agenor.core.composite.SchedulingHint;
 import dev.agenor.runtime.behavior.BaseBehavior;
@@ -123,12 +122,6 @@ public class SequentialBehavior extends CompositeBehavior {
     // -------------------------------------------------------------------------
     // Scheduling contract
     // -------------------------------------------------------------------------
-
-    @Override
-    @SuppressWarnings("removal")  // the class outlives the constant; see 0.30.0 removal
-    public BehaviorType getType() {
-        return BehaviorType.SEQUENTIAL;
-    }
 
     /**
      * Returns {@link SchedulingHint#ONCE} for one-shot sequences and

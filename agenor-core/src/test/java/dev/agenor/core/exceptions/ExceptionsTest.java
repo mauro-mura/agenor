@@ -75,48 +75,6 @@ class ExceptionsTest {
     }
 
     // =========================================================================
-    // MESSAGE EXCEPTION TESTS
-    // =========================================================================
-
-    @Nested
-    @DisplayName("MessageException")
-    class MessageExceptionTest {
-
-        @Test
-        @DisplayName("Should create exception with messageId and message")
-        void shouldCreateWithMessageId() {
-            String messageId = "msg-12345";
-            String message = "Message processing failed";
-            MessageException exception = new MessageException(messageId, message);
-
-            assertThat(exception.getMessage()).isEqualTo(message);
-            assertThat(exception.getMessageId()).isEqualTo(messageId);
-            assertThat(exception.getCause()).isNull();
-        }
-
-        @Test
-        @DisplayName("Should create exception with messageId, message and cause")
-        void shouldCreateWithMessageIdAndCause() {
-            String messageId = "msg-67890";
-            String message = "Message delivery failed";
-            Throwable cause = new IllegalStateException("Queue full");
-            MessageException exception = new MessageException(messageId, message, cause);
-
-            assertThat(exception.getMessage()).isEqualTo(message);
-            assertThat(exception.getMessageId()).isEqualTo(messageId);
-            assertThat(exception.getCause()).isEqualTo(cause);
-        }
-
-        @Test
-        @DisplayName("Should handle null messageId")
-        void shouldHandleNullMessageId() {
-            MessageException exception = new MessageException(null, "Test message");
-
-            assertThat(exception.getMessageId()).isNull();
-        }
-    }
-
-    // =========================================================================
     // AGENT EXCEPTION TESTS
     // =========================================================================
 

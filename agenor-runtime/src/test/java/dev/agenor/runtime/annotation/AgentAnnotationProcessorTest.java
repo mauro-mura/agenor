@@ -182,48 +182,6 @@ class AgentAnnotationProcessorTest {
     }
 
     // =========================================================================
-    // WAKER BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Waker behavior with delay")
-    void shouldCreateWakerBehaviorWithDelay() {
-        WakerTestAgent agent = spy(new WakerTestAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // EVENT_DRIVEN BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create EventDriven behavior")
-    void shouldCreateEventDrivenBehavior() {
-        EventDrivenTestAgent agent = spy(new EventDrivenTestAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
-    // CUSTOM BEHAVIOR TESTS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Should create Custom behavior")
-    void shouldCreateCustomBehavior() {
-        CustomBehaviorAgent agent = spy(new CustomBehaviorAgent());
-
-        processor.processAnnotations(agent);
-
-        verify(agent).addBehavior(any(dev.agenor.core.Behavior.class));
-    }
-
-    // =========================================================================
     // EXT-ONLY BEHAVIOR TYPE WITHOUT EXTENSION TESTS
     // =========================================================================
 
@@ -567,36 +525,6 @@ class AgentAnnotationProcessorTest {
 
         @dev.agenor.core.annotations.Behavior(type = BehaviorType.CYCLIC, interval = "invalid")
         public void periodic() {
-        }
-    }
-
-    static class WakerTestAgent extends BaseAgent {
-        public WakerTestAgent() {
-            super("waker", "Waker Agent");
-        }
-
-        @dev.agenor.core.annotations.Behavior(type = BehaviorType.WAKER, initialDelay = "10s")
-        public void wakeUp() {
-        }
-    }
-
-    static class EventDrivenTestAgent extends BaseAgent {
-        public EventDrivenTestAgent() {
-            super("event", "Event Agent");
-        }
-
-        @Behavior(type = BehaviorType.EVENT_DRIVEN)
-        public void onEvent() {
-        }
-    }
-
-    static class CustomBehaviorAgent extends BaseAgent {
-        public CustomBehaviorAgent() {
-            super("custom", "Custom Agent");
-        }
-
-        @Behavior(type = BehaviorType.CUSTOM, interval = "3s")
-        public void customAction() {
         }
     }
 

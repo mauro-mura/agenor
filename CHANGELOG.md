@@ -7,6 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A composite behavior no longer declares a `BehaviorType`; it derives one from its
+  `SchedulingHint`.** `SchedulingHint` has said since 0.14.0 that it exists because
+  `BehaviorType` cannot answer the question for a composite — a sequence is cyclic or one-shot
+  depending on whether it carries an interval — and it was then applied to one branch of the
+  hierarchy while the scheduler kept dispatching on the enum. `SimpleBehaviorScheduler` now
+  routes every `CompositeBehavior` to the hint before looking at the type at all, and
+  `CompositeBehavior.getType()` returns `CYCLIC` for a repeating composite and `ONE_SHOT`
+  otherwise. `SequentialBehavior` and `ParallelBehavior` lost their `getType()` overrides;
+  `FSMBehavior` keeps its own, because a state machine really is a third shape.
+
+  Behaviour is unchanged for every composite in the tree. If you wrote your own
+  `CompositeBehavior`, you can delete its `getType()` override.
+
+- **`ParallelBehavior` is no longer deprecated.** Its 0.28.0 deprecation said in its own text
+  that it was about the annotation route — "deprecated as an annotation target … building the
+  composite directly keeps working" — but the annotation sat on the class, which scheduled the
+  class itself for deletion and left `BehaviorType.PARALLEL`'s migration note pointing at
+  something that would not survive the same release. The annotation route is gone with the
+  constant; the class stays, alongside its sibling `SequentialBehavior`, which was never
+  deprecated at class level.
+
+- **`ExtBehaviorAnnotationExtension` now serves `FSM` alone**, having delivered seven types
+  before the constants that reached six of them were removed. Whether an SPI is the right shape
+  for a single type is left open on purpose: it is a decision about the extension point, not a
+  consequence of this removal.
+
+- **Level 1 of the examples learning path is one example instead of five.**
+  `CoreBehaviorsExample` shows `ONE_SHOT`, `CYCLIC` and `FSM` in a single agent, with an
+  annotated method and a built composite side by side. It replaces `ThrottledExample`,
+  `ConditionalBehaviorExample`, `RetryExample`, `BatchProcessingExample` and `ScheduledExample`,
+  each of which demonstrated a type that no longer exists.
+
+### Removed
+
+- **The twelve `BehaviorType` constants deprecated in 0.28.0 are gone, with the eleven
+  `@Behavior` elements that parameterised them and the fourteen types they reached.** Three
+  constants remain — `ONE_SHOT`, `CYCLIC`, `FSM` — which is the number of answers the enum has
+  to the only question it asks: when does this work run. `tools/api-census.sh --check` went from
+  38 overdue entries to zero.
+
+  BREAKING CHANGE:
+
+  Removed `BehaviorType` constants, and where each concern belongs now:
+
+  - `WAKER` — use `ONE_SHOT` with `@Behavior(initialDelay = "...")`, which honours the delay.
+    A waker was a polling behavior and the scheduler drove it exactly once, at registration,
+    when its wake condition was by construction still false; through the annotation it never
+    fired.
+  - `EVENT_DRIVEN` — use `@AgenorMessageHandler`. This one never worked either: the processor
+    subscribed the behavior to a topic derived from the method name and to nothing else, and the
+    scheduler skips event-driven behaviors on purpose.
+  - `CUSTOM` — implement `Behavior` and let its owner drive it. Its scheduling path parked a
+    platform thread per behavior in the common pool and could not be cancelled.
+  - `CONDITIONAL` — gating is a property of a behavior, not a kind of one. Test the condition
+    where the work happens.
+  - `THROTTLED` — rate limiting wraps a call rather than scheduling one. Use a resilience
+    library outbound; inbound, the mailbox drain is where receive-side policy belongs
+    (ADR-032, ADR-033).
+  - `BATCH` — buffering inbound messages has been the mailbox's concern since ADR-032. Batch
+    your own data in your handler.
+  - `RETRY` — Resilience4j and Failsafe do this better, and compose with the timeouts and
+    bulkheads that arrive with the same problem.
+  - `CIRCUIT_BREAKER` — a resilience pattern rather than an agent concept; the class serving it
+    went in 0.29.0.
+  - `SCHEDULED` — cron is a scheduling concern: drive the agent from whatever already owns your
+    schedule, or use `CYCLIC` for a fixed cadence.
+  - `PIPELINE` — `SequentialBehavior` covers ordered stages and has real callers.
+  - `SEQUENTIAL`, `PARALLEL` — build a `SequentialBehavior` or `ParallelBehavior` and add it
+    with `agent.addBehavior()`. Both classes are still here. An annotation cannot carry a list
+    of children, which is what made these two constants unable to express what they named.
+
+  Removed `@Behavior` elements, all of which parameterised a removed constant: `condition`,
+  `rateLimit`, `batchSize`, `maxWaitTime`, `maxRetries`, `backoff`, `cron`, `stepTimeout`,
+  `parallelStrategy`, `requiredCompletions`, `childTimeout`.
+
+  Removed types:
+
+  - `dev.agenor.core.exceptions.MessageException` — nothing threw, caught or declared it.
+  - `dev.agenor.runtime.behavior.WakerBehavior`, `EventDrivenBehavior` — see the constants above.
+  - `dev.agenor.runtime.behavior.advanced.BatchBehavior`, `ConditionalBehavior`, `RetryBehavior`,
+    `ScheduledBehavior`, `ThrottledBehavior` — see the constants above.
+  - `dev.agenor.runtime.filter.CompositeFilter`, `PredicateFilter` — `MessageFilter.and/or/negate`
+    and `MessageFilter.of(Predicate)` in `agenor-core` do this, and have users.
+  - `dev.agenor.runtime.hitl.WebhookApprovalNotifier` — implement `ApprovalNotifier` against
+    whatever your deployment actually notifies.
+  - `dev.agenor.runtime.ratelimit.SlidingWindowRateLimiter` — the framework's own rate limiting
+    goes through `TokenBucketRateLimiter`.
+  - `dev.agenor.runtime.guardrail.JsonSchemaOutputGuardrail` — apply a JSON-schema library inside
+    an `OutputGuardrail` you write.
+  - `dev.agenor.runtime.memory.llm.TokenBudgetManager` — token budgets reach users through
+    `LLMMemoryManager` and the context-window strategies.
+
+### Fixed
+
+- **The behavior scheduler no longer parks an unreclaimable platform thread per behavior.**
+  `scheduleCustom` ran a `Thread.sleep` loop on `ForkJoinPool.commonPool` with no
+  `ManagedBlocker`, never registered itself in `scheduledBehaviors` — so `cancel()` could not
+  reach it — and served `CUSTOM`, `CONDITIONAL`, `THROTTLED` and `BATCH`. It lost every caller
+  with those four constants and was deleted rather than repaired. `scheduleWaker` went the same
+  way.
+
 ## [0.29.0] - 2026-08-31
 
 ### Changed

@@ -43,7 +43,9 @@ agent.addBehavior(CyclicBehavior.from("poller", Duration.ofSeconds(30), this::po
 When work has several steps, compose rather than reach for a new type. `SequentialBehavior` runs
 children in order and `ParallelBehavior` runs them together; both live in `agenor-runtime-ext`,
 and both tell the scheduler how they want to be driven through
-[`SchedulingHint`](../architecture.md) rather than through their type.
+[`SchedulingHint`](../architecture.md) rather than through their type. Build a composite and hand
+it to `addBehavior()` — there is no annotation for one, because an annotation cannot carry a list
+of children.
 
 ```java
 agent.addBehavior(new SequentialBehavior("fulfil", List.of(reserve, charge, ship)));
@@ -66,8 +68,8 @@ better home:
 | gating on a condition | a check where the work happens |
 | LLM reasoning patterns such as reflection | a strategy on `LLMAgent` — see `setReflectionStrategy` |
 
-The annotation constants for these were deprecated in 0.28.0 and are removed in 0.30.0. They
-keep working until then, and each names its replacement in its own Javadoc.
+The annotation constants for these were deprecated in 0.28.0 and **removed in 0.30.0**. The
+changelog for that release names the replacement for each one.
 
 ## Lifecycle
 
