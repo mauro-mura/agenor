@@ -41,6 +41,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ConditionalBehaviorExample`, `RetryExample`, `BatchProcessingExample` and `ScheduledExample`,
   each of which demonstrated a type that no longer exists.
 
+### Deprecated
+
+- **The twelve types that existed only to serve the removed behavior types are deprecated for
+  removal in 0.32.0.** `docs/architecture.md` had already written the finding down — "rate
+  limiting and `Condition` gating exist to serve behavior types deprecated in 0.28.0" — and what
+  this release changes is that those types are now gone, so what served them serves nothing.
+
+  The measurement, taken after the removal above: outside `dev.agenor.core.condition` and
+  `dev.agenor.runtime.condition`, **no file in the tree imports either package**; the same holds
+  for `dev.agenor.core.ratelimit` and `dev.agenor.runtime.ratelimit`. Each family is a closed
+  island whose members are named only by each other. There are no examples, and the one
+  user-facing page that named them is the one quoted above.
+
+  - Conditions: `Condition`, `ConditionContext`, `SystemMetrics` (`agenor-core`);
+    `ConditionEvaluator`, `AgentCondition`, `SystemCondition`, `TimeCondition`
+    (`agenor-runtime-ext`). Test the condition where the work happens.
+  - Rate limiting: `RateLimiter`, `RateLimit`, `RateLimiterStats` (`agenor-core`);
+    `TokenBucketRateLimiter` (`agenor-runtime-ext`). Use a resilience library for outbound work;
+    for inbound pressure the mailbox bounds concurrent handlers (ADR-033).
+  - `CronExpression` (`agenor-runtime-ext`), reached only by the removed `ScheduledBehavior`.
+
+  Two things worth recording rather than quietly fixing. `Condition` was listed in `CLAUDE.md`
+  as one of the core contracts `agenor-core` defines; it was **designed** as one and never
+  became one, and the list could not tell you the difference. And `SlidingWindowRateLimiter` was
+  removed in this same release on the stated grounds that "the rate limiting the framework does
+  itself goes through `TokenBucketRateLimiter`" — once `ThrottledBehavior` went, nothing goes
+  through that either. Both notes are now in the deprecation Javadoc, where the next reader
+  meets them.
+
+  `CompletionStrategy` is **not** deprecated. It was on the same tail, reachable only through
+  `ParallelBehavior`, and it keeps a real user because that class survived.
+
 ### Removed
 
 - **The twelve `BehaviorType` constants deprecated in 0.28.0 are gone, with the eleven

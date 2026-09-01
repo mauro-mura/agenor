@@ -104,9 +104,10 @@ Filters select which messages a subscription receives — build them from `Messa
 `agenor-core` and pass them to `FilterableSubscriber.subscribeFiltered`. See
 [Message Filtering](message-filtering.md).
 
-Rate limiting and `Condition` gating exist to serve behavior types deprecated in 0.28.0. Neither
-is offered as surface a user reaches for directly; see [Behaviors](behaviors/README.md) for where
-those concerns belong instead.
+Rate limiting and `Condition` gating existed to serve behavior types that were removed in
+0.30.0. Both are now deprecated for removal in 0.32.0, and neither was ever surface a user
+reached for directly — outside their own packages, nothing in the tree imports them. See
+[Behaviors](behaviors/README.md) for where those concerns belong instead.
 
 ### Dialogue
 

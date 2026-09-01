@@ -27,7 +27,13 @@ import java.util.*;
  *   <li>{@code /} - Step values</li>
  * </ul>
  *
+ * @deprecated since 0.30.0, for removal in 0.32.0. Reached only by
+ *             {@code ScheduledBehavior}, removed in 0.30.0 with
+ *             {@code BehaviorType.SCHEDULED}. Cron is a scheduling concern: drive the agent
+ *             from whatever already owns your schedule, or use {@code CYCLIC} for a fixed
+ *             cadence.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public class CronExpression {
 
     private final String expression;

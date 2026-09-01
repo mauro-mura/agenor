@@ -17,7 +17,14 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Token bucket algorithm implementation for rate limiting.
  * Allows burst traffic up to bucket capacity while maintaining average rate.
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with
+ *             {@link dev.agenor.core.ratelimit.RateLimiter}. Its sibling
+ *             {@code SlidingWindowRateLimiter} was removed in 0.30.0 on the grounds that the
+ *             framework's own rate limiting went through this class; after
+ *             {@code ThrottledBehavior} went, nothing goes through it either.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public class TokenBucketRateLimiter implements RateLimiter {
 
     private static final Logger log = LoggerFactory.getLogger(TokenBucketRateLimiter.class);

@@ -11,7 +11,12 @@ import java.time.Instant;
  * @param activeThreads   number of currently active JVM threads
  * @param timestamp       instant at which this snapshot was captured
  * @since 0.2.0
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with {@link Condition}. It exists to give
+ *             a condition something to test; read the JVM's own {@code OperatingSystemMXBean}
+ *             directly if you need these numbers.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public record SystemMetrics(
     double cpuUsage,
     double memoryUsage,

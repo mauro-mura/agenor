@@ -197,7 +197,14 @@ import dev.agenor.core.Agent;
  * @since 0.2.0
  * @see ConditionContext
  * @see Agent
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0. Gating existed to serve
+ *             {@code BehaviorType.CONDITIONAL}, which was removed in 0.30.0, and nothing else
+ *             in the tree has ever named it: outside {@code dev.agenor.core.condition} and
+ *             {@code dev.agenor.runtime.condition}, no file imports either package. Test the
+ *             condition where the work happens.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 @FunctionalInterface
 public interface Condition {
 

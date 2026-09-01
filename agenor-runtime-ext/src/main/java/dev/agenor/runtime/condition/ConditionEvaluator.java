@@ -8,7 +8,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Evaluates conditions with context and error handling
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with
+ *             {@link dev.agenor.core.condition.Condition}.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public class ConditionEvaluator {
 
     private static final Logger log = LoggerFactory.getLogger(ConditionEvaluator.class);

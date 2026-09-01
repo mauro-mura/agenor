@@ -6,7 +6,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Interface for rate limiting strategy.
  * Controls the rate at which operations can be executed.
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0. This existed to serve
+ *             {@code BehaviorType.THROTTLED}, which was removed in 0.30.0. The framework does
+ *             no rate limiting of its own, and no file outside
+ *             {@code dev.agenor.core.ratelimit} and {@code dev.agenor.runtime.ratelimit}
+ *             imports either package. For outbound work use a resilience library; for inbound
+ *             pressure the mailbox bounds concurrent handlers (ADR-033).
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public interface RateLimiter {
 
     /**

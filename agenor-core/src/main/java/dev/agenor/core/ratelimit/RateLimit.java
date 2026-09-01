@@ -10,7 +10,10 @@ import java.time.Duration;
  * @param burstCapacity maximum burst size above the steady-state limit;
  *                      defaults to {@code maxRequests} when using factory methods
  * @since 0.2.0
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with {@link RateLimiter}.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public record RateLimit(
     int maxRequests,
     Duration period,

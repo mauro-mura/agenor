@@ -167,7 +167,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @since 0.2.0
  * @see Condition
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with {@link Condition}, which is the only
+ *             thing that reaches it.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public class ConditionContext {
 
     private final Map<String, Object> properties = new ConcurrentHashMap<>();

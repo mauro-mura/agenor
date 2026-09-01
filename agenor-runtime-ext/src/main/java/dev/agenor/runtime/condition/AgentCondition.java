@@ -7,7 +7,11 @@ import dev.agenor.runtime.agent.BaseAgent;
 
 /**
  * Pre-built conditions for agent state checks
+ *
+ * @deprecated since 0.30.0, for removal in 0.32.0, with
+ *             {@link dev.agenor.core.condition.Condition}.
  */
+@Deprecated(since = "0.30.0", forRemoval = true)
 public class AgentCondition {
 
     /**
