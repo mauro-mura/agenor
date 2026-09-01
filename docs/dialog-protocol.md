@@ -261,7 +261,18 @@ A conversation with no protocol is never checked; there is no state machine to c
 
 ## Commitments
 
-Commitments track obligations created during dialogue:
+Commitments track obligations created during dialogue. Which party is bound depends on the
+**protocol**, not on the performative alone: under `RequestProtocol` an `AGREE` binds its sender
+— you asked, I agreed, I perform — while under Contract Net the initiator sends `AGREE` to
+accept a proposal, so the participant is the one taking on the work. Each protocol answers this
+through `Protocol.senderPerforms(Performative)`; a protocol you write yourself overrides it when
+it reverses the direction of a committing performative, and inherits the request-shaped reading
+otherwise.
+
+Two limits worth knowing before you build on this. The record is held by the **sender** only: a
+contract-net manager knows it is owed work, while the worker that took the work on holds
+nothing. And although `Performative.createsCommitment()` reports four performatives, commitments
+are created for `REQUEST` and `AGREE` only — a `PROPOSE` does not create one.
 
 ```java
 // Check active commitments as performer

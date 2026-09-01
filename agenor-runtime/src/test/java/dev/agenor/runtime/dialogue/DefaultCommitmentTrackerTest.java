@@ -3,6 +3,7 @@ package dev.agenor.runtime.dialogue;
 import dev.agenor.core.dialogue.CommitmentState;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +37,84 @@ class DefaultCommitmentTrackerTest {
         assertThat(commitment.getRequester()).isEqualTo("requester");
         assertThat(commitment.getPerformer()).isEqualTo("performer");
         assertThat(commitment.getState()).isEqualTo(CommitmentState.PENDING);
+    }
+
+    @Test
+    void shouldBindTheReceiverWhenContractNetAgreeAccceptsAProposal() {
+        // In Contract Net the initiator sends AGREE to accept a proposal, so the party taking
+        // on the work is the receiver. Reading the performative alone put the manager down as
+        // the performer of the task it had just delegated.
+        var tracker = new DefaultCommitmentTracker(new ProtocolRegistry());
+        var agree = DialogueMessage.builder()
+            .id("msg-cn")
+            .conversationId("conv-cn")
+            .senderId("manager")
+            .receiverId("worker-2")
+            .performative(Performative.AGREE)
+            .protocol("contract-net")
+            .content("You win!")
+            .build();
+
+        var commitment = tracker.createFromMessage(agree);
+
+        assertThat(commitment.getPerformer()).isEqualTo("worker-2");
+        assertThat(commitment.getRequester()).isEqualTo("manager");
+        assertThat(tracker.getActiveAsRequester("manager")).hasSize(1);
+        assertThat(tracker.getActiveAsPerformer("manager")).isEmpty();
+    }
+
+    @Test
+    void shouldBindTheSenderWhenAProposalOffersToPerform() {
+        var tracker = new DefaultCommitmentTracker(new ProtocolRegistry());
+        var propose = DialogueMessage.builder()
+            .id("msg-p")
+            .conversationId("conv-cn")
+            .senderId("worker-2")
+            .receiverId("manager")
+            .performative(Performative.PROPOSE)
+            .protocol("contract-net")
+            .content("my bid")
+            .build();
+
+        var commitment = tracker.createFromMessage(propose);
+
+        assertThat(commitment.getPerformer()).isEqualTo("worker-2");
+        assertThat(commitment.getRequester()).isEqualTo("manager");
+    }
+
+    @Test
+    void shouldKeepTheRequestShapedReadingForARequestProtocolAgree() {
+        var tracker = new DefaultCommitmentTracker(new ProtocolRegistry());
+        var agree = DialogueMessage.builder()
+            .id("msg-r")
+            .conversationId("conv-r")
+            .senderId("server")
+            .receiverId("client")
+            .performative(Performative.AGREE)
+            .protocol("request")
+            .content("Accepted")
+            .build();
+
+        var commitment = tracker.createFromMessage(agree);
+
+        assertThat(commitment.getPerformer()).isEqualTo("server");
+        assertThat(commitment.getRequester()).isEqualTo("client");
+    }
+
+    @Test
+    void shouldFallBackToTheRequestShapedReadingWhenNoProtocolIsNamed() {
+        // A message with no protocol, or a tracker with no registry, behaves exactly as this
+        // class did before 0.31.0.
+        var tracker = new DefaultCommitmentTracker(new ProtocolRegistry());
+        var agree = DialogueMessage.builder()
+            .id("msg-n")
+            .conversationId("conv-n")
+            .senderId("a")
+            .receiverId("b")
+            .performative(Performative.AGREE)
+            .build();
+
+        assertThat(tracker.createFromMessage(agree).getPerformer()).isEqualTo("a");
     }
 
     @Test

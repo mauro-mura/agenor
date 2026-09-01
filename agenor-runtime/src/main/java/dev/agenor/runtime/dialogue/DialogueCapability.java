@@ -100,8 +100,12 @@ public class DialogueCapability {
      * @param agent the agent this capability belongs to
      */
     public DialogueCapability(Agent agent) {
-        this(agent, DefaultConversationManager::new, new ProtocolRegistry(),
-            new DefaultCommitmentTracker(), DEFAULT_RETENTION, DEFAULT_SWEEP_INTERVAL);
+        this(agent, new ProtocolRegistry());
+    }
+
+    private DialogueCapability(Agent agent, ProtocolRegistry protocolRegistry) {
+        this(agent, DefaultConversationManager::new, protocolRegistry,
+            new DefaultCommitmentTracker(protocolRegistry), DEFAULT_RETENTION, DEFAULT_SWEEP_INTERVAL);
     }
 
     private DialogueCapability(
@@ -558,7 +562,9 @@ public class DialogueCapability {
         private final Agent agent;
         private ConversationManagerFactory conversationManagerFactory = DefaultConversationManager::new;
         private ProtocolRegistry protocolRegistry = new ProtocolRegistry();
-        private CommitmentTracker commitmentTracker = new DefaultCommitmentTracker();
+        // Left null so the default tracker can be built against whatever registry the caller
+        // ends up setting; resolved in build().
+        private CommitmentTracker commitmentTracker;
         private Duration retention = DEFAULT_RETENTION;
         private Duration sweepInterval = DEFAULT_SWEEP_INTERVAL;
 
@@ -621,8 +627,11 @@ public class DialogueCapability {
          *         hooks when it supports them
          */
         public DialogueCapability build() {
+            CommitmentTracker tracker = commitmentTracker != null
+                ? commitmentTracker
+                : new DefaultCommitmentTracker(protocolRegistry);
             return new DialogueCapability(agent, conversationManagerFactory, protocolRegistry,
-                commitmentTracker, retention, sweepInterval);
+                tracker, retention, sweepInterval);
         }
     }
 }

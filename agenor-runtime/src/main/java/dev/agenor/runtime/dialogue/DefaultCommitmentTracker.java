@@ -4,6 +4,8 @@ import dev.agenor.core.dialogue.Commitment;
 import dev.agenor.core.dialogue.CommitmentTracker;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.core.dialogue.protocol.Protocol;
+import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -25,12 +27,39 @@ public class DefaultCommitmentTracker implements CommitmentTracker {
 
     private final Duration defaultDeadline;
 
+    /**
+     * Resolves the protocol a message was sent under, so the roles of a commitment can be read
+     * from it. May be {@code null}, in which case every protocol is treated as request-shaped —
+     * which is what this class assumed unconditionally before 0.31.0.
+     */
+    private final ProtocolRegistry protocolRegistry;
+
     public DefaultCommitmentTracker() {
-        this(Duration.ofMinutes(5));
+        this(Duration.ofMinutes(5), null);
     }
 
     public DefaultCommitmentTracker(Duration defaultDeadline) {
+        this(defaultDeadline, null);
+    }
+
+    /**
+     * @param protocolRegistry resolves the protocol that decides which party performs
+     * @since 0.31.0
+     */
+    public DefaultCommitmentTracker(ProtocolRegistry protocolRegistry) {
+        this(Duration.ofMinutes(5), protocolRegistry);
+    }
+
+    /**
+     * @param defaultDeadline how long a commitment has before it is considered violated
+     * @param protocolRegistry resolves {@link DialogueMessage#getProtocol()} to the {@link Protocol}
+     *                         that decides which party performs; {@code null} falls back to the
+     *                         request-shaped reading
+     * @since 0.31.0
+     */
+    public DefaultCommitmentTracker(Duration defaultDeadline, ProtocolRegistry protocolRegistry) {
         this.defaultDeadline = defaultDeadline;
+        this.protocolRegistry = protocolRegistry;
     }
 
     @Override
@@ -39,25 +68,14 @@ public class DefaultCommitmentTracker implements CommitmentTracker {
             return null;
         }
 
-        String performer;
-        String requester;
+        // Which party is bound depends on the protocol, not on the performative alone: AGREE
+        // binds its sender under a request protocol and its receiver under Contract Net, where
+        // the initiator sends it to accept a proposal. Asking the protocol is the same move
+        // ADR-029 D5 made for allowedPerformatives.
+        boolean senderPerforms = senderPerforms(message);
 
-        // Determine performer/requester based on performative
-        switch (message.performative()) {
-            case REQUEST, QUERY, CFP -> {
-                // Sender is requesting, receiver will be performer
-                requester = message.senderId();
-                performer = message.receiverId();
-            }
-            case AGREE, PROPOSE -> {
-                // Sender agrees to perform
-                performer = message.senderId();
-                requester = message.receiverId();
-            }
-            default -> {
-                return null;
-            }
-        }
+        String performer = senderPerforms ? message.senderId() : message.receiverId();
+        String requester = senderPerforms ? message.receiverId() : message.senderId();
 
         var id = UUID.randomUUID().toString();
         var deadline = Instant.now().plus(defaultDeadline);
@@ -97,6 +115,21 @@ public class DefaultCommitmentTracker implements CommitmentTracker {
             case CANCEL -> commitment.cancel(response.senderId(), "Cancelled by sender");
             default -> { /* no state change */ }
         }
+    }
+
+    /**
+     * Asks the message's protocol which party a committing performative binds, falling back to
+     * the request-shaped reading when the message names no protocol or none is registered.
+     */
+    private boolean senderPerforms(DialogueMessage message) {
+        Performative performative = message.performative();
+        if (protocolRegistry == null) {
+            return Protocol.senderPerformsByDefault(performative);
+        }
+        return message.getProtocol()
+                .flatMap(protocolRegistry::get)
+                .map(protocol -> protocol.senderPerforms(performative))
+                .orElseGet(() -> Protocol.senderPerformsByDefault(performative));
     }
 
     @Override

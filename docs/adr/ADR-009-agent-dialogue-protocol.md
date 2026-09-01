@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-12-13  
-**Last Modified**: 2026-05-17  
+**Last Modified**: 2026-09-01 (see Amendment below)  
 **Authors**: Project Team
 
 > **Amendment — 2026-05-17**: Following ADR-020 (Core API Refactor), the internal transport is
@@ -384,3 +384,88 @@ recorded so the next person to touch `DialogueCapability` has the option in fron
 
 - ADR-001: Interface-First Design
 - ADR-007: LLMProvider as Core Interface
+
+---
+
+## Amendment — 2026-09-01: a commitment's roles come from the protocol, not the performative
+
+**Status**: Accepted. Amends §3 *Observable Commitment Tracking*.
+
+### What this fills
+
+§3 decided *that* commitments exist and what they expose, and gave the tracker the signature
+`Commitment createFromMessage(DialogueMessage message)`. That signature carries an assumption it
+never states: **that a message alone determines who is bound.** It does not, and the
+implementation built on it read the performative and nothing else:
+
+```java
+case REQUEST, QUERY, CFP -> { requester = sender; performer = receiver; }
+case AGREE, PROPOSE      -> { performer = sender; requester = receiver; }
+```
+
+That is the request-shaped reading — A requests, B agrees, B performs — and it is correct for
+`RequestProtocol` and `QueryProtocol`. **Contract Net reverses it.** There the initiator sends
+`AGREE` to *accept* a proposal, so the party taking on the work is the receiver. Running the
+contract-net example and reading the tracker showed a manager holding an active commitment in
+which it was itself the performer of the task it had just delegated, with the acceptance string
+`"You win!"` as the content. `getActiveAsRequester("manager")` — documented as "commitments I'm
+waiting on" — returned nothing.
+
+### D-A1 — `Protocol` answers the question
+
+`Protocol` gains `boolean senderPerforms(Performative)`, a `default` method returning the
+request-shaped reading, plus the static `Protocol.senderPerformsByDefault(Performative)` so an
+implementation can override some performatives and defer the rest. `ContractNetProtocol`
+overrides it: `PROPOSE` binds its sender, `CFP` and `AGREE` bind the receiver.
+
+This is not a new mechanism. **ADR-029 D5** established that `allowedPerformatives(state,
+isInitiator)` is read from the perspective of the sending party, that the perspective is
+*derivable* rather than guessable, and that "inventing one would reintroduce the guessing this
+ADR removes". Direction is a property of the protocol; a second consumer of that fact belongs on
+the same interface. It also gives `ContractNetProtocol` a reason to be consulted beyond
+validation, and lets a protocol written by a user participate without touching the tracker.
+
+Alternatives rejected:
+
+- **Switch on the protocol id inside `DefaultCommitmentTracker`.** Smaller diff, no public
+  interface touched — and it hardcodes the built-in protocol names in the tracker, excludes any
+  user-defined protocol, and puts protocol knowledge in a second place that can drift from the
+  first.
+- **An explicit API where the caller declares who commits.** No heuristic can then be wrong, but
+  it moves the bookkeeping onto the user, which is the opposite of what §3 offers, and would
+  make "commitments track obligations created during dialogue" false in a new way.
+- **Retiring the commitment model.** It has no readers outside the framework today. It is also
+  the piece §3 justifies as solving "FIPA's unverifiable BDI semantics problem", the
+  documentation teaches it, and it was one method away from being right.
+
+### D-A2 — one registry per capability
+
+`DefaultCommitmentTracker` now takes the `ProtocolRegistry` that resolves a message's protocol.
+`DialogueCapability` and `DefaultConversationManager` hand it the same instance they use
+themselves, because two registries would let the manager's answer and the tracker's answer
+diverge. A tracker constructed without one keeps the request-shaped reading for every message,
+which is exactly the behaviour that preceded this amendment.
+
+### Known limitations, deliberately not addressed here
+
+Both were found with the defect above and are separate decisions, not omissions:
+
+1. **The record is one-sided.** Each agent holds its own `CommitmentTracker`, and only the
+   *sender* of a committing message creates an entry. After a contract-net `AGREE` the manager
+   knows it is owed work; `worker-2`, which took the work on, holds nothing. Whether the
+   receiving side should mirror the commitment, or whether the tracker should be shared, is a
+   question about ownership of state and is not answered here.
+2. **Two of the four committing performatives never commit.**
+   `Performative.createsCommitment()` reports `REQUEST`, `PROPOSE`, `CFP` and `AGREE`, and
+   `createFromMessage` handles all four — but commitments are created at exactly two call sites,
+   guarded by `AGREE` and by `REQUEST`. A participant's `PROPOSE` creates nothing. Making it
+   create something is not a one-line change: a contract net with *n* proposals would open *n*
+   commitments of which one is honoured, and there is today no rule that discharges the losers.
+
+### Correction to §3's listing
+
+§3 sketches `getDebtor()` / `getCreditor()` and a single `getActiveAsDebtor(String)`. What was
+built and shipped is `getPerformer()` / `getRequester()` and the pair `getActiveAsPerformer` /
+`getActiveAsRequester`. The rename carries no semantic change, but §3 has described an interface
+that does not exist since the layer was first implemented; this records it rather than editing
+the original decision.

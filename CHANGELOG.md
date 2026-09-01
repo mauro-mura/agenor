@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A commitment's performer and requester now come from the protocol, not from the performative
+  alone.** `DefaultCommitmentTracker` read `AGREE` as "the sender performs", which is right for
+  `RequestProtocol` — you asked, I agreed, I perform — and backwards for Contract Net, where the
+  initiator sends `AGREE` to *accept* a proposal and the participant is the party taking on the
+  work. A contract-net manager therefore held an active commitment naming itself as the performer
+  of the task it had just delegated, with the acceptance string as the content, while
+  `getActiveAsRequester(managerId)` — documented as "commitments I'm waiting on" — returned
+  nothing.
+
+  `Protocol` gains `senderPerforms(Performative)` as a `default` method, with the static
+  `Protocol.senderPerformsByDefault(...)` for implementations that override some performatives
+  and defer the rest. `ContractNetProtocol` overrides it. This is where the question already
+  belongs: `allowedPerformatives(state, isInitiator)` has read from the sender's perspective
+  since ADR-029, because direction is a property of the protocol. A protocol you write yourself
+  now participates without the tracker knowing about it.
+
+  `DefaultCommitmentTracker` takes the `ProtocolRegistry` that resolves a message's protocol, and
+  `DialogueCapability` hands it the same instance it uses itself. A tracker built without one
+  keeps the previous behaviour for every message.
+
+  Two related defects are recorded in ADR-009's amendment and deliberately not fixed here: the
+  commitment record is created by the sender only, so the party that took the work on holds
+  nothing; and although `Performative.createsCommitment()` reports four performatives,
+  commitments are created for `REQUEST` and `AGREE` only.
+
 ## [0.30.0] - 2026-09-01
 
 ### Changed

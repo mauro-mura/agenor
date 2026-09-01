@@ -40,7 +40,20 @@ public class DefaultConversationManager implements ConversationManager {
     public DefaultConversationManager(
             String localAgentId,
             MessageDispatcher messageDispatcher) {
-        this(localAgentId, messageDispatcher, new ProtocolRegistry(), new DefaultCommitmentTracker());
+        this(localAgentId, messageDispatcher, new ProtocolRegistry());
+    }
+
+    /**
+     * One registry, handed to both the manager and the tracker: the tracker needs it to read a
+     * commitment's roles off the protocol the message was sent under, and two registries would
+     * let those two answers drift.
+     */
+    private DefaultConversationManager(
+            String localAgentId,
+            MessageDispatcher messageDispatcher,
+            ProtocolRegistry protocolRegistry) {
+        this(localAgentId, messageDispatcher, protocolRegistry,
+            new DefaultCommitmentTracker(protocolRegistry));
     }
 
     public DefaultConversationManager(

@@ -82,4 +82,14 @@ class ContractNetProtocolTest {
         var allowed = protocol.allowedPerformatives(AGREED, false);
         assertThat(allowed).containsExactlyInAnyOrder(INFORM, FAILURE);
     }
+
+    @Test
+    void senderPerformsOnlyForAProposal() {
+        // CFP and AGREE are both sent by the initiator; the participant is the party that
+        // takes on the work. Only PROPOSE binds its own sender.
+        assertThat(protocol.senderPerforms(PROPOSE)).isTrue();
+        assertThat(protocol.senderPerforms(CFP)).isFalse();
+        assertThat(protocol.senderPerforms(AGREE)).isFalse();
+        assertThat(protocol.senderPerforms(REQUEST)).isFalse();
+    }
 }

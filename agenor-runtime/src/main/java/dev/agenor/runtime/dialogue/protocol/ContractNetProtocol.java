@@ -68,6 +68,22 @@ public class ContractNetProtocol implements Protocol {
         };
     }
 
+    /**
+     * Contract Net reverses the direction of {@code AGREE}.
+     *
+     * <p>The initiator sends {@code CFP} and later {@code AGREE} to accept one proposal; the
+     * party that takes on the work is the participant in both cases. Only {@code PROPOSE} —
+     * a participant offering to do it — binds its own sender.
+     */
+    @Override
+    public boolean senderPerforms(Performative performative) {
+        return switch (performative) {
+            case PROPOSE -> true;
+            case CFP, AGREE -> false;
+            default -> Protocol.senderPerformsByDefault(performative);
+        };
+    }
+
     @Override
     public Set<Performative> allowedPerformatives(ProtocolState state, boolean isInitiator) {
         if (isInitiator) {
