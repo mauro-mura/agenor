@@ -144,7 +144,16 @@ if (( CHECK_ONLY )); then
     exit 0
 fi
 
-CENSUS_MODULES=(agenor-core agenor-runtime agenor-runtime-ext agenor-runtime-llm agenor-runtime-scanning)
+# Every module that contains code, minus agenor-bom (no code) and agenor-examples (the
+# measuring stick, not a subject). Widened from five to all nine (F-14): the previous list
+# stopped at the runtime split and never looked at the two modules a user meets first —
+# agenor-spring-boot-starter, the whole auto-configuration surface a Spring user sees instead
+# of AgenorRuntime, and agenor-tools, the console/CLI a developer reaches for when something is
+# wrong — nor at the two adapter modules a distributed or persistent deployment depends on.
+CENSUS_MODULES=(
+    agenor-core agenor-runtime agenor-runtime-ext agenor-runtime-llm agenor-runtime-scanning
+    agenor-adapters agenor-adapters-persistence agenor-spring-boot-starter agenor-tools
+)
 EXAMPLES_PREFIX="agenor-examples/src/main"
 EXAMPLES_README="agenor-examples/README.md"
 

@@ -117,6 +117,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of by the summary counts, which a page deletion has fooled before. `CONTRIBUTING.md`'s release
   checklist now points to it where it already asked for the comparison.
 
+- **The census now covers all nine modules that contain code, not five.**
+  `agenor-adapters`, `agenor-adapters-persistence`, `agenor-spring-boot-starter` and
+  `agenor-tools` had never been measured — two of them, the Spring Boot starter and the
+  console/CLI, are how most developers meet the framework at all. Widened only after the
+  fenced-block fix above landed, and read as its own diff: 67 new types, zero verdict changes on
+  the 204 already measured. Totals move from 204 to 271, and **documented, unnamed** from 77 to
+  96.
+
+  The new surface came with one thing the previous five modules never had: an entry point.
+  `AgenorCLI` scores **dead surface** — the census counts imports and same-package word matches,
+  and nothing ever imports a class the JVM starts by fully-qualified name
+  (`agenor-tools/pom.xml`'s `exec:java` `mainClass` property). It is documented, by example, in
+  `agenor-examples/.../CLIExample.java`'s Javadoc, but as an `mvn exec:java
+  -Dexec.mainClass=...` invocation, which the census's import index cannot see either. Recorded,
+  not fixed: an entry point is invisible to this method the same way a getter path already is.
+
+  `WebConsoleServer` also scores **dead surface**, and reading it turned up something the
+  verdict itself did not: it has been `@Deprecated(since = "0.4.0")` — twenty-seven releases —
+  with no `forRemoval`, so `--check` has never once seen it, because `--check` only audits
+  deprecations that carry `forRemoval = true`. `JettyWebConsole` is the live implementation
+  (**named by user code**) that ADR-008 says replaced it. Recorded as a separate finding: a
+  deprecation with no `forRemoval` at all is as invisible to every tool as an undated one, and
+  nothing here checks for that shape either.
+
 ## [0.30.0] - 2026-09-01
 
 ### Changed
