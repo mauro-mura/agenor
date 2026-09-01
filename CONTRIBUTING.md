@@ -340,13 +340,59 @@ We follow [Semantic Versioning](https://semver.org/):
 - **MINOR**: New features, backwards compatible
 - **PATCH**: Bug fixes, backwards compatible
 
+### The version bump is asymmetric
+
+Cutting a release and reopening `main` afterwards do **not** touch the same files.
+
+- **Release — 18 files.** The 12 POMs, the five documents that carry a Maven coordinate
+  (`README.md`, `agenor-bom/README.md`, `docs/getting-started.md`, `docs/hitl-persistence.md`,
+  `docs/spring-boot-starter.md`), and `CHANGELOG.md`. Everything moves to the version being
+  released.
+- **Reopen — 12 files.** The POMs only. **The five documents keep the released version.**
+
+Every Maven coordinate in those five documents is an installation snippet a reader copies into
+their own `pom.xml`; none is an internal reference. Sending them to `-SNAPSHOT` means that for
+the whole period between two releases, the README rendered on GitHub tells a newcomer to depend
+on a version that names nothing — the documentation site is unaffected, because it is built on
+`release: published`, when the coordinate is correct. **A reopen that touches 17 files is the
+bug, not the fix.**
+
+Two ways the bump goes wrong, both worth verifying rather than trusting:
+
+- `mvn versions:set` silently skips `agenor-bom/pom.xml`, which declares its own `<version>`
+  with no parent. Enumerate the POMs directly — `pom.xml */pom.xml` — instead of using the
+  plugin.
+- Never `sed` the bare version across the tree on the way back to `-SNAPSHOT`. The
+  just-released number legitimately survives in `@since` and `@deprecated(since = …)` tags and
+  in documentation prose. Count before and after: at 0.30.0 that was 33 occurrences in
+  `*/src/main/*.java` and 22 in Markdown, and both were unchanged by the reopen.
+
 ### Pre-release Checklist
 
-- [ ] All tests pass
-- [ ] Documentation updated
-- [ ] Examples verified
-- [ ] Performance benchmarks run
-- [ ] Migration guide updated (if needed)
+Each item names a command and what it has to say. 0.28.0 shipped with broken Javadoc and no
+integration test having run, while a shorter version of this list was satisfied — an item you
+cannot check against something is a formality.
+
+- [ ] **Unit tests** — `mvn clean install` reports `BUILD SUCCESS`. Keep the `clean`: an
+      incremental build compiles against stale classes and will pass straight over a type you
+      deleted.
+- [ ] **Integration tests** — `mvn verify -Dintegration.tests.enabled=true` (needs Docker), and
+      every `*IT` class reports `Skipped: 0`. They are opt-in, so `mvn clean install` alone runs
+      none of them and still says `BUILD SUCCESS`.
+- [ ] **Javadoc** — `mvn javadoc:javadoc` is clean, run **before** the tag rather than after it.
+- [ ] **Removal schedule** — `bash tools/api-census.sh --check` exits 0: no deprecation is past
+      its declared release, and none lacks one.
+- [ ] **Examples run, not just compile** — start the ones the release touched and read their
+      output against what their own Javadoc claims. Both examples changed in 0.30.0 compiled,
+      ran, and did something other than what they documented.
+- [ ] **Migration notes reach the CHANGELOG before the code goes** — a deprecation names its
+      replacement in Javadoc that the removal deletes. Copy it out first, or the guidance leaves
+      with the code it explains.
+- [ ] **Documentation matches the tree** — every page naming a changed or removed API is
+      updated. After a documentation change, re-run `bash tools/api-census.sh` and read which
+      verdicts moved: one that improved because a page was deleted has not improved.
+- [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
+      changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
 
 ## 🤝 Community Guidelines
 
