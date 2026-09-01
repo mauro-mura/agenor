@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,6 +67,7 @@ class MailboxDeliverySemanticsIT {
     private AgenorRuntime sender;
     private AgenorRuntime receiver;
     private FailingAgent agent;
+    private AsyncFailingAgent asyncAgent;
 
     @BeforeEach
     void setUp() {
@@ -94,10 +96,13 @@ class MailboxDeliverySemanticsIT {
 
         agent = new FailingAgent();
         receiver.registerAgent(agent);
+        asyncAgent = new AsyncFailingAgent();
+        receiver.registerAgent(asyncAgent);
 
         sender.start().join();
         receiver.start().join();
         awaitResolvable("always-fails");
+        awaitResolvable("fails-later");
 
         inspector = RedisClient.create(redisUri);
         inspectorConn = inspector.connect();
@@ -135,6 +140,30 @@ class MailboxDeliverySemanticsIT {
         awaitUntil(() -> dlqLength(dlqKey) >= 1);
 
         assertThat(agent.attempts.get()).isGreaterThan(1);
+        assertThat(dlqLength(dlqKey)).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("a handler whose returned future fails is redelivered, then dead-lettered")
+    void handlerReturningFailedFutureIsRedeliveredThenDeadLettered() {
+        var dlqKey = PREFIX + ":node:" + RECEIVER_NODE + ":dlq";
+
+        // A handler that fails asynchronously has to reach the transport the same way one that
+        // throws does. It did not before 0.30.0, and not because the failure was swallowed:
+        // a handler declaring CompletableFuture<Void> was rejected as an invalid signature and
+        // never registered at all, so asynchronous work could only be written as a void method
+        // that starts a chain and returns — outside every guarantee ADR-033 makes.
+        sender.getMessageDispatcher().sendTo(Message.builder()
+                .topic("task.explode.later")
+                .senderId("coordinator")
+                .receiverId("fails-later")
+                .content("this will fail after the method returns")
+                .build());
+
+        awaitUntil(() -> asyncAgent.attempts.get() > 1);
+        awaitUntil(() -> dlqLength(dlqKey) >= 1);
+
+        assertThat(asyncAgent.attempts.get()).isGreaterThan(1);
         assertThat(dlqLength(dlqKey)).isGreaterThanOrEqualTo(1);
     }
 
@@ -188,6 +217,27 @@ class MailboxDeliverySemanticsIT {
         public void handle(Message message) {
             attempts.incrementAndGet();
             throw new IllegalStateException("handler failed on purpose: " + message.id());
+        }
+    }
+
+    /**
+     * Its handler returns normally and fails afterwards, which is the shape every handler doing
+     * real asynchronous work has.
+     */
+    static class AsyncFailingAgent extends BaseAgent {
+
+        final AtomicInteger attempts = new AtomicInteger();
+
+        AsyncFailingAgent() {
+            super("fails-later", "Fails Later");
+        }
+
+        @AgenorMessageHandler("task.explode.later")
+        public CompletableFuture<Void> handle(Message message) {
+            attempts.incrementAndGet();
+            return CompletableFuture.supplyAsync(() -> {
+                throw new IllegalStateException("async handler failed on purpose: " + message.id());
+            });
         }
     }
 }

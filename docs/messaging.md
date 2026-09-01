@@ -157,7 +157,7 @@ Subscriptions are not automatically cleaned up on agent stop — call `unsubscri
   message is not replayed. Redis Streams redelivers a message whose handler did not acknowledge
   it, and dead-letters it after `maxDeliveryAttempts`
 
-Two consequences reach the code you write.
+Three consequences reach the code you write.
 
 **Your handlers may overlap.** An agent claims its messages in arrival order, one at a time, but
 it does not *handle* them one at a time: each handler runs on its own virtual thread, so
@@ -169,6 +169,30 @@ applies backpressure to whatever is delivering to it.
 a transport with redelivery the same message arrives again — see
 [Redis Messaging](adapters/redis.md#failure-modes-and-recovery). If you want a failure contained
 rather than retried, catch it in the handler, where the decision is visible.
+
+**Return your future when the work is not done yet.** Everything above applies to what a
+handler *returns*, so a handler that starts an LLM call or a database write and returns `void`
+is finished as far as the framework is concerned: the message is acknowledged immediately, a
+later failure in the chain is invisible, and the work does not count against the 64. Declare the
+handler as returning `CompletableFuture<Void>` and return the chain instead.
+
+```java
+// Inside the guarantees.
+@AgenorMessageHandler("research.request")
+public CompletableFuture<Void> onRequest(Message message) {
+    return llm.chat(request(message)).thenAccept(this::publishFindings);
+}
+
+// Outside them: acknowledged before the call has even started.
+@AgenorMessageHandler("research.request")
+public void onRequest(Message message) {
+    llm.chat(request(message)).thenAccept(this::publishFindings);
+}
+```
+
+Before 0.30.0 the first form did not register at all — a handler returning anything but `void`
+was rejected as an invalid signature — so the second was the only shape an asynchronous handler
+could have.
 
 Why the inbound path is shaped this way is
 [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md); what a failed handler costs is

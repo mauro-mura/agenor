@@ -135,6 +135,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An `@AgenorMessageHandler` can now be asynchronous, and until this release it could not
+  be.** The framework's primary documented way to receive a message could only be written as a
+  `void` method: `isValidMessageHandlerMethod` accepted `void` or `Void` and nothing else, so a
+  handler declaring `CompletableFuture<Void>` was rejected as an invalid signature, logged as a
+  warning, and never registered. The only shape left for asynchronous work — start a chain,
+  return — is the one that opts out of every guarantee ADR-033 makes: D-5, that a handler's
+  failure is no longer swallowed, and D-2, that in-flight handlers are bounded. Both count what
+  a handler *returns*, and a `void` method returns as soon as it has started the work.
+
+  A handler may now return a `CompletionStage`, and the framework waits on it: the message is
+  acknowledged when the stage completes, a failure in the chain reaches the transport rather
+  than vanishing, and the work counts against the mailbox's limit on concurrent handlers. A
+  `void` handler behaves exactly as before. Any other return type is still rejected.
+
+  `LLMDirectMessagingExample` was the shipped demonstration of the pattern that opts out — three
+  researchers and a coordinator, each doing `llm.chat(...).thenAccept(...)` from a `void`
+  handler — and now returns its chains. The cross-transport case is in
+  `MailboxDeliverySemanticsIT`: a handler whose returned future fails is redelivered and reaches
+  the dead-letter stream, exactly as one that throws. It cannot live in
+  `MessageDispatcherContractTests` — that suite is in `agenor-core`, which cannot see
+  `BaseAgent` or the annotation processor.
+
 - **The behavior scheduler no longer parks an unreclaimable platform thread per behavior.**
   `scheduleCustom` ran a `Thread.sleep` loop on `ForkJoinPool.commonPool` with no
   `ManagedBlocker`, never registered itself in `scheduledBehaviors` — so `cancel()` could not

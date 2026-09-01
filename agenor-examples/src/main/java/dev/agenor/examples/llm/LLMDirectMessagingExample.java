@@ -77,8 +77,12 @@ public class LLMDirectMessagingExample {
             this.llm = llm;
         }
 
+        // Returns the chain rather than starting it and returning void. The framework waits on
+        // what a handler returns: that is what makes the message acknowledged when the work is
+        // actually done, lets a failure in the chain reach the transport, and counts the work
+        // against the mailbox's limit on concurrent handlers.
         @AgenorMessageHandler(value = "research.request", autoSubscribe = true)
-        public void handleResearchRequest(Message message) {
+        public CompletableFuture<Void> handleResearchRequest(Message message) {
             @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) message.content();
             String topic = (String) data.get("topic");
@@ -90,7 +94,7 @@ public class LLMDirectMessagingExample {
             ResearchContext ctx = new ResearchContext(requestId, topic, priority);
             activeResearch.put(requestId, ctx);
 
-            createResearchPlan(ctx);
+            return createResearchPlan(ctx);
         }
 
         @Behavior(type = BehaviorType.CYCLIC, interval = "10s", autoStart = true)
@@ -109,7 +113,7 @@ public class LLMDirectMessagingExample {
         @AgenorMessageHandler(value = "research.findings.competitor", autoSubscribe = true)
         public void handleCompetitorFindings(Message message) { processFinding(message, "Competitor"); }
 
-        private void createResearchPlan(ResearchContext ctx) {
+        private CompletableFuture<Void> createResearchPlan(ResearchContext ctx) {
             String planningPrompt = String.format(
                 "Create a research plan for: '%s'\nPriority: %s\n" +
                 "Break into 3 focused research questions:\n" +
@@ -125,7 +129,7 @@ public class LLMDirectMessagingExample {
                 .maxTokens(400)
                 .build();
 
-            llm.chat(request).thenAccept(response -> {
+            return llm.chat(request).thenAccept(response -> {
                 ctx.plan = response.content();
                 log.info("📝 Research plan created for: {}", ctx.topic);
                 delegateResearch(ctx);
@@ -243,7 +247,7 @@ public class LLMDirectMessagingExample {
         }
 
         @AgenorMessageHandler(value = "research.task.technical", autoSubscribe = true)
-        public void handleResearchTask(Message message) {
+        public CompletableFuture<Void> handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
             @SuppressWarnings("unchecked")
@@ -269,7 +273,7 @@ public class LLMDirectMessagingExample {
                 .temperature(0.6).maxTokens(700)
                 .build();
 
-            llm.chat(request).thenAccept(response -> {
+            return llm.chat(request).thenAccept(response -> {
                 if (response.hasFunctionCalls()) log.info("🛠️ Using technical evaluation tools");
                 log.info("✅ Technical analysis complete");
 
@@ -309,7 +313,7 @@ public class LLMDirectMessagingExample {
         }
 
         @AgenorMessageHandler(value = "research.task.market", autoSubscribe = true)
-        public void handleResearchTask(Message message) {
+        public CompletableFuture<Void> handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
             @SuppressWarnings("unchecked")
@@ -317,8 +321,14 @@ public class LLMDirectMessagingExample {
             String requestId = (String) data.get("requestId");
             String topic = (String) data.get("topic");
 
-            if (requestId == null || requestId.isBlank()) { log.error("❌ Missing requestId"); return; }
-            if (topic == null || topic.isBlank())         { log.error("❌ Missing topic");     return; }
+            if (requestId == null || requestId.isBlank()) {
+                log.error("❌ Missing requestId");
+                return CompletableFuture.completedFuture(null);
+            }
+            if (topic == null || topic.isBlank()) {
+                log.error("❌ Missing topic");
+                return CompletableFuture.completedFuture(null);
+            }
 
             log.info("📈 Market researcher analyzing: {}", topic);
 
@@ -338,7 +348,7 @@ public class LLMDirectMessagingExample {
                 .temperature(0.6).maxTokens(700)
                 .build();
 
-            llm.chat(request).thenAccept(response -> {
+            return llm.chat(request).thenAccept(response -> {
                 if (response.hasFunctionCalls()) log.info("📊 Using market analysis tools");
 
                 String findings = response.content();
@@ -389,7 +399,7 @@ public class LLMDirectMessagingExample {
         }
 
         @AgenorMessageHandler(value = "research.task.competitor", autoSubscribe = true)
-        public void handleResearchTask(Message message) {
+        public CompletableFuture<Void> handleResearchTask(Message message) {
             taskCount.incrementAndGet();
 
             @SuppressWarnings("unchecked")
@@ -397,8 +407,14 @@ public class LLMDirectMessagingExample {
             String requestId = (String) data.get("requestId");
             String topic = (String) data.get("topic");
 
-            if (requestId == null || requestId.isBlank()) { log.error("❌ Missing requestId"); return; }
-            if (topic == null || topic.isBlank())         { log.error("❌ Missing topic");     return; }
+            if (requestId == null || requestId.isBlank()) {
+                log.error("❌ Missing requestId");
+                return CompletableFuture.completedFuture(null);
+            }
+            if (topic == null || topic.isBlank()) {
+                log.error("❌ Missing topic");
+                return CompletableFuture.completedFuture(null);
+            }
 
             log.info("🎯 Competitor researcher analyzing: {}", topic);
 
@@ -418,7 +434,7 @@ public class LLMDirectMessagingExample {
                 .temperature(0.6).maxTokens(700)
                 .build();
 
-            llm.chat(request).thenAccept(response -> {
+            return llm.chat(request).thenAccept(response -> {
                 if (response.hasFunctionCalls()) log.info("🔍 Using competitive analysis tools");
 
                 String findings = response.content();

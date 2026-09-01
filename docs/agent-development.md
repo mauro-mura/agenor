@@ -116,6 +116,8 @@ Annotate public methods on your agent class with `@Behavior` and use `BehaviorTy
 
 Use `@AgenorMessageHandler("topic")` on public methods that accept a `Message` parameter. The in-memory message service will deliver matching topic messages within the JVM.
 
+A handler returns `void` when its work is done by the time the method returns, or `CompletableFuture<Void>` when it is not — return the chain rather than starting it and returning `void`, or the message is acknowledged before the work finishes. See [Delivery Semantics](messaging.md#delivery-semantics).
+
 ## LLM Agents — LLMAgent
 
 `LLMAgent` extends `BaseAgent` with conversation history management, context window budgeting, and long-term fact storage. Use it instead of `BaseAgent` when your agent needs to interact with an LLM.

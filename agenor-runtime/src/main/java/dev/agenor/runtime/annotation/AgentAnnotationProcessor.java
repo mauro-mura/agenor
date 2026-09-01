@@ -2,10 +2,13 @@ package dev.agenor.runtime.annotation;
 
 import dev.agenor.runtime.support.MethodHierarchy;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.core.annotations.Behavior;
@@ -207,13 +210,7 @@ public class AgentAnnotationProcessor {
         method.setAccessible(true);
         String topic = annotation.value();
 
-        MessageHandler handler = MessageHandler.sync(message -> {
-            try {
-                method.invoke(agent, message);
-            } catch (Exception e) {
-                throw new RuntimeException("Error executing message handler: " + method.getName(), e);
-            }
-        });
+        MessageHandler handler = message -> invokeHandler(agent, method, message);
 
         var subscription = topicSubscriber.subscribeTopic(topic, handler);
 
@@ -340,11 +337,55 @@ public class AgentAnnotationProcessor {
                (method.getReturnType() == void.class || method.getReturnType() == Void.class);
     }
 
+    /**
+     * Invokes an annotated handler and returns what the mailbox should wait on.
+     *
+     * <p>A {@code void} handler has finished when the method returns, so it yields an already
+     * completed future — exactly as before. A handler that returns a {@link CompletionStage}
+     * has not: its work is still running, and handing that stage back is what puts it inside
+     * the delivery guarantees of ADR-033. The message is acknowledged when the stage completes
+     * rather than when the method returns, the failure of an asynchronous chain reaches the
+     * transport instead of vanishing, and the work counts against the mailbox's bound on
+     * concurrent handlers.
+     *
+     * <p>A failure thrown out of the method is wrapped, as it always was. A failure carried by
+     * a returned stage is passed through untouched: the handler built that future, and its own
+     * exception says more than a wrapper would.
+     */
+    private CompletableFuture<Void> invokeHandler(Agent agent, Method method, Message message) {
+        Object result;
+        try {
+            result = method.invoke(agent, message);
+        } catch (InvocationTargetException e) {
+            return CompletableFuture.failedFuture(
+                    new RuntimeException("Error executing message handler: " + method.getName(),
+                            e.getCause()));
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(
+                    new RuntimeException("Error executing message handler: " + method.getName(), e));
+        }
+
+        if (result instanceof CompletionStage<?> stage) {
+            return stage.toCompletableFuture().thenApply(ignored -> null);
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * A handler method must be public, non-static, and take a single {@link Message}.
+     *
+     * <p>It may return {@code void}, or a {@link CompletionStage} for work that is not finished
+     * when the method returns — see {@link #invokeHandler}. Any other return type is rejected:
+     * the framework would have nothing to do with the value, and accepting it silently is how a
+     * handler that meant to be asynchronous ends up outside the delivery guarantees.
+     */
     private boolean isValidMessageHandlerMethod(Method method) {
         return Modifier.isPublic(method.getModifiers()) &&
                !Modifier.isStatic(method.getModifiers()) &&
                method.getParameterCount() == 1 &&
                method.getParameterTypes()[0] == Message.class &&
-               (method.getReturnType() == void.class || method.getReturnType() == Void.class);
+               (method.getReturnType() == void.class
+                       || method.getReturnType() == Void.class
+                       || CompletionStage.class.isAssignableFrom(method.getReturnType()));
     }
 }

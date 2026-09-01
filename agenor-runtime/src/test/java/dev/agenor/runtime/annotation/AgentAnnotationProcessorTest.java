@@ -2,6 +2,8 @@ package dev.agenor.runtime.annotation;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import dev.agenor.core.*;
 import dev.agenor.core.annotations.Behavior;
@@ -207,6 +209,62 @@ class AgentAnnotationProcessorTest {
         processor.processAnnotations(agent);
 
         verify(topicSubscriber).subscribeTopic(eq("test.topic"), any(MessageHandler.class));
+    }
+
+    @Test
+    @DisplayName("Should register a handler that returns a future, and wait on what it returns")
+    void shouldHonourAReturnedFuture() {
+        // Before 0.30.0 a handler declaring CompletableFuture<Void> was rejected as an invalid
+        // signature and never registered, so asynchronous work could only be written as a void
+        // method that starts a chain and returns — which acknowledges the message immediately
+        // and puts the work outside every guarantee ADR-033 makes.
+        AsyncHandlerAgent agent = new AsyncHandlerAgent();
+
+        processor.processAnnotations(agent);
+
+        ArgumentCaptor<MessageHandler> captor = ArgumentCaptor.forClass(MessageHandler.class);
+        verify(topicSubscriber).subscribeTopic(eq("async.topic"), captor.capture());
+
+        CompletableFuture<Void> handled = captor.getValue()
+            .handle(Message.builder().topic("async.topic").content("x").build());
+
+        // The method returned long before the work did, so the framework is waiting on the
+        // future rather than on the method.
+        assertThat(handled).isNotDone();
+        agent.work.complete(null);
+        handled.join();
+        assertThat(agent.invoked).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should fail the handler's future when a returned future fails")
+    void shouldPropagateAFailedReturnedFuture() {
+        AsyncHandlerAgent agent = new AsyncHandlerAgent();
+
+        processor.processAnnotations(agent);
+
+        ArgumentCaptor<MessageHandler> captor = ArgumentCaptor.forClass(MessageHandler.class);
+        verify(topicSubscriber).subscribeTopic(eq("async.topic"), captor.capture());
+
+        CompletableFuture<Void> handled = captor.getValue()
+            .handle(Message.builder().topic("async.topic").content("x").build());
+        agent.work.completeExceptionally(new IllegalStateException("failed after returning"));
+
+        // This is what reaches the mailbox, and through it the transport: no ack, redelivery,
+        // and eventually the dead-letter stream on a transport that has one.
+        assertThatThrownBy(handled::join)
+            .isInstanceOf(CompletionException.class)
+            .hasRootCauseMessage("failed after returning");
+    }
+
+    @Test
+    @DisplayName("Should still reject a return type the framework can do nothing with")
+    void shouldRejectAnUnusableReturnType() {
+        BadReturnTypeAgent agent = new BadReturnTypeAgent();
+
+        processor.processAnnotations(agent);
+
+        verify(topicSubscriber, never()).subscribeTopic(anyString(), any(MessageHandler.class));
     }
 
     @Test
@@ -525,6 +583,34 @@ class AgentAnnotationProcessorTest {
 
         @dev.agenor.core.annotations.Behavior(type = BehaviorType.CYCLIC, interval = "invalid")
         public void periodic() {
+        }
+    }
+
+    static class AsyncHandlerAgent extends BaseAgent {
+
+        final CompletableFuture<Void> work = new CompletableFuture<>();
+        volatile boolean invoked;
+
+        public AsyncHandlerAgent() {
+            super("async-handler", "Async Handler Agent");
+        }
+
+        @AgenorMessageHandler("async.topic")
+        public CompletableFuture<Void> onMessage(Message message) {
+            invoked = true;
+            return work;
+        }
+    }
+
+    static class BadReturnTypeAgent extends BaseAgent {
+
+        public BadReturnTypeAgent() {
+            super("bad-return", "Bad Return Agent");
+        }
+
+        @AgenorMessageHandler("bad.topic")
+        public String onMessage(Message message) {
+            return "the framework has nothing to do with this";
         }
     }
 
