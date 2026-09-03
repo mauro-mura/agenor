@@ -1,6 +1,7 @@
 package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.AgentEndpoint;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.directory.AgentResolver;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.MessageDispatcherContractTests;
@@ -70,6 +71,11 @@ class RedisMessageDispatcherContractIT implements MessageDispatcherContractTests
         factory = RedisMessagingFactory.builder()
                 .uri(uri)
                 .consumerGroupPrefix("contract-" + System.nanoTime())
+                // The dead-letter cases have to exhaust redelivery before they can assert
+                // anything. At the defaults that is three attempts thirty seconds apart; these
+                // values change how long the suite waits, not what it proves.
+                .maxDeliveryAttempts(1)
+                .pendingEntriesTimeoutMs(500)
                 .build();
         return factory.messageDispatcher(() -> resolver());
     }
@@ -77,6 +83,17 @@ class RedisMessageDispatcherContractIT implements MessageDispatcherContractTests
     @Override
     public void registerAgent(String agentId) {
         endpoints.put(agentId, new AgentEndpoint(factory.config().nodeId(), "redis", Map.of()));
+    }
+
+    @Override
+    public DeadLetterQueue deadLetters() {
+        return factory.deadLetterQueue();
+    }
+
+    /** Redelivery has to time out before an entry can be dead-lettered at all. */
+    @Override
+    public Duration deadLetterTimeout() {
+        return Duration.ofSeconds(20);
     }
 
     private AgentResolver resolver() {

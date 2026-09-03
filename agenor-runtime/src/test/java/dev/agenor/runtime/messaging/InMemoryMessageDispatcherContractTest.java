@@ -1,8 +1,10 @@
 package dev.agenor.runtime.messaging;
 
 import dev.agenor.core.AgentDescriptor;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.MessageDispatcherContractTests;
+import dev.agenor.runtime.deadletter.InMemoryDeadLetterQueue;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +23,14 @@ class InMemoryMessageDispatcherContractTest implements MessageDispatcherContract
 
     private InMemoryAgentDirectory directory;
     private InMemoryMessageDispatcher dispatcher;
+    private InMemoryDeadLetterQueue deadLetters;
 
     @BeforeEach
     void setUp() {
         directory = new InMemoryAgentDirectory("contract-node");
         dispatcher = new InMemoryMessageDispatcher(directory);
+        deadLetters = new InMemoryDeadLetterQueue();
+        dispatcher.setDeadLetterQueue(deadLetters);
     }
 
     @Override
@@ -36,5 +41,10 @@ class InMemoryMessageDispatcherContractTest implements MessageDispatcherContract
     @Override
     public void registerAgent(String agentId) {
         directory.register(AgentDescriptor.builder(agentId).agentName(agentId).build()).join();
+    }
+
+    @Override
+    public DeadLetterQueue deadLetters() {
+        return deadLetters;
     }
 }

@@ -6,8 +6,6 @@ import dev.agenor.core.annotations.AgenorMessageHandler;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.StatefulRedisConnection;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +30,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * This proves what happens when the handler at the end of one of them <em>fails</em>, which is
  * the case a dispatcher-level contract suite cannot reach: there the test subscribes its own
  * handler and no mailbox sits in the path, so the chain is intact whatever the mailbox does.
+ *
+ * <p>Since 0.32.0 {@code MessageDispatcherContractTests} covers dead-lettering on both
+ * transports, and that is where the cross-transport question now lives. What stays here is the
+ * half it still cannot reach: that the chain survives passing <em>through a mailbox</em>, and
+ * through an {@code @AgenorMessageHandler} that fails either by throwing or by returning a
+ * failed future.
  *
  * <p>Before ADR-033 this failed. {@code BaseAgent} handed the consumer loop
  * {@code MessageHandler.sync(box::offer)}, which returned as soon as the message was queued,
@@ -62,8 +66,6 @@ class MailboxDeliverySemanticsIT {
 
     private RedisMessagingFactory senderFactory;
     private RedisMessagingFactory receiverFactory;
-    private RedisClient inspector;
-    private StatefulRedisConnection<String, String> inspectorConn;
     private AgenorRuntime sender;
     private AgenorRuntime receiver;
     private FailingAgent agent;
@@ -104,14 +106,10 @@ class MailboxDeliverySemanticsIT {
         awaitResolvable("always-fails");
         awaitResolvable("fails-later");
 
-        inspector = RedisClient.create(redisUri);
-        inspectorConn = inspector.connect();
     }
 
     @AfterEach
     void tearDown() {
-        if (inspectorConn != null) inspectorConn.close();
-        if (inspector != null) inspector.shutdown();
         if (sender != null && sender.isRunning()) sender.stop().join();
         if (receiver != null && receiver.isRunning()) receiver.stop().join();
         if (senderFactory != null) senderFactory.close();
@@ -121,7 +119,7 @@ class MailboxDeliverySemanticsIT {
     @Test
     @DisplayName("a handler that throws is redelivered, then reaches the dead-letter stream")
     void failingHandlerIsRedeliveredThenDeadLettered() {
-        var dlqKey = PREFIX + ":node:" + RECEIVER_NODE + ":dlq";
+        var deadLetters = receiverFactory.deadLetterQueue();
 
         // When a message crosses the transport to a handler that always throws
         sender.getMessageDispatcher().sendTo(Message.builder()
@@ -135,18 +133,25 @@ class MailboxDeliverySemanticsIT {
         // unacknowledged and was redelivered...
         awaitUntil(() -> agent.attempts.get() > 1);
 
-        // ...and after maxDeliveryAttempts it landed in the dead-letter stream, which is what
-        // docs/adapters/redis.md has promised all along.
-        awaitUntil(() -> dlqLength(dlqKey) >= 1);
+        // ...and after maxDeliveryAttempts it landed in the dead-letter queue, asked through
+        // the framework. Until 0.32.0 this assertion had to rebuild the Redis key by hand and
+        // run XLEN on a connection of its own, because nothing could read the DLQ back.
+        awaitUntil(() -> !deadLetters.recent(10).isEmpty());
 
         assertThat(agent.attempts.get()).isGreaterThan(1);
-        assertThat(dlqLength(dlqKey)).isGreaterThanOrEqualTo(1);
+        assertThat(deadLetters.recent(10))
+                .isNotEmpty()
+                .anySatisfy(dl -> {
+                    assertThat(dl.message().topic()).isEqualTo("task.explode");
+                    assertThat(dl.recipientId()).isEqualTo("always-fails");
+                    assertThat(dl.reason()).isNotBlank();
+                });
     }
 
     @Test
     @DisplayName("a handler whose returned future fails is redelivered, then dead-lettered")
     void handlerReturningFailedFutureIsRedeliveredThenDeadLettered() {
-        var dlqKey = PREFIX + ":node:" + RECEIVER_NODE + ":dlq";
+        var deadLetters = receiverFactory.deadLetterQueue();
 
         // A handler that fails asynchronously has to reach the transport the same way one that
         // throws does. It did not before 0.30.0, and not because the failure was swallowed:
@@ -161,15 +166,15 @@ class MailboxDeliverySemanticsIT {
                 .build());
 
         awaitUntil(() -> asyncAgent.attempts.get() > 1);
-        awaitUntil(() -> dlqLength(dlqKey) >= 1);
+        awaitUntil(() -> deadLetters.recent(10).stream()
+                .anyMatch(dl -> "task.explode.later".equals(dl.message().topic())));
 
         assertThat(asyncAgent.attempts.get()).isGreaterThan(1);
-        assertThat(dlqLength(dlqKey)).isGreaterThanOrEqualTo(1);
-    }
-
-    private long dlqLength(String dlqKey) {
-        Long len = inspectorConn.sync().xlen(dlqKey);
-        return len == null ? 0L : len;
+        assertThat(deadLetters.recent(10))
+                .anySatisfy(dl -> {
+                    assertThat(dl.message().topic()).isEqualTo("task.explode.later");
+                    assertThat(dl.recipientId()).isEqualTo("fails-later");
+                });
     }
 
     private void awaitUntil(java.util.function.BooleanSupplier condition) {

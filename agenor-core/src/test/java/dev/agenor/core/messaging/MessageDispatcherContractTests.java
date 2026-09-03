@@ -1,10 +1,14 @@
 package dev.agenor.core.messaging;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.deadletter.DeadLetter;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.exceptions.AgentNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +42,32 @@ public interface MessageDispatcherContractTests {
      * Called from within individual test methods after {@link #createDispatcher()}.
      */
     void registerAgent(String agentId);
+
+    /**
+     * Returns where the dispatcher under test records a message it gave up on.
+     *
+     * <p>Must be the same instance that dispatcher writes to: the point of the dead-letter
+     * cases below is that both backends answer a failed handler the same way, and a fixture
+     * handing back a different queue would assert nothing.
+     *
+     * @return the queue; never {@code null}
+     * @since 0.32.0
+     */
+    DeadLetterQueue deadLetters();
+
+    /**
+     * How long a backend may take to record a dead letter.
+     *
+     * <p>In memory it is immediate. On a transport with redelivery the message has to exhaust
+     * its attempts first, and how long that takes is that backend's configuration, not this
+     * suite's business - so the backend says.
+     *
+     * @return the timeout; never {@code null}
+     * @since 0.32.0
+     */
+    default Duration deadLetterTimeout() {
+        return Duration.ofSeconds(5);
+    }
 
     // -------------------------------------------------------------------------
     // TopicPublisher + TopicSubscriber
@@ -125,5 +155,86 @@ public interface MessageDispatcherContractTests {
                 Message.builder().receiverId("unknown-contract-agent").topic("direct").content("x").build());
 
         assertThatThrownBy(future::join).hasCauseInstanceOf(AgentNotFoundException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // Dead-lettering (since 0.32.0)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("[Dispatcher] a topic handler that throws sends its message to the dead-letter queue")
+    default void publish_handlerThrows_deadLetters() throws Exception {
+        var dispatcher = createDispatcher();
+        dispatcher.subscribeTopic("orders.failing", msg -> {
+            throw new IllegalStateException("handler exploded");
+        });
+
+        var msg = Message.builder().topic("orders.failing").content("payload").build();
+        dispatcher.publish(msg).join();
+
+        var recorded = awaitDeadLetter(msg.id());
+        assertThat(recorded).isPresent();
+        assertThat(recorded.get().reason()).contains("handler exploded");
+        assertThat(recorded.get().attempts()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[Dispatcher] a direct-message handler that throws sends its message to the dead-letter queue")
+    default void sendTo_handlerThrows_deadLetters() throws Exception {
+        var dispatcher = createDispatcher();
+        registerAgent("dead-letter-agent");
+        dispatcher.subscribeRecipient("dead-letter-agent", msg -> {
+            throw new IllegalStateException("receiver exploded");
+        });
+
+        var msg = Message.builder()
+                .topic("task")
+                .receiverId("dead-letter-agent")
+                .content("payload")
+                .build();
+        // The sender's own future is deliberately not part of this contract: ADR-033 leaves
+        // each transport free to decide whether sendTo waits on the recipient's handler.
+        try {
+            dispatcher.sendTo(msg).join();
+        } catch (Exception expectedOnSomeBackends) {
+            // ignored on purpose - see above
+        }
+
+        var recorded = awaitDeadLetter(msg.id());
+        assertThat(recorded).isPresent();
+        assertThat(recorded.get().reason()).contains("receiver exploded");
+    }
+
+    @Test
+    @DisplayName("[Dispatcher] a handler that succeeds dead-letters nothing")
+    default void publish_handlerSucceeds_recordsNothing() throws Exception {
+        var dispatcher = createDispatcher();
+        var handled = new CountDownLatch(1);
+        dispatcher.subscribeTopic("orders.ok", msg -> {
+            handled.countDown();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        var msg = Message.builder().topic("orders.ok").content("payload").build();
+        dispatcher.publish(msg).join();
+
+        assertThat(handled.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(awaitDeadLetter(msg.id())).isEmpty();
+    }
+
+    /**
+     * Polls until the message appears in the dead-letter queue, or the backend's timeout runs
+     * out. Polling rather than a latch because recording happens inside the transport, on a
+     * thread the test does not hold.
+     */
+    private Optional<DeadLetter> awaitDeadLetter(String messageId) throws InterruptedException {
+        var deadline = System.nanoTime() + deadLetterTimeout().toNanos();
+        while (true) {
+            var match = deadLetters().recent(50).stream()
+                    .filter(dl -> messageId.equals(dl.message().id()))
+                    .findFirst();
+            if (match.isPresent() || System.nanoTime() >= deadline) return match;
+            Thread.sleep(50);
+        }
     }
 }

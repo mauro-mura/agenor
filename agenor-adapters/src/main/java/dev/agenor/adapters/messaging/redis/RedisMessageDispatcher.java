@@ -5,6 +5,8 @@ import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.TransportEndpoint;
 import dev.agenor.core.directory.AgentResolver;
+import dev.agenor.core.deadletter.DeadLetter;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.exceptions.AgentNotFoundException;
 import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
@@ -18,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
@@ -55,6 +58,7 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
     private final RedisMessageTransport messageTransport;
     private final Supplier<AgentResolver> resolverSupplier;
     private final RedisMessagingConfig config;
+    private final DeadLetterQueue deadLetters;
 
     // agentId → handlers for local routing of messages arriving on the node stream.
     // A list, not a single handler: an agent subscribes more than once to its own
@@ -71,10 +75,19 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
                            RedisMessageTransport messageTransport,
                            Supplier<AgentResolver> resolverSupplier,
                            RedisMessagingConfig config) {
+        this(topicPublisher, messageTransport, resolverSupplier, config, null);
+    }
+
+    RedisMessageDispatcher(RedisTopicPublisher topicPublisher,
+                           RedisMessageTransport messageTransport,
+                           Supplier<AgentResolver> resolverSupplier,
+                           RedisMessagingConfig config,
+                           DeadLetterQueue deadLetters) {
         this.topicPublisher   = Objects.requireNonNull(topicPublisher,   "topicPublisher");
         this.messageTransport = Objects.requireNonNull(messageTransport, "messageTransport");
         this.resolverSupplier = resolverSupplier != null ? resolverSupplier : () -> null;
         this.config           = Objects.requireNonNull(config,           "config");
+        this.deadLetters      = deadLetters != null ? deadLetters : DeadLetterQueue.noop();
     }
 
     // -------------------------------------------------------------------------
@@ -118,10 +131,20 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
             throw new IllegalArgumentException("receiverId must be set for sendTo");
         }
 
-        // Local fast-path: agent lives on this node
+        // Local fast-path: agent lives on this node. Redis is never touched, so there is no
+        // stream entry to leave unacknowledged and none of the redelivery machinery applies -
+        // this is the one delivery path on this transport that has to dead-letter for itself.
+        // The returned future still fails, so the sender learns too.
         var localHandlers = directHandlers.get(receiverId);
         if (localHandlers != null && !localHandlers.isEmpty()) {
-            return deliverLocally(localHandlers, msg);
+            return deliverLocally(localHandlers, msg).whenComplete((ignored, failure) -> {
+                if (failure != null) {
+                    var cause = failure instanceof CompletionException && failure.getCause() != null
+                            ? failure.getCause()
+                            : failure;
+                    deadLetters.record(DeadLetter.of(msg, receiverId, cause));
+                }
+            });
         }
 
         // Remote path: resolve via AgentResolver then write to node stream

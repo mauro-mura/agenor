@@ -61,7 +61,7 @@ public final class RedisMessagingFactory implements AutoCloseable {
      * @since 0.21.0
      */
     public RedisMessageDispatcher messageDispatcher() {
-        return new RedisMessageDispatcher(topicPublisher, messageTransport, null, config);
+        return new RedisMessageDispatcher(topicPublisher, messageTransport, null, config, deadLetters);
     }
 
     /**
@@ -78,7 +78,8 @@ public final class RedisMessagingFactory implements AutoCloseable {
      * @since 0.21.0
      */
     public RedisMessageDispatcher messageDispatcher(Supplier<AgentResolver> resolverSupplier) {
-        return new RedisMessageDispatcher(topicPublisher, messageTransport, resolverSupplier, config);
+        return new RedisMessageDispatcher(topicPublisher, messageTransport, resolverSupplier, config,
+                deadLetters);
     }
 
     /**
