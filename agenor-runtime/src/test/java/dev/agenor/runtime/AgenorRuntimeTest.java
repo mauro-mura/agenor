@@ -4,6 +4,7 @@ import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.AgenorConfiguration;
 import dev.agenor.core.Behavior;
 import dev.agenor.core.Message;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.annotations.AgenorMessageHandler;
@@ -11,6 +12,7 @@ import dev.agenor.core.config.ConfigurationException;
 import dev.agenor.core.llm.LLMMemoryAware;
 import dev.agenor.core.memory.llm.LLMMemoryManager;
 import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.deadletter.InMemoryDeadLetterQueue;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
@@ -868,5 +870,49 @@ class AgenorRuntimeTest {
         @dev.agenor.core.annotations.Behavior(type = dev.agenor.core.BehaviorType.FSM, fsmInitialState = "IDLE")
         public void fsmAction() {
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Dead-letter queue (0.32.0)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldDefaultToABoundedInMemoryDeadLetterQueue() {
+        runtimeUnderTest = AgenorRuntime.builder().build();
+
+        assertThat(runtimeUnderTest.getDeadLetterQueue())
+                .isInstanceOf(InMemoryDeadLetterQueue.class);
+        assertThat(runtimeUnderTest.getDeadLetterQueue().recent(10)).isEmpty();
+    }
+
+    @Test
+    void shouldWireItsOwnQueueIntoTheDispatcherItBuilt() throws Exception {
+        var queue = new InMemoryDeadLetterQueue(8);
+        runtimeUnderTest = AgenorRuntime.builder().deadLetterQueue(queue).build();
+
+        assertThat(runtimeUnderTest.getDeadLetterQueue()).isSameAs(queue);
+
+        // The wiring is what matters: a failure on the dispatcher the runtime assembled must
+        // reach the queue the runtime hands out, without the caller connecting the two.
+        runtimeUnderTest.getMessageDispatcher().subscribeTopic("orders", msg -> {
+            throw new IllegalStateException("boom");
+        });
+        runtimeUnderTest.getMessageDispatcher()
+                .publish(Message.builder().topic("orders").content("x").build()).join();
+
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (queue.recent(1).isEmpty() && System.nanoTime() < deadline) Thread.sleep(10);
+        assertThat(queue.recent(1)).hasSize(1);
+    }
+
+    @Test
+    void shouldLeaveASuppliedDispatcherAloneWhenItIsNotTheInMemoryOne() {
+        // A dispatcher the runtime did not build cannot be wired blindly: the runtime says so
+        // in the builder javadoc, and this pins that it does not try.
+        var dispatcher = mock(dev.agenor.core.messaging.MessageDispatcher.class);
+        runtimeUnderTest = AgenorRuntime.builder().messageDispatcher(dispatcher).build();
+
+        assertThat(runtimeUnderTest.getDeadLetterQueue()).isNotSameAs(DeadLetterQueue.noop());
+        assertThat(runtimeUnderTest.getMessageDispatcher()).isSameAs(dispatcher);
     }
 }

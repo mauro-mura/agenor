@@ -1,6 +1,8 @@
 package dev.agenor.runtime.messaging;
 
 import dev.agenor.core.Message;
+import dev.agenor.core.deadletter.DeadLetter;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.exceptions.AgentNotFoundException;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -46,6 +49,7 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
 
     private final AgentResolver agentResolver;
     private volatile AgenorTelemetry telemetry;
+    private volatile DeadLetterQueue deadLetters = DeadLetterQueue.noop();
 
     // Key: topic name
     private final Map<String, List<MessageHandler>> topicSubscriptions = new ConcurrentHashMap<>();
@@ -83,6 +87,30 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
      */
     public void setTelemetry(AgenorTelemetry telemetry) {
         this.telemetry = telemetry != null ? telemetry : AgenorTelemetry.noop();
+    }
+
+    /**
+     * Sets where a message goes when its handler fails.
+     *
+     * <p>This transport does not redeliver, so a handler failure is terminal the first time:
+     * every message that reaches the queue reaches it with one attempt. Without a queue the
+     * dispatcher keeps its previous behaviour and the failure is only logged.
+     *
+     * @param deadLetters the queue; null treated as {@link DeadLetterQueue#noop()}
+     * @since 0.32.0
+     */
+    public void setDeadLetterQueue(DeadLetterQueue deadLetters) {
+        this.deadLetters = deadLetters != null ? deadLetters : DeadLetterQueue.noop();
+    }
+
+    /**
+     * Returns where this dispatcher sends a message whose handler failed.
+     *
+     * @return the queue; never {@code null}
+     * @since 0.32.0
+     */
+    public DeadLetterQueue getDeadLetterQueue() {
+        return deadLetters;
     }
 
     // -------------------------------------------------------------------------
@@ -293,6 +321,7 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
                     handler.handle(msg).join();
                 } catch (Exception e) {
                     log.error("Error handling topic '{}' message {}: {}", topic, msg.id(), e.getMessage(), e);
+                    deadLetter(msg, null, e);
                 }
             });
         }
@@ -310,6 +339,7 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
                     handler.handle(msg).join();
                 } catch (Exception e) {
                     log.error("Error handling direct message for agent '{}': {}", agentId, e.getMessage(), e);
+                    deadLetter(msg, agentId, e);
                 }
             });
         }
@@ -324,9 +354,33 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
                     } catch (Exception e) {
                         log.error("Error handling message {} via predicate subscription: {}",
                                 msg.id(), e.getMessage(), e);
+                        deadLetter(msg, null, e);
                     }
                 });
             }
+        }
+    }
+
+    /**
+     * Hands a failed delivery to the dead-letter queue.
+     *
+     * <p>Unwraps the {@link java.util.concurrent.CompletionException} that {@code join()}
+     * wraps a handler's failure in, so the reason recorded is the failure the handler actually
+     * threw rather than the plumbing that carried it.
+     *
+     * <p>Recording must never become a second failure on top of the first: this runs on a
+     * detached delivery thread whose exceptions nothing observes, so a throwing queue would
+     * disappear entirely.
+     */
+    private void deadLetter(Message msg, String recipientId, Throwable failure) {
+        var cause = failure instanceof CompletionException && failure.getCause() != null
+                ? failure.getCause()
+                : failure;
+        try {
+            deadLetters.record(DeadLetter.of(msg, recipientId, cause));
+        } catch (Exception recordingFailed) {
+            log.error("Dead-letter queue rejected message {}: {}",
+                    msg.id(), recordingFailed.getMessage(), recordingFailed);
         }
     }
 

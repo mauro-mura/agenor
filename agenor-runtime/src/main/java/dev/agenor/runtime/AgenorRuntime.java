@@ -53,6 +53,8 @@ import dev.agenor.runtime.directory.CompositeAgentDirectory;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import dev.agenor.runtime.lifecycle.LifecycleListener;
 import dev.agenor.runtime.lifecycle.LifecycleManager;
+import dev.agenor.core.deadletter.DeadLetterQueue;
+import dev.agenor.runtime.deadletter.InMemoryDeadLetterQueue;
 import dev.agenor.runtime.messaging.InMemoryMessageDispatcher;
 import dev.agenor.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.agenor.runtime.support.AgentDescriptors;
@@ -72,6 +74,7 @@ public class AgenorRuntime {
     private final MemoryStore memoryStore;
     private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
     private final AgenorTelemetry telemetry;
+    private final DeadLetterQueue deadLetters;
 
     // HITL: singleton gate and handle — shared across all agents
     private final ApprovalGate approvalGate;
@@ -133,6 +136,17 @@ public class AgenorRuntime {
         this.messageDispatcher = builder.messageDispatcher != null
                 ? builder.messageDispatcher
                 : new InMemoryMessageDispatcher(resolverForDispatcher, this.telemetry);
+
+        // Where a message goes when its handler fails. The in-memory dispatcher answered a
+        // failed handler with a log line and nothing else; a transport that dead-letters
+        // reaches this the same way, so the runtime's view of what was lost does not depend
+        // on which one is underneath.
+        this.deadLetters = builder.deadLetterQueue != null
+                ? builder.deadLetterQueue
+                : new InMemoryDeadLetterQueue();
+        if (this.messageDispatcher instanceof InMemoryMessageDispatcher imd) {
+            imd.setDeadLetterQueue(this.deadLetters);
+        }
         this.behaviorScheduler = builder.behaviorScheduler != null ?
                 builder.behaviorScheduler : new SimpleBehaviorScheduler(4, this.telemetry);
         this.memoryStore = builder.memoryStore; // optional
@@ -416,6 +430,20 @@ public class AgenorRuntime {
      */
     public MessageDispatcher getMessageDispatcher() {
         return messageDispatcher;
+    }
+
+    /**
+     * Returns where this runtime records a message whose delivery it gave up on.
+     *
+     * <p>Defaults to a bounded in-memory window. A dispatcher this runtime did not build
+     * itself writes here only if it was given the same queue instance — see
+     * {@link Builder#deadLetterQueue(DeadLetterQueue)}.
+     *
+     * @return the dead-letter queue; never null
+     * @since 0.32.0
+     */
+    public DeadLetterQueue getDeadLetterQueue() {
+        return deadLetters;
     }
 
     /**
@@ -788,6 +816,7 @@ public class AgenorRuntime {
     public static class Builder {
         private AgenorConfiguration configuration;
         private MessageDispatcher messageDispatcher;
+        private DeadLetterQueue deadLetterQueue;
         private AgentRegistry agentRegistry;
         private AgentResolver agentResolver;
         private AgentDiscovery agentDiscovery;
@@ -871,6 +900,24 @@ public class AgenorRuntime {
          */
         public Builder messageDispatcher(MessageDispatcher dispatcher) {
             this.messageDispatcher = dispatcher;
+            return this;
+        }
+
+        /**
+         * Sets where the runtime records a message whose delivery it gave up on.
+         *
+         * <p>Defaults to a bounded {@link InMemoryDeadLetterQueue}. The runtime wires this
+         * into a dispatcher it builds itself. A dispatcher supplied through
+         * {@link #messageDispatcher(MessageDispatcher)} has to be given the <em>same
+         * instance</em> through its own configuration, or the runtime and the transport will
+         * each hold a view of a different set of failures.
+         *
+         * @param deadLetterQueue the queue; null restores the default
+         * @return this builder
+         * @since 0.32.0
+         */
+        public Builder deadLetterQueue(DeadLetterQueue deadLetterQueue) {
+            this.deadLetterQueue = deadLetterQueue;
             return this;
         }
 
