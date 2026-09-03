@@ -23,7 +23,7 @@ New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
 | [Messaging Guide](messaging.md) | MessageDispatcher, topics, direct messaging, subscriptions (since 0.20.0) |
 | [Agent Directory Guide](directory.md) | AgentRegistry, AgentDiscovery, AgentResolver, AgentPresence (since 0.20.0) |
 | [Dialogue Protocol](dialog-protocol.md) | A2A protocol, request/reply, CFP |
-| [Message Filtering Guide](message-filtering.md) | Filters, rate limiting |
+| [Message Filtering Guide](message-filtering.md) | Filters |
 | [Observability Guide](observability.md) | OpenTelemetry tracing and span taxonomy |
 
 ## Behaviors

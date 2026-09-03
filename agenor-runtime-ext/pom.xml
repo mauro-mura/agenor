@@ -13,7 +13,7 @@
 
     <artifactId>agenor-runtime-ext</artifactId>
     <name>Agenor Runtime Extensions</name>
-    <description>Generic multi-agent runtime extensions (filtering, rate limiting, conditions, persistence, composite/advanced behaviors, human-in-the-loop, knowledge, in-memory store) for Agenor Framework (see ADR-027)</description>
+    <description>Generic multi-agent runtime extensions (filtering, persistence, composite behaviors, human-in-the-loop, knowledge, in-memory store) for Agenor Framework (see ADR-027)</description>
 
     <dependencies>
         <dependency>

@@ -145,12 +145,7 @@ dev.agenor.examples
 ├── WeatherStationExample
 ├── TaskManagerExample
 ├── DiscoveryExample
-├── behaviors/
-│   ├── ThrottledExample
-│   ├── ConditionalBehaviorExample
-│   ├── RetryExample
-│   ├── BatchProcessingExample
-│   └── ScheduledExample
+├── behaviors/                 CoreBehaviorsExample
 ├── agent/                     ChatAgentExample
 ├── filtering/                 MessageFilterExample
 ├── dialogue/                  ContractNet, Query, Request protocols

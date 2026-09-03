@@ -37,7 +37,7 @@ Design goals:
 - agenor-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
 - agenor-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
 - agenor-runtime-llm (ADR-027): LLM-aware runtime pieces — `LLMAgent`, LLM memory, guardrails, reflection. Depends on agenor-runtime.
-- agenor-runtime-ext (ADR-027): Extended runtime pieces — `InMemoryStore`, filters, rate limiting, conditions, persistence, composite/advanced behaviors, HITL, knowledge. Depends on agenor-runtime.
+- agenor-runtime-ext (ADR-027): Extended runtime pieces — `InMemoryStore`, filters, persistence, composite behaviors, HITL, knowledge. Depends on agenor-runtime.
 - agenor-runtime-scanning (ADR-027): Classpath scanning and DI-based agent discovery, isolated for GraalVM native-image friendliness. Depends on agenor-runtime.
 - agenor-adapters: LLM providers and A2A adapter.
 - agenor-adapters-persistence (ADR-022): JDBC-backed agent directory and persistent HITL approval queue.
@@ -98,16 +98,11 @@ that are deliberately not behavior types.
 - **InMemoryStore** (`agenor-runtime-ext`): Thread-safe `MemoryStore` implementation backed by `ConcurrentHashMap`. Stores `MemoryEntry` objects with topic, scope (`SHORT_TERM` / `LONG_TERM`), content, and optional TTL. Does not persist to disk.
 - **DefaultLLMMemoryManager** (`agenor-runtime-llm`): Bridges a `MemoryStore` and the LLM conversation history. Three context window strategies: `FixedWindow` keeps the N most recent messages, `SlidingWindow` keeps messages within a rolling token budget (the default), `Summarization` auto-summarizes older messages with an LLM call. See [Memory Management](memory.md).
 
-### Filters, rate limiting and conditions (`agenor-runtime-ext`)
+### Filters (`agenor-runtime-ext`)
 
 Filters select which messages a subscription receives — build them from `MessageFilter` in
 `agenor-core` and pass them to `FilterableSubscriber.subscribeFiltered`. See
 [Message Filtering](message-filtering.md).
-
-Rate limiting and `Condition` gating existed to serve behavior types that were removed in
-0.30.0. Both are now deprecated for removal in 0.32.0, and neither was ever surface a user
-reached for directly — outside their own packages, nothing in the tree imports them. See
-[Behaviors](behaviors/README.md) for where those concerns belong instead.
 
 ### Dialogue
 

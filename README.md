@@ -141,9 +141,9 @@ For details, read the Architecture Guide at docs/architecture.md.
 |---|---|---|---|---|---|
 | Agent | BaseAgent | LLMAgent | InMemoryStore | AgentScanner | OpenAIProvider |
 | MessageDispatcher | InMemoryDispatcher | DefaultLLMMemoryManager | Filters | AgentFactory | AnthropicProvider |
-| AgentDirectory | InMemoryDirectory | Guardrails | RateLimiters | | OllamaProvider |
-| BehaviorScheduler | SimpleScheduler | | Conditions | | A2A Adapter |
-| LLMProvider | | | HITL | | extensible |
+| AgentDirectory | InMemoryDirectory | Guardrails | HITL | | OllamaProvider |
+| BehaviorScheduler | SimpleScheduler | | | | A2A Adapter |
+| LLMProvider | | | | | extensible |
 | MemoryStore | | | | | |
 
 `agenor-runtime-llm`, `agenor-runtime-ext`, and `agenor-runtime-scanning` were split out of
@@ -227,8 +227,8 @@ strategy. Depends on `agenor-runtime`.
 ```
 
 ### agenor-runtime-ext
-Extended runtime pieces (ADR-027): `InMemoryStore`, filters, rate limiting, conditions, file
-persistence, composite/advanced behaviors, HITL, knowledge. Depends on `agenor-runtime`.
+Extended runtime pieces (ADR-027): `InMemoryStore`, filters, file persistence, composite
+behaviors, HITL, knowledge. Depends on `agenor-runtime`.
 
 ```xml
 <dependency>
@@ -332,10 +332,7 @@ exchange to production-grade systems. Not published as a dependency — see the
 
 ### Optional: extended runtime behaviors & utilities (`agenor-runtime-ext`)
 - [x] Composite behaviors: Sequential, Parallel, FSM
-- [x] Advanced behaviors: Conditional, Throttled, Batch, Retry, Circuit Breaker, Pipeline, Scheduled
 - [x] Message filtering (topic, header, content, predicate, composite)
-- [x] Rate limiting (token bucket, sliding window)
-- [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
 - [x] File-based persistence utilities
 - [x] Human-in-the-Loop checkpoint
 

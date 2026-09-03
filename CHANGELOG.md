@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING: the condition and rate-limit families and `CronExpression` are gone.** They were
+  deprecated in 0.30.0 naming 0.32.0 as their removal release, and this is 0.32.0.
+  `tools/api-census.sh --check` had been exiting non-zero on all twelve since the version was
+  opened; it exits clean now, and `forRemoval` in `*/src/main` is back to **0**.
+
+  - Conditions: `Condition`, `ConditionContext`, `SystemMetrics` (`agenor-core`);
+    `ConditionEvaluator`, `AgentCondition`, `SystemCondition`, `TimeCondition`
+    (`agenor-runtime-ext`). Test the condition where the work happens.
+  - Rate limiting: `RateLimiter`, `RateLimit`, `RateLimiterStats` (`agenor-core`);
+    `TokenBucketRateLimiter` (`agenor-runtime-ext`). Use a resilience library for outbound
+    work; for inbound pressure the mailbox bounds concurrent handlers (ADR-033).
+  - `CronExpression` (`agenor-runtime-ext`), reached only by the `ScheduledBehavior` that
+    0.30.0 removed.
+
+  **No migration is needed unless you named one of these types directly**, and the measurement
+  says almost nobody could have: outside the twelve themselves, no file in any `src/main`
+  imported `dev.agenor.core.condition`, `dev.agenor.core.ratelimit`,
+  `dev.agenor.runtime.condition` or `dev.agenor.runtime.ratelimit`. No `META-INF/services`
+  entry, no Spring property, no auto-configuration bean and no configuration metadata key
+  named them, so **no configuration changes shape** and `application.yml` files need no edit.
+
+  `ADR-025`'s promotion criteria for `1.0.0` list `Condition` among the core interfaces that
+  must not break; that list is now one shorter, and the ADR carries a scoped note saying so.
+  The criterion itself is unchanged.
+
+### Fixed
+
+- **`agenor-examples/README.md`'s package map listed five examples that 0.30.0 deleted**
+  (`ThrottledExample`, `ConditionalBehaviorExample`, `RetryExample`, `BatchProcessingExample`,
+  `ScheduledExample`), so a reader following the map looked for files that are not there. The
+  Level 1 table above it was already correct. `README.md`'s feature checklist had the same rot
+  from the same release, advertising seven advanced behavior types that no longer exist.
+
+- **`docs/index.md` sent a reader to `message-filtering.md` for rate limiting**, which that
+  page has never covered.
+
 ## [0.31.0] - 2026-09-02
 
 ### Added

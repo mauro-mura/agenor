@@ -96,6 +96,10 @@ time would be premature — the distributed backend story is not yet validated i
 
 **Promotion criteria for `1.0.0`** (observable, not time-based):
 
+> **Scoped note, 0.32.0.** Criterion 2's list of core interfaces is one shorter: `Condition`
+> was removed in 0.32.0, having been deprecated in 0.30.0. It was designed as a core contract
+> and never became one. The criterion itself is unchanged.
+
 1. At least one distributed backend (Redis transport, JDBC directory, or JDBC HITL gate)
    validated in a real deployment outside of the project's own test suite.
 2. No breaking change to any core interface (`Agent`, `MessageDispatcher`, `AgentDirectory`,
