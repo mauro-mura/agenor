@@ -224,16 +224,32 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
         }
     }
 
+    /**
+     * Routes an entry off the node stream to the agent it names.
+     *
+     * <p>An undeliverable message completes <em>exceptionally</em>. That is the whole fix: a
+     * completed future is how the consumer loop is told to acknowledge, so returning one here
+     * used to acknowledge a message nobody had handled and drop it — silently, on the one
+     * transport that has a dead-letter stream, and in direct contradiction of the adapter's
+     * own documented claim that the chain runs all the way to the agent's code.
+     *
+     * <p>Failing instead puts the entry back through the ordinary path: it stays in the PEL,
+     * is redelivered after {@code pendingEntriesTimeoutMs}, and reaches the DLQ only once
+     * {@code maxDeliveryAttempts} is exhausted. The redelivery is not incidental — an agent
+     * that has not finished subscribing is a real race at startup, and this gives it the same
+     * window every other transient failure gets.
+     */
     private CompletableFuture<Void> routeToLocalAgent(Message msg) {
         var receiverId = msg.receiverId();
         if (receiverId == null) {
-            log.warn("Direct message {} arrived with null receiverId — dropping", msg.id());
-            return CompletableFuture.completedFuture(null);
+            log.warn("Direct message {} arrived with null receiverId", msg.id());
+            return CompletableFuture.failedFuture(
+                    new IllegalArgumentException("direct message has no receiverId"));
         }
         var handlers = directHandlers.get(receiverId);
         if (handlers == null || handlers.isEmpty()) {
-            log.warn("No local handler for receiverId='{}' — dropping message {}", receiverId, msg.id());
-            return CompletableFuture.completedFuture(null);
+            log.warn("No local handler for receiverId='{}' for message {}", receiverId, msg.id());
+            return CompletableFuture.failedFuture(new AgentNotFoundException(receiverId));
         }
         return deliverLocally(handlers, msg);
     }

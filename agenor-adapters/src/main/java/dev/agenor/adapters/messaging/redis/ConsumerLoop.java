@@ -1,6 +1,7 @@
 package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.MessageHandler;
+import dev.agenor.core.deadletter.DeadLetter;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import io.lettuce.core.Consumer;
@@ -12,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +50,7 @@ final class ConsumerLoop {
     private final RedisStreamClient client;
     private final RedisMessagingConfig config;
     private final AgenorTelemetry telemetry;
+    private final RedisDeadLetterQueue deadLetters;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile Thread loopThread;
@@ -56,6 +60,10 @@ final class ConsumerLoop {
     // and they are redelivered naturally.
     private final Map<String, AtomicInteger> deliveryAttempts = new ConcurrentHashMap<>();
 
+    // Why the most recent attempt failed, per entry. Read once when the entry is exhausted:
+    // without it a dead letter can only say that delivery failed, not what failed.
+    private final Map<String, String> lastFailure = new ConcurrentHashMap<>();
+
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
                  MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config) {
         this(streamKey, consumerGroup, consumerName, handler, client, config, AgenorTelemetry.noop());
@@ -64,6 +72,13 @@ final class ConsumerLoop {
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
                  MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config,
                  AgenorTelemetry telemetry) {
+        this(streamKey, consumerGroup, consumerName, handler, client, config, telemetry,
+                new RedisDeadLetterQueue(client, config));
+    }
+
+    ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
+                 MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config,
+                 AgenorTelemetry telemetry, RedisDeadLetterQueue deadLetters) {
         this.streamKey     = streamKey;
         this.consumerGroup = consumerGroup;
         this.consumer      = Consumer.from(consumerGroup, consumerName);
@@ -71,6 +86,7 @@ final class ConsumerLoop {
         this.client        = client;
         this.config        = config;
         this.telemetry     = telemetry != null ? telemetry : AgenorTelemetry.noop();
+        this.deadLetters   = deadLetters;
     }
 
     /**
@@ -167,6 +183,31 @@ final class ConsumerLoop {
         }
     }
 
+    /**
+     * Sends an exhausted entry to the dead-letter queue and acknowledges it off the source
+     * stream, in that order: acknowledging first would drop the entry if the write failed.
+     *
+     * <p>The reason recorded is the failure of the <em>last</em> attempt. An entry that could
+     * not even be decoded has no message to carry, so it is acknowledged with an error rather
+     * than dead-lettered — there is nothing to reconstruct on the other side.
+     */
+    private void deadLetter(StreamMessage<String, String> streamMsg, String entryId) {
+        var failure = lastFailure.remove(entryId);
+        var reason  = failure != null
+                ? failure
+                : "delivery failed " + config.maxDeliveryAttempts() + " time(s)";
+        try {
+            var msg = MessageCodec.decode(streamMsg.getBody());
+            deadLetters.record(streamKey, entryId,
+                    new DeadLetter(msg, reason, msg.receiverId(),
+                            config.maxDeliveryAttempts(), Instant.now()));
+        } catch (Exception e) {
+            log.error("Stream entry {} on '{}' could not be decoded and cannot be dead-lettered: {}",
+                    entryId, streamKey, e.getMessage(), e);
+        }
+        client.xack(streamKey, consumerGroup, entryId);
+    }
+
     // package-private for testing
     void processMessage(StreamMessage<String, String> streamMsg) {
         var entryId  = streamMsg.getId();
@@ -177,7 +218,7 @@ final class ConsumerLoop {
         if (attempts > config.maxDeliveryAttempts()) {
             log.error("Stream entry {} exceeded {} delivery attempts; moving to DLQ",
                     entryId, config.maxDeliveryAttempts());
-            client.moveToDlq(streamKey, consumerGroup, streamMsg);
+            deadLetter(streamMsg, entryId);
             deliveryAttempts.remove(entryId);
             return;
         }
@@ -204,7 +245,12 @@ final class ConsumerLoop {
 
             client.xack(streamKey, consumerGroup, entryId);
             deliveryAttempts.remove(entryId);
+            lastFailure.remove(entryId);
         } catch (Exception e) {
+            var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
+            var detail = cause.getMessage();
+            lastFailure.put(entryId, cause.getClass().getSimpleName()
+                    + (detail == null || detail.isBlank() ? "" : ": " + detail));
             log.warn("Handler failed for entry {} on '{}' (attempt {}/{}): {}",
                     entryId, streamKey, attempts, config.maxDeliveryAttempts(), e.getMessage());
             // No XACK — entry stays in PEL and will be redelivered after pendingEntriesTimeoutMs

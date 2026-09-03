@@ -1,16 +1,21 @@
 package dev.agenor.adapters.messaging.redis;
 
+import io.lettuce.core.Limit;
+import io.lettuce.core.Range;
 import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XAddArgs;
 import io.lettuce.core.XGroupCreateArgs;
+import io.lettuce.core.ScanArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -90,22 +95,55 @@ final class RedisStreamClient implements AutoCloseable {
     }
 
     /**
-     * Moves a failed stream entry to the dead-letter stream and acknowledges it
-     * so it no longer blocks the PEL.
+     * Appends an entry to a dead-letter stream, with the same approximate MAXLEN trimming
+     * every other stream gets.
+     *
+     * <p>The DLQ used to be the one stream written with a bare {@code XADD}, so it was also
+     * the one stream nobody drains and nothing bounds. {@code maxStreamLength} is documented
+     * as a per-stream limit and now actually is one.
+     *
+     * @return the entry ID assigned by the server
      */
-    void moveToDlq(String sourceStreamKey, String consumerGroup,
-                   StreamMessage<String, String> streamMsg) {
-        var dlqKey = config.dlqKey(sourceStreamKey);
-        var dlqFields = new HashMap<>(streamMsg.getBody());
-        dlqFields.put("dlq_source_stream", sourceStreamKey);
-        dlqFields.put("dlq_source_id",     streamMsg.getId());
+    String xaddDlq(String dlqKey, Map<String, String> fields) {
+        var args = XAddArgs.Builder.maxlen(config.maxStreamLength()).approximateTrimming(true);
+        return writeConn.sync().xadd(dlqKey, args, fields);
+    }
+
+    /**
+     * Returns up to {@code count} entries of {@code streamKey}, newest first.
+     *
+     * <p>Missing streams read back empty rather than failing: a deployment that has never
+     * dead-lettered anything has no DLQ key at all.
+     */
+    List<StreamMessage<String, String>> xrevrange(String streamKey, int count) {
         try {
-            writeConn.sync().xadd(dlqKey, dlqFields);
-            writeConn.sync().xack(sourceStreamKey, consumerGroup, streamMsg.getId());
-            log.warn("Moved stream entry {} from '{}' to DLQ '{}'",
-                    streamMsg.getId(), sourceStreamKey, dlqKey);
+            return writeConn.sync().xrevrange(streamKey, Range.unbounded(), Limit.from(count));
         } catch (Exception e) {
-            log.error("Failed to move entry {} to DLQ '{}': {}", streamMsg.getId(), dlqKey, e.getMessage());
+            log.warn("Could not read stream '{}': {}", streamKey, e.getMessage());
+            return List.of();
         }
+    }
+
+    /**
+     * Returns every dead-letter stream key in the keyspace, across all nodes and topics.
+     *
+     * <p>A {@code SCAN} rather than a tracked set, because the point of a durable dead-letter
+     * stream is seeing what <em>another</em> node gave up on, which a per-process set cannot
+     * know. It is a keyspace scan and belongs on an operator path, not a hot one.
+     */
+    List<String> scanDlqKeys() {
+        var keys = new ArrayList<String>();
+        try {
+            var args = ScanArgs.Builder.matches(config.consumerGroupPrefix() + ":*:dlq").limit(256);
+            var cursor = writeConn.sync().scan(args);
+            while (true) {
+                keys.addAll(cursor.getKeys());
+                if (cursor.isFinished()) break;
+                cursor = writeConn.sync().scan(cursor, args);
+            }
+        } catch (Exception e) {
+            log.warn("Could not scan for dead-letter streams: {}", e.getMessage());
+        }
+        return keys;
     }
 }

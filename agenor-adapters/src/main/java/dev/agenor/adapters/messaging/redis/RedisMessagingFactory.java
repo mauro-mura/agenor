@@ -37,6 +37,7 @@ public final class RedisMessagingFactory implements AutoCloseable {
     private final RedisTopicPublisher topicPublisher;
     private final RedisMessageTransport messageTransport;
     private final RedisMessagingConfig config;
+    private final RedisDeadLetterQueue deadLetters;
 
     private RedisMessagingFactory(RedisStreamClient streamClient,
                                   RedisTopicPublisher topicPublisher,
@@ -46,6 +47,7 @@ public final class RedisMessagingFactory implements AutoCloseable {
         this.topicPublisher  = topicPublisher;
         this.messageTransport = messageTransport;
         this.config           = config;
+        this.deadLetters      = new RedisDeadLetterQueue(streamClient, config);
     }
 
     /**
@@ -100,6 +102,19 @@ public final class RedisMessagingFactory implements AutoCloseable {
      * @return never {@code null}
      */
     public RedisMessagingConfig config() { return config; }
+
+    /**
+     * Returns this deployment's dead-letter queue.
+     *
+     * <p>Reads span every {@code <prefix>:*:dlq} stream in the keyspace, so this shows what
+     * any node gave up on, not only this one. Pass the returned instance to
+     * {@code AgenorRuntime.Builder.deadLetterQueue(...)} as well: otherwise the runtime keeps
+     * its default in-memory window and the two hold views of different failures.
+     *
+     * @return never {@code null}
+     * @since 0.32.0
+     */
+    public RedisDeadLetterQueue deadLetterQueue() { return deadLetters; }
 
     /**
      * Stops all active consumer loops and closes the Lettuce connection.

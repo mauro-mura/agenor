@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -146,7 +148,31 @@ class ConsumerLoopTelemetryTest {
 
         // Only 3 spans — the 4th call goes straight to DLQ before reaching handler/span
         assertThat(telemetry.spans).hasSize(3);
-        verify(streamClient).moveToDlq(any(), any(), any());
+        verify(streamClient).xaddDlq(eq("agenor:topic:payments:dlq"), any());
+        // Acknowledged only after the DLQ write, so a failed write leaves the entry in the PEL.
+        verify(streamClient).xack("agenor:topic:payments", "cg-test", "9-0");
+    }
+
+    @Test
+    @DisplayName("the DLQ entry carries why the last attempt failed, not just that it did")
+    void dlq_carriesTheReason() {
+        var loop = loop(msg -> CompletableFuture.failedFuture(
+                new IllegalStateException("downstream refused")));
+
+        var msg = streamMsg("11-0", "msg-reason", "payments", "s", null, "x");
+        for (int i = 0; i < 4; i++) loop.processMessage(msg);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<java.util.Map<String, String>> fields =
+                ArgumentCaptor.forClass(java.util.Map.class);
+        verify(streamClient).xaddDlq(anyString(), fields.capture());
+
+        assertThat(fields.getValue())
+                .containsEntry("dlq_reason", "IllegalStateException: downstream refused")
+                .containsEntry("dlq_attempts", "3")
+                .containsEntry("dlq_source_stream", "agenor:topic:payments")
+                .containsEntry("dlq_source_id", "11-0")
+                .containsKey("dlq_at");
     }
 
     @Test
