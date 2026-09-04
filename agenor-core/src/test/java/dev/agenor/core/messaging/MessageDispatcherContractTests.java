@@ -205,6 +205,14 @@ public interface MessageDispatcherContractTests {
         assertThat(recorded.get().reason()).contains("receiver exploded");
     }
 
+    // A direct message to a *registered but unsubscribed* agent is deliberately not a case
+    // here, and the attempt to make it one is why. In memory the message has nowhere to go and
+    // no second chance, so it is dead-lettered - see InMemoryDispatcherDeadLetterTest. On Redis
+    // it is written to the node stream and simply waits there: the consumer loop starts on the
+    // first subscribeRecipient, so the message is delivered when the agent starts, which
+    // RedisMessageTransportIT pins. Requiring both to dead-letter would force the transport
+    // that can still deliver the message to throw it away instead.
+
     @Test
     @DisplayName("[Dispatcher] a handler that succeeds dead-letters nothing")
     default void publish_handlerSucceeds_recordsNothing() throws Exception {

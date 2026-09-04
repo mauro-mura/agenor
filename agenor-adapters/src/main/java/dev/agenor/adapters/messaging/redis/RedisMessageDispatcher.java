@@ -272,7 +272,11 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
         var handlers = directHandlers.get(receiverId);
         if (handlers == null || handlers.isEmpty()) {
             log.warn("No local handler for receiverId='{}' for message {}", receiverId, msg.id());
-            return CompletableFuture.failedFuture(new AgentNotFoundException(receiverId));
+            // Not the directory's "not found" - the entry reached this node because the agent
+            // *was* resolved. Say what actually happened, and say it the same way the
+            // in-memory transport does for the same case.
+            return CompletableFuture.failedFuture(new AgentNotFoundException(receiverId,
+                    "no handler is subscribed for agent '" + receiverId + "' on this node"));
         }
         return deliverLocally(handlers, msg);
     }

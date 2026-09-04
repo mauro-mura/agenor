@@ -98,6 +98,25 @@ class InMemoryDispatcherDeadLetterTest {
     }
 
     @Test
+    @DisplayName("a direct message to a registered agent nobody listens for is dead-lettered")
+    void registeredButUnsubscribedIsDeadLettered() throws Exception {
+        // In the directory, so sendTo resolves it and does not answer AgentNotFoundException -
+        // but nothing ever subscribes. That is an agent registered and not yet started.
+        directory.register(dev.agenor.core.AgentDescriptor.builder("silent-agent")
+                .agentName("Silent Agent")
+                .build()).join();
+
+        dispatcher.sendTo(Message.builder()
+                .topic("t").receiverId("silent-agent").content("payload").build()).join();
+
+        var recorded = awaitOne();
+        assertThat(recorded).hasSize(1);
+        assertThat(recorded.getFirst().recipientId()).isEqualTo("silent-agent");
+        assertThat(recorded.getFirst().reason())
+                .isEqualTo("AgentNotFoundException: no handler is subscribed for agent 'silent-agent'");
+    }
+
+    @Test
     @DisplayName("a successful handler records nothing")
     void successRecordsNothing() throws Exception {
         var handled = new AtomicBoolean();

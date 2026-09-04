@@ -56,6 +56,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapter writes. It used a bare `XADD` and grew without bound, while
   `docs/adapters/redis.md` said otherwise.
 
+- **A direct message to a registered agent nobody listens for is dead-lettered in memory**,
+  where it used to leave a `log.trace` and nothing else. This is not the unknown-agent case,
+  which still answers `AgentNotFoundException` on the sender's future before delivery is
+  attempted — it is an agent that resolves in the directory with no subscriber, which in
+  practice means registered and not yet started. That transport hands off synchronously and has
+  no redelivery, so recording it is the only answer available; the reason reads
+  `AgentNotFoundException: no handler is subscribed for agent '<id>'`.
+
+  It is deliberately **not** a case in `MessageDispatcherContractTests`, and the attempt to make
+  it one is why. On Redis the same message reaches the node stream, but consumer groups are
+  created at `$` on the first `subscribeRecipient`, so an entry written before anything
+  subscribed on that node is skipped forever — present in the stream, absent from the group's
+  PEL, never dead-lettered. `RedisMessageTransportIT.send_beforeAnySubscriber_isNeverDelivered`
+  pins that, so the gap is recorded rather than hidden behind a contract Redis does not keep.
+  The other Redis sub-case, where a consumer loop is already running on the node, was fixed
+  earlier in this release.
+
+- **`AgentNotFoundException` from the Redis consumer loop says what actually happened.** It read
+  "Agent not found in directory", which was never true on that path — the entry reached the node
+  precisely because the agent *was* resolved. Both transports now say
+  "no handler is subscribed for agent '<id>'".
+
 - **`sendTo` to an agent in the same JVM now dead-letters for itself on Redis.** That route is
   a local fast path that never touches a stream, so a failing handler there was invisible to
   the consumer loop and to the DLQ. It is recorded after a single attempt — the message is

@@ -129,6 +129,36 @@ class RedisMessageTransportIT {
         assertThat(counter.get()).isEqualTo(1);
     }
 
+    /**
+     * Pins the consequence of creating consumer groups at {@code $}: an entry written to a node
+     * stream before anything subscribes there is never delivered to that group, and never will
+     * be. It is not lost from Redis - {@code XLEN} still counts it - but it is unreachable by
+     * the framework, and it is not in the group's PEL either, so the loop's {@code XAUTOCLAIM}
+     * pass does not find it.
+     *
+     * <p>This is why "a direct message to a registered but unsubscribed agent" is not a case in
+     * {@code MessageDispatcherContractTests}: in memory that message is dead-lettered, and here
+     * it silently disappears from the framework's view. Making it a contract would state a
+     * guarantee this transport does not keep.
+     */
+    @Test
+    @DisplayName("a message sent before anything subscribes is never delivered to the group")
+    void send_beforeAnySubscriber_isNeverDelivered() throws Exception {
+        var dest = new TransportEndpoint("redis", nodeId, Map.of());
+        transport.send(dest, Message.builder().receiverId("late-agent").content("early").build())
+                .join();
+
+        var latch = new CountDownLatch(1);
+        transport.subscribe(new TransportEndpoint("redis", nodeId, Map.of()), msg -> {
+            latch.countDown();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        assertThat(latch.await(3, TimeUnit.SECONDS))
+                .as("the group was created at $, so the earlier entry is skipped")
+                .isFalse();
+    }
+
     @Test
     @DisplayName("send to a different node writes to that node's stream without local delivery")
     void send_toDifferentNode_writesToRemoteStream() {

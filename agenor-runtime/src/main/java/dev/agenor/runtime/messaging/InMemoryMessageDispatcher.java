@@ -327,10 +327,26 @@ public class InMemoryMessageDispatcher implements MessageDispatcher, FilterableS
         }
     }
 
+    /**
+     * Delivers a direct message to whoever is subscribed for one agent.
+     *
+     * <p>Reached only from {@code sendTo}, which has already resolved the recipient — so an
+     * empty handler list here does not mean "unknown agent", which {@code sendTo} answers with
+     * {@link AgentNotFoundException} before getting this far. It means the agent is in the
+     * directory and nothing is listening for it: registered but not yet started, in practice,
+     * since {@code BaseAgent} subscribes on start.
+     *
+     * <p>That message has nowhere to go and no redelivery to give it a second chance, so it is
+     * dead-lettered. Redis reaches the same conclusion for the same case; answering with a
+     * trace line here was the in-memory half of a defect fixed on only one transport.
+     */
     private void deliverToReceiver(String agentId, Message msg) {
         var handlers = receiverSubscriptions.get(agentId);
         if (handlers == null || handlers.isEmpty()) {
-            log.trace("No receiver subscriptions for agent '{}'", agentId);
+            log.warn("No receiver subscription for agent '{}': dead-lettering message {}",
+                    agentId, msg.id());
+            deadLetter(msg, agentId, new AgentNotFoundException(agentId,
+                    "no handler is subscribed for agent '" + agentId + "'"));
             return;
         }
         for (var handler : handlers) {
