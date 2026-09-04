@@ -74,6 +74,15 @@ All keys are under the `agenor` prefix. Every key is optional and falls back to 
 The `redis.*` sub-section is only read when `provider=redis` and `agenor-adapters` is on the classpath.
 `@ConditionalOnMissingBean` allows providing a custom `RedisMessagingFactory` bean to override all defaults.
 
+**Dead letters exist on both providers, and only their reach differs.** The two `redis.*` keys
+above govern *redelivery* — how many times a message is retried and how long an unacknowledged
+one waits — not whether a message the framework gives up on is recorded. With
+`provider=inmemory` there is no redelivery, so a failing handler dead-letters on the first
+attempt into a bounded in-memory buffer that forgets on restart; with `provider=redis` it
+dead-letters after `redis.max-delivery-attempts` into a durable stream. Either way
+`runtime.getDeadLetterQueue()` answers, and the console's `GET /api/deadletters` shows it. See
+[Messaging](messaging.md#when-delivery-fails-for-good).
+
 Redis example:
 ```yaml
 agenor:

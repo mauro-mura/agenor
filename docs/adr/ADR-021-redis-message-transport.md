@@ -257,6 +257,12 @@ OTel spans emitted via `AgenorTelemetry` (ADR-019) for every:
 - Dead-letter stream adds operational surface (monitoring, replay tooling) that did not
   exist with in-memory messaging; addressed in `docs/adapters/redis.md`.
 
+> **Scoped note, 0.32.0.** The second half of that last bullet no longer holds. The in-memory
+> transport now has a dead-letter queue too — see ADR-033's 2026-09-04 amendment — so the
+> operational surface is the framework's, not this adapter's. What remains specific to Redis is
+> that its dead letters are *durable*: an entry survives the JVM that wrote it, where the
+> in-memory queue is a bounded buffer that forgets on restart.
+
 ---
 
 ## Alternatives Considered

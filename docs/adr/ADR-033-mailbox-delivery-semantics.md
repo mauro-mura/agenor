@@ -195,3 +195,49 @@ in-memory behaviour is exactly as before. It has no redelivery to preserve.
 contract, so an agent implementing `Agent` directly gets none of this. That limitation is
 recorded in ADR-032 and is worth fixing when interceptors or node-to-node security make the
 bypass real, not before.
+
+---
+
+## Amendment (2026-09-04) — a failed message has somewhere to go on both transports
+
+The **Unchanged** clause above is reversed in part. Its two halves were both true; the
+inference between them was not.
+
+It read: "the in-memory dispatcher ... never inspects the returned future, so `sendTo` does not
+block on the recipient's handler and in-memory behaviour is exactly as before. It has no
+redelivery to preserve." That a transport cannot *retry* a message says nothing about whether
+the framework can *record* having lost it, and this ADR let the first fact settle the second.
+The result was that the outcome future D-1 introduced had exactly one downstream consumer,
+`ConsumerLoop.processMessage`. `InMemoryMessageDispatcher` joined the identical future in three
+places and answered every failure with a `log.error`.
+
+The consequence is the one this project has a rule against. The same agent, the same mailbox
+and the same throwing handler produced a dead letter on Redis and a log line in memory — so a
+developer verifying against `InMemoryMessageDispatcher` was not verifying the behaviour they
+would get in production. The case could not even be *stated* in
+`MessageDispatcherContractTests`, because in memory there was nothing to assert against.
+
+**What is added.** `DeadLetterQueue` in `agenor-core` — `record(DeadLetter)` for a message the
+framework has given up on, `recent(limit)` to read them back. Reading is the half that matters:
+a queue that could only be written to would be a logger with more steps, and the Redis DLQ
+stream, which had existed since ADR-021, was exactly that. Two implementations ship with it:
+`InMemoryDeadLetterQueue`, a bounded buffer wired into the three dispatcher paths that used to
+end in `log.error`, and `RedisDeadLetterQueue` over the `<stream>:dlq` stream, whose entries
+now also carry the reason, the attempt count and the time. Three cases in
+`MessageDispatcherContractTests` hold both transports to the same answer, and the web console
+has a view that works on either because it reads the port rather than the sniffer.
+
+**Still unchanged, and deliberately.** Redelivery. The in-memory transport retries nothing and
+this adds no retry — `DeadLetter.attempts` reads 1 there and the exhausted `maxDeliveryAttempts`
+on Redis, which is a fact about the transport rather than a placeholder. `sendTo` still does not
+block on the recipient's handler in memory, so its future still completes where Redis fails it;
+the contract suite looks away from that difference on purpose, because putting it in a contract
+would make the asymmetry official.
+
+**Deliberately not here.** Supervision. No restart policy, no backoff, no escalation to a
+parent. The failure becomes *observable*, not *handled*, and the rest waits for someone who
+needs it.
+
+This is an amendment rather than ADR-034 because it is the observational tail of the decision
+this ADR already took. A new document would have left the clause above standing beside one that
+contradicted it — two places to look, one of them wrong.

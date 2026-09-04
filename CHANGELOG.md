@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A message the framework gives up on now has somewhere to go, on every transport.** Two
+  types in `agenor-core`: `DeadLetter` (the message, the reason, the recipient, the attempt
+  count, the time) and `DeadLetterQueue`, a port with `record` and `recent(int)`. Reading is
+  the half that matters — a queue that could only be written to would be a logger with more
+  steps.
+
+  Before this, the outcome future ADR-033 introduced had exactly one downstream consumer,
+  `ConsumerLoop.processMessage`. `InMemoryMessageDispatcher` joined the identical future in
+  three places and answered every failure with `log.error`. The same agent, the same mailbox
+  and the same throwing handler therefore produced a dead letter on Redis and a log line in
+  memory. ADR-033 carries a dated amendment reversing the clause that made this deliberate.
+
+  - `InMemoryDeadLetterQueue` (`agenor-runtime`) is the default and needs no wiring: a bounded
+    buffer, 256 entries, wired into the three dispatcher paths that used to end in `log.error`.
+    Overflow reaches it too, so a saturated mailbox no longer loses messages to a `log.warn`.
+  - `RedisDeadLetterQueue` (`agenor-adapters`) reads the `<stream>:dlq` streams that already
+    existed. Hand it to the runtime with
+    `AgenorRuntime.builder().deadLetterQueue(factory.deadLetterQueue())`.
+  - Three cases in `MessageDispatcherContractTests` now hold both transports to the same
+    answer (5 tests to 8 on each). This case could not previously be *stated* in the
+    cross-transport suite, because in memory there was nothing to assert against.
+
+  **This records; it does not retry, and it is not supervision.** No restart policy, no
+  backoff, no escalation. `DeadLetter.attempts` reads 1 on a transport without redelivery,
+  which is a fact about that transport rather than a placeholder.
+
+- **`GET /api/deadletters` in the web console**, with a count in the dashboard stat grid and a
+  list beside the live events. Unlike the conversation view added in 0.31.0, this one is not
+  in-memory only: it reads a port rather than a Java predicate, so the same page answers on
+  either transport.
+
+### Changed
+
+- **BREAKING (Redis): an undeliverable direct message is no longer acknowledged and dropped.**
+  `RedisMessageDispatcher.routeToLocalAgent` logged a warning, returned a completed future and
+  let the consumer loop `XACK` — so a message addressed to an agent that had not yet subscribed
+  on that node disappeared silently, on the one transport with a DLQ. It now fails the future,
+  and the message is retried and dead-lettered like any other failure.
+
+- **Redis dead-letter entries carry why.** Alongside `dlq_source_stream` and `dlq_source_id`,
+  an entry now has `dlq_reason`, `dlq_attempts` and `dlq_at`. Provenance alone could not
+  reconstruct a `DeadLetter`, whose `reason` is required. The main stream format is unchanged.
+
+- **The Redis DLQ stream is trimmed** to `maxStreamLength`, like every other stream this
+  adapter writes. It used a bare `XADD` and grew without bound, while
+  `docs/adapters/redis.md` said otherwise.
+
+- **`sendTo` to an agent in the same JVM now dead-letters for itself on Redis.** That route is
+  a local fast path that never touches a stream, so a failing handler there was invisible to
+  the consumer loop and to the DLQ. It is recorded after a single attempt — the message is
+  kept, only the retry is missing, and only for that route.
+
 ### Removed
 
 - **BREAKING: the condition and rate-limit families and `CronExpression` are gone.** They were
@@ -44,6 +98,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`docs/index.md` sent a reader to `message-filtering.md` for rate limiting**, which that
   page has never covered.
+
+- **Two documentation claims that were false as written.** `docs/adapters/redis.md` said the
+  redelivery chain "runs all the way to your agent's code" without excepting the local
+  `sendTo` fast path, which never reaches Redis; and `docs/messaging.md` promised that a
+  saturated agent "applies backpressure to whatever is delivering to it" without saying that
+  in memory the thing delivering is a virtual thread nobody awaits, so nothing reaches the
+  publisher. Both now say which transport they mean. `docs/adapters/redis.md` also no longer
+  claims there is no way to read the DLQ from code, and `docs/spring-boot-starter.md` no
+  longer presents dead-lettering as something only `provider=redis` has.
+
+- **The `/api/messages` javadoc had been orphaned** above `handleGetConversations` since
+  0.31.0, documenting the wrong method.
 
 ## [0.31.0] - 2026-09-02
 

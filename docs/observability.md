@@ -175,6 +175,44 @@ Map<String, Integer> all     = SnifferSupport.getConversations(runtime);
 
 ---
 
+## Seeing what failed
+
+Traces show you the messages that arrived. The ones that never did are a different question,
+and the console answers it on every transport:
+
+```
+GET /api/deadletters             → the recent entries, newest first
+GET /api/deadletters?limit=20    → at most 20 of them
+```
+
+Each entry says what failed and why:
+
+```json
+{
+  "messageId": "3f1c...",
+  "topic": "orders.created",
+  "senderId": "order-service",
+  "recipientId": null,
+  "reason": "IllegalStateException: inventory unavailable",
+  "attempts": 3,
+  "deadLetteredAt": "2026-09-04T07:41:12.884Z",
+  "payload": "Order[id=88123, total=42.00]"
+}
+```
+
+The dashboard shows the same list beside the live events, with a count in the stat grid.
+
+Unlike the conversation view above, **this one is not in-memory only.** It reads
+`runtime.getDeadLetterQueue()` — a port, not a Java predicate — so it answers from whatever
+queue the runtime was built with: the bounded in-memory buffer by default, the durable Redis
+DLQ stream when the runtime is given `RedisMessagingFactory.deadLetterQueue()`. Same page,
+either transport.
+
+The same data is available in code, and the reach of each implementation is in
+[Messaging](messaging.md#when-delivery-fails-for-good).
+
+---
+
 ## Metrics reference
 
 Metrics are emitted via the OTel Meter API when OTel is active. All metric names are

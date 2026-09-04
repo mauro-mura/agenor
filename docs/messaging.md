@@ -156,6 +156,9 @@ Subscriptions are not automatically cleaned up on agent stop — call `unsubscri
 - **Redelivery depends on the transport**: in-memory delivery is at-most-once and a missed
   message is not replayed. Redis Streams redelivers a message whose handler did not acknowledge
   it, and dead-letters it after `maxDeliveryAttempts`
+- **What the framework gives up on does not depend on the transport**: however many attempts
+  a transport makes, the message that survives none of them is recorded in the runtime's
+  [dead-letter queue](#when-delivery-fails-for-good) rather than lost to a log line
 
 Three consequences reach the code you write.
 
@@ -163,7 +166,11 @@ Three consequences reach the code you write.
 it does not *handle* them one at a time: each handler runs on its own virtual thread, so
 handlers may overlap and finish out of order. Guard shared state exactly as you would without
 an agent framework. Up to 64 of one agent's handlers run at once by default; past that the agent
-applies backpressure to whatever is delivering to it.
+applies backpressure to whatever is delivering to it — and *what* is delivering to it decides
+who feels that. On Redis it is the node's consumer loop, so a saturated agent slows delivery
+for every agent on its node. In memory it is a virtual thread nobody is waiting on, so the
+sender's future has already completed and nothing reaches the publisher: the bound protects the
+agent, not the producer. The send side is unbounded on both.
 
 **Make your handlers idempotent.** A handler that throws does not acknowledge its message, so on
 a transport with redelivery the same message arrives again — see
@@ -197,6 +204,44 @@ could have.
 Why the inbound path is shaped this way is
 [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md); what a failed handler costs is
 [ADR-033](adr/ADR-033-mailbox-delivery-semantics.md).
+
+## When delivery fails for good
+
+A handler that keeps throwing eventually exhausts whatever its transport was willing to try.
+What happens then is the same on every transport: the message is recorded in the runtime's
+dead-letter queue, with the reason, the recipient, how many attempts were made and when the
+framework gave up.
+
+```java
+for (DeadLetter dl : runtime.getDeadLetterQueue().recent(20)) {
+    log.warn("gave up on {} to {} after {} attempt(s): {}",
+            dl.message().id(), dl.recipientId(), dl.attempts(), dl.reason());
+}
+```
+
+Reading is the point. Without it this would be a logger with more steps — the entry exists so
+that an operator can find the payload that has to be re-sent by hand, a test can assert on the
+failure, and the console can show it (`GET /api/deadletters`).
+
+What the queue *reaches* differs, and is worth knowing before you rely on it:
+
+| | Default | Attempts before it lands here | How far back `recent` sees |
+|---|---|---|---|
+| In-memory | `InMemoryDeadLetterQueue`, 256 entries | 1 — there is no retry | the buffer, forgotten on restart |
+| Redis | `RedisDeadLetterQueue` over `<stream>:dlq` | `maxDeliveryAttempts`, default 3 | as far as the stream is retained |
+
+The in-memory queue is the default and needs no wiring. On Redis, hand the runtime the
+adapter's queue so both the console and your own code read the durable one:
+
+```java
+AgenorRuntime.builder()
+        .messageDispatcher(factory.messageDispatcher())
+        .deadLetterQueue(factory.deadLetterQueue())
+        .build();
+```
+
+Recording is not retrying, and it is not supervision: nothing restarts an agent or backs off on
+its behalf. The failure becomes visible; deciding what to do about it is still yours.
 
 ## Observability
 

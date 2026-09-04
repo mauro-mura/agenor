@@ -197,6 +197,11 @@ queueing (ADR-033). Two consequences worth planning for:
 An agent that wants a handler failure contained rather than retried should catch it inside the
 handler.
 
+**One route does not go through Redis at all.** `sendTo` addressed to an agent in the same JVM
+is delivered locally, without a stream write — so there is no pending entry to redeliver. Such
+a message is dead-lettered after a single attempt, and its entry reads `attempts = 1`. The
+message is recorded either way; only the retry is missing, and only for that route.
+
 ### Maximum delivery attempts
 
 After `maxDeliveryAttempts` consecutive failures (default 3) the message is moved to the
@@ -205,15 +210,37 @@ No further delivery is attempted.
 
 ### Dead-letter stream
 
-The DLQ is a plain Redis stream. Monitor it with:
+The DLQ is a plain Redis stream, trimmed to `maxStreamLength` like every other stream this
+adapter writes. Alongside the message it carries why the framework gave up: `dlq_reason`,
+`dlq_attempts` and `dlq_at`, plus `dlq_source_stream` and `dlq_source_id` for provenance.
+
+Monitor it from the shell:
 
 ```bash
-xlen agenor:topic:orders.created:dlq   # entry count
+xlen agenor:topic:orders.created:dlq        # entry count
 xrange agenor:topic:orders.created:dlq - +  # inspect entries
 ```
 
-To replay, copy entries back to the source stream or re-publish them via `publisher.publish()`.
-There is no built-in replay API; the DLQ is intentionally kept simple.
+Or read it from the application, which is what the web console does:
+
+```java
+var factory     = RedisMessagingFactory.builder().uri("redis://localhost:6379").build();
+var deadLetters = factory.deadLetterQueue();
+
+for (DeadLetter dl : deadLetters.recent(20)) {
+    log.warn("{} to {} failed after {}: {}",
+            dl.message().id(), dl.recipientId(), dl.attempts(), dl.reason());
+}
+```
+
+`recent` scans every `<prefix>:*:dlq` key and merges them newest-first, so it reaches as far
+back as the streams are retained rather than only as far as one process remembers. Point the
+runtime at it — `AgenorRuntime.builder().deadLetterQueue(factory.deadLetterQueue())` — and
+`GET /api/deadletters` in the console shows the same entries.
+
+**Reading is built in; replay is not.** To replay, copy entries back to the source stream or
+re-publish them via `publisher.publish()`. Re-sending is a decision about your data, and the
+adapter deliberately does not make it for you.
 
 ### Consumer loop crash / JVM restart
 
