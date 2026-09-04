@@ -3,6 +3,7 @@ package dev.agenor.tools.console;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.agenor.core.Agent;
+import dev.agenor.core.deadletter.DeadLetter;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.tools.history.MessageHistoryService;
 import jakarta.servlet.http.HttpServlet;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  * - POST /api/agents/{id}/start - Start agent
  * - POST /api/agents/{id}/stop  - Stop agent
  * - GET  /api/messages        - Get recent messages (with optional filters)
+ * - GET  /api/deadletters     - Get recently dead-lettered messages
  * - GET  /api/stats           - Get runtime statistics
  * - GET  /api/health          - Health check
  */
@@ -84,6 +86,8 @@ public class RestAPIHandler extends HttpServlet {
                 handleGetAgent(req, resp, extractAgentId(path));
             } else if (path.equals("/messages")) {
                 handleGetMessages(req, resp);
+            } else if (path.equals("/deadletters")) {
+                handleGetDeadLetters(req, resp);
             } else if (path.equals("/conversations")) {
                 handleGetConversations(req, resp);
             } else if (path.startsWith("/conversations/")) {
@@ -199,17 +203,6 @@ public class RestAPIHandler extends HttpServlet {
     }
 
     /**
-     * Handles GET /api/messages with optional query parameters.
-     *
-     * <p>Query parameters:
-     * <ul>
-     *   <li>limit - max messages to return (default: 100)</li>
-     *   <li>topic - filter by exact topic match</li>
-     *   <li>topicPattern - filter by topic pattern (supports * and ?)</li>
-     *   <li>senderId - filter by sender ID</li>
-     * </ul>
-     */
-    /**
      * Lists the conversations the sniffer has captured, with each one's message count.
      *
      * <p>What makes a flat message log readable is the conversation it belongs to. A dialogue
@@ -238,23 +231,23 @@ public class RestAPIHandler extends HttpServlet {
         sendSuccess(resp, messageHistory.findByConversation(conversationId));
     }
 
+    /**
+     * Handles GET /api/messages with optional query parameters.
+     *
+     * <p>Query parameters:
+     * <ul>
+     *   <li>limit - max messages to return (default: 100)</li>
+     *   <li>topic - filter by exact topic match</li>
+     *   <li>topicPattern - filter by topic pattern (supports * and ?)</li>
+     *   <li>senderId - filter by sender ID</li>
+     * </ul>
+     */
     private void handleGetMessages(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        // Parse limit parameter
-        int limit = 100;
-        String limitParam = req.getParameter("limit");
-        if (limitParam != null) {
-            try {
-                limit = Integer.parseInt(limitParam);
-                if (limit <= 0 || limit > 1000) {
-                    sendError(resp, HttpServletResponse.SC_BAD_REQUEST,
-                            "limit must be between 1 and 1000");
-                    return;
-                }
-            } catch (NumberFormatException e) {
-                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid limit parameter");
-                return;
-            }
+        OptionalInt parsed = parseLimit(req, resp);
+        if (parsed.isEmpty()) {
+            return;
         }
+        int limit = parsed.getAsInt();
 
         // Check if message history is available
         if (messageHistory == null) {
@@ -287,6 +280,78 @@ public class RestAPIHandler extends HttpServlet {
                 .collect(Collectors.toList());
 
         sendSuccess(resp, result);
+    }
+
+    /**
+     * Handles GET /api/deadletters, newest first.
+     *
+     * <p>This is the one console view that answers on every transport, because it reads a port
+     * rather than the sniffer. The sniffer captures through {@code FilterableSubscriber}, which
+     * no remote backend implements by design (ADR-020), so {@code /api/messages} shows nothing
+     * against Redis. A dead letter arrives here through whatever queue the runtime was built
+     * with: the bounded in-memory buffer by default, the Redis DLQ stream when the Redis
+     * factory supplies one.
+     *
+     * <p>Query parameters: {@code limit} - max entries to return (default: 100).
+     */
+    private void handleGetDeadLetters(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        OptionalInt parsed = parseLimit(req, resp);
+        if (parsed.isEmpty()) {
+            return;
+        }
+
+        List<Map<String, Object>> result = runtime.getDeadLetterQueue()
+                .recent(parsed.getAsInt())
+                .stream()
+                .map(RestAPIHandler::deadLetterToMap)
+                .collect(Collectors.toList());
+
+        sendSuccess(resp, result);
+    }
+
+    /**
+     * Flattens a dead letter into the shape the console renders: what failed, where it was
+     * headed, and why. The payload is rendered as a string because it arrives as whatever the
+     * transport's codec produced - a record in memory, a {@code Map} over Redis - and the
+     * console shows it rather than converting it.
+     */
+    private static Map<String, Object> deadLetterToMap(DeadLetter deadLetter) {
+        var message = deadLetter.message();
+        var map = new LinkedHashMap<String, Object>();
+        map.put("messageId", message.id());
+        map.put("topic", message.topic());
+        map.put("senderId", message.senderId());
+        map.put("recipientId", deadLetter.recipientId());
+        map.put("reason", deadLetter.reason());
+        map.put("attempts", deadLetter.attempts());
+        map.put("deadLetteredAt", deadLetter.deadLetteredAt().toString());
+        map.put("payload", message.content() != null ? String.valueOf(message.content()) : null);
+        return map;
+    }
+
+    /**
+     * Reads the {@code limit} query parameter shared by the message and dead-letter listings.
+     *
+     * @return the limit, or empty when the parameter was rejected - in which case the error
+     *         response has already been written and the caller must return
+     */
+    private OptionalInt parseLimit(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String limitParam = req.getParameter("limit");
+        if (limitParam == null) {
+            return OptionalInt.of(100);
+        }
+        try {
+            int limit = Integer.parseInt(limitParam);
+            if (limit <= 0 || limit > 1000) {
+                sendError(resp, HttpServletResponse.SC_BAD_REQUEST,
+                        "limit must be between 1 and 1000");
+                return OptionalInt.empty();
+            }
+            return OptionalInt.of(limit);
+        } catch (NumberFormatException e) {
+            sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid limit parameter");
+            return OptionalInt.empty();
+        }
     }
 
     private void handleGetStats(HttpServletRequest req, HttpServletResponse resp) throws IOException {

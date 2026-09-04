@@ -38,6 +38,10 @@
                     <h3>System Health</h3>
                     <div class="stat-value" id="health-status">-</div>
                 </div>
+                <div class="stat-card">
+                    <h3>Dead Letters</h3>
+                    <div class="stat-value" id="dead-letter-count">-</div>
+                </div>
             </section>
 
             <!-- Agents Section -->
@@ -49,6 +53,18 @@
 
                 <div id="agents-list" class="agents-list">
                     <div class="loading">Loading agents...</div>
+                </div>
+            </section>
+
+            <!-- Dead Letters Section -->
+            <section class="deadletters-section">
+                <div class="section-header">
+                    <h2>Dead Letters</h2>
+                    <button id="refresh-deadletters-btn" class="btn btn-secondary">🔄 Refresh</button>
+                </div>
+
+                <div id="deadletters-log" class="events-log">
+                    <div class="event">No dead letters.</div>
                 </div>
             </section>
 

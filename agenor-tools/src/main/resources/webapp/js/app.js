@@ -9,6 +9,7 @@ const API_BASE = '/api';
 let agents = [];
 let stats = null;
 let eventLog = [];
+let deadLetters = [];
 
 /**
  * Fetch data from API.
@@ -87,6 +88,67 @@ async function loadHealth() {
     } catch (error) {
         console.error('Failed to load health:', error);
     }
+}
+
+/**
+ * Load the dead letters the runtime has recorded.
+ *
+ * This is the one panel that fills in on every transport: it reads the runtime's dead-letter
+ * queue, not the sniffer, which captures nothing against a remote backend by design.
+ */
+async function loadDeadLetters() {
+    try {
+        deadLetters = await fetchAPI('/deadletters?limit=50');
+        renderDeadLetters();
+    } catch (error) {
+        console.error('Failed to load dead letters:', error);
+    }
+}
+
+/**
+ * Escape text that came from a message payload or an exception before it reaches innerHTML.
+ */
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/**
+ * Render dead letters, newest first.
+ */
+function renderDeadLetters() {
+    const container = document.getElementById('deadletters-log');
+    const counter = document.getElementById('dead-letter-count');
+
+    if (counter) {
+        counter.textContent = deadLetters.length;
+        counter.style.color = deadLetters.length > 0 ? 'var(--danger)' : 'var(--primary)';
+    }
+
+    if (!container) return;
+
+    if (!deadLetters || deadLetters.length === 0) {
+        container.innerHTML = '<div class="event">No dead letters.</div>';
+        return;
+    }
+
+    container.innerHTML = deadLetters.map(entry => `
+        <div class="event error">
+            <span class="event-time">${escapeHtml(entry.deadLetteredAt)}</span>
+            <strong>${escapeHtml(entry.topic || entry.recipientId || 'unknown')}</strong>
+            &mdash; ${escapeHtml(entry.reason)}
+            <div class="agent-meta">
+                <span>Message: ${escapeHtml(entry.messageId)}</span>
+                <span>From: ${escapeHtml(entry.senderId) || '-'}</span>
+                <span>To: ${escapeHtml(entry.recipientId) || '-'}</span>
+                <span>Attempts: ${escapeHtml(entry.attempts)}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 /**
@@ -226,7 +288,8 @@ async function refreshAll() {
     await Promise.all([
         loadAgents(),
         loadStats(),
-        loadHealth()
+        loadHealth(),
+        loadDeadLetters()
     ]);
 }
 
@@ -247,6 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshAll);
+    }
+
+    // Refresh dead letters button
+    const refreshDeadLettersBtn = document.getElementById('refresh-deadletters-btn');
+    if (refreshDeadLettersBtn) {
+        refreshDeadLettersBtn.addEventListener('click', loadDeadLetters);
     }
 
     // Clear events button

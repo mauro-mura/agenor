@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import dev.agenor.core.Message;
 import dev.agenor.runtime.AgenorRuntime;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -141,6 +142,67 @@ class JettyWebConsoleTest {
 
     @Test
     @Order(9)
+    void deadLettersAreEmptyBeforeAnythingFails() throws Exception {
+        var response = get("/api/deadletters");
+        assertThat(response.statusCode()).isEqualTo(200);
+
+        JsonNode json = objectMapper.readTree(response.body());
+        assertThat(json.get("success").asBoolean()).isTrue();
+        assertThat(json.get("data")).isEmpty();
+    }
+
+    /**
+     * The console's reason to exist: a handler fails, and the message that failed is visible
+     * over HTTP instead of only in a log line. Nothing here reaches into the queue - the
+     * message goes in through the dispatcher and comes back out through the REST API.
+     */
+    @Test
+    @Order(10)
+    void deadLetterFromAFailedHandlerIsVisibleOverHttp() throws Exception {
+        var dispatcher = runtime.getMessageDispatcher();
+        dispatcher.subscribeTopic("console.failing", msg -> {
+            throw new IllegalStateException("handler exploded");
+        });
+
+        dispatcher.publish(Message.builder()
+                .topic("console.failing")
+                .senderId("console-test")
+                .content("the payload an operator has to re-send by hand")
+                .build()).join();
+
+        JsonNode entry = awaitFirstDeadLetter();
+
+        assertThat(entry.get("topic").asText()).isEqualTo("console.failing");
+        assertThat(entry.get("senderId").asText()).isEqualTo("console-test");
+        assertThat(entry.get("reason").asText())
+                .isEqualTo("IllegalStateException: handler exploded");
+        assertThat(entry.get("attempts").asInt()).isEqualTo(1);
+        assertThat(entry.get("deadLetteredAt").asText()).isNotBlank();
+        assertThat(entry.get("payload").asText())
+                .isEqualTo("the payload an operator has to re-send by hand");
+    }
+
+    @Test
+    @Order(11)
+    void deadLettersRejectAnOutOfRangeLimit() throws Exception {
+        var response = get("/api/deadletters?limit=0");
+        assertThat(response.statusCode()).isEqualTo(400);
+    }
+
+    private JsonNode awaitFirstDeadLetter() throws Exception {
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            JsonNode data = objectMapper.readTree(get("/api/deadletters").body()).get("data");
+            if (!data.isEmpty()) {
+                return data.get(0);
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("no dead letter appeared on /api/deadletters within 5s");
+    }
+
+    @Test
+    @Order(12)
     void shouldConnectWebSocket() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         List<String> messages = new ArrayList<>();
