@@ -7,6 +7,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-09
+
+### Added
+
+- **`docs/knowledge.md`** — how `KnowledgeStore` and `EmbeddingProvider` fit together, what
+  `dimensions()` and `modelId()` are for, and the `ErrorType` cases worth branching on. The page
+  exists because the types finally have a user, not the other way round.
+
+- **`EMBEDDING_BACKEND` for the examples**, through `ExampleEmbeddingProvider`, on the same terms
+  `LLM_BACKEND` already used: local Ollama by default **regardless** of which `*_API_KEY` happens
+  to be in the shell. `SupportChatbotExample` previously used OpenAI whenever `OPENAI_API_KEY`
+  was set, which is the silent paid-backend behaviour `ExampleLLMProvider` was written to avoid.
+
+### Changed
+
+- **LangChain4j 1.12.2 → 1.20.0**, seven minors in one step. Verified before the bump rather
+  than after: `javap` over every type agenor names — 11 core classes and the 8 provider builders,
+  i.e. every `import dev.langchain4j.*` in the tree — reports **zero removed methods** and
+  nothing deprecated on that surface. `Response`, `EmbeddingModel.embedAll(List<TextSegment>)`,
+  `ToolSpecification` and the four exception types the embedding classifier branches on all
+  survive unchanged.
+
+  `OllamaEmbeddingProvider` gets `.dimensions(...)` back on its builder. It was dropped one
+  release earlier with a comment explaining that LangChain4j 1.12.x had no such method; 1.19
+  added it, and the comment goes with the workaround.
+
+  On the classpath: `langchain4j-reactive-streaming:1.20.0-beta30` is new — a beta-versioned
+  artifact that the *stable* `langchain4j-open-ai` and `-anthropic` depend on, which is
+  LangChain4j's own versioning rather than a preview opt-in here. `mutiny-zero` moves 1.1.1 →
+  1.3.1 and `jspecify` 1.0.0 → 1.0.1. Nothing else moved.
+
+- **Jackson 2.21.1 → 2.22.1 and slf4j 2.0.17 → 2.0.18**, forced by the above. These are floors,
+  not preferences: LangChain4j 1.20.0 requires them and the enforcer's `requireUpperBoundDeps`
+  fails when a transitive asks for more than the managed version. `jackson-annotations` tracks a
+  shorter scheme (2.22, not 2.22.1) — Jackson's versioning, not a typo.
+
+- **`mutiny-zero` is pinned to 1.3.1 project-wide.** LangChain4j 1.20.0 pulls it via
+  `langchain4j-reactive-streaming`; the A2A SDK 0.3.2.Final pulls 1.1.1, and
+  `dependencyConvergence` fails on the split — correctly. 1.3.1 is binary-compatible for the
+  surface A2A actually uses: `Tube`, `TubeConfiguration.withBackpressureStrategy`/`withBufferSize`,
+  `BackpressureStrategy`, `ZeroPublisher.create` and `operators.Transform` are identical across
+  the two releases, checked with `javap` against the A2A jars' own bytecode references rather
+  than inferred from the version numbers.
+
+  The pin sits in the **root** pom, not in `agenor-adapters`. `dependencyManagement` travels down
+  the parent chain, not across a dependency edge, so pinned in the adapter module
+  `agenor-examples` still saw the split.
+
+- **The OpenAI and Ollama embedding providers are backed by LangChain4j**, like the LLM providers
+  beside them, replacing ~300 lines of hand-rolled `java.net.http` and Jackson. No new dependency:
+  `langchain4j-open-ai` and `langchain4j-ollama` were already non-optional here.
+  `EmbeddingProvider`, `EmbeddingException` and `EmbeddingProviderFactory`'s signatures are
+  unchanged. Two behaviour improvements come with it: failures are classified into
+  `AUTHENTICATION` / `RATE_LIMIT` / `MODEL_NOT_FOUND` / `NETWORK` / `SERVER_ERROR` rather than by
+  HTTP status — the Ollama provider previously answered `SERVER_ERROR` to everything — and blank
+  input is rejected as `INVALID_INPUT` instead of being sent.
+
+  **Why this and not a deprecation.** All five embedding types scored as unused surface, and the
+  reason turned out to be the opposite of the usual one: `SupportChatbotExample` needed embeddings
+  and had reimplemented them against LangChain4j directly, hand-rolling a 146-line provider factory
+  of its own. The one place that needed the abstraction had walked around it. Deprecating would
+  have deleted the answer and left the need — anyone doing retrieval over an LLM needs embeddings.
+  The example now uses `EmbeddingProvider`, and its `EmbeddingConfig` is gone.
+
+- **`HybridKnowledgeStore` takes an `EmbeddingProvider` and no dimension count.** The provider
+  already knows how wide its vectors are, so there is nothing left for a caller to get wrong. It
+  also embeds the corpus in **one batched call** instead of one request per document, and
+  `isEmbeddingsEnabled()` now reports whether embeddings are actually contributing rather than
+  whether a provider was supplied — an unreachable backend leaves the store on TF-IDF, and saying
+  otherwise misreported where the answers came from.
+
+### Removed
+
+- **BREAKING (transitive classpath): `agenor-adapters` no longer brings in the `langchain4j`
+  aggregate**, only `langchain4j-core` plus the three provider modules. Nothing in the tree
+  imported the aggregate: it carries AI services, chains, chat memory, document loaders and the
+  in-memory embedding store, and none of those packages appears in an import or a fully-qualified
+  name anywhere. `ToolSpecification`, the one type that looked like it justified the dependency,
+  lives in core.
+
+  `opennlp-tools` (1.3 MB) leaves with it — a natural-language toolkit nothing here calls,
+  inherited purely through the aggregate.
+
+  **What breaks:** code reaching LangChain4j's AI services, chains or chat memory *through*
+  agenor rather than declaring them. That was always an accident of packaging; declare
+  `dev.langchain4j:langchain4j` in your own project if you want it.
+
+  This is the zero-usage rule one level down from the census: offered surface that nothing names.
+
+- **BREAKING: `WebConsoleServer`**, `@Deprecated(since = "0.4.0")` and superseded by
+  `JettyWebConsole` per ADR-008, with zero uses outside its own test. Twenty-nine releases is
+  window enough. The deprecated two-argument `RestAPIHandler` constructor went with it;
+  `RestAPIHandler` itself is unchanged and is what `JettyWebConsole` builds.
+
+  It survived that long because the deprecation carried `since` and nothing else. The removal
+  audit reads `forRemoval = true` sites, so a deprecation that never promised a removal could not
+  be overdue, could not be undated, and could not be flagged — see the tooling change below.
+
 ### Fixed
 
 - **BREAKING (Redis): a message addressed to a node that has not started yet is no longer
@@ -57,106 +155,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as `UNKNOWN` — the least useful answer available for the most common failure. Every unit test
   passed while it did, because they threw the library's exceptions directly. The classifier walks
   the cause chain and there is a regression test for the wrapped shape.
-
-### Changed
-
-- **LangChain4j 1.12.2 → 1.20.0**, seven minors in one step. Verified before the bump rather
-  than after: `javap` over every type agenor names — 11 core classes and the 8 provider builders,
-  i.e. every `import dev.langchain4j.*` in the tree — reports **zero removed methods** and
-  nothing deprecated on that surface. `Response`, `EmbeddingModel.embedAll(List<TextSegment>)`,
-  `ToolSpecification` and the four exception types the embedding classifier branches on all
-  survive unchanged.
-
-  `OllamaEmbeddingProvider` gets `.dimensions(...)` back on its builder. It was dropped one
-  release earlier with a comment explaining that LangChain4j 1.12.x had no such method; 1.19
-  added it, and the comment goes with the workaround.
-
-  On the classpath: `langchain4j-reactive-streaming:1.20.0-beta30` is new — a beta-versioned
-  artifact that the *stable* `langchain4j-open-ai` and `-anthropic` depend on, which is
-  LangChain4j's own versioning rather than a preview opt-in here. `mutiny-zero` moves 1.1.1 →
-  1.3.1 and `jspecify` 1.0.0 → 1.0.1. Nothing else moved.
-
-- **Jackson 2.21.1 → 2.22.1 and slf4j 2.0.17 → 2.0.18**, forced by the above. These are floors,
-  not preferences: LangChain4j 1.20.0 requires them and the enforcer's `requireUpperBoundDeps`
-  fails when a transitive asks for more than the managed version. `jackson-annotations` tracks a
-  shorter scheme (2.22, not 2.22.1) — Jackson's versioning, not a typo.
-
-- **`mutiny-zero` is pinned to 1.3.1 project-wide.** LangChain4j 1.20.0 pulls it via
-  `langchain4j-reactive-streaming`; the A2A SDK 0.3.2.Final pulls 1.1.1, and
-  `dependencyConvergence` fails on the split — correctly. 1.3.1 is binary-compatible for the
-  surface A2A actually uses: `Tube`, `TubeConfiguration.withBackpressureStrategy`/`withBufferSize`,
-  `BackpressureStrategy`, `ZeroPublisher.create` and `operators.Transform` are identical across
-  the two releases, checked with `javap` against the A2A jars' own bytecode references rather
-  than inferred from the version numbers.
-
-  The pin sits in the **root** pom, not in `agenor-adapters`. `dependencyManagement` travels down
-  the parent chain, not across a dependency edge, so pinned in the adapter module
-  `agenor-examples` still saw the split.
-
-### Removed
-
-- **BREAKING (transitive classpath): `agenor-adapters` no longer brings in the `langchain4j`
-  aggregate**, only `langchain4j-core` plus the three provider modules. Nothing in the tree
-  imported the aggregate: it carries AI services, chains, chat memory, document loaders and the
-  in-memory embedding store, and none of those packages appears in an import or a fully-qualified
-  name anywhere. `ToolSpecification`, the one type that looked like it justified the dependency,
-  lives in core.
-
-  `opennlp-tools` (1.3 MB) leaves with it — a natural-language toolkit nothing here calls,
-  inherited purely through the aggregate.
-
-  **What breaks:** code reaching LangChain4j's AI services, chains or chat memory *through*
-  agenor rather than declaring them. That was always an accident of packaging; declare
-  `dev.langchain4j:langchain4j` in your own project if you want it.
-
-  This is the zero-usage rule one level down from the census: offered surface that nothing names.
-
-### Added
-
-- **`docs/knowledge.md`** — how `KnowledgeStore` and `EmbeddingProvider` fit together, what
-  `dimensions()` and `modelId()` are for, and the `ErrorType` cases worth branching on. The page
-  exists because the types finally have a user, not the other way round.
-
-- **`EMBEDDING_BACKEND` for the examples**, through `ExampleEmbeddingProvider`, on the same terms
-  `LLM_BACKEND` already used: local Ollama by default **regardless** of which `*_API_KEY` happens
-  to be in the shell. `SupportChatbotExample` previously used OpenAI whenever `OPENAI_API_KEY`
-  was set, which is the silent paid-backend behaviour `ExampleLLMProvider` was written to avoid.
-
-### Changed
-
-- **The OpenAI and Ollama embedding providers are backed by LangChain4j**, like the LLM providers
-  beside them, replacing ~300 lines of hand-rolled `java.net.http` and Jackson. No new dependency:
-  `langchain4j-open-ai` and `langchain4j-ollama` were already non-optional here.
-  `EmbeddingProvider`, `EmbeddingException` and `EmbeddingProviderFactory`'s signatures are
-  unchanged. Two behaviour improvements come with it: failures are classified into
-  `AUTHENTICATION` / `RATE_LIMIT` / `MODEL_NOT_FOUND` / `NETWORK` / `SERVER_ERROR` rather than by
-  HTTP status — the Ollama provider previously answered `SERVER_ERROR` to everything — and blank
-  input is rejected as `INVALID_INPUT` instead of being sent.
-
-  **Why this and not a deprecation.** All five embedding types scored as unused surface, and the
-  reason turned out to be the opposite of the usual one: `SupportChatbotExample` needed embeddings
-  and had reimplemented them against LangChain4j directly, hand-rolling a 146-line provider factory
-  of its own. The one place that needed the abstraction had walked around it. Deprecating would
-  have deleted the answer and left the need — anyone doing retrieval over an LLM needs embeddings.
-  The example now uses `EmbeddingProvider`, and its `EmbeddingConfig` is gone.
-
-- **`HybridKnowledgeStore` takes an `EmbeddingProvider` and no dimension count.** The provider
-  already knows how wide its vectors are, so there is nothing left for a caller to get wrong. It
-  also embeds the corpus in **one batched call** instead of one request per document, and
-  `isEmbeddingsEnabled()` now reports whether embeddings are actually contributing rather than
-  whether a provider was supplied — an unreachable backend leaves the store on TF-IDF, and saying
-  otherwise misreported where the answers came from.
-
-### Removed
-
-- **BREAKING: `WebConsoleServer`**, `@Deprecated(since = "0.4.0")` and superseded by
-  `JettyWebConsole` per ADR-008, with zero uses outside its own test. Twenty-nine releases is
-  window enough. The deprecated two-argument `RestAPIHandler` constructor went with it;
-  `RestAPIHandler` itself is unchanged and is what `JettyWebConsole` builds.
-
-  It survived that long because the deprecation carried `since` and nothing else. The removal
-  audit reads `forRemoval = true` sites, so a deprecation that never promised a removal could not
-  be overdue, could not be undated, and could not be flagged — see the tooling change below.
 
 ### Tooling
 
@@ -2445,7 +2443,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.32.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.33.0...HEAD
+[0.33.0]: https://github.com/mauro-mura/agenor/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/mauro-mura/agenor/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/mauro-mura/agenor/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/mauro-mura/agenor/compare/v0.29.0...v0.30.0
