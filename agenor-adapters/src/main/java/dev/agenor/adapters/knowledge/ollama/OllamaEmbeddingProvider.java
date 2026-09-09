@@ -49,12 +49,10 @@ public class OllamaEmbeddingProvider implements EmbeddingProvider {
     public OllamaEmbeddingProvider(String baseUrl, String model, int dimensions) {
         this.model      = model;
         this.dimensions = dimensions;
-        // No dimensions() on this builder in LangChain4j 1.12.x - the Ollama model reports its
-        // own. The declared count stays ours: it is what a vector store has to be sized with,
-        // and it must be known without a round trip.
         this.client     = OllamaEmbeddingModel.builder()
                 .baseUrl(baseUrl.stripTrailing())
                 .modelName(model)
+                .dimensions(dimensions)
                 .build();
     }
 
