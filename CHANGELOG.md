@@ -124,6 +124,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already had, one rescored. `documented, unnamed` did not move (95 of 263), and every verdict
   that changed did so because the code changed, not because a page appeared or disappeared.
 
+### Documentation
+
+- **Three false claims removed from user-facing pages**, none of which any test could catch:
+  `docs/messaging.md` still said `MessageService` "is deprecated in 0.20.0 and will be removed in
+  0.22.0" and that a compatibility bridge kept old code compiling — the type has not existed
+  since 0.22.0, eleven releases ago; the same page's custom-backend sample constructed a
+  `RedisMessageDispatcher` from a Spring `RedisTemplate`, which is not how that adapter is built;
+  and `docs/directory.md` showed a `RedisAgentRegistry` that has never existed, the Redis adapter
+  covering messaging only.
+
+- `docs/messaging.md` opens with what the page is for instead of what it replaced in 0.20.0 (C-4).
+
 ## [0.32.0] - 2026-09-05
 
 ### Added

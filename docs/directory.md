@@ -249,17 +249,21 @@ To plug in a custom directory backend (Redis, JDBC, etc.):
 ```java
 // Spring Boot
 @Bean
-public AgentRegistry redisAgentRegistry(RedisTemplate<String, AgentDescriptor> template) {
-    return new RedisAgentRegistry(template);
+public AgentRegistry myAgentRegistry(MyBackend backend) {
+    return new MyAgentRegistry(backend);
 }
 
-// Programmatic
+// Programmatic — one object may implement several of the four capabilities
+var registry = new MyAgentRegistry(backend);
 AgenorRuntime runtime = AgenorRuntime.builder()
-    .agentRegistry(new RedisAgentRegistry(template))
-    .agentResolver(new RedisAgentRegistry(template))
-    .agentDiscovery(new RedisAgentRegistry(template))
-    .agentPresence(new RedisAgentRegistry(template))
+    .agentRegistry(registry)
+    .agentResolver(registry)
+    .agentDiscovery(registry)
+    .agentPresence(registry)
     .build();
 ```
 
 The runtime will use your implementation instead of the default `InMemoryAgentDirectory`.
+
+JDBC is already written — see [JDBC Directory](adapters/jdbc-directory.md). There is no Redis
+directory: the Redis adapter covers messaging only.

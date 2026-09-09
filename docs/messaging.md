@@ -1,6 +1,6 @@
 # Messaging
 
-This document describes Agenor's messaging API introduced in **0.20.0**. It replaces the monolithic `MessageService` with a set of capability-sized interfaces designed to work with both in-memory and distributed backends.
+How one agent reaches another: publish to a topic, send to a named recipient, and what happens when delivery fails. The API is a set of capability-sized interfaces, so the same code runs over the in-memory dispatcher and over a distributed backend.
 
 ## Overview
 
@@ -273,21 +273,6 @@ Every `publish` and `sendTo` call creates an OpenTelemetry span named `message.s
 | `agent.sender` | `msg.senderId()` |
 | `endpoint.type` | resolved transport type (sendTo only) |
 
-## Migration from MessageService (0.19.x → 0.20.0)
-
-`MessageService` is deprecated in 0.20.0 and will be removed in 0.22.0. The table below shows the mapping:
-
-| Old API | New API |
-|---------|---------|
-| `messageService.send(msg)` | `dispatcher.publish(msg)` or `dispatcher.sendTo(msg)` |
-| `messageService.subscribe(topic, handler)` | `dispatcher.subscribeTopic(topic, handler)` |
-| `messageService.subscribe(filter, handler)` | `dispatcher.subscribeFiltered(filter, handler)` |
-| `messageService.unsubscribe(id)` | `subscription.unsubscribe()` |
-| `runtime.getMessageService()` | `runtime.getMessageDispatcher()` |
-| `new InMemoryMessageService()` | `new InMemoryMessageDispatcher(directory)` |
-
-Existing code that uses `MessageService` continues to compile without changes via backward-compat bridge methods. Migrate at your own pace before 0.22.0.
-
 ## Custom Backends
 
 To plug in a custom messaging backend (Redis Streams, Kafka, etc.):
@@ -296,11 +281,13 @@ To plug in a custom messaging backend (Redis Streams, Kafka, etc.):
 2. Register it as a Spring bean or pass it to `AgenorRuntime.Builder.messageDispatcher()`.
 
 ```java
-// Custom Redis-backed dispatcher (example)
 @Bean
-public MessageDispatcher redisMessageDispatcher(RedisTemplate<String, Message> template) {
-    return new RedisMessageDispatcher(template);
+public MessageDispatcher myMessageDispatcher() {
+    return new MyMessageDispatcher(/* ... */);
 }
 ```
+
+Redis is already written: `RedisMessagingFactory` in `agenor-adapters` hands you a
+`MessageDispatcher` over Redis Streams. See [Redis messaging](adapters/redis.md).
 
 The runtime will use your implementation instead of the default `InMemoryMessageDispatcher`.
