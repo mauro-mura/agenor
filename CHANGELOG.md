@@ -58,6 +58,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   passed while it did, because they threw the library's exceptions directly. The classifier walks
   the cause chain and there is a regression test for the wrapped shape.
 
+### Changed
+
+- **LangChain4j 1.12.2 → 1.20.0**, seven minors in one step. Verified before the bump rather
+  than after: `javap` over every type agenor names — 11 core classes and the 8 provider builders,
+  i.e. every `import dev.langchain4j.*` in the tree — reports **zero removed methods** and
+  nothing deprecated on that surface. `Response`, `EmbeddingModel.embedAll(List<TextSegment>)`,
+  `ToolSpecification` and the four exception types the embedding classifier branches on all
+  survive unchanged.
+
+  `OllamaEmbeddingProvider` gets `.dimensions(...)` back on its builder. It was dropped one
+  release earlier with a comment explaining that LangChain4j 1.12.x had no such method; 1.19
+  added it, and the comment goes with the workaround.
+
+  On the classpath: `langchain4j-reactive-streaming:1.20.0-beta30` is new — a beta-versioned
+  artifact that the *stable* `langchain4j-open-ai` and `-anthropic` depend on, which is
+  LangChain4j's own versioning rather than a preview opt-in here. `mutiny-zero` moves 1.1.1 →
+  1.3.1 and `jspecify` 1.0.0 → 1.0.1. Nothing else moved.
+
+- **Jackson 2.21.1 → 2.22.1 and slf4j 2.0.17 → 2.0.18**, forced by the above. These are floors,
+  not preferences: LangChain4j 1.20.0 requires them and the enforcer's `requireUpperBoundDeps`
+  fails when a transitive asks for more than the managed version. `jackson-annotations` tracks a
+  shorter scheme (2.22, not 2.22.1) — Jackson's versioning, not a typo.
+
+- **`mutiny-zero` is pinned to 1.3.1 project-wide.** LangChain4j 1.20.0 pulls it via
+  `langchain4j-reactive-streaming`; the A2A SDK 0.3.2.Final pulls 1.1.1, and
+  `dependencyConvergence` fails on the split — correctly. 1.3.1 is binary-compatible for the
+  surface A2A actually uses: `Tube`, `TubeConfiguration.withBackpressureStrategy`/`withBufferSize`,
+  `BackpressureStrategy`, `ZeroPublisher.create` and `operators.Transform` are identical across
+  the two releases, checked with `javap` against the A2A jars' own bytecode references rather
+  than inferred from the version numbers.
+
+  The pin sits in the **root** pom, not in `agenor-adapters`. `dependencyManagement` travels down
+  the parent chain, not across a dependency edge, so pinned in the adapter module
+  `agenor-examples` still saw the split.
+
 ### Added
 
 - **`docs/knowledge.md`** — how `KnowledgeStore` and `EmbeddingProvider` fit together, what

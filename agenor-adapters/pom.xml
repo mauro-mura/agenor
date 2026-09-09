@@ -16,7 +16,7 @@
     <description>Advanced adapters for external integrations</description>
 
     <properties>
-        <langchain4j.version>1.12.2</langchain4j.version>
+        <langchain4j.version>1.20.0</langchain4j.version>
         <a2a.sdk.version>0.3.2.Final</a2a.sdk.version>
         <mcp.sdk.version>1.0.0</mcp.sdk.version>
         <!-- OTel version managed here, not in the BOM — optional dep per ADR-018 -->
@@ -34,6 +34,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 
