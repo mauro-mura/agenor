@@ -54,10 +54,16 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- LangChain4j Core -->
+        <!--
+          langchain4j-core, not the langchain4j aggregate. The aggregate carries AI services,
+          chains, chat memory, document loaders and the in-memory embedding store - none of
+          which this module imports - and drags in opennlp-tools with them. Everything we
+          actually name (ToolSpecification, the data.message and model.chat types, the
+          exception hierarchy) lives in core.
+        -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
+            <artifactId>langchain4j-core</artifactId>
         </dependency>
 
         <!-- Top 3 Providers: OpenAI, Anthropic, Ollama -->

@@ -93,6 +93,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the parent chain, not across a dependency edge, so pinned in the adapter module
   `agenor-examples` still saw the split.
 
+### Removed
+
+- **BREAKING (transitive classpath): `agenor-adapters` no longer brings in the `langchain4j`
+  aggregate**, only `langchain4j-core` plus the three provider modules. Nothing in the tree
+  imported the aggregate: it carries AI services, chains, chat memory, document loaders and the
+  in-memory embedding store, and none of those packages appears in an import or a fully-qualified
+  name anywhere. `ToolSpecification`, the one type that looked like it justified the dependency,
+  lives in core.
+
+  `opennlp-tools` (1.3 MB) leaves with it — a natural-language toolkit nothing here calls,
+  inherited purely through the aggregate.
+
+  **What breaks:** code reaching LangChain4j's AI services, chains or chat memory *through*
+  agenor rather than declaring them. That was always an accident of packaging; declare
+  `dev.langchain4j:langchain4j` in your own project if you want it.
+
+  This is the zero-usage rule one level down from the census: offered surface that nothing names.
+
 ### Added
 
 - **`docs/knowledge.md`** — how `KnowledgeStore` and `EmbeddingProvider` fit together, what

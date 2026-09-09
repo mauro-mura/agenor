@@ -49,8 +49,15 @@ dev.agenor.adapters
 </dependency>
 ```
 
-This module depends on `agenor-core` and brings in `langchain4j` (LLM transport), the `io.a2a`
-Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP protocol).
+This module depends on `agenor-core` and brings in `langchain4j-core` plus the three provider
+modules it needs (`langchain4j-open-ai`, `-anthropic`, `-ollama`) for LLM and embedding
+transport, the `io.a2a` Java SDK (A2A protocol), and the `io.modelcontextprotocol.sdk` (MCP
+protocol).
+
+Deliberately **not** the `langchain4j` aggregate: it carries AI services, chains, chat memory,
+document loaders and an in-memory embedding store that nothing here imports, and pulls
+`opennlp-tools` along with them. If you want those, declare the aggregate in your own project -
+it is not something to inherit by accident.
 
 ---
 
