@@ -160,6 +160,20 @@ topic each receive a copy even within the same JVM.
 `subscribeRecipient` also starts a node-stream consumer loop on the first call (lazy,
 thread-safe double-checked locking). Subsequent registrations share the same loop.
 
+**A node stream is a mailbox, not a broadcast.** Its consumer group is created at offset `0`,
+when `RedisMessagingFactory.build()` constructs the transport — before any agent has subscribed
+and independently of whether one ever does. A message addressed to an agent on a node that is
+starting up, or that has not started yet, waits in the stream and is delivered when the node
+comes up. Topic groups are different by design: they are created at `$`, so a subscriber gets
+what is published from the moment it subscribes and nothing earlier.
+
+Two consequences worth planning for:
+
+- **Reuse a `nodeId` and you inherit its mail.** Whatever its stream still holds, within
+  `maxStreamLength`, is delivered to the new node. Give an unrelated deployment its own ID.
+- **A node that never comes back keeps a stream.** Nothing expires it; trimming bounds its
+  size, not its existence. `DEL agenor:node:<nodeId>` when you retire an ID for good.
+
 ---
 
 ## Delivery guarantees
@@ -169,6 +183,7 @@ thread-safe double-checked locking). Subsequent registrations share the same loo
 | Guarantee | **At-least-once** — messages are redelivered until `XACK`'d, including into agent handlers (ADR-033) |
 | Durability | Persisted in the Redis stream; survives broker restart with AOF/RDB |
 | Order | Per-stream FIFO within a consumer group |
+| Send before the recipient's node is up | Held in the node stream and delivered when it starts — the node group is created at offset `0` |
 | Fan-out | Each subscription receives every message exactly once (within that subscription) |
 | Handler contract | Handlers **must be idempotent** — the same message may be delivered more than once after a crash or timeout |
 

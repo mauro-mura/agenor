@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BREAKING (Redis): a message addressed to a node that has not started yet is no longer
+  skipped forever.** The node's inbound consumer group was created at offset `$`, lazily, on
+  the first `subscribeRecipient`. Every entry `XADD`ed to `agenor:node:<nodeId>` before that
+  moment was unreachable: still in the stream, still counted by `XLEN`, never in the group's
+  pending list — so neither `XREADGROUP` nor the loop's `XAUTOCLAIM` pass would return it, and
+  the dead-letter queue added in 0.32.0 could not see it either. A message that never enters a
+  group is not one the framework gave up on; it stopped existing.
+
+  Two windows were open, and the ordinary one was not the small one: an agent registered in the
+  directory but not yet started (`BaseAgent` subscribes on start), and a whole node that had not
+  come up — a rolling deploy.
+
+  The node group is now created at offset `0`, by `RedisMessageTransport`'s constructor rather
+  than by the first subscribe. **Topic groups are unchanged at `$`**: a topic subscriber asks
+  for what is published from now on, while a node stream's entries are addressed to an agent,
+  not to a subscription. `RedisStreamClient` offers both and the caller picks, because the
+  offset is a property of what the stream is for.
+
+  Creating at `0` replays nothing that was already handled — a group that has just been created
+  has consumed nothing, so `0` and `$` differ by exactly the entries being lost, and a group
+  that already exists keeps its offset.
+
+  **What this costs you: a `nodeId` now names a durable mailbox rather than a process.** Reuse
+  one and the new node inherits whatever that stream still holds, bounded by `maxStreamLength`.
+  Retire an ID for good with `DEL agenor:node:<nodeId>`. Recorded as an amendment to ADR-021,
+  with `docs/adapters/redis.md` and `docs/messaging.md`.
+
+  `RedisMessageTransportIT` pins both windows
+  (`send_beforeAnySubscriber_isDeliveredOnSubscribe`,
+  `send_toNodeThatNeverRan_isDeliveredWhenItStarts`). The first is a rewrite of a test that
+  asserted the loss.
+
+- **`RedisStreamClient.ensureConsumerGroup` said it avoided the race it left open.** Its Javadoc
+  claimed to be "intentionally synchronous so that callers can rely on the group existing before
+  publishing; avoids a race between subscribe and publish" — the group was only created on
+  subscribe, so a publish before that raced and lost. No test caught it; the sentence was the
+  only place the behaviour was described.
+
 ## [0.32.0] - 2026-09-05
 
 ### Added

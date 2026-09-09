@@ -90,13 +90,17 @@ final class ConsumerLoop {
     }
 
     /**
-     * Creates the consumer group synchronously (in the calling thread), then starts
-     * the blocking read loop on a virtual thread. By the time this method returns the
-     * group is guaranteed to exist, so messages published afterwards will be captured.
+     * Starts the blocking read loop on a virtual thread.
+     *
+     * <p>The consumer group must already exist: the caller creates it, because the
+     * offset it starts at is a property of what the stream is for and not of the loop.
+     * A topic group starts at {@code $} — a subscriber asks for what is published from
+     * now on. A node's inbound group starts at {@code 0}, because its entries are
+     * addressed to an agent rather than to a subscription, and one written before the
+     * group existed would otherwise be skipped permanently.
      */
     void start() {
         if (!running.compareAndSet(false, true)) return;
-        client.ensureConsumerGroup(streamKey, consumerGroup);
         loopThread = Thread.startVirtualThread(this::run);
     }
 

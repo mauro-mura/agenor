@@ -50,6 +50,7 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
         this.streamClient = Objects.requireNonNull(streamClient, "streamClient");
         this.config       = Objects.requireNonNull(config, "config");
         this.telemetry    = telemetry != null ? telemetry : AgenorTelemetry.noop();
+        ensureNodeConsumerGroup(config.nodeId());
     }
 
     // -------------------------------------------------------------------------
@@ -90,9 +91,13 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
      * Registers a handler for messages arriving at {@code local}.
      *
      * <p>{@link TransportEndpoint#address()} must be the node ID of this JVM (i.e.
-     * {@code config.nodeId()}). The transport creates a single consumer group
-     * ({@code <prefix>:cg:node}) on the node's inbound stream; all agents on this
-     * node share that group so each message is processed exactly once per node.
+     * {@code config.nodeId()}). All agents on this node share the single consumer
+     * group ({@code <prefix>:cg:node}) on the node's inbound stream, so each message
+     * is processed exactly once per node.
+     *
+     * <p>The group is not created here: it already exists, created at offset {@code 0}
+     * when this transport was constructed. Subscribing therefore also collects whatever
+     * arrived while the node was up but this agent had not yet started.
      *
      * @param local   the local node endpoint; {@code address()} must equal {@link RedisMessagingConfig#nodeId()}
      * @param handler the handler to invoke for each incoming direct message
@@ -108,6 +113,8 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
         var streamKey      = config.nodeStreamKey(nodeId);
         var consumerGroup  = config.nodeConsumerGroup();
         var consumerName   = config.consumerName();
+
+        ensureNodeConsumerGroup(nodeId);
 
         var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName,
         		handler, streamClient, config, telemetry);
@@ -128,6 +135,24 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
     public void close() {
         activeLoops.values().forEach(ConsumerLoop::stop);
         activeLoops.clear();
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal
+    // -------------------------------------------------------------------------
+
+    /**
+     * Creates this node's inbound consumer group at offset {@code 0} if it is absent.
+     *
+     * <p>Called from the constructor rather than from {@link #subscribe} because a
+     * direct send is addressed to an agent, not to a subscription: an entry written
+     * while the node was up but nothing had subscribed yet used to be skipped forever.
+     * Idempotent, so calling it again on every subscribe costs one BUSYGROUP reply and
+     * repairs the group if it was dropped out from under us.
+     */
+    private void ensureNodeConsumerGroup(String nodeId) {
+        streamClient.ensureConsumerGroupFromStart(
+                config.nodeStreamKey(nodeId), config.nodeConsumerGroup());
     }
 
     // -------------------------------------------------------------------------

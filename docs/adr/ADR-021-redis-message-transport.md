@@ -123,6 +123,46 @@ When a message arrives on `agenor:node:<nodeId>`, the dispatcher reads `receiver
 from the envelope and invokes the matching handler. No `InMemoryMessageDispatcher`
 is involved in the point-to-point path.
 
+### Consumer group offset — amendment, 2026-09-09 (0.33.0)
+
+The original decision created every consumer group at offset `$`, and said so nowhere. That is
+the right offset for a topic: a subscriber asks for what is published from now on, and a
+publisher writing before anyone listens is publishing to nobody by definition.
+
+**It was the wrong offset for a node's inbound stream, and the difference is that those entries
+are addressed to an agent, not to a subscription.** The node group was created lazily, on the
+first `subscribeRecipient` call. Anything `XADD`ed to `agenor:node:<nodeId>` before that moment
+was skipped permanently: still in the stream, still counted by `XLEN`, but never in the group's
+pending list, so neither `XREADGROUP` nor the loop's `XAUTOCLAIM` pass would ever return it — and
+the dead-letter path added in 0.32.0 could not see it either, because a message that never enters
+a group is not a message anyone gave up on. It simply stopped existing as far as the framework
+was concerned.
+
+Two windows were open. A node that was up with agents registered but not yet started, since
+`BaseAgent` subscribes on start; and a node that had not started at all, which is the ordinary
+condition of a rolling deploy.
+
+**Decision.** The node's inbound group is created at offset `0`, by `RedisMessageTransport`'s
+constructor rather than by the first subscribe. Topic groups are unchanged at `$`;
+`RedisStreamClient` now offers both (`ensureConsumerGroup`, `ensureConsumerGroupFromStart`) and
+the caller picks, because the offset is a property of what the stream is for and the consumer
+loop cannot know that.
+
+Creating at `0` replays nothing that was already handled: a group that has just been created has
+consumed nothing, so `0` and `$` differ by exactly the entries addressed to this node before it
+first came up — the ones being lost. A group that already exists keeps its own offset, so a
+restart resumes where it left off and `XGROUP CREATE` is a no-op.
+
+**The residual limitation, stated rather than discovered later.** Reusing a node ID whose stream
+still holds untrimmed entries will deliver them to the new node. Handlers must be idempotent
+already (ADR-032, ADR-033), and the backlog is bounded by `maxStreamLength`, but a node ID is now
+load-bearing in a way it was not: it identifies a mailbox that outlives the process. Do not
+recycle one for an unrelated deployment.
+
+Pinned by `RedisMessageTransportIT.send_beforeAnySubscriber_isDeliveredOnSubscribe` and
+`send_toNodeThatNeverRan_isDeliveredWhenItStarts`. Both windows were previously pinned by a
+single test asserting the loss.
+
 ### Message encoding
 
 Messages are serialised as JSON (Jackson, already a `agenor-core` dependency) and stored as
@@ -256,6 +296,8 @@ OTel spans emitted via `AgenorTelemetry` (ADR-019) for every:
   conservative.
 - Dead-letter stream adds operational surface (monitoring, replay tooling) that did not
   exist with in-memory messaging; addressed in `docs/adapters/redis.md`.
+- **A node ID identifies a durable mailbox, not just a process** (0.33.0, see the amendment
+  above). Reusing one delivers whatever its stream still holds to the new node.
 
 > **Scoped note, 0.32.0.** The second half of that last bullet no longer holds. The in-memory
 > transport now has a dead-letter queue too — see ADR-033's 2026-09-04 amendment — so the

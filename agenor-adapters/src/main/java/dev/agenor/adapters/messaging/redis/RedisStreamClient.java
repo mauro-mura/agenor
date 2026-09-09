@@ -57,23 +57,52 @@ final class RedisStreamClient implements AutoCloseable {
     }
 
     /**
-     * Creates the consumer group on {@code streamKey} if it does not already exist,
-     * using the shared write connection.
+     * Creates the consumer group on {@code streamKey} at offset {@code $} if it does
+     * not already exist, using the shared write connection.
      *
-     * <p>The group starts at offset {@code $} — only messages published after group
-     * creation are delivered. MKSTREAM ensures the stream itself is created if absent.
+     * <p>Only entries added after the group exists are delivered to it. Anything
+     * written to the stream beforehand is skipped permanently: it stays in the stream
+     * and is counted by {@code XLEN}, but never enters the group's pending list, so
+     * neither {@code XREADGROUP} nor {@code XAUTOCLAIM} will ever return it.
      *
-     * <p>This method is intentionally synchronous so that callers can rely on the
-     * group existing before publishing; avoids a race between subscribe and publish.
+     * <p>That is the right shape for a topic, where a subscriber asks for what is
+     * published from now on. It is the wrong shape for a node's inbound stream, whose
+     * entries are addressed to a specific agent — use
+     * {@link #ensureConsumerGroupFromStart} for those.
+     *
+     * <p>Synchronous by design: the group exists by the time this returns.
      */
     void ensureConsumerGroup(String streamKey, String group) {
+        createGroup(streamKey, group, XReadArgs.StreamOffset.latest(streamKey), "$");
+    }
+
+    /**
+     * Creates the consumer group on {@code streamKey} at offset {@code 0} if it does
+     * not already exist, so that entries written before the group existed are still
+     * delivered.
+     *
+     * <p>A group that has just been created has consumed nothing, so {@code 0} and
+     * {@code $} differ by exactly one thing: the entries addressed to this node before
+     * it first came up. Those are the messages a direct send would otherwise lose.
+     * A group that already exists keeps its own offset — this call is a no-op then, so
+     * a restart never replays what the previous run acknowledged.
+     *
+     * <p>The backlog is bounded by {@code maxStreamLength} trimming. Reusing a node ID
+     * whose stream still holds entries will therefore deliver them to the new node:
+     * see the 2026-09-09 amendment to ADR-021.
+     *
+     * <p>Synchronous by design: the group exists by the time this returns.
+     */
+    void ensureConsumerGroupFromStart(String streamKey, String group) {
+        createGroup(streamKey, group, XReadArgs.StreamOffset.from(streamKey, "0"), "0");
+    }
+
+    private void createGroup(String streamKey, String group,
+                             XReadArgs.StreamOffset<String> offset, String offsetLabel) {
         try {
-            writeConn.sync().xgroupCreate(
-                    XReadArgs.StreamOffset.latest(streamKey),
-                    group,
-                    XGroupCreateArgs.Builder.mkstream()
-            );
-            log.debug("Created consumer group '{}' on stream '{}'", group, streamKey);
+            writeConn.sync().xgroupCreate(offset, group, XGroupCreateArgs.Builder.mkstream());
+            log.debug("Created consumer group '{}' on stream '{}' at offset {}",
+                    group, streamKey, offsetLabel);
         } catch (RedisBusyException e) {
             log.trace("Consumer group '{}' already exists on '{}'", group, streamKey);
         }

@@ -243,6 +243,24 @@ AgenorRuntime.builder()
 Recording is not retrying, and it is not supervision: nothing restarts an agent or backs off on
 its behalf. The failure becomes visible; deciding what to do about it is still yours.
 
+### Sending to an agent that has not started
+
+An agent is in the directory from the moment it is registered, but it subscribes when it starts,
+so there is a window in which `sendTo` resolves a recipient that is not listening yet. The two
+transports answer differently, and both answers are deliberate:
+
+- **In memory**, the message is dead-lettered, with the reason
+  `AgentNotFoundException: no handler is subscribed for agent '<id>'`. That transport hands off
+  synchronously to a subscriber map — there is nowhere to park a message and no redelivery to
+  give it a second chance, so recording it is the only honest answer.
+- **On Redis**, the message waits in the recipient node's stream and is delivered when that node
+  comes up, whether the wait is milliseconds or a deploy. See
+  [Redis messaging](adapters/redis.md#point-to-point-mechanics) for what that costs you: a
+  `nodeId` names a durable mailbox.
+
+Neither is a case in the cross-transport contract suite, because there is no single answer for
+it to assert.
+
 ## Observability
 
 Every `publish` and `sendTo` call creates an OpenTelemetry span named `message.send` with the following attributes:

@@ -23,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -164,13 +166,29 @@ class RedisMessageTransportTest {
     class SubscribeConsumerGroup {
 
         @Test
-        @DisplayName("subscribe creates the consumer group synchronously on the node stream")
-        void subscribe_createsConsumerGroupOnNodeStream() {
+        @DisplayName("constructing the transport creates the node group, before any subscribe")
+        void construction_createsConsumerGroupFromStart() {
+            // setUp() built the transport and nothing else has run.
+            verify(streamClient).ensureConsumerGroupFromStart(
+                    eq("agenor:node:node-1"),
+                    eq(config.nodeConsumerGroup())
+            );
+        }
+
+        @Test
+        @DisplayName("subscribe re-ensures the node group, at offset 0 and not at $")
+        void subscribe_ensuresConsumerGroupFromStart() {
             var local = new TransportEndpoint("redis", "node-1", Map.of());
             transport.subscribe(local, msg ->
                     java.util.concurrent.CompletableFuture.completedFuture(null));
 
-            verify(streamClient).ensureConsumerGroup(
+            // Once from the constructor, once from subscribe; never the $ variant, which
+            // would skip everything written before this node first came up.
+            verify(streamClient, times(2)).ensureConsumerGroupFromStart(
+                    eq("agenor:node:node-1"),
+                    eq(config.nodeConsumerGroup())
+            );
+            verify(streamClient, never()).ensureConsumerGroup(
                     eq("agenor:node:node-1"),
                     eq(config.nodeConsumerGroup())
             );
