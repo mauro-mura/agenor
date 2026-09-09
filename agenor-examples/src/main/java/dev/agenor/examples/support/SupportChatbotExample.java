@@ -17,7 +17,7 @@ import dev.agenor.core.knowledge.KnowledgeStore;
 import dev.agenor.examples.support.a2a.A2AHttpServer;
 import dev.agenor.examples.support.agents.CollaborativeRouterAgent;
 import dev.agenor.examples.support.context.ConversationContextManager;
-import dev.agenor.examples.support.knowledge.EmbeddingConfig;
+import dev.agenor.examples.llm.ExampleEmbeddingProvider;
 import dev.agenor.examples.support.knowledge.HybridKnowledgeStore;
 import dev.agenor.examples.support.knowledge.SupportKnowledgeData;
 import dev.agenor.examples.support.llm.LLMConfig;
@@ -83,18 +83,21 @@ public class SupportChatbotExample {
 
         // ========== KNOWLEDGE & SEARCH ==========
 
-        // Initialize embedding configuration
-        EmbeddingConfig embeddingConfig = EmbeddingConfig.fromEnvironment();
+        // Pick an embedding provider the same way the Level 4 examples pick a chat model:
+        // local Ollama unless EMBEDDING_BACKEND says otherwise.
+        var embeddings = ExampleEmbeddingProvider.fromEnvironment();
 
         // Initialize knowledge store with hybrid search (TF-IDF + embeddings)
-        HybridKnowledgeStore knowledgeStore = SupportKnowledgeData.createHybridStore(embeddingConfig);
+        HybridKnowledgeStore knowledgeStore = SupportKnowledgeData.createHybridStore(embeddings);
 
         if (knowledgeStore.isEmbeddingsEnabled()) {
             log.info("Loaded {} FAQ documents with hybrid search (TF-IDF + embeddings)",
                 knowledgeStore.size());
         } else {
-            log.info("Loaded {} FAQ documents with TF-IDF search (embeddings not configured)",
-                knowledgeStore.size());
+            log.info("Loaded {} FAQ documents with TF-IDF search ({})", knowledgeStore.size(),
+                embeddings == null
+                    ? "EMBEDDING_BACKEND=none"
+                    : "the embedding backend did not answer - see the warning above");
         }
 
         // Initialize query expander for synonym support

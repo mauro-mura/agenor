@@ -79,6 +79,7 @@ nav:
     - Agent State Persistence: persistence.md
   - LLM & Adapters:
     - LLM Overview: llm-integration.md
+    - Knowledge & Embeddings: knowledge.md
     - Guardrails: guardrails.md
     - MCP: adapters/mcp.md
     - Redis Messaging: adapters/redis.md

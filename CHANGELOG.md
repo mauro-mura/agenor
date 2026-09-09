@@ -47,6 +47,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subscribe, so a publish before that raced and lost. No test caught it; the sentence was the
   only place the behaviour was described.
 
+- **The support example's embedding failures now say which failure it was.** An unreachable
+  daemon and a model that was never pulled are the same HTTP failure from the outside and need
+  opposite responses. `HybridKnowledgeStore` reads `EmbeddingException.ErrorType` and prints
+  "run `ollama pull nomic-embed-text`" or "start Ollama, or run with `EMBEDDING_BACKEND=none`".
+
+- **The embedding error classifier only looked at the outermost throwable.** LangChain4j's Ollama
+  model reports a dead daemon as `RuntimeException: java.net.ConnectException`, which came back
+  as `UNKNOWN` — the least useful answer available for the most common failure. Every unit test
+  passed while it did, because they threw the library's exceptions directly. The classifier walks
+  the cause chain and there is a regression test for the wrapped shape.
+
+### Added
+
+- **`docs/knowledge.md`** — how `KnowledgeStore` and `EmbeddingProvider` fit together, what
+  `dimensions()` and `modelId()` are for, and the `ErrorType` cases worth branching on. The page
+  exists because the types finally have a user, not the other way round.
+
+- **`EMBEDDING_BACKEND` for the examples**, through `ExampleEmbeddingProvider`, on the same terms
+  `LLM_BACKEND` already used: local Ollama by default **regardless** of which `*_API_KEY` happens
+  to be in the shell. `SupportChatbotExample` previously used OpenAI whenever `OPENAI_API_KEY`
+  was set, which is the silent paid-backend behaviour `ExampleLLMProvider` was written to avoid.
+
+### Changed
+
+- **The OpenAI and Ollama embedding providers are backed by LangChain4j**, like the LLM providers
+  beside them, replacing ~300 lines of hand-rolled `java.net.http` and Jackson. No new dependency:
+  `langchain4j-open-ai` and `langchain4j-ollama` were already non-optional here.
+  `EmbeddingProvider`, `EmbeddingException` and `EmbeddingProviderFactory`'s signatures are
+  unchanged. Two behaviour improvements come with it: failures are classified into
+  `AUTHENTICATION` / `RATE_LIMIT` / `MODEL_NOT_FOUND` / `NETWORK` / `SERVER_ERROR` rather than by
+  HTTP status — the Ollama provider previously answered `SERVER_ERROR` to everything — and blank
+  input is rejected as `INVALID_INPUT` instead of being sent.
+
+  **Why this and not a deprecation.** All five embedding types scored as unused surface, and the
+  reason turned out to be the opposite of the usual one: `SupportChatbotExample` needed embeddings
+  and had reimplemented them against LangChain4j directly, hand-rolling a 146-line provider factory
+  of its own. The one place that needed the abstraction had walked around it. Deprecating would
+  have deleted the answer and left the need — anyone doing retrieval over an LLM needs embeddings.
+  The example now uses `EmbeddingProvider`, and its `EmbeddingConfig` is gone.
+
+- **`HybridKnowledgeStore` takes an `EmbeddingProvider` and no dimension count.** The provider
+  already knows how wide its vectors are, so there is nothing left for a caller to get wrong. It
+  also embeds the corpus in **one batched call** instead of one request per document, and
+  `isEmbeddingsEnabled()` now reports whether embeddings are actually contributing rather than
+  whether a provider was supplied — an unreachable backend leaves the store on TF-IDF, and saying
+  otherwise misreported where the answers came from.
+
 ### Removed
 
 - **BREAKING: `WebConsoleServer`**, `@Deprecated(since = "0.4.0")` and superseded by
@@ -72,6 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can never see it. It gets its own verdict — *entry point*, carrying no action. Deliberately not
   extended to reflection or `ServiceLoader`: `main` is declared in the type's own source, so
   recognising it needs no knowledge of how anything is wired, which is what the others require.
+
+- The census's `dead surface` column is at **0** — one type removed, one given the user it
+  already had, one rescored. `documented, unnamed` did not move (95 of 263), and every verdict
+  that changed did so because the code changed, not because a page appeared or disappeared.
 
 ## [0.32.0] - 2026-09-05
 

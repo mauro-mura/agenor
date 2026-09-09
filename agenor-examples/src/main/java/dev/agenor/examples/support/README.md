@@ -60,6 +60,18 @@ tier, + `GROQ_API_KEY`), `openai` (+ `OPENAI_API_KEY`), or `anthropic`
 (+ `ANTHROPIC_API_KEY`). A stray `OPENAI_API_KEY` left in the shell without
 `LLM_BACKEND=openai` never silently enables a paid backend.
 
+## Embedding backend
+
+Hybrid search needs vectors, and `EMBEDDING_BACKEND` chooses where they come
+from on the same terms: `ollama` (default, free, local - `ollama pull
+nomic-embed-text`), `openai` (+ `OPENAI_API_KEY`), or `none` for TF-IDF only.
+A key left in the shell does not enable the paid one here either.
+
+If the chosen backend does not answer, `HybridKnowledgeStore` logs the reason,
+indexes on TF-IDF alone, and reports `isEmbeddingsEnabled() == false` - so the
+example runs with nothing installed and never claims answers came from vectors
+when they did not.
+
 ## Run Modes
 
 ```bash

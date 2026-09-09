@@ -1,5 +1,6 @@
 package dev.agenor.examples.support.knowledge;
 
+import dev.agenor.core.knowledge.EmbeddingProvider;
 import dev.agenor.core.knowledge.KnowledgeDocument;
 import dev.agenor.core.knowledge.KnowledgeStore;
 import dev.agenor.examples.support.model.SupportIntent;
@@ -316,27 +317,19 @@ public final class SupportKnowledgeData {
 
     /**
      * Initializes a HybridKnowledgeStore with TF-IDF + embeddings.
-     * Requires embedding model for vector search.
-     * Falls back to TF-IDF only if embeddings unavailable.
+     *
+     * <p>Pass {@code null} - or run with an unreachable embedding backend - and the store
+     * indexes on TF-IDF alone. That fallback is why this example runs with no setup at all.
+     *
+     * @param embeddings the provider from {@code ExampleEmbeddingProvider.fromEnvironment()},
+     *                   or {@code null} for lexical search only
      */
-    public static HybridKnowledgeStore createHybridStore(EmbeddingConfig embeddingConfig) {
-        HybridKnowledgeStore store;
-
-        if (embeddingConfig != null && embeddingConfig.isEnabled()) {
-            var embeddingModel = embeddingConfig.createModel();
-            if (embeddingModel != null) {
-                store = new HybridKnowledgeStore(
-                    embeddingModel,
-                    embeddingConfig.getDimensions(),
-                    0.4,  // TF-IDF weight
-                    0.6   // Embeddings weight
-                );
-            } else {
-                store = new HybridKnowledgeStore(); // TF-IDF only fallback
-            }
-        } else {
-            store = new HybridKnowledgeStore(); // TF-IDF only
-        }
+    public static HybridKnowledgeStore createHybridStore(EmbeddingProvider embeddings) {
+        HybridKnowledgeStore store = embeddings == null
+                ? new HybridKnowledgeStore()
+                : new HybridKnowledgeStore(embeddings,
+                        0.4,   // TF-IDF weight
+                        0.6);  // Embeddings weight
 
         getAllDocuments().forEach(store::add);
         store.buildIndex();

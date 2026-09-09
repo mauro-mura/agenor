@@ -3,6 +3,11 @@ package dev.agenor.adapters.knowledge.ollama;
 import dev.agenor.adapters.knowledge.EmbeddingProviderContractTest;
 import dev.agenor.core.knowledge.EmbeddingException;
 import dev.agenor.core.knowledge.EmbeddingProvider;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.exception.ModelNotFoundException;
+import dev.langchain4j.exception.UnresolvedModelServerException;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,15 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.net.ConnectException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -31,10 +33,7 @@ class OllamaEmbeddingProviderTest extends EmbeddingProviderContractTest {
     private static final int DEFAULT_DIMENSIONS = 768;
 
     @Mock
-    private HttpClient httpClient;
-
-    @Mock
-    private HttpResponse<String> httpResponse;
+    private EmbeddingModel embeddingModel;
 
     private OllamaEmbeddingProvider provider;
 
@@ -44,29 +43,17 @@ class OllamaEmbeddingProviderTest extends EmbeddingProviderContractTest {
     }
 
     @BeforeEach
-    void setUp() throws Exception {
-        provider = new OllamaEmbeddingProvider();
+    void setUp() {
+        provider = new OllamaEmbeddingProvider(embeddingModel, DEFAULT_MODEL, DEFAULT_DIMENSIONS);
 
-        // Use reflection to inject the mock HttpClient
-        java.lang.reflect.Field httpClientField = OllamaEmbeddingProvider.class.getDeclaredField("http");
-        httpClientField.setAccessible(true);
-        httpClientField.set(provider, httpClient);
-
-        // Default behavior for HttpClient to avoid NPE in contract tests.
-        lenient().when(httpResponse.statusCode()).thenReturn(200);
-        lenient().when(httpResponse.body()).thenReturn(generateJsonResponse(DEFAULT_DIMENSIONS));
-        lenient().when(httpClient.sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(CompletableFuture.completedFuture(httpResponse));
-    }
-
-    private String generateJsonResponse(int dims) {
-        StringBuilder sb = new StringBuilder("{\"embedding\":[");
-        for (int i = 0; i < dims; i++) {
-            sb.append("0.0");
-            if (i < dims - 1) sb.append(",");
-        }
-        sb.append("]}");
-        return sb.toString();
+        // One vector per requested segment, each the declared width, so the contract cases
+        // in the superclass have something honest to assert against.
+        lenient().when(embeddingModel.embedAll(anyList())).thenAnswer(inv -> {
+            List<?> segments = inv.getArgument(0);
+            return Response.from(segments.stream()
+                    .map(s -> Embedding.from(new float[DEFAULT_DIMENSIONS]))
+                    .toList());
+        });
     }
 
     @Nested
@@ -76,8 +63,9 @@ class OllamaEmbeddingProviderTest extends EmbeddingProviderContractTest {
         @Test
         @DisplayName("Default constructor uses correct model and dimensions")
         void defaultConstructor() {
-            assertThat(provider.modelId()).isEqualTo(DEFAULT_MODEL);
-            assertThat(provider.dimensions()).isEqualTo(DEFAULT_DIMENSIONS);
+            OllamaEmbeddingProvider real = new OllamaEmbeddingProvider();
+            assertThat(real.modelId()).isEqualTo(DEFAULT_MODEL);
+            assertThat(real.dimensions()).isEqualTo(DEFAULT_DIMENSIONS);
         }
 
         @Test
@@ -97,11 +85,8 @@ class OllamaEmbeddingProviderTest extends EmbeddingProviderContractTest {
         @Test
         @DisplayName("Successfully returns embedding for single text")
         void embedSuccess() {
-            String jsonResponse = "{\"embedding\":[0.1, 0.2, 0.3]}";
-            when(httpResponse.statusCode()).thenReturn(200);
-            when(httpResponse.body()).thenReturn(jsonResponse);
-            when(httpClient.sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-                .thenReturn(CompletableFuture.completedFuture(httpResponse));
+            when(embeddingModel.embedAll(anyList()))
+                    .thenReturn(Response.from(List.of(Embedding.from(new float[] {0.1f, 0.2f, 0.3f}))));
 
             float[] result = provider.embed("hello world").join();
 
@@ -109,33 +94,61 @@ class OllamaEmbeddingProviderTest extends EmbeddingProviderContractTest {
         }
 
         @Test
-        @DisplayName("Throws Server Error on non-200 codes")
-        void embedServerError() {
-            when(httpResponse.statusCode()).thenReturn(500);
-            when(httpClient.sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-                .thenReturn(CompletableFuture.completedFuture(httpResponse));
+        @DisplayName("A daemon that is not there is a NETWORK error, not a server error")
+        void embedConnectionError() {
+            when(embeddingModel.embedAll(anyList()))
+                    .thenThrow(new UnresolvedModelServerException("Connection refused"));
 
             CompletableFuture<float[]> future = provider.embed("hello");
 
             assertThatThrownBy(future::join)
-                .hasCauseInstanceOf(EmbeddingException.class)
-                .hasMessageContaining("Ollama API error: HTTP 500");
+                    .cause()
+                    .isInstanceOf(EmbeddingException.class)
+                    .extracting(e -> ((EmbeddingException) e).getErrorType())
+                    .isEqualTo(EmbeddingException.ErrorType.NETWORK);
         }
 
         @Test
-        @DisplayName("Throws Network error on connection failure")
-        void embedConnectionError() {
-            CompletableFuture<HttpResponse<String>> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(new ConnectException("Connection refused"));
+        @DisplayName("A model that was never pulled is MODEL_NOT_FOUND, not a server error")
+        void embedUnknownModel() {
+            // The distinction the hand-rolled provider could not make: every non-200 was a
+            // SERVER_ERROR, so "ollama pull nomic-embed-text" and "the daemon is down" read
+            // the same to a caller deciding whether to retry.
+            when(embeddingModel.embedAll(anyList()))
+                    .thenThrow(new ModelNotFoundException("model 'nope' not found"));
 
-            when(httpClient.sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-                .thenReturn(failedFuture);
+            assertThatThrownBy(provider.embed("hello")::join)
+                    .cause()
+                    .isInstanceOf(EmbeddingException.class)
+                    .extracting(e -> ((EmbeddingException) e).getErrorType())
+                    .isEqualTo(EmbeddingException.ErrorType.MODEL_NOT_FOUND);
+        }
 
-            CompletableFuture<float[]> future = provider.embed("hello");
+        @Test
+        @DisplayName("A cause wrapped one level deep is still classified")
+        void embedWrappedConnectionError() {
+            // The shape LangChain4j's Ollama model actually throws when the daemon is down.
+            // Matching only the outermost throwable called this UNKNOWN, which is the least
+            // useful answer available for the most common failure - and the unit tests, which
+            // threw the library's exceptions directly, all passed while it did.
+            when(embeddingModel.embedAll(anyList()))
+                    .thenThrow(new RuntimeException(new java.net.ConnectException("refused")));
 
-            assertThatThrownBy(future::join)
-                .hasCauseInstanceOf(EmbeddingException.class)
-                .hasMessageContaining("Cannot connect to Ollama");
+            assertThatThrownBy(provider.embed("hello")::join)
+                    .cause()
+                    .isInstanceOf(EmbeddingException.class)
+                    .extracting(e -> ((EmbeddingException) e).getErrorType())
+                    .isEqualTo(EmbeddingException.ErrorType.NETWORK);
+        }
+
+        @Test
+        @DisplayName("Blank input is rejected as INVALID_INPUT, without a call")
+        void embedBlankInput() {
+            assertThatThrownBy(provider.embed("   ")::join)
+                    .cause()
+                    .isInstanceOf(EmbeddingException.class)
+                    .extracting(e -> ((EmbeddingException) e).getErrorType())
+                    .isEqualTo(EmbeddingException.ErrorType.INVALID_INPUT);
         }
     }
 }

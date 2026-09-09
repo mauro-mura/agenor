@@ -30,10 +30,11 @@ dev.agenor.adapters
 │   └── McpFunctionAdapter.java      # Maps MCP tools to Agenor function-calling framework
 └── knowledge/
     ├── EmbeddingProviderFactory.java     # Recommended entry point
+    ├── EmbeddingSupport.java             # Shared plumbing; not called from user code
     ├── openai/
-    │   └── OpenAIEmbeddingProvider.java  # OpenAI Embeddings API (text-embedding-3-*)
+    │   └── OpenAIEmbeddingProvider.java  # OpenAI Embeddings (text-embedding-3-*)
     └── ollama/
-        └── OllamaEmbeddingProvider.java  # Ollama local embeddings API
+        └── OllamaEmbeddingProvider.java  # Ollama local embeddings
 ```
 
 ---

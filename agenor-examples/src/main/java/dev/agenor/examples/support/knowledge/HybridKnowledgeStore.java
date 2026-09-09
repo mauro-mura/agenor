@@ -3,7 +3,8 @@ package dev.agenor.examples.support.knowledge;
 import dev.agenor.core.knowledge.KnowledgeDocument;
 import dev.agenor.core.knowledge.KnowledgeStore;
 import dev.agenor.examples.support.model.SupportIntent;
-import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.agenor.core.knowledge.EmbeddingException;
+import dev.agenor.core.knowledge.EmbeddingProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,12 +17,11 @@ import java.util.stream.Collectors;
  * {@link KnowledgeStore} combining TF-IDF and vector embeddings.
  *
  * <p>Score = (tfidfWeight * tfidfScore) + (embeddingWeight * embeddingScore).
- * Falls back to TF-IDF only when no {@link EmbeddingModel} is supplied.
+ * Falls back to TF-IDF only when no {@link EmbeddingProvider} is supplied, which is what
+ * happens when neither Ollama nor an API key is available - so this example runs either way.
  *
- * <p>For new code prefer wiring {@code EmbeddingProvider} from
- * {@code agenor-adapters} via {@code EmbeddingProviderFactory}; this class
- * retains the example-local {@code EmbeddingModel} abstraction for
- * backwards compatibility within the support example.
+ * <p>The provider comes from {@code EmbeddingProviderFactory} in {@code agenor-adapters}, so
+ * swapping OpenAI for a local Ollama is a factory call and nothing here changes.
  */
 public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
 
@@ -30,7 +30,7 @@ public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
     private final Map<String, KnowledgeDocument<SupportIntent>> documents = new ConcurrentHashMap<>();
     private final TFIDFScorer tfidfScorer = new TFIDFScorer();
     private final InMemoryVectorStore vectorStore;
-    private final EmbeddingModel embeddingModel;
+    private final EmbeddingProvider embeddings;
     private final double tfidfWeight;
     private final double embeddingWeight;
 
@@ -38,22 +38,28 @@ public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
     private boolean embeddingsIndexed = false;
 
     /** Creates a hybrid store with default weights (40% TF-IDF, 60% embeddings). */
-    public HybridKnowledgeStore(EmbeddingModel embeddingModel, int dimensions) {
-        this(embeddingModel, dimensions, 0.4, 0.6);
+    public HybridKnowledgeStore(EmbeddingProvider embeddings) {
+        this(embeddings, 0.4, 0.6);
     }
 
-    /** Creates a hybrid store with custom weights. */
-    public HybridKnowledgeStore(EmbeddingModel embeddingModel, int dimensions,
+    /**
+     * Creates a hybrid store with custom weights.
+     *
+     * <p>The vector store is sized from {@link EmbeddingProvider#dimensions()}. There is no
+     * dimension parameter because there is nothing for a caller to get wrong: the provider
+     * already knows how wide its vectors are.
+     */
+    public HybridKnowledgeStore(EmbeddingProvider embeddings,
                                  double tfidfWeight, double embeddingWeight) {
-        this.embeddingModel = embeddingModel;
-        this.vectorStore = new InMemoryVectorStore(dimensions);
+        this.embeddings = embeddings;
+        this.vectorStore = new InMemoryVectorStore(embeddings.dimensions());
         this.tfidfWeight = tfidfWeight;
         this.embeddingWeight = embeddingWeight;
     }
 
-    /** Creates a TF-IDF only store (no embedding model). */
+    /** Creates a TF-IDF only store (no embedding provider). */
     public HybridKnowledgeStore() {
-        this.embeddingModel = null;
+        this.embeddings = null;
         this.vectorStore = null;
         this.tfidfWeight = 1.0;
         this.embeddingWeight = 0.0;
@@ -116,8 +122,13 @@ public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Whether embeddings are actually contributing to search, which is not the same as whether
+     * a provider was supplied: an unreachable backend leaves this store on TF-IDF, and saying
+     * otherwise would misreport what the answers came from. Meaningful after {@link #buildIndex}.
+     */
     public boolean isEmbeddingsEnabled() {
-        return embeddingModel != null;
+        return embeddings != null && embeddingsIndexed;
     }
 
     @Override
@@ -133,30 +144,34 @@ public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
         tfidfScorer.buildIndex();
         tfidfIndexBuilt = true;
 
-        if (embeddingModel != null && vectorStore != null) {
-            for (KnowledgeDocument<SupportIntent> doc : documents.values()) {
-                try {
-                    float[] embedding = embeddingModel.embed(buildIndexableContent(doc)).content().vector();
-                    vectorStore.store(doc.id(), embedding);
-                } catch (Exception e) {
-                    log.warn("Failed to embed document {}: {}", doc.id(), e.getMessage());
+        if (embeddings != null && vectorStore != null) {
+            // One batched call for the whole corpus rather than one request per document -
+            // what embedAll is for, and the reason the provider interface has it.
+            var docs = List.copyOf(documents.values());
+            try {
+                var vectors = embeddings.embedAll(
+                        docs.stream().map(this::buildIndexableContent).toList()).join();
+                for (int i = 0; i < docs.size(); i++) {
+                    vectorStore.store(docs.get(i).id(), vectors.get(i));
                 }
+                embeddingsIndexed = true;
+                log.debug("Hybrid index built: {} documents", documents.size());
+            } catch (Exception e) {
+                log.warn("Staying on TF-IDF: {}", explain(e));
             }
-            embeddingsIndexed = true;
-            log.debug("Hybrid index built: {} documents", documents.size());
         }
     }
 
     private void ensureIndexBuilt() {
-        if (!tfidfIndexBuilt || (embeddingModel != null && !embeddingsIndexed)) buildIndex();
+        if (!tfidfIndexBuilt || (embeddings != null && !embeddingsIndexed)) buildIndex();
     }
 
     private Map<String, Double> embeddingSearch(String query, int topK) {
-        if (embeddingModel == null || vectorStore == null || !embeddingsIndexed) {
+        if (embeddings == null || vectorStore == null || !embeddingsIndexed) {
             return Map.of();
         }
         try {
-            float[] queryEmbedding = embeddingModel.embed(query).content().vector();
+            float[] queryEmbedding = embeddings.embed(query).join();
             return vectorStore.search(queryEmbedding, topK).stream()
                 .collect(Collectors.toMap(
                     InMemoryVectorStore.SearchResult::id,
@@ -165,6 +180,30 @@ public class HybridKnowledgeStore implements KnowledgeStore<SupportIntent> {
             log.warn("Embedding search failed, falling back to TF-IDF only: {}", e.getMessage());
             return Map.of();
         }
+    }
+
+    /**
+     * Turns a failed embedding call into something a developer can act on.
+     *
+     * <p>The two cases that look identical from the outside need opposite responses: a daemon
+     * that is not running, and a model that was never pulled. {@code EmbeddingException}
+     * classifies them, so this can say which one happened instead of printing a stack trace.
+     */
+    private String explain(Throwable e) {
+        var cause = e instanceof java.util.concurrent.CompletionException && e.getCause() != null
+                ? e.getCause() : e;
+        if (cause instanceof EmbeddingException ee) {
+            return switch (ee.getErrorType()) {
+                case NETWORK -> "no embedding backend answered - start Ollama, or run with "
+                        + "EMBEDDING_BACKEND=none to stop trying";
+                case MODEL_NOT_FOUND -> "the embedding model is not installed - run `ollama pull "
+                        + embeddings.modelId() + "`";
+                case AUTHENTICATION -> "the embedding provider rejected the credentials";
+                case RATE_LIMIT -> "the embedding provider is throttling; try again later";
+                default -> ee.getErrorType() + " - " + ee.getMessage();
+            };
+        }
+        return String.valueOf(e.getMessage());
     }
 
     private String buildIndexableContent(KnowledgeDocument<SupportIntent> doc) {

@@ -94,6 +94,19 @@ Optional model overrides: `OPENAI_MODEL`, `GROQ_MODEL`, `ANTHROPIC_MODEL`,
 `OLLAMA_MODEL`. See `dev.agenor.examples.llm.ExampleLLMProvider` for the
 selection logic used by every example below.
 
+**Embeddings pick a backend the same way**, through `EMBEDDING_BACKEND` and
+`dev.agenor.examples.llm.ExampleEmbeddingProvider`. Only `SupportChatbotExample`
+uses one.
+
+| `EMBEDDING_BACKEND` | Requires | Cost | Notes |
+|----------------------|----------|------|-------|
+| _(unset)_ / `ollama` | — | **Free, local** | Default. `ollama pull nomic-embed-text`. Override with `OLLAMA_BASE_URL`/`OLLAMA_EMBEDDING_MODEL`. |
+| `openai` | `OPENAI_API_KEY` | Paid | Override with `OPENAI_EMBEDDING_MODEL`. |
+| `none` | — | — | Lexical search only. |
+
+If the backend does not answer, the example says so and falls back to TF-IDF
+rather than failing — so it runs with nothing installed.
+
 > **Function-calling caveat:** Agenor's Ollama adapter doesn't wire up tool
 > calling, so examples that demonstrate `FunctionDefinition`/tool use
 > (`AIAssistantExample`, the capability/fault-tolerance research-team

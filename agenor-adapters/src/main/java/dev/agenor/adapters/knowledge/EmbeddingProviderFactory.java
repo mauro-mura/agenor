@@ -7,8 +7,9 @@ import dev.agenor.core.knowledge.EmbeddingProvider;
 /**
  * Factory for {@link EmbeddingProvider} instances.
  *
- * <p>Mirrors the pattern of {@code LLMProviderFactory}: a single entry point
- * that hides concrete implementation classes and their constructors.
+ * <p>Like {@code LLMProviderFactory}, this is the single entry point that hides the concrete
+ * implementation classes and their constructors. It returns finished providers rather than
+ * builders, because an embedding model has three settings and a chat model has a dozen.
  *
  * <p>Example:
  * <pre>{@code
@@ -18,6 +19,10 @@ import dev.agenor.core.knowledge.EmbeddingProvider;
  * // Local model via Ollama
  * EmbeddingProvider local = EmbeddingProviderFactory.ollama();
  * }</pre>
+ *
+ * <p>Both are backed by LangChain4j, the same library the LLM providers use. Sizing a vector
+ * store is {@code provider.dimensions()} - see {@code HybridKnowledgeStore} in
+ * {@code agenor-examples} for the whole path from documents to a semantic search.
  */
 public final class EmbeddingProviderFactory {
 
