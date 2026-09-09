@@ -45,16 +45,6 @@ public class RestAPIHandler extends HttpServlet {
     private long startTime = System.currentTimeMillis();
 
     /**
-     * Creates a RestAPIHandler without message history support.
-     *
-     * @deprecated Use {@link #RestAPIHandler(AgenorRuntime, ObjectMapper, MessageHistoryService)}
-     */
-    @Deprecated
-    public RestAPIHandler(AgenorRuntime runtime, ObjectMapper objectMapper) {
-        this(runtime, objectMapper, null);
-    }
-
-    /**
      * Creates a RestAPIHandler with full message history support.
      *
      * @param runtime the Agenor runtime

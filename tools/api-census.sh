@@ -65,15 +65,39 @@ current_version() {
         | sed -E "s|</?version>||g; s/-SNAPSHOT$//"
 }
 
-# file|line|declared release (empty when none)|the declaration it sits on
+# file|line|declared release (empty when none)|kind|the declaration it sits on
+#
+# kind is "scheduled" for a @Deprecated carrying forRemoval = true, "unscheduled" for one
+# carrying nothing else. The second was invisible to this tool until 0.33.0 (F-16): the loop
+# keyed on forRemoval, so a @Deprecated that never promised a removal could not fail any
+# check. WebConsoleServer had been @Deprecated(since = "0.4.0") for the better part of the
+# project's public history on exactly that footing.
 deprecation_sites() {
     find . -path "*/src/main/*" -name "*.java" -print0 \
         | xargs -0 awk -v W="$DEPRECATION_WINDOW" '
-        FNR == 1 { pending = 0 }
+        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+
+        FNR == 1 { pending = 0; annot = ""; open = 0 }
         { buf[FNR] = $0 }
-        pending && $0 !~ /forRemoval = true/ {
-            subject = $0
-            gsub(/^[ \t]+|[ \t]+$/, "", subject)
+
+        # An annotation whose argument list runs over several lines: keep collecting until
+        # the parentheses balance, so forRemoval on its own line is still seen.
+        open {
+            annot = annot " " $0
+            if (index($0, ")")) { open = 0 }
+            next
+        }
+
+        trim($0) ~ /^@Deprecated/ {
+            annot = $0
+            open  = (index($0, "(") && !index($0, ")"))
+            if (open) { pending = FNR; next }
+            pending = FNR
+            next
+        }
+
+        pending {
+            subject = trim($0)
             if (subject != "" && substr(subject, 1, 1) != "@") {
                 # Trailing brace or semicolon ends a declaration; a trailing comma ends an
                 # enum constant. An *interior* comma does not - it separates an extends list,
@@ -81,20 +105,23 @@ deprecation_sites() {
                 sub(/[ \t]*[{;].*$/, "", subject)
                 sub(/,[ \t]*$/, "", subject)
                 if (length(subject) > 64) subject = substr(subject, 1, 61) "..."
-                print FILENAME "|" pending "|" declared "|" subject
-                pending = 0
-            }
-        }
-        /forRemoval = true/ {
-            declared = ""
-            for (i = FNR - 1; i >= 1 && i > FNR - 1 - W; i--) {
-                if (match(buf[i], /removal (at|in) [0-9]+\.[0-9]+\.[0-9]+/)) {
-                    declared = substr(buf[i], RSTART, RLENGTH)
-                    sub(/removal (at|in) /, "", declared)
-                    break
+
+                kind = (annot ~ /forRemoval[ \t]*=[ \t]*true/) ? "scheduled" : "unscheduled"
+
+                declared = ""
+                if (kind == "scheduled") {
+                    for (i = pending; i >= 1 && i > pending - W; i--) {
+                        if (match(buf[i], /removal (at|in) [0-9]+\.[0-9]+\.[0-9]+/)) {
+                            declared = substr(buf[i], RSTART, RLENGTH)
+                            sub(/removal (at|in) /, "", declared)
+                            break
+                        }
+                    }
                 }
+                print FILENAME "|" pending "|" declared "|" kind "|" subject
+                pending = 0
+                annot = ""
             }
-            pending = FNR
         }
     ' | sed 's|^\./||' | sort
 }
@@ -104,12 +131,16 @@ version_le() {   # $1 <= $2
 }
 
 run_schedule_check() {
-    local version rows="" n_overdue=0 n_undated=0 file line declared subject
+    local version rows="" n_overdue=0 n_undated=0 n_unscheduled=0
+    local file line declared kind subject
     version="$(current_version)"
 
-    while IFS='|' read -r file line declared subject; do
+    while IFS='|' read -r file line declared kind subject; do
         [[ -n "$file" ]] || continue
-        if [[ -z "$declared" ]]; then
+        if [[ "$kind" == "unscheduled" ]]; then
+            rows+="| \`$subject\` | $file:$line | **no forRemoval** | unscheduled |"$'\n'
+            n_unscheduled=$((n_unscheduled + 1))
+        elif [[ -z "$declared" ]]; then
             rows+="| \`$subject\` | $file:$line | **none declared** | undated |"$'\n'
             n_undated=$((n_undated + 1))
         elif version_le "$declared" "$version"; then
@@ -118,22 +149,29 @@ run_schedule_check() {
         fi
     done < <(deprecation_sites)
 
-    if (( n_overdue == 0 && n_undated == 0 )); then
-        printf 'Removal schedule clean at %s: every forRemoval names a later release.\n' "$version"
+    if (( n_overdue == 0 && n_undated == 0 && n_unscheduled == 0 )); then
+        printf 'Removal schedule clean at %s: every deprecation names a removal, at a later release.\n' "$version"
         return 0
     fi
 
     cat <<REPORT
 ## Overdue
 
-Building $version. $n_overdue past their declared release, $n_undated with no release declared.
+Building $version. $n_overdue past their declared release, $n_undated with no release
+declared, $n_unscheduled deprecated without a forRemoval at all.
 
 | Deprecation | Site | Declared | |
 |---|---|---|---|
 $rows
-An undated deprecation is the worse of the two: it can never *become* overdue, so nothing will
-ever flag it. Either remove these now, or move the date and say in the commit why the release
-they were promised to came and went.
+The three failures are not equally bad, and the order is the reverse of what the counts suggest.
+
+An **overdue** deprecation announced a date and missed it: visible, and every run says so until
+someone acts. An **undated** one can never *become* overdue, so only this check will ever raise
+it. An **unscheduled** one - @Deprecated with no forRemoval - announces nothing enforceable at
+all: a permanent, silent "don't use this", indistinguishable by tooling from a type nobody got
+around to finishing. It is the one this check was blind to until 0.33.0.
+
+Either remove these now, or give them a forRemoval and a release and say in the commit why.
 REPORT
     return 1
 }
@@ -197,6 +235,20 @@ done < <(grep -H "^import dev\.agenor\." "${ALL_FILES[@]}" || true)
 # whole SPI seam — HitlRegistrationExtension, LlmRegistrationExtension,
 # DefaultAgentDiscoveryEngine and the rest — reads as dead surface and the census recommends
 # deleting the thing that makes the module split work.
+#
+# The same shape, one level weaker, is a `public static void main`. Nothing writes
+# `import dev.agenor.tools.cli.AgenorCLI;` because nothing calls it as a method: it is named
+# by agenor-tools/pom.xml's exec-maven-plugin and by whatever launches the packaged jar. It
+# scored **dead surface** with every column at zero while being that module's front door
+# (F-15). Unlike a ServiceLoader registration there is no file to read, so the type gets its
+# own verdict rather than a synthetic reference: "entry point", which carries no action.
+#
+# Why this indirection and not the others. Reflection, a ServiceLoader with no
+# META-INF/services entry and a build-tool property are all invisible the same way, and
+# inventing a detector per case is what this tool has avoided. `main` is separable from them
+# on one axis: it is a language-level entry point declared in the type's own source, so
+# recognising it needs no knowledge of how anything is wired. The others need exactly that
+# knowledge, which is why SERVICE_LOADED reads the registration file instead of guessing.
 declare -A SERVICE_LOADED  # fully-qualified type -> 1
 while IFS= read -r svc; do
     while IFS= read -r impl; do
@@ -326,7 +378,7 @@ documented_in() {   # <TypeName> -> number of user-facing doc files naming it in
 CENSUS_MODULE_LIST=$(printf '`%s`, ' "${CENSUS_MODULES[@]}"); CENSUS_MODULE_LIST="${CENSUS_MODULE_LIST%, }"
 
 rows=""
-declare -i n_total=0 n_keep=0 n_selfjust=0 n_offered=0 n_internal=0 n_dead=0 n_demo=0 n_dep=0
+declare -i n_total=0 n_keep=0 n_selfjust=0 n_offered=0 n_internal=0 n_dead=0 n_demo=0 n_dep=0 n_entry=0
 
 for module in "${CENSUS_MODULES[@]}"; do
     for own in "${ALL_FILES[@]}"; do
@@ -391,6 +443,8 @@ for module in "${CENSUS_MODULES[@]}"; do
         elif (( docs > 0 && fw > 0 ));            then verdict="**documented, unnamed — check getters**"; n_offered+=1
         elif (( docs > 0 ));                     then verdict="**documented, unnamed**";   n_offered+=1
         elif (( fw > 0 ));                       then verdict="plumbing";                  n_internal+=1
+        elif grep -qE "public +static +void +main *\(" "$own"; then
+                                                      verdict="entry point";                n_entry+=1
         else                                          verdict="**dead surface**";          n_dead+=1
         fi
         n_total+=1
@@ -502,6 +556,23 @@ outside a fence, counts the same as a kept code sample.
 The census covers types, not methods. Method-level findings — \`BaseAgent.requestFrom\`,
 \`ConversationManager.onMessage\` — still need finding by hand.
 
+### An entry point scores zero and is not dead
+
+A type whose only caller is a JVM launch scores zero on every column, because the reference
+count is built on "something names this type in code that compiles against it" and a
+\`public static void main\` is named by a command line or a build property instead.
+\`AgenorCLI\` is the case: \`agenor-tools/pom.xml\` wires it as that module's \`exec:java\` target,
+and \`CLIExample\`'s Javadoc documents six invocations of it, each a string inside a comment.
+Both halves of the census are blind to it for the same underlying reason, so it gets its own
+verdict — **entry point** — rather than a synthetic reference that would misreport it as used.
+The verdict carries no action: it means the question does not apply.
+
+This is deliberately not extended to reflection, a \`ServiceLoader\` with no
+\`META-INF/services\` entry, or anything else reached by configuration. \`main\` is separable
+from those on one axis: it is declared in the type's own source, so recognising it needs no
+knowledge of how the type is wired. Everything else does — which is why the ServiceLoader
+index reads the registration files rather than guessing.
+
 ### Read \`framework = 1\` with suspicion
 
 A single framework reference is often not independent evidence of need. \`RetryBehavior\`,
@@ -529,6 +600,7 @@ unnecessary":
 | **documented, unnamed** | user-facing docs name it, no user code does | decide: plumbing (stop documenting as surface) or unused (deprecate) |
 | **documented, unnamed — check getters** | same, and \`framework > 0\`: a getter path may reach it without naming it | check call sites for that path before deciding — see above |
 | plumbing | never named by user code, never documented as surface | — correctly invisible |
+| entry point | scores zero on every column, and declares \`public static void main\` | — invisible by construction, see below |
 | **dead surface** | named by nothing, documented nowhere | deprecate |
 
 ## Summary
@@ -540,6 +612,7 @@ unnecessary":
 | **self-justifying** | $n_selfjust |
 | **documented, unnamed** | $n_offered |
 | plumbing | $n_internal |
+| entry point | $n_entry |
 | **dead surface** | $n_dead |
 | **Total** | $n_total |
 

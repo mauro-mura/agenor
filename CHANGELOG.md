@@ -47,6 +47,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subscribe, so a publish before that raced and lost. No test caught it; the sentence was the
   only place the behaviour was described.
 
+### Removed
+
+- **BREAKING: `WebConsoleServer`**, `@Deprecated(since = "0.4.0")` and superseded by
+  `JettyWebConsole` per ADR-008, with zero uses outside its own test. Twenty-nine releases is
+  window enough. The deprecated two-argument `RestAPIHandler` constructor went with it;
+  `RestAPIHandler` itself is unchanged and is what `JettyWebConsole` builds.
+
+  It survived that long because the deprecation carried `since` and nothing else. The removal
+  audit reads `forRemoval = true` sites, so a deprecation that never promised a removal could not
+  be overdue, could not be undated, and could not be flagged — see the tooling change below.
+
+### Tooling
+
+- **`tools/api-census.sh --check` now fails on a `@Deprecated` carrying no `forRemoval`**, as a
+  third failure shape beside overdue and undated. It is the least visible of the three and the
+  one that announces nothing enforceable: a permanent, silent "don't use this", indistinguishable
+  by tooling from a type nobody got around to finishing. Two sites existed project-wide; both
+  were removed above, so the check is green with the rule on.
+
+- **An entry point is no longer reported as dead surface.** `AgenorCLI` scored zero on every
+  column while being the packaged product's front door: a `public static void main` is named by a
+  build property or a command line, never by an `import`, so a reference count built on imports
+  can never see it. It gets its own verdict — *entry point*, carrying no action. Deliberately not
+  extended to reflection or `ServiceLoader`: `main` is declared in the type's own source, so
+  recognising it needs no knowledge of how anything is wired, which is what the others require.
+
 ## [0.32.0] - 2026-09-05
 
 ### Added
