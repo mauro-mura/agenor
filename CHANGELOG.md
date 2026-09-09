@@ -124,6 +124,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already had, one rescored. `documented, unnamed` did not move (95 of 263), and every verdict
   that changed did so because the code changed, not because a page appeared or disappeared.
 
+### Tests
+
+- **`OllamaEmbeddingProviderIT`** verifies the embedding path against a real Ollama in
+  Testcontainers, in the shape `OllamaProviderIT` established. The unit tests mock LangChain4j's
+  `EmbeddingModel`, so three claims were being taken on faith: that `nomic-embed-text` produces
+  vectors as wide as `dimensions()` declares — the number a vector store is sized with, where a
+  mismatch fails in the caller and not here; that the vectors are semantically useful at all,
+  which is the only reason to prefer them over the keyword store and which no mock can show; and
+  that an unpulled model really arrives as `MODEL_NOT_FOUND`, which is what the support example's
+  "run `ollama pull …`" message depends on.
+
+  The third is why the class exists. The same assumption — that a real failure has the shape a
+  unit test invents — had already produced one defect here, and this release fixed it.
+
 ### Documentation
 
 - **Three false claims removed from user-facing pages**, none of which any test could catch:
