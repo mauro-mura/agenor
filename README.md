@@ -373,7 +373,7 @@ mvn exec:java -pl agenor-examples \
 mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
 
-# Level 4 — LLM multi-agent (requires OPENAI_API_KEY)
+# Level 4 — LLM multi-agent (free by default: local Ollama, no API key)
 mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
@@ -431,7 +431,6 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 - Virtual threads vs traditional threading
 - Cloud-native vs desktop-oriented
 - Interface-first vs monolithic
-- Reactive patterns vs blocking I/O
 
 **Built for coordination, not just generation:**
 - Agents are independent, addressable, long-lived processes — each with its own

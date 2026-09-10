@@ -21,7 +21,7 @@ This directory contains Architecture Decision Records (ADRs) for the Agenor proj
 | [ADR-013](ADR-013-mcp-adapter.md)                                   | MCP Adapter                              | Accepted | 2026-03-16 |
 | [ADR-014](ADR-014-guardrails-layer.md)                              | Guardrails Layer                         | Accepted | 2026-03-23 |
 | [ADR-015](ADR-015-hitl-checkpoint.md)                               | Human-in-the-Loop Checkpoint             | Accepted | 2026-03-24 |
-| [ADR-016](ADR-016-spring-boot-starter.md)                           | Spring Boot Starter Module               | Proposed | 2026-03-26 |
+| [ADR-016](ADR-016-spring-boot-starter.md)                           | Spring Boot Starter Module               | Accepted | 2026-03-26 |
 | [ADR-017](ADR-017-llmrequest-model-optional.md)                     | LLMRequest model field — optional        | Accepted | 2026-04-12 |
 | [ADR-018](ADR-018-optional-adapter-dependencies-pattern.md)         | Optional Adapter Dependencies Pattern    | Accepted | 2026-04-23 |
 | [ADR-019](ADR-019-opentelemetry-instrumentation.md)                 | OpenTelemetry Instrumentation            | Accepted | 2026-04-23 |
