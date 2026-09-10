@@ -174,9 +174,17 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <!--
+          Logback is a logging *backend*, and a library must not put one on its consumer's
+          classpath: the choice belongs to the application. Only slf4j-api is inherited at
+          compile scope. Tests of every module still get a backend from the test-scoped
+          declaration below; the two executable modules (agenor-examples, agenor-tools)
+          re-declare it at runtime scope in their own POM.
+        -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- Testing -->
