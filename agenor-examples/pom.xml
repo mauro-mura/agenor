@@ -155,5 +155,15 @@
             <version>2.0.2</version>
             <scope>test</scope>
         </dependency>
+        <!--
+          Executable module: it needs a logging backend at run time. The parent declares
+          Logback at test scope so that no consumer of the library inherits one, so an
+          executable has to ask for it explicitly.
+        -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 </project>
