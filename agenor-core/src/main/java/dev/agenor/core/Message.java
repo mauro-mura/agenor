@@ -244,11 +244,22 @@ public record Message(
      * codec is what produced the {@code Map} being converted here; if the two configurations
      * diverge — most visibly on {@code java.time} handling — a payload it serialised
      * successfully fails to convert back. See ADR-030.
+     *
+     * <p>The two {@code java.time} settings below are the pair ADR-030's guarantee actually
+     * needs. Without them {@code OffsetDateTime} and {@code ZonedDateTime} came back
+     * normalised to UTC: the same instant, a different object, so {@code equals()} failed and
+     * a payload meaning "14:00 in Rome" arrived meaning "12:00 UTC". Disabling
+     * {@code ADJUST_DATES_TO_CONTEXT_TIME_ZONE} keeps the offset; enabling
+     * {@code WRITE_DATES_WITH_ZONE_ID} is what puts the zone id on the wire at all, without
+     * which a {@code ZonedDateTime} has nothing to be restored from. {@code Instant},
+     * {@code LocalDateTime}, {@code LocalDate} and {@code Duration} are unaffected by either.
      */
     private static final ObjectMapper CONTENT_MAPPER = new ObjectMapper()
             .findAndRegisterModules()
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+            .enable(SerializationFeature.WRITE_DATES_WITH_ZONE_ID);
 
     /**
      * Canonical constructor with default value generation and defensive copying.

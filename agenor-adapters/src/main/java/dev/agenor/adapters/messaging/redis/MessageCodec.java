@@ -25,10 +25,18 @@ final class MessageCodec {
     static final String FIELD_CORR     = "correlation_id";
     static final String FIELD_TS       = "timestamp";
 
+    /**
+     * Must stay configured identically to {@code Message.CONTENT_MAPPER}, which converts back
+     * what this codec writes. The two temporal settings are why: they change what the wire
+     * format means, so a mapper that has them and one that does not disagree about the value
+     * of every offset-carrying timestamp. See ADR-030 and the Javadoc on {@code CONTENT_MAPPER}.
+     */
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .findAndRegisterModules()
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+            .enable(SerializationFeature.WRITE_DATES_WITH_ZONE_ID);
 
     private MessageCodec() { throw new UnsupportedOperationException(); }
 

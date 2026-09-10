@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`OffsetDateTime` and `ZonedDateTime` now survive a `Message` content round-trip.** They did
+  not, on either transport: both mappers left `ADJUST_DATES_TO_CONTEXT_TIME_ZONE` at its
+  default, so an offset-carrying timestamp came back normalised to UTC — the same instant, a
+  different object, with `equals()` failing and "14:00 in Rome" arriving as "12:00 UTC".
+  `Message.CONTENT_MAPPER` and `MessageCodec.MAPPER` both gain
+  `disable(ADJUST_DATES_TO_CONTEXT_TIME_ZONE)` and `enable(WRITE_DATES_WITH_ZONE_ID)`, and must
+  continue to move together. See the 2026-09-10 amendment to ADR-030 D2.
+
+  **This widens the wire format for one type.** A `ZonedDateTime` now serialises as
+  `2026-09-10T14:00:00+02:00[Europe/Rome]`; the bracketed zone is a Java extension to ISO-8601
+  that the JDK reads natively and a strict parser in another language does not. Nothing else
+  changes on the wire — `OffsetDateTime`, `Instant`, `LocalDateTime`, `LocalDate` and
+  `Duration` serialise byte-for-byte as before. It is done now, ahead of the first Maven Central
+  release, precisely because after it there would be persisted payloads in the old format.
+
+  The existing round-trip test used `Instant`, the one `java.time` type with no offset or zone
+  to lose, so it passed honestly and made the defect invisible. Three cases were added that fail
+  if either setting is dropped from either mapper — one of them only after its first assertion
+  was found to pass on the broken configuration, because AssertJ compares two `OffsetDateTime`
+  values by instant and so ignored the very offset under test.
+
+### Fixed
+
+- **`Performative.createsCommitment()` documents what it reaches.** It returns `true` for
+  `REQUEST`, `PROPOSE`, `CFP` and `AGREE`, but the runtime has two call sites, guarded on
+  `AGREE` and on `REQUEST`, so a `CFP` or a `PROPOSE` records no commitment. The gap stays a
+  deliberate deferral (ADR-009's 2026-09-01 amendment); the Javadoc no longer implies otherwise.
+
+
 ## [0.33.0] - 2026-09-09
 
 ### Added
