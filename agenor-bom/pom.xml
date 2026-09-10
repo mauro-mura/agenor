@@ -14,6 +14,42 @@
     <description>Bill of Materials for Agenor Framework - manages dependency versions</description>
     <url>https://agenor.dev</url>
 
+    <!--
+      Duplicated from the root POM on purpose, and not by oversight: this module cannot
+      have a <parent>. The root POM imports agenor-bom into its own dependencyManagement,
+      so making the BOM inherit from the root would close a cycle. Maven Central rejects a
+      POM without licenses, developers and scm, and the BOM is published like any other
+      artifact - so it carries its own copy. Any change to these blocks in the root POM
+      must be mirrored here.
+    -->
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>mauro-mura</id>
+            <name>Mauro Mura</name>
+            <url>https://github.com/mauro-mura</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/mauro-mura/agenor.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/mauro-mura/agenor.git</developerConnection>
+        <url>https://github.com/mauro-mura/agenor</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/mauro-mura/agenor/issues</url>
+    </issueManagement>
+
     <dependencyManagement>
         <dependencies>
             <!-- Agenor Core Modules -->
@@ -75,14 +111,67 @@
     </dependencyManagement>
 
     <build>
-	    <plugins>
-	        <plugin>
-	            <groupId>org.apache.maven.plugins</groupId>
-	            <artifactId>maven-javadoc-plugin</artifactId>
-	            <configuration>
-	                <skip>true</skip>
-	            </configuration>
-	        </plugin>
-	    </plugins>
-	</build>
+        <plugins>
+            <!--
+              Version pinned explicitly: with no parent there is no pluginManagement to
+              inherit it from, and an unversioned plugin is what makes Maven report this
+              project as malformed. Javadoc is skipped because a BOM has no sources.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.12.0</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!--
+      The `release` profile is defined here too, for the same reason the metadata is:
+      a profile declared in the root POM does not exist for a module that does not
+      inherit from it. Only signing and publishing - a pom packaging has no sources
+      and no javadoc to attach.
+    -->
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.11.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>false</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

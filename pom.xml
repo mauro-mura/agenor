@@ -2,7 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         child.project.url.inherit.append.path="false">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.agenor</groupId>
@@ -12,7 +13,49 @@
 
     <name>Agenor Multi-Agent Framework</name>
     <description>Multi-agent coordination for the JVM — autonomous agents that negotiate, delegate, and execute, with optional LLM reasoning</description>
+    <!--
+      inherit.append.path=false on url and scm: without it Maven appends the artifactId to
+      every inherited URL, so agenor-core would publish a POM pointing at
+      https://agenor.dev/agenor-core and scm:git:...agenor.git/agenor-core - a 404 and an
+      unclonable URL, in every artifact on Central.
+    -->
     <url>https://agenor.dev</url>
+
+    <!--
+      Required by Maven Central: a release is rejected without licenses, developers and scm.
+      Child modules inherit all four blocks. agenor-bom cannot inherit them - the root POM
+      imports it, so it can have no parent - and carries its own copy; any change here must
+      be mirrored there.
+    -->
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>mauro-mura</id>
+            <name>Mauro Mura</name>
+            <url>https://github.com/mauro-mura</url>
+        </developer>
+    </developers>
+
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/mauro-mura/agenor.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/mauro-mura/agenor.git</developerConnection>
+        <url>https://github.com/mauro-mura/agenor</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/mauro-mura/agenor/issues</url>
+    </issueManagement>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -263,6 +306,22 @@
 				    <artifactId>maven-javadoc-plugin</artifactId>
 				    <version>3.12.0</version>
 				</plugin>
+                <!-- Publishing: used only by the `release` profile, pinned here like the rest. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.2.7</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>0.11.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -358,4 +417,95 @@
             </plugin>
         </plugins>
     </build>
+    <!--
+      Everything Maven Central needs, kept out of the default build so that a daily
+      `mvn install` does not pay for sources, javadoc and signing. Run with:
+        mvn -P release deploy
+      Local dry run, which builds the bundle without uploading it:
+        mvn -P release deploy -DskipPublishing=true
+    -->
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <!--
+                                      The plugin-level configuration above sends javadoc to
+                                      target/site, which is the docs site's directory. The
+                                      attached jar must be built from its own output instead,
+                                      or it would package whatever else target/site holds.
+                                    -->
+                                    <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- loopback pinentry: CI has no tty to prompt on. -->
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <!--
+                              false for the first release: the deployment lands in the portal
+                              and a human presses publish. Flip it once the pipeline has been
+                              seen to work end to end.
+                            -->
+                            <autoPublish>false</autoPublish>
+                            <excludeArtifacts>
+                                <!--
+                                  agenor-examples is the learning path, not public surface.
+                                  Publishing it would contradict the zero-usage rule.
+                                -->
+                                <excludeArtifact>agenor-examples</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
