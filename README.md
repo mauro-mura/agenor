@@ -184,6 +184,41 @@ agenor:
     provider: local      
 ```
 
+## 🧭 API stability
+
+**The whole API is `0.x`, and that is a statement rather than a formality.** A minor release may
+break a public type. The criteria that would move this project to `1.0.0` are written down in
+[ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md): the stable surface enumerated type by type,
+three consecutive releases without a break in it, no pending ADR that would change it, and a
+per-backend statement of what is production-ready. None of the four is met yet — the
+enumeration in particular does not exist, and the section you are reading is its informal
+precursor, not the document itself.
+
+When it arrives, `1.0.0` will mean **the enumerated API does not break without a major
+release**. It will not mean the distributed story has been proven in the field; that is a
+separate claim, made per backend in the documentation, and
+[the Redis transport's own limits](docs/adapters/redis.md#trust-model-the-transport-authenticates-nothing)
+are stated there rather than implied by a version number.
+
+Within that, some parts are more settled than others. The list below is **not** a promise that
+everything unlisted is stable. It is the honest answer to "which of this is most likely to move
+under me", each entry with the reason it is on the list:
+
+| Expect this to move | Why |
+|---|---|
+| `agenor-runtime-llm`, `LLMProvider` and the LLM types in core | split out of `agenor-runtime` only in 0.25.0 (ADR-027, August 2026); the seam is new |
+| Knowledge and embeddings (`KnowledgeStore`, `EmbeddingProvider`) | the one example that needed embeddings had bypassed the abstraction and reimplemented it; the shape is not settled by use yet |
+| The commitment model (`Commitment`, `CommitmentTracker`) | the record is one-sided and two of four committing performatives never commit — both named as known limitations in ADR-009's amendments, both open |
+| The MCP and A2A adapters | their surface tracks external SDKs that are themselves moving: A2A is at `0.3.2.Final` |
+| `agenor-tools` (CLI, web console) | the console lost a public type as recently as 0.33.0 |
+| The `agenor-core` test-jar (contract suites) | published for adapter authors; a test contract, not a runtime API |
+
+The parts a first agent actually touches — `@Agent`, `@Behavior`, `@AgenorMessageHandler`,
+`Agent`, `Message`, `AgenorRuntime`, `BaseAgent`, the `MessageDispatcher` and directory
+interfaces, and the Request / Query / Contract-Net protocols — are the ones under the most
+pressure to stay put, and where a break would be reported in the changelog with a replacement
+named. That is the current commitment. It is weaker than semver, and saying so is the point.
+
 ## 📦 Modules
 
 Agenor is an 11-module Maven project.

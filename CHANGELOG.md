@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The `1.0.0` promotion criteria were unreachable, and are revised** (amendment to ADR-025 D3).
+  The old criterion 1 required a distributed backend "validated in a real deployment outside of
+  the project's own test suite" — the only one of the three outside the project's control, and
+  circular besides: nobody deploys a `0.x` library to production *because* it is `0.x`. It also
+  measured the wrong property. Semantic versioning's `1.0.0` is a commitment to a compatibility
+  discipline, not a maturity certificate.
+
+  Four criteria replace the three, all of them things the project can act on: the stable surface
+  enumerated type by type in a published document; three consecutive releases with no break in
+  it; no pending ADR that would change it; and a per-backend statement of what is
+  production-ready. The old criterion 2's "two or three consecutive releases" is gone with them —
+  a threshold that admits either answer settles nothing — as is its hardcoded interface list,
+  which still named `Condition` (removed in 0.32.0) alongside `LLMProvider` and `MemoryStore`,
+  both of which the README lists among the types most likely to move.
+
+  **`1.0.0` will therefore no longer assert that the distributed story has been proven
+  anywhere.** That claim moves to the documentation, per backend, where it can be specific.
+
 - **`OffsetDateTime` and `ZonedDateTime` now survive a `Message` content round-trip.** They did
   not, on either transport: both mappers left `ADJUST_DATES_TO_CONTEXT_TIME_ZONE` at its
   default, so an offset-carrying timestamp came back normalised to UTC — the same instant, a
@@ -29,6 +47,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   if either setting is dropped from either mapper — one of them only after its first assertion
   was found to pass on the broken configuration, because AssertJ compares two `OffsetDateTime`
   values by instant and so ignored the very offset under test.
+
+### Added
+
+- **An "API stability" section in the README**, before the module list, saying which parts are
+  expected to move and why — the LLM split is recent, the embedding abstraction was bypassed by
+  the project's own example, the commitment model has two open limitations, the A2A SDK is
+  pre-1.0, `agenor-tools` lost a public type in 0.33.0, and the core test-jar is a test contract.
+  It states explicitly that nothing follows about types *not* on the list: the enumerated stable
+  surface that `1.0.0` will require does not exist yet, and this section is its informal
+  precursor rather than the document itself.
+
+- **A "Trust model" section in `docs/adapters/redis.md`.** Nothing authenticates a message
+  crossing between nodes: `senderId` is a claim the sender wrote, not an identity, and anything
+  that can reach the broker can name itself any agent. True since the transport shipped, written
+  down nowhere until now. Repeated in `docs/distributed-quick-start.md`, and a filter example
+  named `trusted` — keyed on exactly that unverified field — was renamed.
 
 ### Fixed
 
