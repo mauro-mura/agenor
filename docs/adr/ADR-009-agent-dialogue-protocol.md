@@ -145,7 +145,7 @@ public enum Performative {
     PROPOSE,        // Make proposal
     CFP,            // Call for proposals
     CANCEL,         // Cancel interaction
-    NOT_UNDERSTOOD  // Parse/semantic error
+    NOTIFY          // Notify of event
 }
 ```
 
