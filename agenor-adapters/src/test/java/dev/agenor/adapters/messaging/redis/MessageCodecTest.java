@@ -5,6 +5,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -156,6 +160,47 @@ class MessageCodecTest {
     }
 
     @Test
+    @DisplayName("an OffsetDateTime keeps its offset across the round-trip, not just its instant")
+    void roundTrip_offsetDateTime_preservesOffset() {
+        // The Instant test above passes on any configuration: Instant is the one java.time type
+        // with no offset to lose, so it was never going to catch this. These two are the types
+        // that used to come back normalised to UTC - the same moment, a different object.
+        var at = OffsetDateTime.of(2026, 9, 10, 14, 0, 0, 0, ZoneOffset.ofHours(2));
+        var decoded = MessageCodec.decode(MessageCodec.encode(
+                Message.builder().topic("bookings").content(new Slot("standup", at, null)).build()));
+
+        // Assert the offset explicitly. AssertJ's isEqualTo on an OffsetDateTime compares the
+        // instant, so it holds even when the offset has been normalised away - which is the
+        // very thing under test, and the same shape of blind spot the Instant test above had.
+        var back = decoded.getContent(Slot.class).offset();
+        assertThat(back.getOffset()).isEqualTo(ZoneOffset.ofHours(2));
+        assertThat(back.toLocalDateTime()).isEqualTo(at.toLocalDateTime());
+        assertThat(back).isEqualTo(at);
+    }
+
+    @Test
+    @DisplayName("a ZonedDateTime keeps its zone id, which only survives because it is written to the wire")
+    void roundTrip_zonedDateTime_preservesZoneId() {
+        var at = ZonedDateTime.of(2026, 9, 10, 14, 0, 0, 0, ZoneId.of("Europe/Rome"));
+        var decoded = MessageCodec.decode(MessageCodec.encode(
+                Message.builder().topic("bookings").content(new Slot("standup", null, at)).build()));
+
+        var back = decoded.getContent(Slot.class).zoned();
+        assertThat(back).isEqualTo(at);
+        assertThat(back.getZone()).isEqualTo(ZoneId.of("Europe/Rome"));
+    }
+
+    @Test
+    @DisplayName("the zone id is on the wire: without it a ZonedDateTime has nothing to be restored from")
+    void encode_zonedDateTime_writesZoneIdIntoThePayload() {
+        var at = ZonedDateTime.of(2026, 9, 10, 14, 0, 0, 0, ZoneId.of("Europe/Rome"));
+        var fields = MessageCodec.encode(
+                Message.builder().topic("bookings").content(new Slot("standup", null, at)).build());
+
+        assertThat(fields.get(MessageCodec.FIELD_PAYLOAD)).contains("[Europe/Rome]");
+    }
+
+    @Test
     @DisplayName("requesting a scalar payload as a record names both types instead of failing at the use site")
     void getContent_incompatibleScalar_reportsBothTypes() {
         var decoded = MessageCodec.decode(MessageCodec.encode(
@@ -189,4 +234,6 @@ class MessageCodecTest {
     record Bid(String workerId, double cost, int timeSeconds) {}
 
     record Promise(String what, Instant deadline) {}
+
+    record Slot(String what, OffsetDateTime offset, ZonedDateTime zoned) {}
 }

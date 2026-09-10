@@ -110,6 +110,32 @@ The duplication of configuration between the two modules is accepted: `agenor-co
 depend on `agenor-adapters`, and hoisting a shared mapper into core purely for the codec's
 benefit would invert the module direction. A comment on each side names the other.
 
+#### Amendment — 2026-09-10: the pair was identical and still lossy
+
+D2 said the two mappers must be configured *identically*. They were, and that was not enough:
+the shared configuration left `ADJUST_DATES_TO_CONTEXT_TIME_ZONE` at its default, so
+`OffsetDateTime` and `ZonedDateTime` came back normalised to UTC. The same instant, a different
+object — `equals()` failed, and a payload meaning "14:00 in Rome" arrived meaning "12:00 UTC".
+`Instant`, `LocalDateTime`, `LocalDate` and `Duration` were never affected.
+
+Both mappers now also carry `disable(ADJUST_DATES_TO_CONTEXT_TIME_ZONE)` and
+`enable(WRITE_DATES_WITH_ZONE_ID)`. Two settings rather than one, because the offset and the
+zone are lost for different reasons: the offset was on the wire and discarded on the way back,
+while the **zone id was never written at all**, so no deserialisation setting alone could have
+restored it. Disabling the adjustment fixes `OffsetDateTime`; only writing the zone id fixes
+`ZonedDateTime`.
+
+This widens the wire format for one type: a `ZonedDateTime` now serialises as
+`2026-09-10T14:00:00+02:00[Europe/Rome]`. That bracketed suffix is a Java extension to
+ISO-8601 — the JDK reads it natively, a strict ISO-8601 parser in another language does not.
+The trade was taken deliberately and taken *before* the first Maven Central release, while no
+consumer can hold a persisted payload in the old format. `OffsetDateTime` and every other
+temporal type serialise exactly as before.
+
+D2's requirement is unchanged and now has teeth in both directions: the two configurations must
+match, **and** the pair must be one that round-trips. `MessageCodecTest` covers the second half
+with three cases that fail if either setting is dropped from either mapper.
+
 ### D3 — Failure is `IllegalArgumentException`, and conversion stays lenient
 
 When the content is neither an instance of the requested type nor convertible to it, the caller
