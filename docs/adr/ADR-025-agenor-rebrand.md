@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-05-28  
+**Last Modified**: 2026-09-11 (see Amendment to D3 below)  
 **Authors**: Project Team  
 **References**: ADR-002 (Interface-First Architecture), ADR-003 (Maven Multi-Module Structure),
 ADR-006 (Annotation-Based Agent Configuration), ADR-016 (Spring Boot Starter),
@@ -109,6 +110,62 @@ time would be premature — the distributed backend story is not yet validated i
    Maven coordinates.
 
 Until these criteria are met, the project signals active development via the `0.x` prefix.
+
+#### Amendment — 2026-09-11: criterion 1 was unreachable, and it measured the wrong thing
+
+The three criteria above are **superseded** by the four below. They are kept in place because
+the reasoning that produced them is worth reading; they are no longer the gate.
+
+**What was wrong with criterion 1.** It required a distributed backend "validated in a real
+deployment outside of the project's own test suite". Three defects, in order of severity:
+
+- **It is the only criterion outside the project's control.** Criteria 2 and 3 describe things
+  the project does. This one requires a third party to choose to deploy. There is no action that
+  advances it, which makes it a wish rather than a criterion.
+- **It is circular.** Nobody puts a `0.x` library into production *because* it is `0.x`. So
+  `1.0.0` required production use, and production use was discouraged by the absence of `1.0.0`.
+  A lock whose key is inside it.
+- **It measures the wrong property.** In semantic versioning `1.0.0` is not a maturity
+  certificate; it is a commitment to a compatibility discipline — from here, the surface
+  declared stable does not break without a major. That is a promise about the project's own
+  behaviour. Tying it to field evidence made the version number carry a claim it does not make.
+
+**What was wrong with criterion 2.** Two smaller things. It said "the last two or three
+consecutive releases", which cannot be checked — a criterion that admits either answer settles
+nothing. And its hardcoded list still names `Condition`, removed in 0.32.0, alongside
+`LLMProvider` and `MemoryStore`, which the README's *API stability* section lists among the
+types most likely to move. A gate cannot require stability from surface the project publicly
+says is unsettled.
+
+**The concern underneath both is kept, and moved to where it belongs.** The original worry was
+claiming maturity the project did not have. That was right. The mistake was encoding the answer
+as *wait for outside validation* instead of *commit to a discipline and state maturity
+separately*. Backend maturity is now a per-backend statement in the documentation, where it can
+be specific: `docs/adapters/redis.md` says plainly that the transport authenticates nothing
+crossing between nodes, and that limit is Redis's to carry, not the version number's.
+
+**Promotion criteria for `1.0.0`, superseding the three above:**
+
+1. **The stable surface is enumerated in a published document**, type by type, with everything
+   not on it explicitly outside the commitment. An unwritten stable surface cannot be promised.
+2. **That enumerated surface has gone three consecutive releases with no breaking change**,
+   counted from the release that first published the enumeration. Any break resets the count.
+3. **No ADR in the pipeline requires a change to it**, or a change to the Maven coordinates.
+   (Unchanged from the original criterion 3.)
+4. **The documentation states, per backend, what is and is not production-ready**, so that
+   `1.0.0` is read as a compatibility promise and not as a claim of field maturity.
+
+All four are things the project can act on, and each can be checked by reading the tree.
+
+**What this deliberately gives up.** `1.0.0` will no longer assert that the distributed story
+has been proven anywhere. It asserts that the enumerated API will not break without a major.
+Those are different claims, and conflating them is what made the original gate unreachable.
+Criterion 4 exists so that the claim not being made is still written down somewhere.
+
+**Open, and left to the release that adopts this**: at the cadence of 0.30.0 through 0.33.0 —
+three releases in eight days — a criterion counted in releases is a weak soak. Whether
+criterion 2 should also require a minimum elapsed span is a real question, and it sits against
+this ADR's own "observable, not time-based" preference. Recorded rather than silently decided.
 
 ---
 
