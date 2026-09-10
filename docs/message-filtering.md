@@ -116,10 +116,16 @@ ContentFilter.matching(obj ->
 ```java
 import dev.agenor.core.filter.MessageFilter;
 
-MessageFilter trusted = MessageFilter.of(
-    msg -> msg.senderId() != null && msg.senderId().startsWith("trusted-")
+MessageFilter fromPartnerAgents = MessageFilter.of(
+    msg -> msg.senderId() != null && msg.senderId().startsWith("partner-")
 );
 ```
+
+> This routes; it does not authorise. `senderId` is a field the sender wrote, and no transport
+> verifies it — on Redis in particular, anything that can reach the broker can name itself
+> whatever it likes. A filter on `senderId` is a naming convention, useful for keeping traffic
+> apart and useless against anyone who does not want to be kept apart. See
+> [Trust model](adapters/redis.md#trust-model-the-transport-authenticates-nothing).
 
 ### Combining filters
 
