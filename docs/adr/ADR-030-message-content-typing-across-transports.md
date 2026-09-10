@@ -2,6 +2,7 @@
 
 **Status**: Accepted
 **Date**: 2026-08-16
+**Last Modified**: 2026-09-10 (see Amendment to D2 below)
 **Authors**: Project Team
 **References**: ADR-005 (JSON Message Format with Records), ADR-021 (Redis MessageTransport),
 ADR-002 (Interface-First Architecture), ADR-004 (Progressive Complexity Strategy)
