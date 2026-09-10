@@ -29,6 +29,12 @@ docker run -d -p 6379:6379 valkey/valkey:8
 The directory schema is created for you: `JdbcAgentDirectory.create(...)` runs its Flyway
 migrations before returning.
 
+> **This is a development setup, and going distributed changes your threat model.** Neither
+> backend is reachable-from-anywhere safe as started above, and more importantly Agenor itself
+> **does not authenticate a message crossing between nodes** — `senderId` is a claim the sender
+> wrote, not an identity. Run the broker on a trusted network. See
+> [Trust model](adapters/redis.md#trust-model-the-transport-authenticates-nothing).
+
 ---
 
 ## 2. Dependencies

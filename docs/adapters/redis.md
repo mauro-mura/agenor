@@ -12,6 +12,9 @@ available via `RedisMessagingFactory` for cases where fine-grained control is ne
 
 Architectural rationale: ADR-021 — Redis MessageTransport (repository: `docs/adr/`)
 
+> **Before you wire this up:** the transport authenticates nothing that crosses between nodes.
+> It assumes a trusted network. See [Trust model](#trust-model-the-transport-authenticates-nothing).
+
 ---
 
 ## Prerequisites
@@ -186,6 +189,36 @@ Two consequences worth planning for:
 | Send before the recipient's node is up | Held in the node stream and delivered when it starts — the node group is created at offset `0` |
 | Fan-out | Each subscription receives every message exactly once (within that subscription) |
 | Handler contract | Handlers **must be idempotent** — the same message may be delivered more than once after a crash or timeout |
+
+---
+
+## Trust model: the transport authenticates nothing
+
+**Nothing verifies who sent a message that crosses between nodes.** There is no
+authentication of the sender, no authorisation of the destination, and no integrity check on
+the payload. `Message.senderId()` is a field the sender wrote; on this transport it is a claim,
+not an identity. Anything that can reach the Redis server can write to any node's stream,
+publish on any topic, and name itself any agent it likes.
+
+This is a statement about Agenor, not about Redis. Redis itself has authentication
+(`requirepass`, ACLs) and TLS, and the adapter passes your URI through — `rediss://` and
+`redis://user:password@host` both work, see [URI schemes](#uri-schemes). Use them. But that
+secures the connection *to the broker*; it says nothing about which of the clients already
+holding those credentials sent a given message, and Agenor does not ask.
+
+What follows from it:
+
+- **Run this on a trusted network**, with the broker reachable only by the nodes that make up
+  your deployment. Do not expose it to anything you would not let impersonate one of your own
+  agents.
+- **Do not use `senderId` as an authorisation input.** A filter or a handler branching on it is
+  a routing convenience, not a control.
+- **Do not put anything on a topic that every node should not be able to read.** Fan-out is
+  unrestricted by design.
+
+The gap is recorded and deliberate rather than overlooked: closing it needs an interception
+point that belongs to the agent contract rather than to a base class, which is why it has not
+been fixed piecemeal. Until it is, this section is the honest description of what you get.
 
 ---
 
