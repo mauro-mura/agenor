@@ -62,7 +62,7 @@ The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.33.0</version>
+            <version>0.34.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>

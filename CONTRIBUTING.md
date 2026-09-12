@@ -365,6 +365,12 @@ Two ways the bump goes wrong, both worth verifying rather than trusting:
 - `mvn versions:set` silently skips `agenor-bom/pom.xml`, which declares its own `<version>`
   with no parent. Enumerate the POMs directly — `pom.xml */pom.xml` — instead of using the
   plugin.
+- **`tools/central-smoke/pom.xml` is a thirteenth POM and is not one of the twelve.** Its own
+  `<version>` is never published and never moves; its `agenor.version` property names the
+  *released* version under test, so it belongs with the five documents — it goes to the new
+  number on release and **stays there** on the way back to `-SNAPSHOT`, because a smoke test
+  pointed at a snapshot resolves nothing from Central. The `pom.xml */pom.xml` glob excludes it
+  by construction; a recursive `find` would not.
 - Never `sed` the bare version across the tree on the way back to `-SNAPSHOT`. The
   just-released number legitimately survives in `@since` and `@deprecated(since = …)` tags and
   in documentation prose. Count before and after: at 0.30.0 that was 33 occurrences in

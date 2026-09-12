@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-12
+
+**The first release published to Maven Central.** Every artifact before this one existed only in
+the source tree: the POMs carried no licence, developer, scm or issue metadata, no signing or
+publishing plugin, and `logback-classic` sat unscoped in the root `<dependencies>`, so a consumer
+would have inherited a logging backend along with the framework. Install instructions asked a
+reader to clone and build.
+
 ### Changed
+
+- **BREAKING (transitive): no published module puts a logging backend on a consumer's
+  classpath.** `logback-classic` sat in the root `<dependencies>` with no `<scope>`, so every
+  module carried it and anything depending on Agenor inherited it. Choosing the SLF4J binding is
+  the application's call, and a library that makes it silently wins that choice — including
+  against a backend the application had already picked, which is how two bindings on one
+  classpath and a startup warning happen.
+
+  It is now `test` in the root, and `runtime` in `agenor-examples` and `agenor-tools`, which are
+  executables and need one. The Spring Boot starter relies on Spring Boot's own logging.
+
+  **A consumer who was relying on Agenor to supply a backend now sees SLF4J's "no providers"
+  warning and logs nothing** until they add one — one dependency, their choice of which.
+  `tools/central-smoke` fails the release if this ever regresses.
 
 - **The `1.0.0` promotion criteria were unreachable, and are revised** (amendment to ADR-025 D3).
   The old criterion 1 required a distributed backend "validated in a real deployment outside of
@@ -70,6 +92,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   divergence because Central validates each POM on its own.
 
 ### Added
+
+- **The POMs are publishable.** `licenses` (Apache-2.0), `developers`, `scm` and
+  `issueManagement` in the root, where the child modules inherit them, and duplicated in
+  `agenor-bom/pom.xml`, which has no parent and so inherits nothing. Central rejects a release
+  that is missing any of those blocks. A `release` profile — kept out of the default build so a
+  daily `mvn install` does not pay for it — attaches sources and javadoc, signs with
+  `maven-gpg-plugin` using loopback pinentry because CI has no tty, and runs
+  `central-publishing-maven-plugin` with `publishingServerId=central`, `autoPublish=false` for
+  the first release, and `agenor-examples` excluded from the bundle.
+
+  One detail worth recording because it is invisible until published:
+  `child.project.url.inherit.append.path="false"` on `<project>` and the three `child.scm.*`
+  equivalents on `<scm>`. Without them Maven appends each artifactId to every inherited URL, so
+  `agenor-core` would publish a project URL of `https://agenor.dev/agenor-core` and an scm URL
+  ending `.git/agenor-core` — neither of which exists. **langchain4j 1.20.0 ships exactly that
+  defect on Central**, which is how the check was thought of: Central validates that these fields
+  are present, not that they resolve.
 
 - **An "API stability" section in the README**, before the module list, saying which parts are
   expected to move and why — the LLM split is recent, the embedding abstraction was bypassed by
@@ -2589,7 +2628,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/mauro-mura/agenor/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/mauro-mura/agenor/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/mauro-mura/agenor/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/mauro-mura/agenor/compare/v0.30.0...v0.31.0
