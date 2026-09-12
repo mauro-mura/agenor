@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     name: Build and Test
@@ -28,27 +31,52 @@ jobs:
       - name: Run tests and coverage
         run: mvn -B verify org.jacoco:jacoco-maven-plugin:report
 
+      # Fails when a deprecation is past its declared removal release, has no
+      # declared release, or carries no forRemoval at all. Each of those three has
+      # already let dead surface survive: dev.agenor.core.AgentDirectory by four
+      # releases, WebConsoleServer by twenty-nine. Nothing else runs this.
+      - name: Check the removal schedule
+        run: bash tools/api-census.sh --check
+
+      # Globbed, not enumerated: the enumeration listed 4 of the 11 modules and
+      # went stale the moment ADR-027 split the runtime into four.
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-reports
-          path: |
-            agenor-core/target/site/jacoco/
-            agenor-runtime/target/site/jacoco/
-            agenor-adapters/target/site/jacoco/
-            agenor-tools/target/site/jacoco/
+          path: '*/target/site/jacoco/'
           retention-days: 30
 
       - name: Build summary
         if: always()
+        env:
+          # awk formats 88.4 as "88,4" under a comma locale.
+          LC_ALL: C
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          for module in agenor-core agenor-runtime agenor-adapters agenor-tools; do
-            if [ -f "$module/target/site/jacoco/index.html" ]; then
-              echo "✅ $module coverage report generated" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Build Summary"
+            echo
+            echo "| Module | Coverage report | Line coverage |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for pom in */pom.xml; do
+            module=$(dirname "$pom")
+            csv="$module/target/site/jacoco/jacoco.csv"
+            if [ -f "$csv" ]; then
+              # jacoco.csv columns: ...,LINE_MISSED,LINE_COVERED,...
+              pct=$(awk -F, 'NR > 1 { missed += $8; covered += $9 }
+                             END { if (missed + covered > 0)
+                                     printf "%.1f%%", 100 * covered / (missed + covered);
+                                   else print "n/a" }' "$csv")
+              echo "| $module | ✅ | $pct |" >> "$GITHUB_STEP_SUMMARY"
+            elif [ -f "$module/target/site/jacoco/index.html" ]; then
+              echo "| $module | ✅ | — |" >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "⚠️ $module coverage report not found" >> $GITHUB_STEP_SUMMARY
+              # agenor-bom has no code, so it has no report and that is correct.
+              echo "| $module | — | no report |" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "The 80% line-coverage target is not enforced by any build step —" \
+               "it is on review (CONTRIBUTING)." >> "$GITHUB_STEP_SUMMARY"
