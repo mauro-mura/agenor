@@ -45,11 +45,22 @@ dependencies {
 
 ## Modules Managed
 
+All nine, which is every published module — `agenor-examples` is the learning path and is
+not published:
+
 - `agenor-core` - Core interfaces and abstractions
-- `agenor-runtime` - Runtime implementations
-- `agenor-adapters` - External system adapters
-- `agenor-spring-boot-starter` - Spring Boot 3.5.x auto-configuration
-- `agenor-tools` - CLI tools and utilities
+- `agenor-runtime` - In-memory runtime implementations
+- `agenor-runtime-llm` - LLM-aware runtime pieces (`LLMAgent`, memory, guardrails)
+- `agenor-runtime-ext` - Extended runtime (stores, filters, HITL, knowledge, composites)
+- `agenor-runtime-scanning` - Classpath scanning and DI-based agent discovery
+- `agenor-adapters` - LLM providers, MCP, A2A, Redis messaging
+- `agenor-adapters-persistence` - JDBC-backed directory and HITL persistence
+- `agenor-spring-boot-starter` - Spring Boot 4.0.x auto-configuration
+- `agenor-tools` - CLI
+
+The last four runtime modules were split out of `agenor-runtime` by ADR-027: a consumer with
+no LLM, no classpath scanning and no extensions depends on `agenor-core` and
+`agenor-runtime` alone.
 
 ## Benefits
 
