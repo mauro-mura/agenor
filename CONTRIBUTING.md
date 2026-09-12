@@ -161,7 +161,10 @@ Resolves #123"
 - `style`: Code style changes (formatting, etc.)
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+- `build`: The build, CI workflows and the release pipeline — anything under
+  `.github/workflows/`, the POMs' plugin configuration, or `tools/`. Listed because three
+  commits had already used it before it was written down here
+- `chore`: Maintenance tasks — version bumps, ignores, housekeeping
 
 ### 6. Submit Pull Request
 
