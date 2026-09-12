@@ -36,11 +36,21 @@ public @interface Agent {
     /**
      * The agent identifier used for registration and discovery.
      *
-     * <p>When left empty, the runtime defaults to the simple class name
-     * converted to a kebab-case (e.g., {@code OrderProcessorAgent} → {@code order-processor-agent}).
-     * The value must be unique within the runtime.
+     * <p>The value must be unique within the runtime: it is the address the agent is sent
+     * messages at, registered in the directory under, and published as the sender of its own
+     * messages. A class annotated with a fixed id and instantiated twice therefore produces two
+     * agents claiming one address.
      *
-     * @return the agent identifier, or empty string to use the class-name default
+     * <p>When left empty, {@code BaseAgent} generates a random UUID — which is also what an
+     * agent gets when it is not annotated at all. <strong>There is no class-name default.</strong>
+     * This Javadoc promised one, in kebab-case, until 0.34.0; nothing ever implemented it, and a
+     * default derived from the class would give every instance of a class the same address.
+     *
+     * <p>A subclass that passes its own id to {@code super(...)} overrides this value, because an
+     * explicit instance id is the authoritative one — that is how an agent class instantiated
+     * several times gets distinct addresses.
+     *
+     * @return the agent identifier, or empty string for a generated one
      */
     String value() default "";
 
