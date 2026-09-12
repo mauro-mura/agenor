@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Standalone consumer project: deliberately NOT a module of the Agenor build.
+
+  Its whole purpose is to depend on Agenor the way a user does — through the BOM,
+  resolved from Maven Central — so it must never see the reactor or the artifacts
+  a local `mvn install` put in ~/.m2. Run it against a published version with:
+
+    mvn -f tools/central-smoke/pom.xml -Dagenor.version=0.34.0 \
+        -Dmaven.repo.local=/tmp/agenor-smoke-repo test
+
+  The empty local repository is what makes the test mean anything: without it a
+  stale local install answers every resolution and nothing is proven about Central.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>dev.agenor.smoke</groupId>
+    <artifactId>central-smoke</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Agenor Central Smoke Test</name>
+    <description>
+        Resolves Agenor from Maven Central and runs the README's first agent.
+    </description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
+        <!-- The version under test. Override on the command line. -->
+        <agenor.version>0.34.0</agenor.version>
+        <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+    </properties>
+
+    <!--
+      Only Central. Declaring an id of `central` replaces the inherited definition
+      from the super POM, so there is no second repository to fall back on: if the
+      release is not on Central, this build fails to resolve rather than quietly
+      succeeding from somewhere else.
+    -->
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>dev.agenor</groupId>
+                <artifactId>agenor-bom</artifactId>
+                <version>${agenor.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- No versions here: that is what the BOM is being tested for. -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime</artifactId>
+        </dependency>
+        <!--
+          No logging backend on purpose. SLF4J prints one warning and stays quiet,
+          which is the correct behaviour for a library consumer who has not chosen
+          one yet — and `mvn dependency:list` here is the check that no published
+          module drags a backend in (see the release profile's M3 rationale).
+        -->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <!--
+                          Bound to `test` so that `mvn test` is the whole smoke
+                          test: compile against Central, then run and assert.
+                        -->
+                        <id>run-smoke</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>dev.agenor.smoke.CentralSmoke</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
