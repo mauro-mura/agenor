@@ -48,6 +48,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was found to pass on the broken configuration, because AssertJ compares two `OffsetDateTime`
   values by instant and so ignored the very offset under test.
 
+- **`build.yml` runs `tools/api-census.sh --check`**, the companion number nothing ran
+  automatically. It fails when a deprecation is past its declared removal release, was never
+  given one, or carries no `forRemoval` at all — the three shapes that let
+  `dev.agenor.core.AgentDirectory` survive four releases past its date and `WebConsoleServer`
+  twenty-nine without one.
+
+- **`build.yml` reports coverage for every module, by glob.** It enumerated four of the eleven and
+  went stale the moment ADR-027 split the runtime into four; the job summary is now a table with
+  each module's line coverage read from `jacoco.csv`, and says in place that the 80% target is
+  enforced by nobody.
+
+- **`agenor-bom/README.md` lists all nine managed modules** instead of five, and says Spring Boot
+  4.0.x instead of 3.5.x. The four ADR-027 runtime modules and `agenor-adapters-persistence` had
+  been managed by the BOM and absent from its own documentation.
+
+- **CONTRIBUTING gains the publish process**: the portal step and what to inspect there, the
+  Central sync delay that makes an early smoke-test failure more likely to be the sync than the
+  release, the smoke-test command, and the rule that root POM metadata must be mirrored in
+  `agenor-bom/pom.xml` — the BOM has no parent, inherits nothing, and no build step catches a
+  divergence because Central validates each POM on its own.
+
 ### Added
 
 - **An "API stability" section in the README**, before the module list, saying which parts are
@@ -64,7 +85,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   down nowhere until now. Repeated in `docs/distributed-quick-start.md`, and a filter example
   named `trusted` — keyed on exactly that unverified field — was renamed.
 
+- **`.github/workflows/release.yml` — the publish itself.** Triggered by publishing a GitHub
+  release, the same event that deploys the docs site, so the tag, the artifacts and the
+  documentation cannot drift apart. It runs `mvn -P release clean deploy` with tests, and refuses
+  two ways of publishing the wrong thing before it starts: a `-SNAPSHOT` version (what a
+  `workflow_dispatch` from `main` would deploy) and a release tag that does not name the version
+  it checked out. `autoPublish` stays `false`, so the deployment stops in the Central Portal
+  validated and unpublished, which is also the only place the bundle contents can be inspected —
+  `skipPublishing` skips bundling too, so there is no local equivalent.
+
+- **`tools/central-smoke/` and `.github/workflows/central-smoke.yml` — the check that the release
+  is usable.** A standalone Maven project, deliberately not a module, that imports the BOM at a
+  version you pass in, resolves from Central only with an empty local repository, compiles the
+  README's first agent *verbatim*, and runs it until a message arrives. A release that resolves
+  but does not run fails here. The workflow additionally fails if a logging backend reached the
+  consumer classpath, which is the standing check on the Logback change earlier in this release.
+
+  **Its first run found F-20**, which is the case for it: the README's `@Agent("hello-agent")`
+  printed `Hello from 02adb7cb-…`. No test in this repository was going to catch that, because
+  every example writes its id twice — once in the annotation, once in `super(...)` — and it is
+  the `super` call that works.
+
+- **`.github/workflows/integration.yml` and `tools/assert-integration-tests-ran.sh`.** The
+  integration tests are opt-in, so `build.yml` has always reported BUILD SUCCESS without running
+  one of them; this is the first workflow that executes them (on push to `main`, nightly, and on
+  demand). The script is the part that matters: a missing `-Dintegration.tests.enabled=true`
+  makes the class-level `@EnabledIfSystemProperty` guard *skip* every IT rather than fail, so the
+  run asserts both that failsafe reports exist at all and that CONTRIBUTING's "Skipped: 0" holds.
+
+  The two Ollama ITs, which pull a model, run nightly only; that split is precautionary and
+  unmeasured, and the workflow says so where the measurement should go. They are excluded by a
+  new `@Tag("ollama")` rather than by a negated `-Dit.test='!Ollama*IT'`, which was the first
+  attempt and is a trap: a negated pattern *replaces* failsafe's `*IT` includes, so failsafe
+  picks up every test class in the tree and re-runs the entire unit suite under it — 355 report
+  files instead of 11, measured before the workflow was committed.
+
 ### Fixed
+
+- **`@Agent("my-agent")` now gives the agent that identity** (F-20). It did not, on either
+  registration path: the no-arg `BaseAgent()` constructor generated a UUID and never read the
+  annotation, and the one site that did read it for identity —
+  `AgentFactory.extractAgentId`, on the scanning path — has its result discarded, because
+  `discoverAgents` iterates the map's `values()` and `registerAgent` re-keys by `getAgentId()`.
+  So the annotation's only surviving effect anywhere was one log line, while the id it declared
+  was the address the agent would be sent messages at, registered in the directory under, and
+  publish its own messages as.
+
+  **This changes agent identity, which is an address on the message path**, and it is done before
+  the first Central release for that reason. An annotated agent that takes the no-arg constructor
+  moves from a random UUID to the id its annotation always claimed. An explicit id still wins —
+  `super(agentId)` does not consult the annotation, because an agent class instantiated several
+  times needs per-instance ids and only the subclass knows that.
+
+  Nothing in this repository moves: every example that is addressed by name already wrote its id
+  **twice**, once in the annotation and once in `super(...)`, and it was the `super` call that
+  worked. That duplication reads like a convention and was a workaround for this defect.
+
+  Found by `tools/central-smoke` on its first run, which is the argument for having it: the
+  README's first agent printed `Hello from 02adb7cb-8a4a-…`, and no test in the repository was
+  positioned to notice. `Agent#value()`'s Javadoc is corrected in the same change — it promised a
+  kebab-case class-name default that nothing ever implemented, and that would have given every
+  instance of a class the same address.
 
 - **`Performative.createsCommitment()` documents what it reaches.** It returns `true` for
   `REQUEST`, `PROPOSE`, `CFP` and `AGREE`, but the runtime has two call sites, guarded on

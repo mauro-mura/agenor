@@ -1,0 +1,96 @@
+name: Integration Tests
+
+# The integration tests are opt-in (`-Dintegration.tests.enabled=true`), so
+# build.yml has always reported BUILD SUCCESS without running one of them. This
+# workflow is the only place that actually executes them.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 03:17 UTC — off the hour, where the runner queue is shorter.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Testcontainers-based ITs that pull small images (Valkey, Postgres).
+  containers:
+    name: Integration tests (containers)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # The two Ollama ITs carry @Tag("ollama") and run in the nightly job below.
+      # Excluding them by tag rather than by a negated `-Dit.test='!Ollama*IT'`:
+      # that pattern *replaces* failsafe's `*IT` includes, so failsafe picks up
+      # every test class in the tree and re-runs the whole unit suite under it —
+      # measured here, 355 report files instead of 11.
+      - name: Run integration tests
+        run: mvn -B verify -Dintegration.tests.enabled=true -DexcludedGroups=ollama
+
+      - name: Assert nothing was skipped
+        # CONTRIBUTING requires "Skipped: 0": the class-level
+        # @EnabledIfSystemProperty guard turns a missing property into a *skip*,
+        # not a failure, which is exactly how a green build can run no ITs.
+        if: always()
+        run: bash tools/assert-integration-tests-ran.sh
+
+      - name: Upload failsafe reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports-containers
+          path: '*/target/failsafe-reports/'
+          retention-days: 30
+
+  # The Ollama ITs pull qwen2.5:0.5b inside a container. Nightly only, and not
+  # gating a push: the split is precautionary, since nobody has measured what they
+  # cost on a hosted runner. Once there is a measurement, record it here and move
+  # them into the job above if it is affordable.
+  ollama:
+    name: Integration tests (Ollama, nightly)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run the Ollama integration tests
+        run: |
+          start=$SECONDS
+          # A *positive* `it.test` is safe — it narrows failsafe's includes instead of
+          # replacing them with everything. `failIfNoSpecifiedTests=false` because
+          # only one module holds a class matching it.
+          mvn -B verify \
+              -Dintegration.tests.enabled=true \
+              -Dit.test='Ollama*IT' \
+              -Dit.failIfNoSpecifiedTests=false \
+              -Dfailsafe.failIfNoSpecifiedTests=false
+          echo "Ollama ITs took $(( SECONDS - start ))s (whole build)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assert nothing was skipped
+        if: always()
+        run: bash tools/assert-integration-tests-ran.sh
+
+      - name: Upload failsafe reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports-ollama
+          path: '*/target/failsafe-reports/'
+          retention-days: 30

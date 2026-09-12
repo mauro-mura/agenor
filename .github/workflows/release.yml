@@ -1,0 +1,91 @@
+name: Release to Maven Central
+
+# Publishing a GitHub release is the single trigger for a release: the same event
+# already deploys the docs site (deploy-docs.yml), so the tag, the site and the
+# Central deployment all come from one action instead of three.
+# workflow_dispatch exists to retry a failed upload without cutting a new tag.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two uploads of the same version would create two deployments in the portal.
+concurrency:
+  group: maven-central-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to Central
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+          # Writes a settings.xml with <server id="central"> whose username and
+          # password are read from the two named environment variables, and
+          # imports the signing key that maven-gpg-plugin picks up. The values
+          # of server-username/server-password/gpg-passphrase are variable
+          # NAMES, not secrets — the secrets are injected on the deploy step.
+          server-id: central
+          server-username: CENTRAL_TOKEN_USERNAME
+          server-password: CENTRAL_TOKEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      # A release is immutable once Central has it. Both ways of getting the
+      # wrong thing there are cheap to rule out first: a SNAPSHOT (dispatching
+      # this workflow from `main`, where the version is always -SNAPSHOT), and a
+      # tag that does not name the version it checked out.
+      - name: Check the version is releasable
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # tail -1: -q leaves only the value here, but a warning on stdout would
+          # otherwise turn a good release into a failed one.
+          version=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout | tail -1)
+          echo "Project version: $version"
+          case "$version" in
+            *-SNAPSHOT)
+              echo "::error::$version is a SNAPSHOT — publish from a release tag, not a branch"
+              exit 1
+              ;;
+          esac
+          if [ -n "$RELEASE_TAG" ] && [ "$RELEASE_TAG" != "v$version" ]; then
+            echo "::error::release tag $RELEASE_TAG does not name project version $version"
+            exit 1
+          fi
+
+      # Tests run: this is the artifact users resolve, and the pre-release
+      # checklist is a human process that this does not depend on. `-P release`
+      # adds sources, javadoc, GPG signatures and the Central publishing plugin.
+      - name: Deploy to Central
+        run: mvn -B -P release clean deploy
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Next step is manual
+        if: success()
+        run: |
+          {
+            echo "## Deployed to Maven Central"
+            echo
+            echo "\`autoPublish\` is **false**, so the deployment is now *validated* in the"
+            echo "Central Portal and waiting for a human to press **Publish**:"
+            echo
+            echo "<https://central.sonatype.com/publishing/deployments>"
+            echo
+            echo "While it is there, confirm the bundle contains no \`agenor-examples\`"
+            echo "artifact (M6 could not be verified locally), then publish and run the"
+            echo "\`Central smoke test\` workflow against the released version."
+          } >> "$GITHUB_STEP_SUMMARY"

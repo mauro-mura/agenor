@@ -161,7 +161,10 @@ Resolves #123"
 - `style`: Code style changes (formatting, etc.)
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+- `build`: The build, CI workflows and the release pipeline — anything under
+  `.github/workflows/`, the POMs' plugin configuration, or `tools/`. Listed because three
+  commits had already used it before it was written down here
+- `chore`: Maintenance tasks — version bumps, ignores, housekeeping
 
 ### 6. Submit Pull Request
 
@@ -395,6 +398,48 @@ cannot check against something is a formality.
       by eye — save the report before the change, rerun, then diff the two.
 - [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
       changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
+
+### Publishing to Maven Central
+
+The release is published by **publishing the GitHub release** — that one event triggers both
+`release.yml` (Central) and `deploy-docs.yml` (the site), so the tag, the artifacts and the
+documentation cannot drift apart. Nothing is deployed by a local `mvn deploy`, and nothing is
+deployed from a branch: `release.yml` refuses a `-SNAPSHOT` version and refuses a tag that does
+not name the version it checked out.
+
+What is published: the nine modules the BOM manages, plus the BOM itself. `agenor-examples` is
+excluded by the `release` profile's `excludeArtifacts`.
+
+1. **Publish the GitHub release** on the tag. `release.yml` runs `mvn -P release clean deploy`
+   with tests, sources, javadoc and GPG signatures.
+2. **Press Publish in the portal.** `autoPublish` is `false`, so the deployment stops in the
+   Central Portal *validated but unpublished*, at
+   <https://central.sonatype.com/publishing/deployments>. **This is the only place the bundle
+   contents can be inspected** — `skipPublishing` skips bundling too, so there is no local
+   equivalent. Confirm no `agenor-examples` artifact is in it, and that every jar module has
+   `.pom`, `.jar`, `-sources.jar`, `-javadoc.jar`, an `.asc` for each, and checksums.
+3. **Wait for the sync.** Publishing is not instant: the artifacts appear on
+   `central.sonatype.com` first and on `repo.maven.apache.org` (which is what a user's Maven
+   resolves) after a delay that is minutes at best and has no SLA. A failing smoke test in the
+   first half hour is more likely to be the sync than the release.
+4. **Run the smoke test.** The `Central smoke test` workflow, with the published version as its
+   `version` input. It resolves the BOM from Central with an empty local repository, compiles
+   the README's first agent and runs it, and fails if a logging backend reached the classpath.
+   Locally: `mvn -f tools/central-smoke/pom.xml -Dagenor.version=<version>
+   -Dmaven.repo.local=/tmp/agenor-smoke-repo test` — the empty local repository is the point,
+   since `~/.m2` would otherwise answer every resolution.
+5. **Only then update the install instructions**, if this was the first release to Central.
+
+Two rules that exist because the mistake is silent:
+
+- **Root POM metadata must be mirrored in `agenor-bom/pom.xml`.** The BOM has no parent
+  (it *is* one), so it inherits nothing: `licenses`, `developers`, `scm`, `issueManagement`,
+  `url`, the GPG plugin and the Central plugin are all duplicated there on purpose. A change to
+  one that is not made to the other is not caught by any build — Central validates each
+  artifact's POM on its own and both still pass.
+- **A release is immutable.** Central does not allow overwriting a published version, so
+  anything wrong ships as-is and is fixed by a new version. This is why a wire-format or
+  identity change belongs *before* a release rather than after it.
 
 ## 🤝 Community Guidelines
 

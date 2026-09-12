@@ -113,10 +113,34 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
     protected AgentDescriptor agentDescriptor;
 
     /**
-     * Create an agent with auto-generated ID
+     * Create an agent identified by its {@link dev.agenor.core.annotations.Agent @Agent}
+     * annotation, falling back to a random UUID when the class does not declare an id.
+     *
+     * <p>Until 0.34.0 this constructor always generated a UUID and never read the annotation,
+     * so {@code @Agent("hello-agent")} on a manually registered agent had no effect on its
+     * identity — the id it is addressed by, published under and listed as in the directory.
+     * Every example in this repository worked around it by repeating the id in a
+     * {@code super(...)} call, which reads like a convention and was a workaround.
+     *
+     * <p>An explicit id still wins: {@link #BaseAgent(String)} and its siblings do not consult
+     * the annotation, because an agent class instantiated more than once needs per-instance ids
+     * and only the subclass knows that. A class annotated with a fixed id and instantiated twice
+     * produces two agents claiming one address — that is the annotation being taken at its word,
+     * not a defect here.
+     *
+     * <p>The annotation is not {@code @Inherited}, so a subclass of an annotated agent declares
+     * its own or gets a UUID.
      */
     protected BaseAgent() {
-        this(UUID.randomUUID().toString());
+        // Resolved in the body, not passed to this(...): a constructor's delegation arguments
+        // may not touch `this`, and only the runtime class knows which @Agent applies.
+        // getClass() is legal here — Object's constructor has already run.
+        var declared = declaredAgentId(getClass());
+        var id = declared != null ? declared : UUID.randomUUID().toString();
+        this.agentId = id;
+        this.agentName = id;
+        this.agentDescriptor = createDefaultDescriptor();
+        this.memoryNamespace = "agent:" + id + ":";
     }
 
     /**
@@ -181,6 +205,20 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         this.agentDirectory = ctx.agentDirectory();
         this.behaviorScheduler = ctx.behaviorScheduler();
         this.memoryStore = ctx.memoryStore();
+    }
+
+    /**
+     * The id declared by {@code @Agent(value = ...)} on {@code type}, or {@code null} when the
+     * class is not annotated or leaves the value empty.
+     *
+     * @since 0.34.0
+     */
+    private static String declaredAgentId(Class<?> type) {
+        var annotation = type.getAnnotation(dev.agenor.core.annotations.Agent.class);
+        if (annotation == null || annotation.value().isBlank()) {
+            return null;
+        }
+        return annotation.value().trim();
     }
 
     @Override

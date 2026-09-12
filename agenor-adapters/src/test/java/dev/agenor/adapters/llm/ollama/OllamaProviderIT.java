@@ -1,6 +1,7 @@
 package dev.agenor.adapters.llm.ollama;
 
 import dev.agenor.core.llm.*;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
@@ -35,10 +36,17 @@ import static org.junit.jupiter.api.Assertions.*;
  * image and a 397MB model - ran in the unit-test phase, discovered by a different
  * convention from the nine tests it belongs with. The root pom says {@code *IT.java} means
  * an integration test needing Docker; this one now says so in its name.
+ *
+ * <p>Tagged {@code ollama} so CI can run it nightly and leave it out of the per-push
+ * integration job: {@code -DexcludedGroups=ollama} on the push run, {@code -Dit.test='Ollama*IT'}
+ * nightly. The tag exists because the obvious alternative does not work — a negated
+ * {@code -Dit.test='!Ollama*IT'} *replaces* failsafe's {@code *IT} includes and makes it re-run
+ * the entire unit suite.
  */
 @Testcontainers
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
 @EnabledIfDockerAvailable
+@Tag("ollama")
 class OllamaProviderIT {
 
     @Container

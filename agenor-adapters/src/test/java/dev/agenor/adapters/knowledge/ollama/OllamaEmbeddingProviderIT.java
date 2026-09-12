@@ -4,6 +4,7 @@ import dev.agenor.core.knowledge.EmbeddingException;
 import dev.agenor.core.knowledge.EmbeddingProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
@@ -46,10 +47,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * this code: a dead daemon reaches LangChain4j's Ollama model as
  * {@code RuntimeException: ConnectException}, and the classifier, which matched only the
  * outermost throwable, answered {@code UNKNOWN} while every unit test passed.
+ *
+ * <p>Tagged {@code ollama} with {@code OllamaProviderIT}, for the same reason: it pulls a model,
+ * so CI runs it nightly rather than on every push. See that class for why the tag is used instead
+ * of a negated {@code -Dit.test} pattern.
  */
 @Testcontainers
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
 @EnabledIfDockerAvailable
+@Tag("ollama")
 @DisplayName("OllamaEmbeddingProvider — integration tests")
 class OllamaEmbeddingProviderIT {
 
