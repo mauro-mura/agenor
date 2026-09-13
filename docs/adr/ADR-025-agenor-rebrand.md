@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-05-28  
-**Last Modified**: 2026-09-11 (see Amendment to D3 below)  
+**Last Modified**: 2026-09-13 (see second Amendment to D3 below)  
 **Authors**: Project Team  
 **References**: ADR-002 (Interface-First Architecture), ADR-003 (Maven Multi-Module Structure),
 ADR-006 (Annotation-Based Agent Configuration), ADR-016 (Spring Boot Starter),
@@ -166,6 +166,76 @@ Criterion 4 exists so that the claim not being made is still written down somewh
 three releases in eight days — a criterion counted in releases is a weak soak. Whether
 criterion 2 should also require a minimum elapsed span is a real question, and it sits against
 this ADR's own "observable, not time-based" preference. Recorded rather than silently decided.
+
+#### Amendment — 2026-09-13: criterion 1 replaced by a retrospective measure, not an enumeration
+
+The four criteria above are **superseded** by the three below, six weeks after being written.
+The four are kept in place because the reasoning is worth reading; they stopped being the gate
+the day this was written, before a single release had been cut under them.
+
+**What was wrong with criterion 1.** It required "the stable surface enumerated in a published
+document" — writing down, while still `0.x`, which types would not be allowed to break. Two
+defects:
+
+- **It is not what SemVer asks for.** Under SemVer, `0.x` means anything may change in any
+  release, with no promise attached, and `1.0.0` is the act of freezing whatever is public at
+  that moment and committing to the major/minor/patch discipline from there on. Nothing in the
+  spec asks a project to pre-negotiate a stable subset before cutting `1.0.0`; the stability is
+  what `1.0.0` grants, not a precondition engineered in advance. Enumerating a subset ahead of
+  time is a voluntary tiering discipline *on top of* SemVer — legitimate in the abstract, used by
+  some projects, but not required, and this project had no mechanism to enforce it (no
+  `japicmp`, no annotation anyone reads) and no request for it from anyone outside the project.
+- **The timing was wrong on the project's own evidence.** The project already marks every
+  breaking change with `BREAKING` in `CHANGELOG.md`. Read against the last five releases:
+
+  | Release | `BREAKING` entries |
+  |---|---|
+  | 0.34.0 | 1 (Logback off the consumer classpath — a root-POM change, not a peripheral one) |
+  | 0.33.0 | 3 |
+  | 0.32.0 | 2 |
+  | 0.31.0 | 0 |
+  | 0.30.0 | 1 |
+
+  Four of the last five broke something, the most recent — 0.34.0, the release that put Agenor
+  on Maven Central — included. There is no evidence of a plateau. Enumerating a stable subset at
+  this point would have been premature twice over: against what SemVer asks, and against what
+  the project's own surface is still doing.
+
+**What criterion 2 becomes.** It is folded into the new criterion 1, below: instead of measuring
+a hand-picked subset, it measures the whole public surface, retrospectively, using a discipline
+the project already practises.
+
+**Promotion criteria for `1.0.0`, superseding the four above:**
+
+1. **Three consecutive releases with no `BREAKING` entry in `CHANGELOG.md`**, across the whole
+   public surface — not a curated subset. Any `BREAKING` entry resets the count to zero, counted
+   from the release after the reset. **As of this amendment the count is zero**, reset by
+   0.34.0's own Logback change.
+2. **No ADR in the pipeline requires a change to the current public surface**, or to Maven
+   coordinates. (Unchanged in substance from the old criterion 3.)
+3. **The documentation states, per backend, what is and is not production-ready.** (Unchanged
+   from the old criterion 4.)
+
+When criterion 1 is met, `1.0.0` is cut. It freezes whatever is public at that moment; no
+enumeration document is written first, and none is needed — `docs/api-stability.md` was
+considered and **not** written for exactly this reason. The README's informal *API stability*
+table ("Expect this to move") stays as guidance for adopters, not as a criterion.
+
+**What this does not solve.** All eleven modules share one version, inherited from the reactor
+(`${project.version}`) via the BOM, whose own stated purpose is that "every module shares one
+version". If the least mature modules (`agenor-runtime-llm`, the adapters, `agenor-tools` — the
+ones the README's table already names as most likely to move) keep changing indefinitely, they
+hold the whole project's count at zero even once `agenor-core` and `agenor-runtime` have settled.
+**Independent per-module versioning was considered and set aside**, not on principle but on
+cost against a solo maintainer's capacity: it would require the BOM to manage several versions
+instead of one (against its own value proposition), `release.yml` and `tools/doc-versions.sh`
+would need to track which coordinate takes which version, and every release would require
+deciding which modules to bump plus holding a compatibility matrix between interdependent
+modules in mind. It is also not yet evidenced as the right fix — 0.34.0's own break came from the
+root POM, not from a peripheral module, so the "immature modules alone are blocking the count"
+premise has no case to point to yet. If that evidence appears, the cheaper middle ground is
+scoping *which modules' `BREAKING` entries count toward criterion 1*, not giving each module its
+own version number — recorded here for a future amendment, not actioned now.
 
 ---
 

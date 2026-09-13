@@ -177,21 +177,21 @@ agenor:
 
 **The whole API is `0.x`, and that is a statement rather than a formality.** A minor release may
 break a public type. The criteria that would move this project to `1.0.0` are written down in
-[ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md): the stable surface enumerated type by type,
-three consecutive releases without a break in it, no pending ADR that would change it, and a
-per-backend statement of what is production-ready. None of the four is met yet — the
-enumeration in particular does not exist, and the section you are reading is its informal
-precursor, not the document itself.
+[ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md): three consecutive releases with no `BREAKING`
+entry in `CHANGELOG.md` across the whole public API, no pending ADR that would change it, and a
+per-backend statement of what is production-ready. **The count is currently zero** — reset by
+0.34.0's own Logback change — and nothing here is enumerated in advance: `1.0.0` freezes
+whatever is public the day the count reaches three, it doesn't wait on a document written first.
 
-When it arrives, `1.0.0` will mean **the enumerated API does not break without a major
-release**. It will not mean the distributed story has been proven in the field; that is a
-separate claim, made per backend in the documentation, and
+When it arrives, `1.0.0` will mean **the public API does not break without a major release**. It
+will not mean the distributed story has been proven in the field; that is a separate claim, made
+per backend in the documentation, and
 [the Redis transport's own limits](docs/adapters/redis.md#trust-model-the-transport-authenticates-nothing)
 are stated there rather than implied by a version number.
 
-Within that, some parts are more settled than others. The list below is **not** a promise that
-everything unlisted is stable. It is the honest answer to "which of this is most likely to move
-under me", each entry with the reason it is on the list:
+Within that, some parts are more settled than others. The list below is informal guidance, not a
+criterion — it is **not** a promise that everything unlisted is stable. It is the honest answer
+to "which of this is most likely to move under me", each entry with the reason it is on the list:
 
 | Expect this to move | Why |
 |---|---|

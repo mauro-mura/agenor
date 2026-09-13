@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The `1.0.0` promotion criteria are revised again**, six weeks after the last revision
+  (second amendment to ADR-025 §D3). The previous criterion 1 asked for the stable surface to be
+  *enumerated in a published document* before `1.0.0`. That is not what SemVer asks for: `0.x`
+  means anything may change in any release, and `1.0.0` is the act of freezing whatever is public
+  at that moment, not a precondition engineered in advance by pre-negotiating a stable subset.
+  It was also premature on the project's own evidence — the CHANGELOG already marks every
+  breaking change with `BREAKING`, and four of the last five releases (0.34.0 included) carry at
+  least one.
+
+  Criterion 1 now reads **three consecutive releases with no `BREAKING` entry, across the whole
+  public API** — not a hand-picked subset — folding the old criterion 2 into it. The count is
+  currently zero, reset by this release's own Logback change. No enumeration document is
+  written: `docs/api-stability.md` was considered and not built, for exactly this reason. The
+  README's informal "Expect this to move" table stays as guidance, not as a criterion.
+  Independent per-module versioning, which would let mature modules reach `1.0.0` without waiting
+  on less mature ones, was also considered and set aside — real tooling cost for a solo
+  maintainer, and not yet evidenced as the right fix (this release's own break came from the root
+  POM, not a peripheral module).
+
 - **The README installs Agenor from Maven Central.** Now that 0.34.0 is there, the BOM import is
   the one installation instruction instead of option two of three, below a `git clone`. Building
   from source moved to Development Setup, with the JDK-not-JRE warning that only a build needs, and
