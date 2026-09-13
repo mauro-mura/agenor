@@ -54,7 +54,9 @@ The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
 
 ## 5. Add Agenor to Your Project
 
-> Until Agenor is published to Maven Central, run `mvn install` locally first (step 1 above).
+Agenor is on [Maven Central](https://central.sonatype.com/artifact/dev.agenor/agenor-bom): this
+step needs no clone and no local build. Agenor ships no logging backend, so add one as well —
+see [Installation](https://github.com/mauro-mura/agenor#installation) in the README.
 
 ```xml
 <dependencyManagement>

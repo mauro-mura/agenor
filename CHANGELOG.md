@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The README installs Agenor from Maven Central.** Now that 0.34.0 is there, the BOM import is
+  the one installation instruction instead of option two of three, below a `git clone`. Building
+  from source moved to Development Setup, with the JDK-not-JRE warning that only a build needs, and
+  a Maven Central badge went on top. Every coordinate the README names was resolved from Central
+  with an empty local repository before the change — all nine modules, their full transitive
+  closure, and the Logback snippet — and `agenor-examples` was confirmed absent there, which settles
+  the one publishing check that had no local equivalent.
+
+  **The README now says Agenor ships no logging backend**, with a Logback snippet. Without it, the
+  first agent a newcomer copies has a `log.info` that prints nothing, because 0.34.0 took Logback
+  off the consumer classpath.
+
+  `docs/getting-started.md` stops telling readers to run `mvn install` "until Agenor is published
+  to Maven Central". Its clone step stays: that page is a tour of the examples, which are not
+  published.
+
+- **`docs/first-agent.md` works in a reader's own project.** It promised "every line written by
+  you" but told the reader to build Agenor first, showed no imports, gave only a command that runs
+  the repository's copy of the program from a clone, and listed an output line its own `main` did
+  not print. It now opens with the Central dependency — `agenor-runtime` alone is enough — shows
+  the seven imports, runs the reader's own class, prints both lines it promises, and says the SLF4J
+  "no providers" warning above them is expected. Verified by extracting the page's snippets and its
+  run command into an empty project and running them against Central.
+
 ## [0.34.0] - 2026-09-12
 
 **The first release published to Maven Central.** Every artifact before this one existed only in
