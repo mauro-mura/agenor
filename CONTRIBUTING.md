@@ -347,13 +347,23 @@ We follow [Semantic Versioning](https://semver.org/):
 
 Cutting a release and reopening `main` afterwards do **not** touch the same files.
 
-- **Release — 18 files.** The 12 POMs, the five documents that carry a Maven coordinate
-  (`README.md`, `agenor-bom/README.md`, `docs/getting-started.md`, `docs/hitl-persistence.md`,
-  `docs/spring-boot-starter.md`), and `CHANGELOG.md`. Everything moves to the version being
-  released.
-- **Reopen — 12 files.** The POMs only. **The five documents keep the released version.**
+- **Release.** The 12 POMs, `CHANGELOG.md`, and every documented coordinate, which one command
+  moves: `bash tools/doc-versions.sh --set x.y.z`. Everything names the version being released.
+- **Reopen — 12 files.** The POMs only. **Documentation keeps the released version.**
 
-Every Maven coordinate in those five documents is an installation snippet a reader copies into
+The documented coordinates used to be a hand-kept list of "the five documents", and it went
+stale the first time a page gained a coordinate. `tools/doc-versions.sh` finds them by pattern
+instead — a `<version>` after `<groupId>dev.agenor</groupId><artifactId>agenor-…`, a Gradle
+`dev.agenor:agenor-…:x.y.z`, and `agenor.version` in `tools/central-smoke/pom.xml` — across every
+tracked Markdown file except `CHANGELOG.md` and the ADRs, and never touches prose that merely
+mentions a version. `--list` shows what it found. `release.yml` runs `--check` before deploying,
+so a release whose documentation names another version does not publish.
+
+**Write coordinates as literal versions, never `${agenor.version}`.** That property exists in
+Agenor's own build, not in a reader's, so a snippet using it fails for the person who copies it.
+Nine did until 0.34.0.
+
+Every Maven coordinate in the documentation is an installation snippet a reader copies into
 their own `pom.xml`; none is an internal reference. Sending them to `-SNAPSHOT` means that for
 the whole period between two releases, the README rendered on GitHub tells a newcomer to depend
 on a version that names nothing — the documentation site is unaffected, because it is built on
@@ -367,10 +377,10 @@ Two ways the bump goes wrong, both worth verifying rather than trusting:
   plugin.
 - **`tools/central-smoke/pom.xml` is a thirteenth POM and is not one of the twelve.** Its own
   `<version>` is never published and never moves; its `agenor.version` property names the
-  *released* version under test, so it belongs with the five documents — it goes to the new
-  number on release and **stays there** on the way back to `-SNAPSHOT`, because a smoke test
-  pointed at a snapshot resolves nothing from Central. The `pom.xml */pom.xml` glob excludes it
-  by construction; a recursive `find` would not.
+  *released* version under test, so it moves with the documentation — `doc-versions.sh --set`
+  handles it — and **stays there** on the way back to `-SNAPSHOT`, because a smoke test pointed
+  at a snapshot resolves nothing from Central. The `pom.xml */pom.xml` glob excludes it by
+  construction; a recursive `find` would not.
 - Never `sed` the bare version across the tree on the way back to `-SNAPSHOT`. The
   just-released number legitimately survives in `@since` and `@deprecated(since = …)` tags and
   in documentation prose. Count before and after: at 0.30.0 that was 33 occurrences in

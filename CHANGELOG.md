@@ -33,6 +33,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "no providers" warning above them is expected. Verified by extracting the page's snippets and its
   run command into an empty project and running them against Central.
 
+### Added
+
+- **`tools/doc-versions.sh`**, which finds every Agenor coordinate in the documentation by pattern
+  and `--list`s, `--set`s or `--check`s its version. The coordinates had been kept by hand from a
+  list of "the five documents" in CONTRIBUTING, which went stale the first time a page gained a
+  coordinate — first-agent.md, in this same change — and never included the nine placeholder
+  snippets above, which the script found on its first run. `release.yml` runs `--check` before
+  deploying; `--check` also fails if the Logback version the README tells readers to add is not
+  the one the build uses. A `-SNAPSHOT` is refused outright: documentation names only released
+  versions.
+
+### Fixed
+
+- **Nine documented dependency snippets named `${agenor.version}`** — in the Redis, MCP and JDBC
+  directory adapter pages and the two adapter module READMEs. The property exists only inside
+  Agenor's own build, so every reader who copied one got Maven's "version must be a valid version"
+  error. They now name `0.34.0`, and CONTRIBUTING says to write coordinates as literal versions.
+
 ## [0.34.0] - 2026-09-12
 
 **The first release published to Maven Central.** Every artifact before this one existed only in

@@ -48,7 +48,7 @@ explicitly:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>${agenor.version}</version>
+    <version>0.34.0</version>
 </dependency>
 <!-- Runtime JDBC driver — choose one -->
 <dependency>

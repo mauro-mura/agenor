@@ -63,6 +63,10 @@ jobs:
             echo "::error::release tag $RELEASE_TAG does not name project version $version"
             exit 1
           fi
+          # Every installation snippet in the docs must name the version going out. A
+          # release that ships documentation pointing at the previous one is caught here,
+          # not by the first reader who copies it.
+          bash tools/doc-versions.sh --check "$version"
 
       # Tests run: this is the artifact users resolve, and the pre-release
       # checklist is a human process that this does not depend on. `-P release`
