@@ -1,6 +1,7 @@
 
 ![agenor](docs/assets/agenor-wordmark.svg)
 
+[![Maven Central](https://img.shields.io/maven-central/v/dev.agenor/agenor-bom.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/dev.agenor/agenor-bom)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9%2B-blue.svg)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
@@ -26,24 +27,13 @@ Agenor reimagines multi-agent systems with modern Java practices:
 
 ### Prerequisites
 
-- A **JDK** 21+ (LTS recommended) — a JRE is not enough, the build runs `javac`.
-  Several distributions ship a headless JRE as the default `java`; the build fails
-  with `release version 21 not supported` if `JAVA_HOME` points at one.
+- Java 21+
 - Maven 3.9+
 
 ### Installation
 
-#### Option 1: Clone and Build from Source
-
-```bash
-git clone https://github.com/mauro-mura/agenor.git
-cd agenor
-mvn clean install
-```
-
-#### Option 2: Add as Maven Dependency (Recommended)
-
-Use the Agenor BOM (Bill of Materials) to manage module versions consistently:
+Agenor is published on [Maven Central](https://central.sonatype.com/artifact/dev.agenor/agenor-bom).
+Import the BOM (Bill of Materials) so that every Agenor module you add shares one version:
 
 ```xml
 <dependencyManagement>
@@ -73,15 +63,24 @@ Use the Agenor BOM (Bill of Materials) to manage module versions consistently:
 </dependencies>
 ```
 
-**Benefits of using the BOM:**
-- ✅ No need to specify versions for each Agenor module
-- ✅ Guaranteed compatibility between modules
-- ✅ Simplified dependency management
-- ✅ Easy upgrades - change one version, update all modules
+Agenor logs through SLF4J and **ships no logging backend** — choosing one is your
+application's call. Until you add one, SLF4J prints a "no providers" warning and the
+`log.info` in the agent below prints nothing. Logback, for example:
 
-#### Option 3: Without BOM
+```xml
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.5.32</version>
+    <scope>runtime</scope>
+</dependency>
+```
 
-If you prefer explicit version management:
+Spring Boot applications already have one and need nothing extra.
+
+#### Without the BOM
+
+Every module takes the same version:
 
 ```xml
 <dependencies>
@@ -389,7 +388,8 @@ The `agenor-examples` module contains a structured **learning path** from first 
 production systems. See **[agenor-examples/README.md](agenor-examples/README.md)** for the
 full guide.
 
-Quick-start examples to run immediately:
+The examples are not published to Maven Central, so they run from a clone: follow
+[Development Setup](#development-setup) first — `mvn exec:java` needs the modules installed.
 
 ```bash
 # Level 0 — first agent exchange
@@ -419,13 +419,20 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ### Development Setup
 
+Building from source is for working on Agenor itself — to use it, depend on it from Maven
+Central as shown in [Installation](#installation).
+
+Building needs a **JDK** 21+, not a JRE: the build runs `javac`. Several distributions ship
+a headless JRE as the default `java`, and the build fails with
+`release version 21 not supported` if `JAVA_HOME` points at one.
+
 ```bash
 # Clone and setup
 git clone https://github.com/mauro-mura/agenor.git
 cd agenor
 
-# Build and test
-mvn clean test
+# Build, test and install into ~/.m2
+mvn clean install
 
 # Run examples
 mvn exec:java -pl agenor-examples \

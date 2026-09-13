@@ -12,7 +12,7 @@ round-trip without writing provider-specific code.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${agenor.version}</version>
+    <version>0.34.0</version>
 </dependency>
 ```
  

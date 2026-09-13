@@ -43,7 +43,7 @@ Consumers that want Redis messaging must add Lettuce explicitly:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>${agenor.version}</version>
+    <version>0.34.0</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>
@@ -357,7 +357,7 @@ Add the starter and Lettuce to your POM:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>${agenor.version}</version>
+    <version>0.34.0</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>

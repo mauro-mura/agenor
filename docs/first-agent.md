@@ -3,8 +3,29 @@
 Two agents. One asks a question, the other answers it. Fifteen minutes, and you will have
 written every line yourself.
 
-You need Java 21 and Maven 3.9. If you have not built Agenor yet, do that first — see
-[Getting Started](getting-started.md).
+You need Java 21 and Maven 3.9, and nothing to build: Agenor is on Maven Central. Put this in
+your project's `pom.xml` — `agenor-runtime` is the only module this page uses:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-bom</artifactId>
+            <version>0.34.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>dev.agenor</groupId>
+        <artifactId>agenor-runtime</artifactId>
+    </dependency>
+</dependencies>
+```
 
 ## Six concepts, and that is the whole list
 
@@ -20,6 +41,23 @@ You need Java 21 and Maven 3.9. If you have not built Agenor yet, do that first 
 Behaviours, topics, the agent directory and the message builder are all real and all useful.
 None of them appears below, because none of them is needed to make two agents talk. You will
 meet them when you need them.
+
+Everything below goes in one file, `FirstAgent.java`, with these imports at the top:
+
+```java
+import dev.agenor.core.dialogue.DialogueHandler;
+import dev.agenor.core.dialogue.DialogueMessage;
+import dev.agenor.core.dialogue.Performative;
+import dev.agenor.runtime.AgenorRuntime;
+import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.dialogue.DialogueCapability;
+
+import java.util.concurrent.CompletableFuture;
+
+public class FirstAgent {
+    // the two agents and main() from the sections below go here
+}
+```
 
 ## 1. The agent that answers
 
@@ -84,6 +122,7 @@ public static void main(String[] args) {
     runtime.start().join();
 
     DialogueMessage answer = reader.askAbout("Kafka").join();
+    System.out.println("Reader asked about Kafka");
     System.out.println("Librarian answered: " + answer.content());
 
     runtime.stop().join();
@@ -94,19 +133,23 @@ public static void main(String[] args) {
 there is nothing to install and nothing to configure. Swapping either for Redis or a database
 later does not change any of the code above.
 
-The complete file is
-[`QuickStartExample.java`](https://github.com/mauro-mura/agenor/blob/main/agenor-examples/src/main/java/dev/agenor/examples/QuickStartExample.java).
-Run it with:
-
-```bash
-mvn exec:java -pl agenor-examples \
-    -Dexec.mainClass="dev.agenor.examples.QuickStartExample"
-```
+Run `FirstAgent.main` from your IDE, or from the command line with
+`mvn compile exec:java -Dexec.mainClass=FirstAgent`. You should see:
 
 ```
 Reader asked about Kafka
 Librarian answered: we have 3 books about Kafka
 ```
+
+Above those two lines SLF4J prints a warning that it found no providers. That is expected:
+Agenor ships no logging backend and leaves the choice to your application — the
+[README](https://github.com/mauro-mura/agenor#installation) shows how to add one. The answer
+prints either way, because this page uses `System.out`.
+
+The same program is in the repository as
+[`QuickStartExample.java`](https://github.com/mauro-mura/agenor/blob/main/agenor-examples/src/main/java/dev/agenor/examples/QuickStartExample.java);
+from a clone, after `mvn clean install`, it runs with
+`mvn exec:java -pl agenor-examples -Dexec.mainClass="dev.agenor.examples.QuickStartExample"`.
 
 ## What to reach for next
 
