@@ -13,16 +13,6 @@
 
 Agenor draws on the concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on modern Java.
 
-## 🚀 Vision
-
-Agenor reimagines multi-agent systems with modern Java practices:
-
-- **Start Simple, Scale Smart**: Begin with in-memory implementations, evolve to enterprise solutions
-- **Interface-First Design**: Clean abstractions that enable seamless technology transitions
-- **JVM-Native**: Runs as a plain Java 21 process — embeds in any Spring Boot service; optional Redis/JDBC backends enable stateless, multi-node deployments
-- **Developer Experience**: Clear APIs, minimal configuration, annotation-driven agent discovery
-- **Virtual Threads**: Leverage Java 21's Project Loom for efficient concurrency
-
 ## ⚡ Quick Start
 
 ### Prerequisites
@@ -159,9 +149,9 @@ See docs/architecture.md for the full breakdown.
 
 ### Evolution Path
 
-```
-All components are interfaces — swap any implementation without changing agent code.
-```
+All components are interfaces — swap any implementation without changing agent code. See the
+[Architecture Guide](docs/architecture.md) for how a deployment grows from single-JVM to
+distributed.
 
 ## 🔧 Configuration
 
@@ -319,8 +309,8 @@ Web Console and CLI tools.
 
 ### agenor-spring-boot-starter
  
-Zero-configuration Spring Boot 4.0.x integration. Auto-wires `AgenorRuntime` and
-optionally an `LLMProvider` from `application.yml`. Includes Actuator health indicator.
+Spring Boot 4.0.x auto-configuration: wires `AgenorRuntime` and optionally an `LLMProvider`
+from `application.yml`. Includes an Actuator health indicator.
  
 ```xml
 <dependency>
@@ -344,7 +334,7 @@ That's it — `AgenorRuntime` is started and stopped automatically by the Spring
 
 ### agenor-examples
 Runnable examples organized as a 6-level learning path (Level 0–5), from a first agent
-exchange to production-grade systems. Not published as a dependency — see the
+exchange to a multi-node, multi-behavior application. Not published as a dependency — see the
 [📚 Examples](#-examples) section below.
 
 ## 🚀 Features
@@ -384,9 +374,9 @@ exchange to production-grade systems. Not published as a dependency — see the
 
 ## 📚 Examples
 
-The `agenor-examples` module contains a structured **learning path** from first steps to
-production systems. See **[agenor-examples/README.md](agenor-examples/README.md)** for the
-full guide.
+The `agenor-examples` module contains a structured **learning path** from first steps to a
+multi-node, multi-behavior application. See **[agenor-examples/README.md](agenor-examples/README.md)**
+for the full guide.
 
 The examples are not published to Maven Central, so they run from a clone: follow
 [Development Setup](#development-setup) first — `mvn exec:java` needs the modules installed.
