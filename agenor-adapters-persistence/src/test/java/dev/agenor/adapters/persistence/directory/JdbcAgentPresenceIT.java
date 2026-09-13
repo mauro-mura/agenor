@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * Integration tests for {@link JdbcAgentPresence} against a real PostgreSQL database
- * (ADR-028 Phase A, task 7).
+ * (ADR-028 Phase A).
  *
  * <p>Enable via: {@code mvn verify -Dintegration.tests.enabled=true -pl agenor-adapters-persistence}
  *

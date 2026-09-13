@@ -93,7 +93,7 @@
           No logging backend on purpose. SLF4J prints one warning and stays quiet,
           which is the correct behaviour for a library consumer who has not chosen
           one yet — and `mvn dependency:list` here is the check that no published
-          module drags a backend in (see the release profile's M3 rationale).
+          module drags a backend in (Logback left the published modules in 0.34.0).
         -->
     </dependencies>
 

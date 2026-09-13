@@ -39,7 +39,7 @@ jobs:
               test
 
       - name: No logging backend on the consumer classpath
-        # The acceptance criterion from the publishing work plan: a consumer who
+        # Logback left the published modules in 0.34.0: a consumer who
         # asked for agenor-core and agenor-runtime must not inherit a backend.
         # slf4j-api is expected; a binding is the failure.
         env:

@@ -90,6 +90,6 @@ jobs:
             echo "<https://central.sonatype.com/publishing/deployments>"
             echo
             echo "While it is there, confirm the bundle contains no \`agenor-examples\`"
-            echo "artifact (M6 could not be verified locally), then publish and run the"
+            echo "artifact (the bundle cannot be listed locally), then publish and run the"
             echo "\`Central smoke test\` workflow against the released version."
           } >> "$GITHUB_STEP_SUMMARY"

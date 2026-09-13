@@ -18,9 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies {@code AgentFactory.createDescriptor(...)} delegates to
- * {@link AgentDescriptors#create} and produces an identical descriptor (ADR-027,
- * task 1.5's extraction contract). Split out of {@code AgentDescriptorsTest} in
- * {@code agenor-runtime} (ADR-027, task 4): {@code AgentFactory} moved to
+ * {@link AgentDescriptors#create} and produces an identical descriptor, so the scanning and
+ * manual registration paths cannot drift apart. Split out of {@code AgentDescriptorsTest} in
+ * {@code agenor-runtime} by the ADR-027 module split: {@code AgentFactory} moved to
  * {@code agenor-runtime-scanning}, which {@code agenor-runtime} cannot depend on.
  */
 @DisplayName("AgentFactory.createDescriptor() / AgentDescriptors parity")

@@ -18,8 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code AgentFactory} at all.
  *
  * <p>The parity check against {@code AgentFactory.createDescriptor()} itself lives in
- * {@code AgentFactoryDescriptorParityTest} in {@code agenor-runtime-scanning} (ADR-027,
- * task 4) — {@code AgentFactory} moved there and {@code agenor-runtime} cannot depend
+ * {@code AgentFactoryDescriptorParityTest} in {@code agenor-runtime-scanning} (ADR-027
+ * module split) — {@code AgentFactory} moved there and {@code agenor-runtime} cannot depend
  * on it.
  */
 @DisplayName("AgentDescriptors")

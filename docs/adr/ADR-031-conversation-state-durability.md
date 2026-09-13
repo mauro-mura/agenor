@@ -87,7 +87,7 @@ contract-test suite across implementations, and the semantics of a restored-but-
 conversation described above — the hardest part, and the one no store answers.
 
 If a concrete adopter requirement appears, Option B (a JDBC or Redis `ConversationManager` behind
-the existing seam, following ADR-023's two-phase shape) becomes its own work plan, and it must
+the existing seam, following ADR-023's two-phase shape) becomes its own ADR, and it must
 answer the pending-future problem before writing any SQL.
 
 ### What "durable enough" looks like today, without this ADR changing

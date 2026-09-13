@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * Regression tests for F-20: {@code @Agent("id")} did not give the agent that identity.
+ * Regression tests for a defect fixed in 0.34.0: {@code @Agent("id")} did not give the agent
+ * that identity.
  *
  * <p>The no-arg {@code BaseAgent()} constructor generated a UUID and never read the annotation,
  * so the README's first agent — annotated {@code @Agent("hello-agent")} and registered manually —
@@ -61,7 +62,7 @@ class BaseAgentAnnotatedIdentityTest {
 
             runtime.registerAgent(new AnnotatedAgent());
 
-            // The symptom F-20 was found by: this is the address a sender uses.
+            // The symptom the defect was found by: this is the address a sender uses.
             assertThat(runtime.getAgent("hello-agent")).isPresent();
         }
     }
