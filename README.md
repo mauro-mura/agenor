@@ -11,7 +11,7 @@
 
 **For Java developers who have a job to split across several independent workers, and need them to talk.** You write a class, annotate it, and start it; the framework handles discovery, addressing, delivery and lifecycle. It is a plain Java 21 library — no broker to install and no server to run before you see something work, and Redis or JDBC only when you outgrow a single process. LLM-backed reasoning (`agenor-runtime-llm`) is an optional module, not a prerequisite.
 
-Agenor modernizes the concepts pioneered by JADE for the cloud-native era, with virtual threads and records instead of the 2001 API.
+Agenor draws on the concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on modern Java.
 
 ## 🚀 Vision
 
@@ -468,12 +468,6 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 
 ## 💡 Why Agenor?
 
-**vs. JADE:**
-- Modern Java (21 vs 8)
-- Virtual threads vs traditional threading
-- Cloud-native vs desktop-oriented
-- Interface-first vs monolithic
-
 **Built for coordination, not just generation:**
 - Agents are independent, addressable, long-lived processes — each with its own
   lifecycle and behavior scheduler, registered in an `AgentDirectory` for discovery
@@ -484,11 +478,19 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 - LLM-backed reasoning (`agenor-runtime-llm`) is one optional capability an agent can
   have, not the mechanism coordination is built on
 
-**vs. Building from Scratch:**
-- Proven multi-agent patterns
-- Gradual complexity adoption
-- Clear migration paths
-- Extensible by design — plug in any infrastructure
+**Reach for Agenor when:**
+- You have several independent, long-lived workers that need to discover each other,
+  exchange messages and negotiate — not one call orchestrating tools in sequence
+- You want agents that can delegate and bid on work (Contract-Net) with or without an
+  LLM in the loop
+- You want to start on a single JVM, no broker or server to stand up first, and grow
+  into a Redis- or JDBC-backed multi-node deployment only when you need to
+
+**Look elsewhere when:**
+- Your whole system is one LLM call chaining tools in sequence, with nothing that needs
+  its own address, lifecycle or negotiation
+- Durable, replayable long-running workflow execution is the core guarantee you need
+- Fine-grained supervision and actor-level control is the primitive you're building on
 
 ## 📄 License
 
