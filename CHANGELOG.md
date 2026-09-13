@@ -184,7 +184,7 @@ reader to clone and build.
   but does not run fails here. The workflow additionally fails if a logging backend reached the
   consumer classpath, which is the standing check on the Logback change earlier in this release.
 
-  **Its first run found F-20**, which is the case for it: the README's `@Agent("hello-agent")`
+  **Its first run found a defect**, which is the case for it: the README's `@Agent("hello-agent")`
   printed `Hello from 02adb7cb-…`. No test in this repository was going to catch that, because
   every example writes its id twice — once in the annotation, once in `super(...)` — and it is
   the `super` call that works.
@@ -205,14 +205,14 @@ reader to clone and build.
 
 ### Fixed
 
-- **`@Agent("my-agent")` now gives the agent that identity** (F-20). It did not, on either
-  registration path: the no-arg `BaseAgent()` constructor generated a UUID and never read the
-  annotation, and the one site that did read it for identity —
+- **`@Agent("my-agent")` now gives the agent that identity**, found by the Central smoke test above.
+  It did not, on either registration path: the no-arg `BaseAgent()` constructor generated a UUID and
+  never read the annotation, and the one site that did read it for identity —
   `AgentFactory.extractAgentId`, on the scanning path — has its result discarded, because
-  `discoverAgents` iterates the map's `values()` and `registerAgent` re-keys by `getAgentId()`.
-  So the annotation's only surviving effect anywhere was one log line, while the id it declared
-  was the address the agent would be sent messages at, registered in the directory under, and
-  publish its own messages as.
+  `discoverAgents` iterates the map's `values()` and `registerAgent` re-keys by `getAgentId()`. So
+  the annotation's only surviving effect anywhere was one log line, while the id it declared was the
+  address the agent would be sent messages at, registered in the directory under, and publish its
+  own messages as.
 
   **This changes agent identity, which is an address on the message path**, and it is done before
   the first Central release for that reason. An annotated agent that takes the no-arg constructor
@@ -428,7 +428,7 @@ reader to clone and build.
   and `docs/directory.md` showed a `RedisAgentRegistry` that has never existed, the Redis adapter
   covering messaging only.
 
-- `docs/messaging.md` opens with what the page is for instead of what it replaced in 0.20.0 (C-4).
+- `docs/messaging.md` opens with what the page is for instead of what it replaced in 0.20.0.
 
 ## [0.32.0] - 2026-09-05
 
@@ -690,7 +690,7 @@ reader to clone and build.
   verdict itself did not: it has been `@Deprecated(since = "0.4.0")` — twenty-seven releases —
   with no `forRemoval`, so `--check` has never once seen it, because `--check` only audits
   deprecations that carry `forRemoval = true`. `JettyWebConsole` is the live implementation
-  (**named by user code**) that ADR-008 says replaced it. Recorded as a separate finding: a
+  (**named by user code**) that ADR-008 says replaced it. A
   deprecation with no `forRemoval` at all is as invisible to every tool as an undated one, and
   nothing here checks for that shape either.
 
@@ -860,15 +860,15 @@ reader to clone and build.
 ### Changed
 
 - **`docs/mailbox.md` is gone; the two rules it held that change your code are in
-  `docs/messaging.md`.** The mailbox is infrastructure — you never create one, wire one or call
-  into one — and a dedicated user-facing page for it was the case that the adoption phase's
-  "plumbing must stay invisible" criterion was written against. What survives is the part a
-  reader acts on: handlers for one agent may overlap and are not serialised, and a handler must
-  be idempotent because a transport with redelivery will run it again. Both now sit in
-  *Delivery Semantics*, where they correct two claims that had been false since 0.27.0 — that
-  page still said delivery was "at-most-once" and that there was "no backpressure", neither of
-  which survived ADR-032 and ADR-033. Why the inbound path is shaped this way stays in those
-  two ADRs, which is where a maintainer looks and a user does not.
+  `docs/messaging.md`.** The mailbox is infrastructure — you never create one, wire one or call into
+  one — and a dedicated user-facing page for it was exactly what the project's rule that plumbing
+  stays out of user-facing documentation is written against. What survives is the part a reader acts
+  on: handlers for one agent may overlap and are not serialised, and a handler must be idempotent
+  because a transport with redelivery will run it again. Both now sit in *Delivery Semantics*, where
+  they correct two claims that had been false since 0.27.0 — that page still said delivery was
+  "at-most-once" and that there was "no backpressure", neither of which survived ADR-032 and
+  ADR-033. Why the inbound path is shaped this way stays in those two ADRs, which is where a
+  maintainer looks and a user does not.
 
   The mailbox itself is unchanged. Nothing was deprecated: `MailboxConfig`, `OverflowPolicy`
   and `MailboxOverflowException` are still public and still supported. They now have no

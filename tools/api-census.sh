@@ -68,7 +68,7 @@ current_version() {
 # file|line|declared release (empty when none)|kind|the declaration it sits on
 #
 # kind is "scheduled" for a @Deprecated carrying forRemoval = true, "unscheduled" for one
-# carrying nothing else. The second was invisible to this tool until 0.33.0 (F-16): the loop
+# carrying nothing else. The second was invisible to this tool until 0.33.0: the loop
 # keyed on forRemoval, so a @Deprecated that never promised a removal could not fail any
 # check. WebConsoleServer had been @Deprecated(since = "0.4.0") for the better part of the
 # project's public history on exactly that footing.
@@ -183,7 +183,7 @@ if (( CHECK_ONLY )); then
 fi
 
 # Every module that contains code, minus agenor-bom (no code) and agenor-examples (the
-# measuring stick, not a subject). Widened from five to all nine (F-14): the previous list
+# measuring stick, not a subject). Widened from five to all nine in 0.31.0: the previous list
 # stopped at the runtime split and never looked at the two modules a user meets first —
 # agenor-spring-boot-starter, the whole auto-configuration surface a Spring user sees instead
 # of AgenorRuntime, and agenor-tools, the console/CLI a developer reaches for when something is
@@ -240,7 +240,7 @@ done < <(grep -H "^import dev\.agenor\." "${ALL_FILES[@]}" || true)
 # `import dev.agenor.tools.cli.AgenorCLI;` because nothing calls it as a method: it is named
 # by agenor-tools/pom.xml's exec-maven-plugin and by whatever launches the packaged jar. It
 # scored **dead surface** with every column at zero while being that module's front door
-# (F-15). Unlike a ServiceLoader registration there is no file to read, so the type gets its
+# until 0.33.0. Unlike a ServiceLoader registration there is no file to read, so the type gets its
 # own verdict rather than a synthetic reference: "entry point", which carries no action.
 #
 # Why this indirection and not the others. Reflection, a ServiceLoader with no
@@ -315,11 +315,11 @@ is_dedicated() {   # <example file> <TypeName>
 # ---------------------------------------------------------------------------------------
 # Offered surface: the types user-facing documentation names.
 #
-# C-3 pairs usage with documentation — an API with no uses is "either undocumented or
-# unnecessary" — so usage alone cannot decide. Framework code referencing a type only proves
-# the framework needs it internally, which is no reason for a user to ever meet it.
+# The zero-usage rule pairs usage with documentation — an API with no uses is "either undocumented
+# or unnecessary" — so usage alone cannot decide. Framework code referencing a type only proves the
+# framework needs it internally, which is no reason for a user to ever meet it.
 #
-# ADRs are excluded on purpose (C-4): a decision record explains why something is the way it is
+# ADRs are excluded on purpose: a decision record explains why something is the way it is
 # to whoever maintains it. It does not offer the type to a user. Working notes are excluded by
 # construction — they do not live under docs/, which is also why they are never published.
 # ---------------------------------------------------------------------------------------
@@ -535,7 +535,8 @@ had to learn. It is plumbing you reached through something else.
 
 So a zero here does not by itself mean "unused". It means "user code never has to name it",
 which is the input to two different conclusions: either the type is genuinely unused, or it is
-plumbing that user-facing documentation is presenting as surface (C-1). The **docs** column is
+plumbing that user-facing documentation is presenting as surface — infrastructure a user should
+never need to know about, documented as if they did. The **docs** column is
 what separates them — except this rule states it and the verdict used to leave a reader to
 remember it. Three times a **documented, unnamed** row got read as "nothing touches this", when
 what it meant was "no *user* code names it". When a documented type also has \`framework > 0\` —
@@ -588,9 +589,9 @@ not a use, and counting it is how an API with no users certifies itself as used.
 
 Framework references are reported but never settle a verdict on their own. That the framework
 needs a type internally is no reason for a user to ever meet it — so the second axis is
-**docs**: how many user-facing pages name the type (ADRs excluded, per C-4).
-Crossing the two is what C-3 actually asks for, an API being "either undocumented or
-unnecessary":
+**docs**: how many user-facing pages name the type (ADRs excluded: a decision record explains a
+type to its maintainer, it does not offer it to a user). Crossing the two is what the zero-usage
+rule actually asks for, an API being "either undocumented or unnecessary":
 
 | Verdict | Rule | Action |
 |---|---|---|

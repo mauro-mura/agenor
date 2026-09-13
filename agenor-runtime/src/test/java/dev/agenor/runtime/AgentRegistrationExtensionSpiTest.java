@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the {@code AgentRegistrationExtension} SPI wiring in
- * {@code AgenorRuntime.registerAgent()} (ADR-027, task 1.5): every extension
+ * {@code AgenorRuntime.registerAgent()} (ADR-027): every extension
  * discovered via {@link java.util.ServiceLoader} — not just the built-in LLM
  * guardrail/HITL ones — is invoked exactly once per registered agent.
  *

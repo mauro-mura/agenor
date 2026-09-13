@@ -281,7 +281,7 @@ about.
 
 ## Implementation and verification
 
-Phase A only. The work is tracked in `work-plan-adr028-redis-agent-presence-20260810.md`.
+Phase A only; Phase B is designed in D-5 and not built.
 
 - `agenor-core`: `AgentPresence` Javadoc states D-1 and D-2 without naming a backend; the four
   contract suites move here and a `test-jar` is published. The deprecated

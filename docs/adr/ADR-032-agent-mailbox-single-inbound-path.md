@@ -208,7 +208,7 @@ users did not ask for and would find hard to diagnose. Claim ordering removes th
 transport discrepancy, which is the defect; serialising user code is a different and much
 larger decision.
 
-P2-2's defensive synchronisation in `DefaultConversation` is **not removed**. Dialogue's
+The defensive synchronisation in `DefaultConversation` is **not removed**. Dialogue's
 timeout path still mutates conversation state from another thread, so the lock still
 guards a real race. Recorded here so it is not later mistaken for dead code.
 
@@ -244,7 +244,7 @@ ADR-027's amendment governs two points, and both are discharged:
 
 ### A pull API: `receive(selector, timeout)`
 
-The original G1 proposal added a JADE-style selective receive, letting an agent await a
+The original proposal for this ADR added a JADE-style selective receive, letting an agent await a
 message matching an arbitrary predicate. It was rejected on evidence:
 
 - **The framework already waits, twice.** `DialogueCapability.request`/`query`/
@@ -388,8 +388,7 @@ Three assertions carry the substance of this ADR and must exist:
 Plus the ADR-029 amendment: a dialogue message reaches `@DialogueHandler` and **not**
 `onDirectMessage()`.
 
-Implemented in 0.27.0. Its work plan was deleted once this ADR became the record; the
-delivery semantics it left implicit are settled in ADR-033.
+Implemented in 0.27.0. The delivery semantics this ADR left implicit are settled in ADR-033.
 
 ## Related ADRs
 

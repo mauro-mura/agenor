@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * classpath: {@code createAgent(Class)} (DI-based construction) and
  * {@code scanPackage(...)}-driven discovery at {@code start()}.
  *
- * <p>Split out of {@code AgenorRuntimeTest} in {@code agenor-runtime} (ADR-027, task 4):
+ * <p>Split out of {@code AgenorRuntimeTest} in {@code agenor-runtime} by the ADR-027 module split:
  * that suite covers {@link AgenorRuntime} behavior that works with zero optional
  * modules on the classpath; these tests only pass once {@code agenor-runtime-scanning}
  * (which provides the {@code AgentDiscoveryEngine} SPI implementation) is present —
