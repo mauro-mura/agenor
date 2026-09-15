@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "no providers" warning above them is expected. Verified by extracting the page's snippets and its
   run command into an empty project and running them against Central.
 
+- **CONTRIBUTING lists only the communication channels that exist.** It sent readers to a Discord
+  server that was never created, and named email without an address. GitHub Discussions is now
+  enabled, and both CONTRIBUTING and the README's Support section point to it; the email is
+  info@agenor.dev, the address `SECURITY.md` already gave.
+
 ### Added
 
 - **`tools/doc-versions.sh`**, which finds every Agenor coordinate in the documentation by pattern

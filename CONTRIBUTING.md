@@ -470,8 +470,8 @@ Two rules that exist because the mistake is silent:
 
 - **Issues**: Bug reports, feature requests
 - **Discussions**: General questions, ideas
-- **Discord**: Real-time community chat
-- **Email**: Private/sensitive matters
+- **Email**: Private or sensitive matters, at info@agenor.dev. Security vulnerabilities follow
+  [SECURITY.md](SECURITY.md) instead.
 
 ### Getting Help
 
@@ -491,5 +491,7 @@ discussions.
 
 - **Project Lead**: Mauro Mura
 - **Issues**: [GitHub Issues](https://github.com/mauro-mura/agenor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/mauro-mura/agenor/discussions)
+- **Email**: info@agenor.dev
 
 Thank you for helping make Agenor better! 🚀
