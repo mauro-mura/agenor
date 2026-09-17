@@ -52,8 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "no providers" warning above them is expected. Verified by extracting the page's snippets and its
   run command into an empty project and running them against Central.
 
-- **The README's Support section links the maintainer's blog**, where each release is written up
-  with examples that are run against the published artifacts before the article goes out.
+- **The README's Support section links the maintainer's blog**, which carries worked examples
+  and the reasoning behind design decisions. Releases are recorded here and on the GitHub
+  releases page; the blog is not a release-notes channel and does not cover every version.
 
 - **CONTRIBUTING lists only the communication channels that exist.** It sent readers to a Discord
   server that was never created, and named email without an address. GitHub Discussions is now
