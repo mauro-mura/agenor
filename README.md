@@ -490,6 +490,8 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 - 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/agenor/issues)
 - 💬 Questions and ideas: [GitHub Discussions](https://github.com/mauro-mura/agenor/discussions)
+- 📝 Release notes and articles: [{bit Autonomi}](https://bitautonomi.substack.com), the
+  maintainer's blog, where each release is written up with runnable examples
 
 ## 🤖 Development
 
