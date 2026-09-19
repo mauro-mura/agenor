@@ -188,7 +188,7 @@ LLMProvider ollama = LLMProviderFactory.ollama()
 
 ### ToolConversionUtils
 
-Converts Agenor `FunctionDefinition` objects to the vendor-specific JSON schema format required by each provider. Called internally by all three providers when `LLMRequest.hasFunctions()` is true. You do not normally need to use this class directly.
+Converts Agenor `FunctionDefinition` objects to the vendor-specific JSON schema format required by each provider. Called internally by `OpenAIProvider` and `AnthropicProvider` when `LLMRequest.hasFunctions()` is true; `OllamaProvider` does not call it, because it does not support function calling. You do not normally need to use this class directly.
 
 ```java
 // Used internally:

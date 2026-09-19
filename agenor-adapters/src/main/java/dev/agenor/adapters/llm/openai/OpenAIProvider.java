@@ -1,13 +1,12 @@
 package dev.agenor.adapters.llm.openai;
 
+import dev.agenor.adapters.llm.LLMSupport;
 import dev.agenor.adapters.llm.ToolConversionUtils;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
-import dev.langchain4j.model.chat.request.json.JsonSchemaElement;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -100,8 +99,10 @@ public class OpenAIProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-        return CompletableFuture.supplyAsync(() -> {
+        final String resolvedModel = LLMSupport.resolveModel(request, modelName);
+        return LLMSupport.supplyAsync(() -> {
             ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
+                    .modelName(resolvedModel)
                     .messages(convertMessages(request));
 
             // ✅ ADD FUNCTION CALLING SUPPORT
@@ -112,7 +113,7 @@ public class OpenAIProvider implements LLMProvider {
 
             ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
-            LLMResponse.Builder builder = LLMResponse.builder(response.id(), modelName);
+            LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
             builder.role(LLMMessage.Role.ASSISTANT);
 
             if (response.aiMessage() != null && response.aiMessage().text() != null) {
@@ -154,9 +155,12 @@ public class OpenAIProvider implements LLMProvider {
     public CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> handler) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         final String streamId = UUID.randomUUID().toString();
+        final String resolvedModel = LLMSupport.resolveModel(request, modelName);
         final int[] idx = new int[] { 0 };
+        final boolean[] sawPartial = new boolean[] { false };
 
         ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
+                .modelName(resolvedModel)
                 .messages(convertMessages(request));
 
         // ✅ ADD FUNCTION CALLING SUPPORT FOR STREAMING
@@ -169,6 +173,16 @@ public class OpenAIProvider implements LLMProvider {
                 chatRequestBuilder.build(),
                 new StreamingChatResponseHandler() {
                     @Override
+                    public void onPartialResponse(String partialResponse) {
+                        if (partialResponse == null || partialResponse.isEmpty()) {
+                            return;
+                        }
+                        sawPartial[0] = true;
+                        handler.accept(
+                                StreamingChunk.of(streamId, resolvedModel, partialResponse, idx[0]++));
+                    }
+
+                    @Override
                     public void onCompleteResponse(ChatResponse completeResponse) {
                         String content = (completeResponse != null && completeResponse.aiMessage() != null)
                                 ? completeResponse.aiMessage().text()
@@ -176,10 +190,13 @@ public class OpenAIProvider implements LLMProvider {
                         String finish = (completeResponse != null && completeResponse.finishReason() != null)
                                 ? completeResponse.finishReason().toString()
                                 : "stop";
-                        if (content != null && !content.isEmpty()) {
-                            handler.accept(StreamingChunk.of(streamId, modelName, content, idx[0]++));
+                        // Only when nothing was streamed: a response that produced no incremental
+                        // events must still reach the handler, and one that did must not arrive
+                        // a second time in full.
+                        if (!sawPartial[0] && content != null && !content.isEmpty()) {
+                            handler.accept(StreamingChunk.of(streamId, resolvedModel, content, idx[0]++));
                         }
-                        handler.accept(StreamingChunk.of(streamId, modelName, "", finish, idx[0]));
+                        handler.accept(StreamingChunk.of(streamId, resolvedModel, "", finish, idx[0]));
                         future.complete(null);
                     }
 
@@ -223,88 +240,6 @@ public class OpenAIProvider implements LLMProvider {
         }).collect(Collectors.toList());
     }
 
-    /**
-     * Convert Agenor FunctionDefinition to LangChain4j ToolSpecification.
-     */
-    private List<ToolSpecification> convertFunctionsToToolSpecs(List<FunctionDefinition> functions) {
-        return functions.stream()
-                .map(this::convertFunctionToToolSpec)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Convert single FunctionDefinition to ToolSpecification.
-     */
-    private ToolSpecification convertFunctionToToolSpec(FunctionDefinition func) {
-        ToolSpecification.Builder builder = ToolSpecification.builder()
-                .name(func.name())
-                .description(func.description());
-
-        // Convert parameters from Agenor format to LangChain4j JsonObjectSchema
-        if (func.parameters() != null && !func.parameters().isEmpty()) {
-            JsonObjectSchema.Builder schemaBuilder = JsonObjectSchema.builder();
-
-            Map<String, Object> params = func.parameters();
-
-            // Extract properties
-            if (params.containsKey("properties")) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> properties = (Map<String, Object>) params.get("properties");
-
-                Map<String, JsonSchemaElement> convertedProps = new HashMap<>();
-                properties.forEach((propName, propDef) -> {
-                    JsonSchemaElement element = convertPropertyToJsonSchema(propDef);
-                    convertedProps.put(propName, element);
-                });
-
-                schemaBuilder.addProperties(convertedProps);
-            }
-
-            // Extract required fields
-            if (params.containsKey("required")) {
-                @SuppressWarnings("unchecked")
-                List<String> required = (List<String>) params.get("required");
-                required.forEach(schemaBuilder::required);
-            }
-
-            builder.parameters(schemaBuilder.build());
-        }
-
-        return builder.build();
-    }
-
-    /**
-     * Convert property definition to JsonSchemaElement.
-     */
-    private JsonSchemaElement convertPropertyToJsonSchema(Object propDef) {
-        if (!(propDef instanceof Map)) {
-            return dev.langchain4j.model.chat.request.json.JsonStringSchema.builder().build();
-        }
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> prop = (Map<String, Object>) propDef;
-        String type = (String) prop.getOrDefault("type", "string");
-        String description = (String) prop.get("description");
-
-        return switch (type) {
-            case "string" -> dev.langchain4j.model.chat.request.json.JsonStringSchema.builder()
-                    .description(description)
-                    .build();
-            case "integer", "number" -> dev.langchain4j.model.chat.request.json.JsonIntegerSchema.builder()
-                    .description(description)
-                    .build();
-            case "boolean" -> dev.langchain4j.model.chat.request.json.JsonBooleanSchema.builder()
-                    .description(description)
-                    .build();
-            case "array" -> dev.langchain4j.model.chat.request.json.JsonArraySchema.builder()
-                    .description(description)
-                    .build();
-            default -> dev.langchain4j.model.chat.request.json.JsonStringSchema.builder()
-                    .description(description)
-                    .build();
-        };
-    }
-
     // ========================================================================
     // Builder
     // ========================================================================
@@ -316,7 +251,7 @@ public class OpenAIProvider implements LLMProvider {
     public static class Builder {
         private String apiKey;
         private String baseUrl;
-        private String modelName = Models.GPT_4O.id;;
+        private String modelName = Models.GPT_4O.id;
         private Double temperature = 0.7;
         private Integer maxTokens = 2000;
         private Duration timeout = Duration.ofSeconds(60);

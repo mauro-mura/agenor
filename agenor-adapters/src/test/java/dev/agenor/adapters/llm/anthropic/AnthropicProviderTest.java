@@ -198,11 +198,11 @@ class AnthropicProviderTest {
     }
 
     // -----------------------------------------------------------------------
-    // chatStream() - onCompleteResponse with content
+    // chatStream() - a response that emits no partials
     // -----------------------------------------------------------------------
 
     @Test
-    void chatStream_withContent_shouldDeliverChunks() throws Exception {
+    void chatStream_withoutPartials_shouldStillDeliverTheWholeText() throws Exception {
         doAnswer(invocation -> {
             StreamingChatResponseHandler handler = invocation.getArgument(1);
             handler.onCompleteResponse(buildResponse("Streamed answer", FinishReason.STOP, null));

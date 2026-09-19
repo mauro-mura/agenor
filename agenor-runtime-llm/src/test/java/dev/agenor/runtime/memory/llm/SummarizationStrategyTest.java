@@ -1,11 +1,17 @@
 package dev.agenor.runtime.memory.llm;
 
 import dev.agenor.core.llm.LLMMessage;
+import dev.agenor.core.llm.LLMProvider;
+import dev.agenor.core.llm.LLMRequest;
+import dev.agenor.core.llm.LLMResponse;
+import dev.agenor.core.llm.StreamingChunk;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -18,6 +24,69 @@ class SummarizationStrategyTest {
     void setUp() {
         strategy = new SummarizationStrategy();
         estimator = new SimpleTokenEstimator();
+    }
+
+    // ========== THE MODEL REACHES THE PROVIDER ==========
+
+    /**
+     * The constructor takes a model and its Javadoc calls it the "model identifier passed to the
+     * provider", so the request this strategy builds has to carry it. That half was always
+     * correct; the half that was not is in the adapters, which until 0.35.0 built their client
+     * request without it and answered from the model they were constructed with. The adapter side
+     * is pinned by the adapters' own tests - this one pins the contract they honour.
+     */
+    @Test
+    void generateSummary_shouldPassItsModelToTheProvider() {
+        List<LLMRequest> seen = new ArrayList<>();
+        LLMProvider recording = new RecordingProvider(seen, "a summary");
+
+        List<LLMMessage> many = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            many.add(LLMMessage.user("message " + i));
+        }
+
+        new SummarizationStrategy(recording, "gpt-4.1-mini")
+                .selectMessages(many, 4000, estimator);
+
+        assertThat(seen).hasSize(1);
+        assertThat(seen.get(0).model()).isEqualTo("gpt-4.1-mini");
+    }
+
+    /** Minimal recording stub - the module under test does not depend on any real provider. */
+    private static final class RecordingProvider implements LLMProvider {
+        private final List<LLMRequest> seen;
+        private final String reply;
+
+        RecordingProvider(List<LLMRequest> seen, String reply) {
+            this.seen = seen;
+            this.reply = reply;
+        }
+
+        @Override
+        public CompletableFuture<LLMResponse> chat(LLMRequest request) {
+            seen.add(request);
+            return CompletableFuture.completedFuture(
+                    LLMResponse.builder("resp-1", request.model())
+                            .role(LLMMessage.Role.ASSISTANT)
+                            .content(reply)
+                            .build());
+        }
+
+        @Override
+        public CompletableFuture<Void> chatStream(LLMRequest request,
+                                                  Consumer<StreamingChunk> chunkHandler) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<List<String>> getAvailableModels() {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        @Override
+        public String getProviderName() {
+            return "recording";
+        }
     }
 
     // ========== METADATA ==========

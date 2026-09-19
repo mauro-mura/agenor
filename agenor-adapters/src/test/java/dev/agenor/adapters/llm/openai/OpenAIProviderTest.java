@@ -224,11 +224,11 @@ class OpenAIProviderTest {
     }
 
     // -----------------------------------------------------------------------
-    // chatStream() - onCompleteResponse with non-empty content
+    // chatStream() - a response that emits no partials
     // -----------------------------------------------------------------------
 
     @Test
-    void chatStream_withContent_shouldDeliverChunksAndComplete() throws Exception {
+    void chatStream_withoutPartials_shouldStillDeliverTheWholeText() throws Exception {
         doAnswer(invocation -> {
             StreamingChatResponseHandler handler = invocation.getArgument(1);
             ChatResponse finalResponse = buildResponse("Streamed content", FinishReason.STOP, null);
