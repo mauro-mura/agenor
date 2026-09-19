@@ -102,9 +102,9 @@ class OllamaProviderIT {
                 .build();
 
         LLMRequest request = LLMRequest.builder()
-                .addMessage(LLMMessage.user("Count: 1, 2, 3"))
+                .addMessage(LLMMessage.user("Count from 1 to 20, separated by commas."))
                 .temperature(0.0)
-                .maxTokens(20)
+                .maxTokens(80)
                 .build();
 
         List<StreamingChunk> chunks = new ArrayList<>();
@@ -122,6 +122,13 @@ class OllamaProviderIT {
         streamFuture.get(120, TimeUnit.SECONDS);
 
         assertFalse(chunks.isEmpty());
+
+        // The assertion that was missing, and the reason a non-streaming provider passed for
+        // months: a handler called once with the whole text, then once to close, produces exactly
+        // two chunks and satisfies "not empty". Incremental delivery means more than that.
+        long contentChunks = chunks.stream().filter(StreamingChunk::hasContent).count();
+        assertTrue(contentChunks > 1,
+                "expected the response to arrive in several chunks, got " + contentChunks);
 
         // Verify stream structure
         String streamId = chunks.get(0).id();
@@ -260,6 +267,34 @@ class OllamaProviderIT {
      * model is confirmed present before returning, so a test that gets past this point cannot
      * fail with "model not found".
      */
+    @Test
+    void chat_withPerRequestModel_shouldReachTheServer() throws Exception {
+        String ollamaUrl = "http://localhost:" + ollama.getMappedPort(11434);
+        pullModel(ollamaUrl, "qwen2.5:0.5b");
+
+        // Built with a model that was never pulled. If request.model() only labelled the response
+        // - which is all it did before 0.35.0 - the call goes out asking for "not-a-real-model"
+        // and Ollama refuses it. Reaching a reply at all is the proof, on a real server rather
+        // than against a mock that cannot tell the two apart.
+        OllamaProvider provider = OllamaProvider.builder()
+                .baseUrl(ollamaUrl)
+                .modelName("not-a-real-model")
+                .timeout(Duration.ofMinutes(3))
+                .build();
+
+        LLMRequest request = LLMRequest.builder()
+                .addMessage(LLMMessage.user("Reply with the single word: ok"))
+                .model("qwen2.5:0.5b")
+                .temperature(0.0)
+                .maxTokens(10)
+                .build();
+
+        LLMResponse response = provider.chat(request).get(120, TimeUnit.SECONDS);
+
+        assertNotNull(response.content());
+        assertEquals("qwen2.5:0.5b", response.model());
+    }
+
     private void pullModel(String ollamaUrl, String modelName) {
         if (modelIsPresent(ollamaUrl, modelName)) {
             return;

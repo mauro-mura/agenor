@@ -1,5 +1,6 @@
 package dev.agenor.adapters.llm.anthropic;
 
+import dev.agenor.adapters.llm.LLMSupport;
 import dev.agenor.adapters.llm.ToolConversionUtils;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
@@ -89,9 +90,11 @@ public class AnthropicProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-        return CompletableFuture.supplyAsync(() -> {
+        final String resolvedModel = LLMSupport.resolveModel(request, modelName);
+        return LLMSupport.supplyAsync(() -> {
 
             ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
+                    .modelName(resolvedModel)
                     .messages(convertMessages(request));
 
             // ✅ ADD FUNCTION CALLING SUPPORT
@@ -102,7 +105,7 @@ public class AnthropicProvider implements LLMProvider {
 
             ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
-            LLMResponse.Builder builder = LLMResponse.builder(response.id(), modelName);
+            LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
             builder.role(LLMMessage.Role.ASSISTANT);
 
             if (response.aiMessage() != null && response.aiMessage().text() != null) {
@@ -145,9 +148,12 @@ public class AnthropicProvider implements LLMProvider {
     public CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> handler) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         final String streamId = UUID.randomUUID().toString();
+        final String resolvedModel = LLMSupport.resolveModel(request, modelName);
         final int[] idx = new int[] { 0 };
+        final boolean[] sawPartial = new boolean[] { false };
 
         ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
+                .modelName(resolvedModel)
                 .messages(convertMessages(request));
 
         // ✅ ADD FUNCTION CALLING SUPPORT FOR STREAMING
@@ -160,6 +166,16 @@ public class AnthropicProvider implements LLMProvider {
                 chatRequestBuilder.build(),
                 new StreamingChatResponseHandler() {
                     @Override
+                    public void onPartialResponse(String partialResponse) {
+                        if (partialResponse == null || partialResponse.isEmpty()) {
+                            return;
+                        }
+                        sawPartial[0] = true;
+                        handler.accept(
+                                StreamingChunk.of(streamId, resolvedModel, partialResponse, idx[0]++));
+                    }
+
+                    @Override
                     public void onCompleteResponse(ChatResponse completeResponse) {
                         String content = (completeResponse != null && completeResponse.aiMessage() != null)
                                 ? completeResponse.aiMessage().text()
@@ -167,10 +183,13 @@ public class AnthropicProvider implements LLMProvider {
                         String finish = (completeResponse != null && completeResponse.finishReason() != null)
                                 ? completeResponse.finishReason().toString()
                                 : "stop";
-                        if (content != null && !content.isEmpty()) {
-                            handler.accept(StreamingChunk.of(streamId, modelName, content, idx[0]++));
+                        // Only when nothing was streamed: a response that produced no incremental
+                        // events must still reach the handler, and one that did must not arrive
+                        // a second time in full.
+                        if (!sawPartial[0] && content != null && !content.isEmpty()) {
+                            handler.accept(StreamingChunk.of(streamId, resolvedModel, content, idx[0]++));
                         }
-                        handler.accept(StreamingChunk.of(streamId, modelName, "", finish, idx[0]));
+                        handler.accept(StreamingChunk.of(streamId, resolvedModel, "", finish, idx[0]));
                         future.complete(null);
                     }
 

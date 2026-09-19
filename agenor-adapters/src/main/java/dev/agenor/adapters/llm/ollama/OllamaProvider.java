@@ -1,5 +1,6 @@
 package dev.agenor.adapters.llm.ollama;
 
+import dev.agenor.adapters.llm.LLMSupport;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -118,11 +119,13 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-        return CompletableFuture.supplyAsync(() -> {
+        final String resolvedModel = LLMSupport.resolveModel(request, modelName);
+        return LLMSupport.supplyAsync(() -> {
             try {
                 List<ChatMessage> messages = convertMessages(request.messages());
 
                 ChatRequest.Builder requestBuilder = ChatRequest.builder()
+                        .modelName(resolvedModel)
                         .messages(messages);
 
                 if (request.temperature() != null) {
@@ -136,7 +139,7 @@ public class OllamaProvider implements LLMProvider {
 
                 return LLMResponse.builder(
                                 UUID.randomUUID().toString(),
-                                resolveModel(request)
+                                resolvedModel
                         )
                         .content(response.aiMessage().text())
                         .role(LLMMessage.Role.ASSISTANT)
@@ -145,7 +148,7 @@ public class OllamaProvider implements LLMProvider {
                         .build();
 
             } catch (Exception e) {
-                throw new RuntimeException(new LLMException("Ollama chat request failed", e));
+                throw new LLMException("Ollama chat request failed", e);
             }
         });
     }
@@ -156,11 +159,12 @@ public class OllamaProvider implements LLMProvider {
 
         try {
             List<ChatMessage> messages = convertMessages(request.messages());
-            final String resolvedModel = resolveModel(request);
+            final String resolvedModel = LLMSupport.resolveModel(request, modelName);
             final String streamId = UUID.randomUUID().toString();
             final int[] chunkIndex = {0};
 
             ChatRequest.Builder requestBuilder = ChatRequest.builder()
+                    .modelName(resolvedModel)
                     .messages(messages);
 
             if (request.temperature() != null) {
@@ -239,11 +243,6 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public String getDefaultModel() { return Models.LLAMA_3_2.id; }
-
-    private String resolveModel(LLMRequest request) {
-        if (request.model() != null && !request.model().isBlank()) return request.model();
-        return modelName;
-    }
 
     private List<ChatMessage> convertMessages(List<LLMMessage> messages) {
         return messages.stream()

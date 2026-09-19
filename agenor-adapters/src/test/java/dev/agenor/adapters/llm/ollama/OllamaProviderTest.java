@@ -149,8 +149,12 @@ class OllamaProviderTest {
 
             ExecutionException exception = assertThrows(ExecutionException.class,
                     () -> future.get(5, TimeUnit.SECONDS));
-            assertTrue(exception.getCause() instanceof RuntimeException);
-            assertTrue(exception.getCause().getCause() instanceof LLMException);
+            // The LLMException is the cause, not the cause of the cause. It used to be thrown
+            // inside a RuntimeException, so a caller matching on getCause() found the wrapper
+            // and a catch (LLMException e) never fired at all - on an exception type that is
+            // already unchecked, so the wrapper bought nothing.
+            assertTrue(exception.getCause() instanceof LLMException);
+            assertEquals("Ollama chat request failed", exception.getCause().getMessage());
         }
     }
 
