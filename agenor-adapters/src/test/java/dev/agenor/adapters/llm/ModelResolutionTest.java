@@ -1,11 +1,11 @@
 package dev.agenor.adapters.llm;
 
+import static dev.agenor.adapters.llm.LLMTestFixtures.inject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +21,9 @@ import dev.agenor.adapters.llm.ollama.OllamaProvider;
 import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMRequest;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.anthropic.AnthropicChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.chat.response.ChatResponseMetadata;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 
@@ -47,12 +45,7 @@ class ModelResolutionTest {
     @Mock private AnthropicChatModel anthropicChatModel;
     @Mock private OllamaChatModel ollamaChatModel;
 
-    // An id is required: OpenAI and Anthropic pass response.id() straight into
-    // LLMResponse.builder(), which rejects null.
-    private static final ChatResponse EMPTY_RESPONSE = ChatResponse.builder()
-            .aiMessage(AiMessage.from("ok"))
-            .metadata(ChatResponseMetadata.builder().id("resp-1").build())
-            .build();
+    private static final ChatResponse EMPTY_RESPONSE = LLMTestFixtures.chatResponse("ok");
 
     private static LLMRequest request(String model) {
         LLMRequest.Builder builder = LLMRequest.builder()
@@ -61,16 +54,6 @@ class ModelResolutionTest {
             builder.model(model);
         }
         return builder.build();
-    }
-
-    private static void inject(Object provider, String field, Object value) {
-        try {
-            Field f = provider.getClass().getDeclaredField(field);
-            f.setAccessible(true);
-            f.set(provider, value);
-        } catch (Exception e) {
-            throw new IllegalStateException("could not inject " + field, e);
-        }
     }
 
     // ------------------------------------------------------------------

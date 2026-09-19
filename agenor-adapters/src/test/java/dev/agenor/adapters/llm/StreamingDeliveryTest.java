@@ -1,10 +1,10 @@
 package dev.agenor.adapters.llm;
 
+import static dev.agenor.adapters.llm.LLMTestFixtures.inject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -65,16 +65,6 @@ class StreamingDeliveryTest {
 
     private static LLMRequest request() {
         return LLMRequest.builder().addMessage(LLMMessage.user("stream please")).build();
-    }
-
-    private static void inject(Object provider, String field, Object value) {
-        try {
-            Field f = provider.getClass().getDeclaredField(field);
-            f.setAccessible(true);
-            f.set(provider, value);
-        } catch (Exception e) {
-            throw new IllegalStateException("could not inject " + field, e);
-        }
     }
 
     /** Drives the handler with the given partials, then completes with their concatenation. */
