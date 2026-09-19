@@ -130,16 +130,30 @@ The `agenor-adapters` module provides concrete implementations of core interface
 All three providers implement `LLMProvider` from `agenor-core`:
 
 - **OpenAIProvider**: OpenAI REST API (GPT-4, GPT-3.5, etc.). Supports streaming and function calling.
-- **AnthropicProvider**: Anthropic API (Claude 3 Opus, Sonnet, Haiku). Supports streaming.
-- **OllamaProvider**: Local Ollama server. Supports any model available on the local instance.
+- **AnthropicProvider**: Anthropic API (Claude 3 Opus, Sonnet, Haiku). Supports streaming and function calling.
+- **OllamaProvider**: Local Ollama server. Supports any model available on the local instance, and
+  streaming. It does not support function calling.
 
-**LLMProviderFactory** is the recommended entry point. It creates the correct provider from a name string and API key, avoiding direct dependency on implementation classes:
+All three take the model per request: `LLMRequest.model()` wins over the model the provider was
+built with, and the response is labelled with the one that answered.
+
+**LLMProviderFactory** is the recommended entry point. It hands back a builder per provider, so user code names the factory rather than the implementation class:
 
 ```java
-LLMProvider openAI    = LLMProviderFactory.create("openai", System.getenv("OPENAI_API_KEY"));
-LLMProvider anthropic = LLMProviderFactory.create("anthropic", System.getenv("ANTHROPIC_API_KEY"));
-LLMProvider ollama    = LLMProviderFactory.create("ollama", null); // no key needed
+LLMProvider openAI    = LLMProviderFactory.openai()
+                            .apiKey(System.getenv("OPENAI_API_KEY"))
+                            .modelName("gpt-4o")
+                            .build();
+LLMProvider anthropic = LLMProviderFactory.anthropic()
+                            .apiKey(System.getenv("ANTHROPIC_API_KEY"))
+                            .modelName("claude-sonnet-4-6")
+                            .build();
+LLMProvider ollama    = LLMProviderFactory.ollama()          // no key needed
+                            .modelName("llama3.2")
+                            .build();
 ```
+
+There is no resolution by name string: each provider is named at the call site.
 
 **ToolConversionUtils**: converts Agenor `FunctionDefinition` objects to the vendor-specific JSON schemas required by each provider.
 

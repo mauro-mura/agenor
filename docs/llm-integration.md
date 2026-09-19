@@ -194,7 +194,10 @@ provider.chatStream(request, chunk -> {
 
 ## Function Calling
 
-All three providers support function/tool calling.
+OpenAI and Anthropic support function/tool calling. `OllamaProvider` does not: it reports
+`supportsFunctionCalling()` as `false` and never passes tool definitions to the model, so
+functions on a request sent through it are silently ignored. Check the flag before building a
+tool loop against a provider chosen at runtime.
 
 ### Define a function
 
@@ -454,7 +457,12 @@ mySupportAgent.setLLMMemoryManager(memory);
 
 ## Error Handling (LLMException)
 
-All LLM errors extend `LLMException`. Use `getErrorType()` to branch on the cause:
+`LLMException` carries an `ErrorType` a caller can branch on, and the code below is how to read
+it. **The three bundled adapters do not populate it.** OpenAI and Anthropic let the underlying
+client's exception travel as the cause of the `CompletionException`, and Ollama reports its
+failures as an `LLMException` of type `UNKNOWN`. So the branching below describes what the type
+offers, not what these three currently deliver; against a provider you have written yourself it
+works as written.
 
 ```java
 provider.chat(request).exceptionally(ex -> {
