@@ -155,10 +155,10 @@ When a new architectural decision is required:
 - Establish quality practices
 - Set operational guidelines
 
-**Phase 3 - Enterprise**
+**Phase 3 - Integration**
 - Advanced features and extensibility
 - Production-ready capabilities
-- Enterprise integration patterns (Spring Boot starter, HITL, Guardrails)
+- Integration patterns (Spring Boot starter, HITL, Guardrails)
 
 ### Technology Evolution
 

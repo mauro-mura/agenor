@@ -52,7 +52,7 @@ lock, generates WAL, and triggers autovacuum churn on the updated rows.
 The right tool for liveness is a TTL-based store (Redis key expiry, Consul health checks) or
 an in-process heartbeat map. The runtime assembles a mixed backend: JDBC for the three
 read/write capabilities, in-memory `AgentPresence` for single-node liveness, or a dedicated
-presence backend (deferred to Enterprise) for multi-node liveness. The capability split from
+presence backend (out of scope) for multi-node liveness. The capability split from
 ADR-020 makes this mix-and-match possible without any compromise in either implementation.
 
 Attempting to configure `agenor.directory.presence: jdbc` yields a clear startup error
@@ -97,7 +97,7 @@ order, tracking execution in `flyway_schema_history`.
 | Property | Flyway |
 |----------|--------|
 | Migration format | Plain SQL (or Java callbacks) |
-| Rollback | Not supported in OSS tier |
+| Rollback | Not supported |
 | Mental model | Sequential versioned files |
 | Dependency footprint | Light (`flyway-core` only) |
 | Spring Boot integration | First-class (`spring.flyway.*`) |
@@ -237,7 +237,7 @@ B. Node A's instance of `payment-agent` becomes unreachable until it re-register
 This is the correct behaviour for restart/migration scenarios. For horizontal scaling of the
 same logical agent across multiple nodes simultaneously, callers must use distinct `agent_id`
 values (e.g., `"payment-agent-1"`, `"payment-agent-2"`) and discover by type via
-`AgentDiscovery.findByType`. A multi-endpoint resolver is deferred to the Enterprise tier.
+`AgentDiscovery.findByType`. A multi-endpoint resolver is out of scope.
 
 ### Design notes
 
@@ -337,7 +337,7 @@ Redis adapter convention established in ADR-021.
 **Negative / trade-offs:**
 
 - `AgentPresence` is not provided. Single-node deployments fall back to in-memory presence;
-  multi-node liveness requires a dedicated presence backend (deferred to Enterprise).
+  multi-node liveness requires a dedicated presence backend (out of scope).
 - `endpoint_props` and `metadata` as `TEXT` columns lose Postgres JSONB indexing. Users who
   need it can apply a custom migration; the default schema favours cross-database portability.
 - The singleton constraint (one registration per `agent_id`) means horizontal scaling of the
@@ -363,10 +363,10 @@ this module. Liquibase's rollback support and changeset DSL are not required, an
 dependency footprint contradicts the lean-classpath goal of the module.
 
 **Use composite PK `(agent_id, node_id)` to allow multiple nodes to register the same logical agent simultaneously.**  
-Rejected for the OSS tier: `AgentResolver.resolveEndpoint(agentId)` would return multiple
+Rejected: `AgentResolver.resolveEndpoint(agentId)` would return multiple
 endpoints and require tie-breaking logic (random selection, round-robin, liveness check).
-This is load-balancing / multi-endpoint routing — a concern that belongs to the Enterprise
-tier alongside clustering and leader election. The PK on `agent_id` alone keeps the resolver
+This is load-balancing / multi-endpoint routing — a concern out of scope here, alongside
+clustering and leader election. The PK on `agent_id` alone keeps the resolver
 trivial (single-row PK lookup) and makes routing behaviour predictable.
 
 **Implement `AgentPresence` over JDBC with batched updates.**  

@@ -133,11 +133,11 @@ the new builder setter.
 - The `CompletableFuture` lives only in the submitting JVM. A node crash before a decision
   arrives means the future is lost — the decision can still be submitted from any node and
   recorded in the DB, but the original agent will not receive it after restart. This is
-  documented as a known constraint; full event-sourced replay is deferred to the Enterprise tier.
+  documented as a known constraint; full event-sourced replay is out of scope.
 - Polling `getPendingRequests()` on non-Postgres databases is the only cross-node synchronisation
   mechanism; pull-based, not push-based.
 
-### Out of scope (deferred to Enterprise)
+### Out of scope
 
 - Full event-sourced HITL replay (agent re-registers future after restart via persistent request ID)
 - Consul / NATS / Kafka-based HITL propagation

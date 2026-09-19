@@ -169,7 +169,7 @@ it. If that JVM crashes before the decision arrives:
   `getPendingRequests()`), but the originating agent will not see it after restart.
 
 This is a documented trade-off. Full event-sourced replay (agent re-registers a future for
-an existing `requestId` after restart) is deferred to the Enterprise tier.
+an existing `requestId` after restart) is out of scope.
 
 ---
 

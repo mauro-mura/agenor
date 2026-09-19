@@ -189,3 +189,42 @@ Example consumer opt-in (JDBC persistence):
   in this project).
 - Future ADRs for each planned adapter (OpenTelemetry, Redis messaging,
   `agenor-adapters-persistence`) will reference this ADR as the governing rule.
+
+---
+
+## Amendment — 2026-09-19: there is no Enterprise tier, and that row never had a case
+
+**Supersedes**: the fourth row of the placement table in *Decision* — *"Adapter is commercial /
+Enterprise-tier → Separate Enterprise module, not in OSS BOM"*. The row stays above as the record
+of what was decided; this says what it turned out to mean.
+
+### Context
+
+The row assumed a commercial tier existed, or would. Written down here once, the assumption
+spread: several later ADRs and one user-facing page sent deferred work "to the Enterprise tier",
+and one of them went as far as naming its module (`agenor-enterprise-distributed`). None of that
+was ever decided anywhere. No such tier, module or roadmap entry exists.
+
+For a reader the difference is not cosmetic. *"Deferred to the Enterprise tier"* says **this will
+exist, just not here** — a claim about a future the project has not committed to and has no plan
+to deliver. *"Out of scope"* says what is true: it is not being built, and nothing is promised.
+
+### Decision
+
+**The Enterprise tier is out of scope.** Every deferral that pointed at it now reads *out of
+scope* — in `docs/hitl-persistence.md`, in the ADR index, and in ADR-020, ADR-021, ADR-022,
+ADR-023 and ADR-024. The paired phrasings went with it: an "OSS tier" is just the project, so a
+decision "rejected for the OSS tier" is simply rejected.
+
+The fourth row above is therefore inert. It is kept rather than deleted because it is the record
+of a real decision, and because the placement question it answers could return if a closed-source
+adapter ever appears — at which point it is a new decision with evidence, not an inherited
+assumption.
+
+### Consequences
+
+- Nothing in the code changes. This is the same correction applied to the README, to CONTRIBUTING
+  and to the LLM guide in this release: removing a claim the project does not support.
+- Work that was "deferred to Enterprise" — Kafka transport, event-sourced HITL replay,
+  multi-endpoint resolution, a dedicated presence backend — is not thereby scheduled. It is
+  unscheduled and now says so.

@@ -176,7 +176,7 @@ Rejected: adds indirection without removing the predicate problem. The router wo
 need to materialise filtered subscriptions, which remote stores cannot support.
 
 **Move to an event-bus abstraction (CloudEvents, MimeType-based).**  
-Deferred to Enterprise tier. The OSS split is the smallest change that unblocks distributed
+Out of scope. The capability split is the smallest change that unblocks distributed
 backends while keeping the API learnable.
 
 ---

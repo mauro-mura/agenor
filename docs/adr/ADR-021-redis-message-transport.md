@@ -320,8 +320,8 @@ Same asymmetry problem as above, inverted. Rejected for the same reason.
 
 **Kafka instead of Redis/Valkey.**  
 Kafka offers stronger ordering and retention guarantees but introduces ZooKeeper/KRaft,
-a different protocol (not RESP), and a substantially larger operational footprint. Deferred
-to the Enterprise tier (`agenor-enterprise-distributed`). The capability interfaces from
+a different protocol (not RESP), and a substantially larger operational footprint. Out of
+scope. The capability interfaces from
 ADR-020 ensure a Kafka adapter can slot in without code changes in the rest of the framework.
 
 **Use Redis Lists (`LPUSH`/`BRPOP`) instead of Streams.**  

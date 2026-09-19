@@ -56,6 +56,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the reasoning behind design decisions. Releases are recorded here and on the GitHub
   releases page; the blog is not a release-notes channel and does not cover every version.
 
+- **The README stops positioning Agenor against other frameworks, and drops the claims nobody
+  could check.** The "vs. JADE" and "vs. Building from Scratch" blocks are gone, replaced by two
+  lists — *Reach for Agenor when* and *Look elsewhere when* — that describe the shapes of problem
+  the framework does and does not fit, naming no framework at all. The reasoning is deliberate
+  rather than cautious: a young project with no track record that argues against far larger
+  communities buys itself friction it cannot afford, and the lists say more about whether to use
+  Agenor than a comparison ever did. One lineage sentence stays, non-comparative: Agenor draws on
+  concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on
+  modern Java.
+
+  The same pass removed the **Vision** section, **"Zero-configuration"** and **"production-grade"**.
+  None of the three could be checked against anything, which is the same standard applied to the
+  installation instructions, the communication channels and the LLM guide in this release.
+
+- **The documentation stops deferring work to an "Enterprise tier" that does not exist.** The
+  phrase was written once as a placement rule in ADR-018, and the assumption spread from there:
+  ADR-020, ADR-021, ADR-022, ADR-023, ADR-024, the ADR index and `docs/hitl-persistence.md` all
+  sent deferred work to a commercial tier, one of them naming its module
+  (`agenor-enterprise-distributed`). No such tier, module or roadmap entry was ever decided.
+
+  To a reader the difference is not cosmetic: *deferred to the Enterprise tier* says **this will
+  exist, just not here**, which is a claim about a future the project has not committed to. All of
+  them now read *out of scope*, which is what is true. The paired phrasing went too — an "OSS
+  tier" is just the project, so a decision "rejected for the OSS tier" is simply rejected.
+  ADR-018 carries a dated amendment recording that its own row never had a case; the row stays,
+  because the placement question could return if a closed-source adapter ever appears, and it
+  would then be a new decision with evidence rather than an inherited assumption. No code changes.
+
+- **CONTRIBUTING asks for verification against a second transport.** Behaviour verified only
+  against `InMemoryMessageDispatcher` is not verified: Agenor ships more than one
+  `MessageDispatcher`, and code that only ever ran against the in-memory one has shipped broken
+  against the others three times. A change touching the message path is now expected to be
+  exercised against a second transport — an `*IT.java` against the Redis adapter, for instance —
+  before it counts as verified.
+
 - **The LLM documentation stops claiming things the adapters do not do.** Five statements were
   false when read against the code, and the pass that found them was the same one that has been
   applied to the README and the guides over the last several releases — this was the area it had
@@ -89,6 +124,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mirroring what `EmbeddingSupport` already is for the embedding side. It holds the virtual-thread
   executor the three of them were missing, and the ADR-017 model resolution, which had been written
   out three times once every adapter needed it.
+
+- **`LLMProviderContractTest`**, an abstract contract test every LLM provider is now held to,
+  alongside the one the embedding providers already had. It pins what the interface promises:
+  a non-blank provider name and model catalogue, `validateRequest(null)` raising `LLMException`,
+  an assistant-role answer labelled with a model, the per-request model taking precedence over
+  the provider's own, and streaming delivering each partial as its own chunk with a shared stream
+  id, contiguous indices and exactly one terminal chunk. The three adapters get a subclass each,
+  and a fourth implementation written against the interface alone — owing nothing to LangChain4j,
+  which all three adapters are built on — keeps a clause from quietly encoding that library's
+  behaviour instead of the contract's.
+
+  **What it cannot see is recorded in it.** Run against the providers as they were before this
+  release, the clauses fail six times on OpenAI and Anthropic and *not once* on Ollama, whose
+  model defect was identical: it labelled the response correctly while querying the model it was
+  built with, and a clause reading `LLMResponse.model()` cannot tell those apart. Two clauses are
+  also deliberately absent — that failures arrive classified, which no adapter does and the
+  interface does not promise, and that a request with no messages is rejected, which `LLMRequest`
+  already makes unbuildable.
 
 - **Contract-shaped tests for the two defects above**, written across all three providers rather
   than per adapter: that a per-request model reaches the `ChatRequest` handed to the client and not

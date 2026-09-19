@@ -27,13 +27,13 @@ ADR-018 establishes the placement rule for new adapters:
 | Lightweight library | `agenor-adapters`, `compile` scope |
 | Heavy but universally useful (OTel, Lettuce) | `agenor-adapters`, `optional=true` |
 | Heavyweight infrastructure, mutually exclusive alternatives | Dedicated sub-module |
-| Commercial / Enterprise | Separate Enterprise module |
+| Commercial / closed-source | Out of scope - see ADR-018 |
 
 The JDBC persistence stack falls unambiguously into the third row:
 
 1. **Heavyweight**: HikariCP + Flyway + JDBC drivers add significant classpath weight.
 2. **Mutually exclusive**: a deployment uses exactly one directory backend. Consul, etcd, and
-   DynamoDB (all deferred to Enterprise) are mutually exclusive with JDBC. Having them share a
+   DynamoDB (all out of scope) are mutually exclusive with JDBC. Having them share a
    module would force all alternatives onto every consumer's classpath.
 3. **Operationally distinct**: Flyway performs DDL at startup; HikariCP manages a connection
    pool with health-check threads. These are infrastructure concerns orthogonal to the agentic
@@ -169,7 +169,7 @@ agenor:
 
 - `AgentPresence` is not implemented by this module. Operators who want multi-node liveness
   must combine this module with an in-memory presence backend (single-node only) or wait for
-  a future dedicated presence backend (Redis TTL or Consul — Enterprise tier). This is
+  a future dedicated presence backend (Redis TTL or Consul — out of scope here). This is
   documented explicitly; attempting to configure `agenor.directory.presence: jdbc` yields a
   clear startup error.
 - An additional module increases the Maven reactor build time marginally.
