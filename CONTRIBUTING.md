@@ -290,6 +290,14 @@ class WeatherCollectorAgentTest {
    - Serve as documentation
    - Test end-to-end scenarios
 
+### Verify Against the Other Transport
+
+A behavior verified only against `InMemoryMessageDispatcher` is not verified. Agenor ships more
+than one `MessageDispatcher` implementation, and code that only ever ran against the in-memory
+one has shipped broken against the others — this defect class has recurred three times. If your
+change touches the message path, exercise it against a second transport (e.g. an `*IT.java` test
+against the Redis adapter) before calling it verified.
+
 ### Test Coverage
 
 - Maintain > 80% line coverage. No build step checks this, so it is on you and on review:
