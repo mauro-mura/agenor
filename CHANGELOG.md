@@ -56,12 +56,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the reasoning behind design decisions. Releases are recorded here and on the GitHub
   releases page; the blog is not a release-notes channel and does not cover every version.
 
+- **The LLM documentation stops claiming things the adapters do not do.** Five statements were
+  false when read against the code, and the pass that found them was the same one that has been
+  applied to the README and the guides over the last several releases — this was the area it had
+  not reached.
+
+  `docs/llm-integration.md` said all three providers support function/tool calling: `OllamaProvider`
+  reports `supportsFunctionCalling()` as `false` and never passes tool definitions, so functions on
+  a request sent through it are ignored in silence. Its error-handling section opened with "all LLM
+  errors extend `LLMException`" and taught a retry built on `switch (e.getErrorType())`; no bundled
+  adapter produces a classified `LLMException`, so that `switch` reaches `default` every time. The
+  section now says what the three adapters actually deliver, and leaves the example as a
+  description of what the type offers.
+
+  `docs/architecture.md` documented `LLMProviderFactory.create("openai", key)` — **a method that
+  does not exist**. It now shows the builder form that does, and says there is no resolution by
+  name. It also listed function calling for OpenAI only and streaming for neither Anthropic nor
+  Ollama; and `agenor-adapters/README.md` said `ToolConversionUtils` is called by all three
+  providers, where Ollama does not reference it at all.
+
+  The two claims about streaming per token were left standing, because this release made them true
+  rather than because they were harmless.
+
 - **CONTRIBUTING lists only the communication channels that exist.** It sent readers to a Discord
   server that was never created, and named email without an address. GitHub Discussions is now
   enabled, and both CONTRIBUTING and the README's Support section point to it; the email is
   info@agenor.dev, the address `SECURITY.md` already gave.
 
 ### Added
+
+- **`LLMSupport`** in `agenor-adapters`, the shared plumbing behind the three LLM providers,
+  mirroring what `EmbeddingSupport` already is for the embedding side. It holds the virtual-thread
+  executor the three of them were missing, and the ADR-017 model resolution, which had been written
+  out three times once every adapter needed it.
+
+- **Contract-shaped tests for the two defects above**, written across all three providers rather
+  than per adapter: that a per-request model reaches the `ChatRequest` handed to the client and not
+  only the response label, and that partials arrive as separate chunks in order with no duplicate
+  delivery at the end. Both were run against the unfixed providers first — seven of eight and two
+  of five failed respectively, and the ones that passed are the cases whose behaviour was
+  deliberately preserved. One further test pins the LangChain4j behaviour the model fix relies on:
+  that naming a model per request overrides only the model and leaves the client's other defaults,
+  Anthropic's mandatory `max_tokens` included, standing.
 
 - **`tools/doc-versions.sh`**, which finds every Agenor coordinate in the documentation by pattern
   and `--list`s, `--set`s or `--check`s its version. The coordinates had been kept by hand from a
@@ -73,6 +109,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   versions.
 
 ### Fixed
+
+- **Streaming now streams on every provider.** `supportsStreaming()` returned `true` for all three
+  adapters, but only `OllamaProvider` implemented `onPartialResponse`. On OpenAI and Anthropic the
+  handler was called once, with the whole text, after the response was already complete — so a
+  caller building an incremental UI on `chatStream` saw exactly the latency of `chat`, the
+  `llm.chat.stream` span recorded `llm.stream.chunks = 2` for every response whatever its length,
+  and nothing reported an error. Both now deliver each partial as it arrives.
+
+  A response that emits no incremental events at all — a reply that is only tool calls, say —
+  still delivers its whole text in one chunk, as it did before; what no longer happens is
+  delivering it twice when the response did stream. The adapters' own tests did not catch the
+  defect because they encoded it: the Anthropic test asserting that chunks arrive drove the
+  handler's completion callback directly and never emitted a partial.
+
+- **A request that names a model is now answered by that model** (ADR-017, *Accepted* 2026-04-12).
+  The decision says model resolution happens in the provider's execution path "where it is passed
+  to the underlying client", with `LLMRequest.model()` taking precedence over the provider's
+  build-time model. No adapter did that on the path that reaches the client: OpenAI and Anthropic
+  never read `request.model()` at all and stamped the response with the build-time name, and
+  Ollama read it only to *label* the response while querying the model it was constructed with.
+
+  The visible damage was inside the framework, not in the adapters. `SummarizationStrategy` takes a
+  model in its constructor, documents it as the "model identifier passed to the provider", and puts
+  it on every summarisation request — where it was dropped. `InstrumentedLLMProvider` implements the
+  ADR-017 precedence correctly and writes `llm.model = request.model()` into its span, so traces
+  reported the model that had been asked for while the call went to another one. Nothing failed;
+  the answer simply came from somewhere other than where the trace said.
+
+- **An Ollama failure is now catchable.** `OllamaProvider.chat()` threw
+  `RuntimeException(LLMException)`, so a caller writing `catch (LLMException e)` never matched, and
+  one matching on a `CompletionException`'s cause found the wrapper instead of the exception. The
+  wrapper bought nothing even syntactically: `LLMException` extends `AgenorException`, which is
+  already unchecked. The `LLMException` is now the cause.
+
+  This changes what comes out of the future, and it is recorded as a fix rather than a breaking
+  change on the grounds that the unwrapped exception is the one the code already meant to deliver
+  and the extra frame was not something a caller could sensibly depend on.
+
+- **The LLM adapters no longer block the common ForkJoinPool.** All three called
+  `CompletableFuture.supplyAsync` with no executor, putting an HTTP request that lasts seconds on a
+  pool sized `cores - 1` and shared with the rest of the application. They now run on virtual
+  threads through the new `LLMSupport`, as ADR-001 asks and as the embedding providers and the
+  Redis adapters already did.
 
 - **Nine documented dependency snippets named `${agenor.version}`** — in the Redis, MCP and JDBC
   directory adapter pages and the two adapter module READMEs. The property exists only inside
