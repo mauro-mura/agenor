@@ -342,6 +342,24 @@ public class WeatherService {
 - Maintain accurate installation instructions
 - Include migration notes for breaking changes
 
+### CHANGELOG Entries
+
+An entry is a **bold lead sentence and at most one paragraph after it**.
+`bash tools/changelog-budget.sh --check` holds that from 0.35.0 on: 120 prose words, two
+paragraphs, and every entry whose lead opens with `**BREAKING` carrying a line that starts
+`Migration:`. Nested lists and fenced code are exempt — enumerating what was removed and what
+replaces each one is the job, and a before/after snippet is the shortest form a migration takes.
+
+The budget exists because the file stopped matching the format it declares. Prose per entry went
+from 7-8 words through 0.9.0 to 87-203 from 0.25.0 on, and the last ten of thirty-nine releases
+hold 72% of it. What grew is not the number of changes but the *reasoning per change*, and that
+has a home: the 0.34.0 entry on the Enterprise tier and the ADR-018 amendment recording the same
+decision differ in one preposition. When an entry needs the argument, link the ADR and let the
+entry say what changed.
+
+Releases below 0.35.0 are history. `--check` skips them, `--check --all` measures them, and
+nothing rewrites them — the same reason `tools/doc-versions.sh` leaves this file alone.
+
 ## 🚀 Release Process
 
 ### Version Numbering
@@ -422,6 +440,8 @@ cannot check against something is a formality.
       by eye — save the report before the change, rerun, then diff the two.
 - [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
       changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
+- [ ] **CHANGELOG budget** — `bash tools/changelog-budget.sh --check` exits 0: no entry over its
+      prose budget, and every `BREAKING` entry names its migration on a line a reader can grep.
 
 ### Publishing to Maven Central
 
