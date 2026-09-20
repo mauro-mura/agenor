@@ -9,40 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **The `1.0.0` promotion criteria are revised again**, six weeks after the last revision
-  (second amendment to ADR-025 §D3). The previous criterion 1 asked for the stable surface to be
-  *enumerated in a published document* before `1.0.0`. That is not what SemVer asks for: `0.x`
-  means anything may change in any release, and `1.0.0` is the act of freezing whatever is public
-  at that moment, not a precondition engineered in advance by pre-negotiating a stable subset.
-  It was also premature on the project's own evidence — the CHANGELOG already marks every
-  breaking change with `BREAKING`, and four of the last five releases (0.34.0 included) carry at
-  least one.
-
+- **The `1.0.0` promotion criteria are revised again**, six weeks after the last revision.
   Criterion 1 now reads **three consecutive releases with no `BREAKING` entry, across the whole
-  public API** — not a hand-picked subset — folding the old criterion 2 into it. The count is
-  currently zero, reset by this release's own Logback change. No enumeration document is
-  written: `docs/api-stability.md` was considered and not built, for exactly this reason. The
-  README's informal "Expect this to move" table stays as guidance, not as a criterion.
-  Independent per-module versioning, which would let mature modules reach `1.0.0` without waiting
-  on less mature ones, was also considered and set aside — real tooling cost for a solo
-  maintainer, and not yet evidenced as the right fix (this release's own break came from the root
-  POM, not a peripheral module).
+  public API** — not the hand-picked, pre-enumerated subset the previous one asked for, which is
+  not what SemVer asks for either — and the old criterion 2 folds into it. The count is currently
+  zero, reset by this release's own Logback change. The second amendment to ADR-025 §D3 carries
+  the argument, the five-release evidence behind it, and the two alternatives set aside:
+  `docs/api-stability.md` and independent per-module versioning.
 
 - **The README installs Agenor from Maven Central.** Now that 0.34.0 is there, the BOM import is
-  the one installation instruction instead of option two of three, below a `git clone`. Building
-  from source moved to Development Setup, with the JDK-not-JRE warning that only a build needs, and
-  a Maven Central badge went on top. Every coordinate the README names was resolved from Central
-  with an empty local repository before the change — all nine modules, their full transitive
-  closure, and the Logback snippet — and `agenor-examples` was confirmed absent there, which settles
-  the one publishing check that had no local equivalent.
+  the one installation instruction instead of option two of three below a `git clone`, with a
+  Maven Central badge on top; building from source moved to Development Setup, with the
+  JDK-not-JRE warning that only a build needs. Every coordinate the README names was resolved from
+  Central with an empty local repository first — all nine modules, their full transitive closure,
+  and the Logback snippet — and `agenor-examples` was confirmed absent there, which settles the
+  one publishing check that had no local equivalent.
 
-  **The README now says Agenor ships no logging backend**, with a Logback snippet. Without it, the
+- **The README says Agenor ships no logging backend**, with a Logback snippet. Without it, the
   first agent a newcomer copies has a `log.info` that prints nothing, because 0.34.0 took Logback
   off the consumer classpath.
 
-  `docs/getting-started.md` stops telling readers to run `mvn install` "until Agenor is published
-  to Maven Central". Its clone step stays: that page is a tour of the examples, which are not
-  published.
+- **`docs/getting-started.md` stops telling readers to run `mvn install`** "until Agenor is
+  published to Maven Central". Its clone step stays: that page is a tour of the examples, which
+  are not published.
 
 - **`docs/first-agent.md` works in a reader's own project.** It promised "every line written by
   you" but told the reader to build Agenor first, showed no imports, gave only a command that runs
@@ -59,30 +48,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The README stops positioning Agenor against other frameworks, and drops the claims nobody
   could check.** The "vs. JADE" and "vs. Building from Scratch" blocks are gone, replaced by two
   lists — *Reach for Agenor when* and *Look elsewhere when* — that describe the shapes of problem
-  the framework does and does not fit, naming no framework at all. The reasoning is deliberate
-  rather than cautious: a young project with no track record that argues against far larger
-  communities buys itself friction it cannot afford, and the lists say more about whether to use
-  Agenor than a comparison ever did. One lineage sentence stays, non-comparative: Agenor draws on
-  concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on
-  modern Java.
+  the framework does and does not fit, naming no framework at all. Deliberate, not cautious: a
+  young project with no track record that argues against far larger communities buys friction it
+  cannot afford, and the lists say more about whether to use Agenor than a comparison did. One
+  non-comparative lineage sentence stays, on the concepts JADE pioneered.
 
-  The same pass removed the **Vision** section, **"Zero-configuration"** and **"production-grade"**.
-  None of the three could be checked against anything, which is the same standard applied to the
-  installation instructions, the communication channels and the LLM guide in this release.
+  The same pass removed the **Vision** section, **"Zero-configuration"** and
+  **"production-grade"**: none could be checked against anything.
 
 - **The documentation stops deferring work to an "Enterprise tier" that does not exist.** The
-  phrase was written once as a placement rule in ADR-018, and the assumption spread from there:
-  ADR-020, ADR-021, ADR-022, ADR-023, ADR-024, the ADR index and `docs/hitl-persistence.md` all
-  sent deferred work to a commercial tier, one of them naming its module
-  (`agenor-enterprise-distributed`). No such tier, module or roadmap entry was ever decided.
-
-  To a reader the difference is not cosmetic: *deferred to the Enterprise tier* says **this will
-  exist, just not here**, which is a claim about a future the project has not committed to. All of
-  them now read *out of scope*, which is what is true. The paired phrasing went too — an "OSS
-  tier" is just the project, so a decision "rejected for the OSS tier" is simply rejected.
-  ADR-018 carries a dated amendment recording that its own row never had a case; the row stays,
-  because the placement question could return if a closed-source adapter ever appears, and it
-  would then be a new decision with evidence rather than an inherited assumption. No code changes.
+  phrase was written once as a placement rule in ADR-018 and spread from there: ADR-020 through
+  ADR-024, the ADR index and `docs/hitl-persistence.md` all sent deferred work to a commercial
+  tier, one of them naming its module. No such tier, module or roadmap entry was ever decided, so
+  all of them now read *out of scope*, which is what is true — *deferred to the Enterprise tier*
+  claims a future the project has not committed to. The paired "OSS tier" phrasing went with it.
+  ADR-018 carries the dated amendment and keeps its now-inert row; no code changes.
 
 - **CONTRIBUTING asks for verification against a second transport.** Behaviour verified only
   against `InMemoryMessageDispatcher` is not verified: Agenor ships more than one
@@ -92,23 +72,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before it counts as verified.
 
 - **The LLM documentation stops claiming things the adapters do not do.** Five statements were
-  false when read against the code, and the pass that found them was the same one that has been
-  applied to the README and the guides over the last several releases — this was the area it had
-  not reached.
+  false when read against the code, found by the pass applied to the README and the guides over
+  the last several releases — this was the area it had not reached.
 
-  `docs/llm-integration.md` said all three providers support function/tool calling: `OllamaProvider`
-  reports `supportsFunctionCalling()` as `false` and never passes tool definitions, so functions on
-  a request sent through it are ignored in silence. Its error-handling section opened with "all LLM
-  errors extend `LLMException`" and taught a retry built on `switch (e.getErrorType())`; no bundled
-  adapter produces a classified `LLMException`, so that `switch` reaches `default` every time. The
-  section now says what the three adapters actually deliver, and leaves the example as a
-  description of what the type offers.
-
-  `docs/architecture.md` documented `LLMProviderFactory.create("openai", key)` — **a method that
-  does not exist**. It now shows the builder form that does, and says there is no resolution by
-  name. It also listed function calling for OpenAI only and streaming for neither Anthropic nor
-  Ollama; and `agenor-adapters/README.md` said `ToolConversionUtils` is called by all three
-  providers, where Ollama does not reference it at all.
+  - `docs/llm-integration.md` said all three providers support function/tool calling.
+    `OllamaProvider` reports `supportsFunctionCalling()` as `false` and never passes tool
+    definitions, so functions on a request sent through it are ignored in silence.
+  - Its error-handling section opened with "all LLM errors extend `LLMException`" and taught a
+    retry built on `switch (e.getErrorType())`. No bundled adapter produces a classified
+    `LLMException`, so that `switch` reaches `default` every time; the section now says what the
+    three adapters deliver, and leaves the example as a description of what the type offers.
+  - `docs/architecture.md` documented `LLMProviderFactory.create("openai", key)` — **a method
+    that does not exist**. It now shows the builder form that does, and says there is no
+    resolution by name.
+  - The same page listed function calling for OpenAI only, and streaming for neither Anthropic
+    nor Ollama.
+  - `agenor-adapters/README.md` said `ToolConversionUtils` is called by all three providers,
+    where Ollama does not reference it at all.
 
   The two claims about streaming per token were left standing, because this release made them true
   rather than because they were harmless.
@@ -126,22 +106,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   out three times once every adapter needed it.
 
 - **`LLMProviderContractTest`**, an abstract contract test every LLM provider is now held to,
-  alongside the one the embedding providers already had. It pins what the interface promises:
-  a non-blank provider name and model catalogue, `validateRequest(null)` raising `LLMException`,
-  an assistant-role answer labelled with a model, the per-request model taking precedence over
-  the provider's own, and streaming delivering each partial as its own chunk with a shared stream
-  id, contiguous indices and exactly one terminal chunk. The three adapters get a subclass each,
+  alongside the one the embedding providers already had. The three adapters get a subclass each,
   and a fourth implementation written against the interface alone — owing nothing to LangChain4j,
   which all three adapters are built on — keeps a clause from quietly encoding that library's
-  behaviour instead of the contract's.
+  behaviour instead of the contract's. What it pins:
 
-  **What it cannot see is recorded in it.** Run against the providers as they were before this
-  release, the clauses fail six times on OpenAI and Anthropic and *not once* on Ollama, whose
+  - a non-blank provider name and model catalogue;
+  - `validateRequest(null)` raising `LLMException`;
+  - an assistant-role answer labelled with a model, and the per-request model taking precedence
+    over the provider's own;
+  - streaming delivering each partial as its own chunk, with a shared stream id, contiguous
+    indices and exactly one terminal chunk;
+  - deliberately not pinned: that failures arrive classified, which no adapter does and the
+    interface does not promise, and that a request with no messages is rejected, which
+    `LLMRequest` already makes unbuildable.
+
+  **What it cannot see is recorded in it.** Run against the pre-release providers, the clauses
+  fail six times on OpenAI and Anthropic and *not once* on Ollama, whose
   model defect was identical: it labelled the response correctly while querying the model it was
-  built with, and a clause reading `LLMResponse.model()` cannot tell those apart. Two clauses are
-  also deliberately absent — that failures arrive classified, which no adapter does and the
-  interface does not promise, and that a request with no messages is rejected, which `LLMRequest`
-  already makes unbuildable.
+  built with, and a clause reading `LLMResponse.model()` cannot tell those apart.
 
 - **Contract-shaped tests for the two defects above**, written across all three providers rather
   than per adapter: that a per-request model reaches the `ChatRequest` handed to the client and not
@@ -163,18 +146,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Streaming now streams on every provider.** `supportsStreaming()` returned `true` for all three
-  adapters, but only `OllamaProvider` implemented `onPartialResponse`. On OpenAI and Anthropic the
-  handler was called once, with the whole text, after the response was already complete — so a
-  caller building an incremental UI on `chatStream` saw exactly the latency of `chat`, the
-  `llm.chat.stream` span recorded `llm.stream.chunks = 2` for every response whatever its length,
-  and nothing reported an error. Both now deliver each partial as it arrives.
+- **Streaming now streams on every provider.** `supportsStreaming()` returned `true` for all
+  three adapters, but only `OllamaProvider` implemented `onPartialResponse`: elsewhere the
+  handler was called once, with the whole text, after the response was complete. A caller
+  building an incremental UI on `chatStream` saw exactly the latency of `chat`, the
+  `llm.chat.stream` span recorded `llm.stream.chunks = 2` for every response, and nothing
+  reported an error. Both now deliver each partial as it arrives, and not the whole text again
+  at the end; a reply that emits no incremental events at all still arrives in one chunk.
 
-  A response that emits no incremental events at all — a reply that is only tool calls, say —
-  still delivers its whole text in one chunk, as it did before; what no longer happens is
-  delivering it twice when the response did stream. The adapters' own tests did not catch the
-  defect because they encoded it: the Anthropic test asserting that chunks arrive drove the
-  handler's completion callback directly and never emitted a partial.
+  The adapters' own tests encoded the defect: the Anthropic one asserting that chunks arrive drove
+  the handler's completion callback directly and never emitted a partial.
 
 - **A request that names a model is now answered by that model** (ADR-017, *Accepted* 2026-04-12).
   The decision says model resolution happens in the provider's execution path "where it is passed
@@ -183,12 +164,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never read `request.model()` at all and stamped the response with the build-time name, and
   Ollama read it only to *label* the response while querying the model it was constructed with.
 
-  The visible damage was inside the framework, not in the adapters. `SummarizationStrategy` takes a
-  model in its constructor, documents it as the "model identifier passed to the provider", and puts
-  it on every summarisation request — where it was dropped. `InstrumentedLLMProvider` implements the
-  ADR-017 precedence correctly and writes `llm.model = request.model()` into its span, so traces
-  reported the model that had been asked for while the call went to another one. Nothing failed;
-  the answer simply came from somewhere other than where the trace said.
+  The visible damage was inside the framework, not in the adapters. Nothing failed; the answer
+  simply came from somewhere other than where the trace said.
+
+  - `SummarizationStrategy` takes a model in its constructor, documents it as the "model
+    identifier passed to the provider", and puts it on every summarisation request — where it
+    was dropped.
+  - `InstrumentedLLMProvider` implements the ADR-017 precedence correctly and writes
+    `llm.model = request.model()` into its span, so traces reported the model that had been asked
+    for while the call went to another one.
 
 - **An Ollama failure is now catchable.** `OllamaProvider.chat()` threw
   `RuntimeException(LLMException)`, so a caller writing `catch (LLMException e)` never matched, and
