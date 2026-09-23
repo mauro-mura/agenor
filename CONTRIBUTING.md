@@ -515,6 +515,27 @@ Many features, implementations, and architectural decisions have been
 shaped through AI-assisted development, code generation, and design
 discussions.
 
+That work leaves two things in the repository, and **neither is required to contribute**:
+`CLAUDE.md`, the operating notes an assistant reads, and `.claude/`, which holds hooks and a
+release skill. They run only inside an assistant session. Clone the repository, run
+`mvn clean install`, open a branch: the build, the tests and CI are identical whether or not you
+use one. `.claude/README.md` says what each file does.
+
+One rule governs what may go in there: **no project rule lives only in `.claude/`.** Every check
+that matters is a script in `tools/`, run by CI and by `bash tools/preflight.sh`; a hook only
+triggers one earlier. A rule enforced in an assistant's configuration and nowhere else would bind
+one contributor and silently exempt everyone else.
+
+### Precedence
+
+Where these disagree, the leftmost wins:
+
+**`docs/adr/` > `CONTRIBUTING.md` > `CLAUDE.md`**
+
+An ADR records a decision with its context and consequences, and outranks any summary of it. This
+file is binding on contributors. `CLAUDE.md` is operating notes, and where it restates something
+from here it is a convenience, not a second source of truth.
+
 ## 📧 Contact
 
 - **Project Lead**: Mauro Mura

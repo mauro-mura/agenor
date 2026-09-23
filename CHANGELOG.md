@@ -98,8 +98,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   enabled, and both CONTRIBUTING and the README's Support section point to it; the email is
   info@agenor.dev, the address `SECURITY.md` already gave.
 
+- **`build.yml` checks the CHANGELOG budget and public references.** The budget has been binding
+  since 0.35.0 with nothing running it, which is the failure mode the removal-schedule check was
+  added to fix in the first place. The build summary's per-module coverage table now comes from
+  `tools/coverage-report.sh` instead of a second copy of the same `awk`.
+
+- **`CLAUDE.md` and `.claude/` are tracked, and CONTRIBUTING states which document wins.**
+  Precedence is `docs/adr/` > `CONTRIBUTING.md` > `CLAUDE.md`, stated because two of the three are
+  now public and say overlapping things. `CLAUDE.md` lost the release-by-release census narrative
+  and the passages restating CONTRIBUTING, keeping the rules and the lessons. Nothing in `.claude/`
+  is required to contribute: it holds hooks and a release skill that run only inside an assistant
+  session, and no project check depends on any of it.
+
 ### Added
 
+- **The pre-release checklist is something you can run.** `bash tools/preflight.sh` reports every
+  item as PASS, FAIL or SKIP and says whether the run satisfies the checklist at all — a SKIP is
+  not a pass, which is the distinction 0.28.0 shipped without. Four scripts, each usable on its
+  own:
+
+  - `tools/preflight.sh` — the table, orchestrating the others; `--fast` drops the two Maven rows.
+  - `tools/public-refs-check.sh` — fails when a tracked file points at material that is not
+    published, so a reader who has only the repository cannot resolve it.
+  - `tools/coverage-report.sh` — per-module line coverage from the reports JaCoCo already writes,
+    worst first, marking what is under the 80% target. It never fails: the threshold is measured,
+    not enforced, and four modules are under it today.
+  - `tools/bump-poms.sh` — the twelve POMs and nothing else, with the three traps checked:
+    `agenor-bom` included, `tools/central-smoke/pom.xml` excluded, and the released version left
+    where it legitimately survives.
 - **`LLMSupport`** in `agenor-adapters`, the shared plumbing behind the three LLM providers,
   mirroring what `EmbeddingSupport` already is for the embedding side. It holds the virtual-thread
   executor the three of them were missing, and the ADR-017 model resolution, which had been written
