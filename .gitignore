@@ -77,8 +77,13 @@ $RECYCLE.BIN/
 /.metadata/
 
 ## AI Coding Assistants ###
-CLAUDE.md
-.claude/
+## CLAUDE.md and .claude/ are tracked. The hooks and the skill in there are part of how this
+## repository is worked on, they run only inside an assistant session, and .claude/README.md
+## says what they do and whom they bind — which is nobody who does not use one.
+## Three things stay out, all machine-local rather than project configuration:
+.claude/settings.local.json
+.claude/CLAUDE.md
+.claude/skills/graphify/
 ## Machine-local MCP endpoints (an IDE's port on 127.0.0.1), not project configuration.
 .mcp.json
 
