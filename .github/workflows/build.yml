@@ -38,6 +38,18 @@ jobs:
       - name: Check the removal schedule
         run: bash tools/api-census.sh --check
 
+      # CONTRIBUTING declares this budget binding from 0.35.0 on. Until now nothing ran it:
+      # the rule existed, the check did not.
+      - name: Check the CHANGELOG budget
+        run: bash tools/changelog-budget.sh --check
+
+      # A tracked file that points at the maintainer's unpublished notes, or names a row in one
+      # of their registers, cannot be resolved by a reader who has only the repository. bc50b55
+      # had to resolve a batch of these by hand. The script's own header carries the examples,
+      # and is exempt for exactly that reason — as is this comment, now that it names none.
+      - name: Check public references
+        run: bash tools/public-refs-check.sh
+
       # Globbed, not enumerated: the enumeration listed 4 of the 11 modules and
       # went stale the moment ADR-027 split the runtime into four.
       - name: Upload coverage reports
@@ -50,33 +62,11 @@ jobs:
 
       - name: Build summary
         if: always()
-        env:
-          # awk formats 88.4 as "88,4" under a comma locale.
-          LC_ALL: C
         run: |
           {
             echo "## Build Summary"
             echo
-            echo "| Module | Coverage report | Line coverage |"
-            echo "|---|---|---|"
+            echo '```'
+            bash tools/coverage-report.sh
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          for pom in */pom.xml; do
-            module=$(dirname "$pom")
-            csv="$module/target/site/jacoco/jacoco.csv"
-            if [ -f "$csv" ]; then
-              # jacoco.csv columns: ...,LINE_MISSED,LINE_COVERED,...
-              pct=$(awk -F, 'NR > 1 { missed += $8; covered += $9 }
-                             END { if (missed + covered > 0)
-                                     printf "%.1f%%", 100 * covered / (missed + covered);
-                                   else print "n/a" }' "$csv")
-              echo "| $module | ✅ | $pct |" >> "$GITHUB_STEP_SUMMARY"
-            elif [ -f "$module/target/site/jacoco/index.html" ]; then
-              echo "| $module | ✅ | — |" >> "$GITHUB_STEP_SUMMARY"
-            else
-              # agenor-bom has no code, so it has no report and that is correct.
-              echo "| $module | — | no report |" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-          echo >> "$GITHUB_STEP_SUMMARY"
-          echo "The 80% line-coverage target is not enforced by any build step —" \
-               "it is on review (CONTRIBUTING)." >> "$GITHUB_STEP_SUMMARY"
