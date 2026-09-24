@@ -31,7 +31,7 @@ Import the BOM (Bill of Materials) so that every Agenor module you add shares on
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.34.0</version>
+            <version>0.35.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -77,7 +77,7 @@ Every module takes the same version:
     <dependency>
         <groupId>dev.agenor</groupId>
         <artifactId>agenor-runtime</artifactId>
-        <version>0.34.0</version>
+        <version>0.35.0</version>
     </dependency>
 </dependencies>
 ```
@@ -223,7 +223,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-core</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -234,7 +234,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -246,7 +246,7 @@ strategy. Depends on `agenor-runtime`.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime-llm</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -258,7 +258,7 @@ behaviors, HITL, knowledge. Depends on `agenor-runtime`.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime-ext</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -270,7 +270,7 @@ GraalVM native-image friendly. Required for `scanPackage(...)`. Depends on `agen
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-runtime-scanning</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -281,7 +281,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -292,7 +292,7 @@ JDBC-backed agent directory and persistent Human-in-the-Loop checkpoints (ADR-02
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -303,7 +303,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-tools</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
 
@@ -316,7 +316,7 @@ from `application.yml`. Includes an Actuator health indicator.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 ```
  

@@ -32,7 +32,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <!-- The version under test. Override on the command line. -->
-        <agenor.version>0.34.0</agenor.version>
+        <agenor.version>0.35.0</agenor.version>
         <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
     </properties>
 

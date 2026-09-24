@@ -12,7 +12,7 @@ your project's `pom.xml` — `agenor-runtime` is the only module this page uses:
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.34.0</version>
+            <version>0.35.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>

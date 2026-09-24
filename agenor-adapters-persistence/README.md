@@ -76,7 +76,7 @@ See `agenor-examples/.../hitl/PersistentHitlExample.java` for a runnable example
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.34.0</version>
+    <version>0.35.0</version>
 </dependency>
 <!-- Choose a JDBC driver -->
 <dependency>

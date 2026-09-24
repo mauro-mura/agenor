@@ -64,7 +64,7 @@ see [Installation](https://github.com/mauro-mura/agenor#installation) in the REA
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.34.0</version>
+            <version>0.35.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
