@@ -15,7 +15,28 @@ and Agenor starts with the Spring context.
 ```
 
 All Spring Boot dependencies are declared `optional=true` — they do not appear on the
-transitive classpath of non-Spring consumers.
+transitive classpath of non-Spring consumers. `agenor-runtime-scanning` is **not** optional:
+it is what makes `agenor.agents.base-package` below work, and it is a small module with no
+third-party dependencies of its own (see [`agenor-runtime-scanning`](../README.md#agenor-runtime-scanning)
+in the README). A consumer building for GraalVM native-image
+who does not use classpath discovery can exclude it:
+
+```xml
+<dependency>
+    <groupId>dev.agenor</groupId>
+    <artifactId>agenor-spring-boot-starter</artifactId>
+    <version>0.35.0</version>
+    <exclusions>
+        <exclusion>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-scanning</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+Setting `base-package`, `scan-packages`, or `scan-paths` with that exclusion in place fails
+fast at startup with a message naming the dependency to add back.
 
 ## Quick Start
 
@@ -50,7 +71,8 @@ All keys are under the `agenor` prefix. Every key is optional and falls back to 
 | `scan-packages` | `[]` | Additional packages to scan |
 | `scan-paths` | `[]` | Legacy alias for `scan-packages` (kept for compatibility with `agenor.yml`) |
 
-`base-package` and `scan-packages` are merged — both are scanned.
+`base-package` and `scan-packages` are merged — both are scanned. This is the one part of
+the starter that is not optional at the dependency level — see the exclusion note above.
 
 ### `agenor.scheduler`
 

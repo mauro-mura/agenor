@@ -746,4 +746,36 @@ public class AgenorAutoConfiguration {
             return "llm-adapters-guard-noop";
         }
     }
+
+    /**
+     * Fail-fast guard: active only when {@code agenor-runtime-scanning} is absent from the
+     * classpath — which happens only when a consumer explicitly excludes it (the starter
+     * declares it as a mandatory, non-optional dependency; see the starter's {@code pom.xml}
+     * for the native-image exclusion). The bean method throws if any of
+     * {@code agenor.agents.base-package}, {@code agenor.agents.scan-packages}, or
+     * {@code agenor.agents.scan-paths} is set, since classpath discovery cannot work without
+     * this module. A consumer who excluded it without using discovery must see no error.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnMissingClass("dev.agenor.runtime.discovery.DefaultAgentDiscoveryEngine")
+    static class ScanningMissingGuard {
+
+        @Bean
+        public String AgenorScanningMissingGuard(AgenorProperties props) {
+            AgenorProperties.Agents agents = props.agents();
+            boolean discoveryRequested = agents.basePackage() != null
+                    || !agents.scanPackages().isEmpty()
+                    || !agents.scanPaths().isEmpty();
+            if (discoveryRequested) {
+                throw new IllegalStateException(
+                        "agenor.agents.base-package / scan-packages / scan-paths is set but "
+                        + "'agenor-runtime-scanning' was excluded from the classpath. "
+                        + "Remove the exclusion, or add "
+                        + "<dependency><groupId>dev.agenor</groupId>"
+                        + "<artifactId>agenor-runtime-scanning</artifactId></dependency> "
+                        + "to your pom.xml.");
+            }
+            return "scanning-guard-noop";
+        }
+    }
 }

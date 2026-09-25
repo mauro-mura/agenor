@@ -42,12 +42,19 @@
             <artifactId>agenor-runtime</artifactId>
         </dependency>
 
-        <!-- agenor runtime-scanning — optional; required only when agenor.agents.base-package
-             (or scanPackage(...)) is used for classpath annotation discovery (ADR-027) -->
+        <!-- agenor runtime-scanning — mandatory; agenor.agents.base-package is the starter's
+             documented Quick Start (ADR-016), and package scanning fails at startup without
+             this module (ADR-027). A consumer building for GraalVM native-image who does not
+             use classpath discovery can exclude it explicitly:
+               <exclusion>
+                   <groupId>dev.agenor</groupId>
+                   <artifactId>agenor-runtime-scanning</artifactId>
+               </exclusion>
+             AgenorAutoConfiguration fails fast with an actionable message if base-package /
+             scan-packages / scan-paths is set while the exclusion is in effect. -->
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-runtime-scanning</artifactId>
-            <optional>true</optional>
         </dependency>
 
         <!-- agenor adapters — optional; required only when agenor.llm.provider != none -->

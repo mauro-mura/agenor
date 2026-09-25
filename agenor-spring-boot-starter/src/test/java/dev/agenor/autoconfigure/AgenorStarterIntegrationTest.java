@@ -92,6 +92,28 @@ class AgenorStarterIntegrationTest {
             });
     }
 
+    /**
+     * The property reaching {@link dev.agenor.core.AgenorConfiguration} (test above) is not
+     * the same as an agent actually being discovered and started — {@code agenor-runtime-scanning}
+     * has to be on the classpath for that. This is the starter's documented Quick Start
+     * (docs/spring-boot-starter.md), run end-to-end against a real {@code @Agent} class.
+     */
+    @Test
+    void basePackage_discoversAndStartsTheAgent() {
+        runner
+            .withPropertyValues("agenor.agents.base-package="
+                    + "dev.agenor.autoconfigure.testagents")
+            .run(ctx -> {
+                AgenorRuntime runtime = ctx.getBean(AgenorRuntime.class);
+                assertThat(runtime.getAgents())
+                        .anySatisfy(agent -> {
+                            assertThat(agent.getAgentId())
+                                    .isEqualTo("discoverable-starter-agent");
+                            assertThat(agent.isRunning()).isTrue();
+                        });
+            });
+    }
+
     // -----------------------------------------------------------------------
     // Scenario 4: custom thread-pool-size
     // -----------------------------------------------------------------------
