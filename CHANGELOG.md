@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`agenor-spring-boot-starter`'s documented Quick Start now works on a consumer's own
+  classpath.** `agenor-runtime-scanning` was `optional=true`, so declaring only the starter did not
+  get it — but the Quick Start is exactly `agenor.agents.base-package: com.example.agents`,
+  which needs it, and failed at startup naming no dependency to add. The starter's own tests
+  missed this: `optional=true` still puts the jar on the module's test classpath, unlike a
+  consumer's.
+
+  `agenor-runtime-scanning` (3 classes, no third-party dependencies) is now a regular
+  dependency. A native-image consumer not using classpath discovery can still exclude it; a
+  new `ScanningMissingGuard` bean then fails fast, naming the dependency, if `base-package`/
+  `scan-packages`/`scan-paths` is set — the same pattern already used for `agenor-adapters`.
+  `agenor-adapters` and `agenor-adapters-persistence` stay `optional=true` (ADR-018),
+  as mutually exclusive `provider=` choices.
+
 ## [0.35.0] - 2026-09-24
 
 ### Changed

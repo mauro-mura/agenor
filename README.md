@@ -265,6 +265,9 @@ behaviors, HITL, knowledge. Depends on `agenor-runtime`.
 ### agenor-runtime-scanning
 Classpath scanning and DI-based agent discovery (ADR-027), isolated so `agenor-runtime` stays
 GraalVM native-image friendly. Required for `scanPackage(...)`. Depends on `agenor-runtime`.
+`agenor-spring-boot-starter` brings it in transitively — it is what makes
+`agenor.agents.base-package` work — and it can be excluded there for native-image builds
+that don't use classpath discovery (see the [Spring Boot Starter guide](docs/spring-boot-starter.md)).
 
 ```xml
 <dependency>
