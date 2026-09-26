@@ -159,6 +159,21 @@ public class ContractNetExample {
                 });
         }
 
+        /**
+         * The commitment this manager is waiting on, in whatever state it has reached.
+         *
+         * <p>Package-private, for {@code ContractNetCrossRuntimeIT}: once a commitment is
+         * settled it is no longer returned by {@code getActiveAsRequester}, so reading its
+         * outcome needs the id the manager kept.
+         *
+         * @return the commitment, or empty before an AGREE has created one
+         */
+        Optional<Commitment> awaitedCommitment() {
+            return awaitedCommitmentId == null
+                    ? Optional.empty()
+                    : dialogue.getCommitmentTracker().get(awaitedCommitmentId);
+        }
+
         @DialogueHandler(performatives = Performative.INFORM)
         public void onComplete(DialogueMessage msg) {
             System.out.println("[Manager] Task completed by " + msg.senderId() + ": " + msg.content());

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Contract Net now has a cross-runtime integration test.** `ContractNetCrossRuntimeIT` runs
+  `ContractNetExample`'s manager and workers on separate nodes over a shared Valkey transport and
+  PostgreSQL directory, so `sendTo` cannot take the in-process fast path. It pins three things:
+  every worker resolves to the node that owns it, a call-for-proposals fanned out across the wire
+  collects all three bids and awards the cheapest, and the commitment an `AGREE` creates reaches
+  `FULFILLED` once the worker's `INFORM` crosses back — exercising `ContractNetProtocol`'s
+  `senderPerforms` override after a real network hop. `Manager` gains a package-private
+  `awaitedCommitment()` accessor for the third assertion.
+
 ### Fixed
 
 - **`agenor-spring-boot-starter`'s documented Quick Start now works on a consumer's own
