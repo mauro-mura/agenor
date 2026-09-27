@@ -50,6 +50,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Four small, unrelated defects in the Spring Boot starter and the LLM adapters, found and
+  fixed in the same pass:**
+
+  - `agenor.llm.base-url` now applies to `provider=openai` too, not only `ollama` — the recipe
+    for an OpenAI-compatible endpoint under a different provider (Groq, for one) already worked
+    in code and is now reachable from Spring configuration;
+  - the starter's OpenAI and Anthropic defaults were each a string literal repeated at two call
+    sites in the same class; each is now one named constant, value unchanged — deliberately not
+    aligned to `getDefaultModel()`, which would have silently moved a user from the smaller,
+    cheaper default this starter has always shipped onto a larger, pricier one;
+  - `AnthropicProvider` and `OllamaProvider` built their streaming client without
+    `logRequests`/`logResponses`, present on their own non-streaming client two lines above —
+    the debug flag was off exactly when streaming was being debugged;
+  - a chat response with no id metadata failed with a bare `NullPointerException` from inside
+    `LLMResponse.builder` on OpenAI and Anthropic; both now fall back to a generated id the same
+    way Ollama already did, instead of the same defect twice.
+
 - **Seven `LLMRequest` fields no adapter read now reach the client.** `topP`, `stop`,
   `presencePenalty`, `frequencyPenalty` and `functionCall` ("none"/"auto"/"required") were
   validated, documented and silently dropped on all three adapters; `additionalParameters` now

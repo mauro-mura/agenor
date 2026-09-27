@@ -261,8 +261,11 @@ public record AgenorProperties(
      * @param apiKey   API key for cloud providers (required for {@code openai} and
      *                 {@code anthropic}); use {@code ${ENV_VAR}} for injection
      * @param model    model name override; falls back to provider default if null
-     * @param baseUrl  base URL for self-hosted providers (Ollama);
-     *                 default {@code http://localhost:11434}
+     * @param baseUrl  base URL override. For {@code ollama}, a self-hosted server; default
+     *                 {@code http://localhost:11434} if unset. For {@code openai}, an
+     *                 OpenAI-compatible endpoint under a different provider — Groq's, for
+     *                 one, at {@code https://api.groq.com/openai/v1} — left unset to talk to
+     *                 OpenAI itself. Not read for {@code anthropic}
      */
     public record Llm(
             @DefaultValue("none") String provider,

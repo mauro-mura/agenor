@@ -132,7 +132,8 @@ public class OpenAIProvider implements LLMProvider {
 
                 ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
-                LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
+                LLMResponse.Builder builder = LLMResponse.builder(
+                        LLMSupport.orGeneratedId(response.id()), resolvedModel);
                 builder.role(LLMMessage.Role.ASSISTANT);
 
                 if (response.aiMessage() != null && response.aiMessage().text() != null) {

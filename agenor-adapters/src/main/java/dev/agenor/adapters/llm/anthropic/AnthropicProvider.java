@@ -99,6 +99,8 @@ public class AnthropicProvider implements LLMProvider {
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
                 .timeout(builder.timeout)
+                .logRequests(builder.logRequests)
+                .logResponses(builder.logResponses)
                 .build();
     }
 
@@ -120,7 +122,8 @@ public class AnthropicProvider implements LLMProvider {
 
                 ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
-                LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
+                LLMResponse.Builder builder = LLMResponse.builder(
+                        LLMSupport.orGeneratedId(response.id()), resolvedModel);
                 builder.role(LLMMessage.Role.ASSISTANT);
 
                 if (response.aiMessage() != null && response.aiMessage().text() != null) {

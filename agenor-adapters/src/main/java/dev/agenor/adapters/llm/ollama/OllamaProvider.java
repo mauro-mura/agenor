@@ -130,6 +130,8 @@ public class OllamaProvider implements LLMProvider {
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .timeout(builder.timeout)
+                .logRequests(builder.logRequests)
+                .logResponses(builder.logResponses)
                 .build();
     }
 

@@ -19,6 +19,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ToolChoice;
 
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -240,5 +241,22 @@ public final class LLMSupport {
             if (c.getCause() == c) break;
         }
         return null;
+    }
+
+    /**
+     * Returns {@code id} if present, or a freshly generated one.
+     *
+     * <p>{@link dev.agenor.core.llm.LLMResponse#builder} requires a non-null id, and OpenAI and
+     * Anthropic pass {@code ChatResponse.id()} straight through — a completed chat response that
+     * carries no id metadata therefore failed with a bare {@link NullPointerException} from
+     * inside the builder, on success, not on a provider failure. Ollama already synthesizes a
+     * {@link UUID} for this reason; this gives the other two the same fallback instead of the
+     * same defect twice, so the field means the same thing regardless of provider.
+     *
+     * @param id the id the client reported, or {@code null}
+     * @return {@code id}, or a new random one if it was {@code null}
+     */
+    public static String orGeneratedId(String id) {
+        return id != null ? id : UUID.randomUUID().toString();
     }
 }

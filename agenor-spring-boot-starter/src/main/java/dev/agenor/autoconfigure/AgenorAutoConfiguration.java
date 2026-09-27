@@ -286,17 +286,29 @@ public class AgenorAutoConfiguration {
     @ConditionalOnClass(name = "dev.agenor.adapters.llm.LLMProviderFactory")
     static class LlmConfiguration {
 
+        // One name per default, not a string repeated at each call site. Deliberately not
+        // OpenAIProvider.getDefaultModel() / AnthropicProvider.getDefaultModel(): those return
+        // GPT_4O and CLAUDE_SONNET_4_6, and matching them would silently move a Spring Boot
+        // user from the smaller, cheaper model this starter has always defaulted to onto a
+        // larger, pricier one nobody asked to change.
+        private static final String DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+        private static final String DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+        private static final String DEFAULT_OLLAMA_MODEL = "llama3.2";
+        private static final String DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
         @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "openai")
         public LLMProvider openAiLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "openai");
-            log.info("Creating OpenAI LLMProvider (model={})", effectiveModel(llm, "gpt-4o-mini"));
-            return dev.agenor.adapters.llm.LLMProviderFactory.openai()
+            String model = effectiveModel(llm, DEFAULT_OPENAI_MODEL);
+            log.info("Creating OpenAI LLMProvider (model={})", model);
+            var builder = dev.agenor.adapters.llm.LLMProviderFactory.openai()
                     .apiKey(llm.apiKey())
-                    .modelName(effectiveModel(llm, "gpt-4o-mini"))
-                    .build();
+                    .modelName(model);
+            applyBaseUrl(builder, llm);
+            return builder.build();
         }
 
         @Bean
@@ -305,11 +317,11 @@ public class AgenorAutoConfiguration {
         public LLMProvider anthropicLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "anthropic");
-            log.info("Creating Anthropic LLMProvider (model={})",
-                    effectiveModel(llm, "claude-3-haiku-20240307"));
+            String model = effectiveModel(llm, DEFAULT_ANTHROPIC_MODEL);
+            log.info("Creating Anthropic LLMProvider (model={})", model);
             return dev.agenor.adapters.llm.LLMProviderFactory.anthropic()
                     .apiKey(llm.apiKey())
-                    .modelName(effectiveModel(llm, "claude-3-haiku-20240307"))
+                    .modelName(model)
                     .build();
         }
 
@@ -318,13 +330,27 @@ public class AgenorAutoConfiguration {
         @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "ollama")
         public LLMProvider ollamaLlmProvider(AgenorProperties props) {
             AgenorProperties.Llm llm = props.llm();
-            String baseUrl = llm.baseUrl() != null ? llm.baseUrl() : "http://localhost:11434";
-            log.info("Creating Ollama LLMProvider (baseUrl={}, model={})",
-                    baseUrl, effectiveModel(llm, "llama3.2"));
+            String baseUrl = llm.baseUrl() != null ? llm.baseUrl() : DEFAULT_OLLAMA_BASE_URL;
+            String model = effectiveModel(llm, DEFAULT_OLLAMA_MODEL);
+            log.info("Creating Ollama LLMProvider (baseUrl={}, model={})", baseUrl, model);
             return dev.agenor.adapters.llm.LLMProviderFactory.ollama()
                     .baseUrl(baseUrl)
-                    .modelName(effectiveModel(llm, "llama3.2"))
+                    .modelName(model)
                     .build();
+        }
+
+        /**
+         * Applies {@code agenor.llm.base-url} to an OpenAI-compatible builder, for an
+         * OpenAI-compatible endpoint that is not OpenAI itself — Groq, for one, already works
+         * this way in code ({@code LLMConfig.java}); this is the same recipe reachable from
+         * Spring configuration, without a new adapter or provider enum entry.
+         */
+        private static void applyBaseUrl(
+                dev.agenor.adapters.llm.openai.OpenAIProvider.Builder builder,
+                AgenorProperties.Llm llm) {
+            if (llm.baseUrl() != null && !llm.baseUrl().isBlank()) {
+                builder.baseUrl(llm.baseUrl());
+            }
         }
 
         private static String effectiveModel(AgenorProperties.Llm llm, String defaultModel) {

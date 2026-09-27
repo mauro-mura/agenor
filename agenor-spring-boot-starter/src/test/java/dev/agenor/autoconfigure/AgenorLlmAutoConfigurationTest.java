@@ -75,6 +75,24 @@ class AgenorLlmAutoConfigurationTest {
             .run(ctx -> assertThat(ctx).hasSingleBean(LLMProvider.class));
     }
 
+    @Test
+    void openAiProviderAcceptsABaseUrlForAnOpenAiCompatibleEndpoint() {
+        // e.g. Groq, at https://api.groq.com/openai/v1 — an OpenAI-compatible endpoint under a
+        // different provider, reachable from configuration alone, no new adapter.
+        runner
+            .withPropertyValues(
+                "agenor.llm.provider=openai",
+                "agenor.llm.api-key=gsk-test-key",
+                "agenor.llm.base-url=https://api.groq.com/openai/v1",
+                "agenor.llm.model=llama-3.3-70b-versatile"
+            )
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(LLMProvider.class);
+                LLMProvider provider = ctx.getBean(LLMProvider.class);
+                assertThat(provider.getProviderName()).containsIgnoringCase("openai");
+            });
+    }
+
     // --- provider=anthropic ---
 
     @Test
