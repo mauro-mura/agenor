@@ -50,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`EmbeddingProviderContractTest`'s own self-check now actually runs.** Its stub
+  implementation was a static class nested inside the abstract test itself, which the normal
+  build never collects — only a test filter naming it explicitly does, and no build step did.
+  It is a top-level class now, next to `StubLLMProviderContractTest`, which was made top-level
+  for the same reason. Confirmed with a clean run before and after: nested, it produced no
+  surefire report at all; top-level, it runs its five assertions on every `mvn test`.
+
 - **Four small, unrelated defects in the Spring Boot starter and the LLM adapters, found and
   fixed in the same pass:**
 

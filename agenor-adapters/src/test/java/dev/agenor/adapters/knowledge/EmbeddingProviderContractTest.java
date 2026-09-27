@@ -16,8 +16,9 @@ import static org.assertj.core.api.Assertions.*;
  * concrete {@code EmbeddingProvider} honours the interface contract.
  * HTTP-based providers should be tested against a local stub (e.g. WireMock).
  *
- * <p>A {@link StubEmbeddingProvider} implementation is included for verifying
- * the contract in unit tests without any network dependency.
+ * <p>{@code StubEmbeddingProviderContractTest} runs this against a provider written for that
+ * purpose alone, with no network dependency — a top-level class, not nested here, so the normal
+ * build actually collects it.
  */
 public abstract class EmbeddingProviderContractTest {
 
@@ -57,44 +58,5 @@ public abstract class EmbeddingProviderContractTest {
     void embedAllReturnsNonNull() {
         CompletableFuture<List<float[]>> future = provider().embedAll(List.of("hello"));
         assertThat(future).isNotNull();
-    }
-
-    // =========================================================================
-    // Stub implementation for unit testing the contract itself
-    // =========================================================================
-
-    static class StubEmbeddingProvider implements EmbeddingProvider {
-
-        private final int dims;
-        private final String model;
-
-        StubEmbeddingProvider(int dims, String model) {
-            this.dims = dims;
-            this.model = model;
-        }
-
-        @Override
-        public CompletableFuture<float[]> embed(String text) {
-            float[] v = new float[dims];
-            for (int i = 0; i < dims; i++) v[i] = (float) (text.hashCode() % 100) / 100f;
-            return CompletableFuture.completedFuture(v);
-        }
-
-        @Override
-        public int dimensions() { return dims; }
-
-        @Override
-        public String modelId() { return model; }
-    }
-
-    // =========================================================================
-    // Concrete subclass using the stub
-    // =========================================================================
-
-    static class StubEmbeddingProviderContractTest extends EmbeddingProviderContractTest {
-        @Override
-        protected EmbeddingProvider provider() {
-            return new StubEmbeddingProvider(384, "stub-model");
-        }
     }
 }
