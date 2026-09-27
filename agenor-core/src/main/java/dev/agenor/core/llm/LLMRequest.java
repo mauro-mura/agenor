@@ -35,13 +35,22 @@ import java.util.Objects;
  * @param temperature sampling temperature (0.0 to 2.0)
  * @param maxTokens maximum tokens to generate in response
  * @param functions optional list of function definitions for tool use
- * @param functionCall optional control for specific function calling
+ * @param functionCall which tool the model should call: {@code "none"}, {@code "auto"},
+ *        {@code "required"}, or a specific function name as {@code {"name": "my_function"}}.
+ *        Every bundled adapter honours the first three; naming one specific function has no
+ *        equivalent in the client library OpenAI and Ollama share and is not honoured — it
+ *        reaches neither client, silently, the same as before this field was read at all
  * @param topP nucleus sampling parameter (0.0 to 1.0)
- * @param n number of responses to generate
+ * @param n number of responses to generate. Validated but honoured by no bundled adapter — none
+ *        of OpenAI's, Anthropic's or Ollama's client libraries expose a way to request more
+ *        than one completion per call
  * @param stop optional list of stop sequences
  * @param presencePenalty presence penalty (-2.0 to 2.0)
  * @param frequencyPenalty frequency penalty (-2.0 to 2.0)
- * @param additionalParameters provider-specific extra parameters
+ * @param additionalParameters provider-specific extra parameters, honoured only where the
+ *        provider exposes a generic escape hatch for them — OpenAI's adapter maps this onto its
+ *        {@code customParameters}; Anthropic's and Ollama's client libraries have no equivalent,
+ *        so it is silently unused there
  *
  * @since 0.3.0
  */
@@ -254,7 +263,10 @@ public record LLMRequest(
         /**
          * Control which function the model should call.
          *
-         * <p>Can be "none", "auto", or specify a function name like {"name": "my_function"}.
+         * <p>Can be {@code "none"}, {@code "auto"}, {@code "required"}, or a specific function
+         * name like {@code {"name": "my_function"}}. Every bundled adapter honours the first
+         * three; naming one specific function is not honoured by any of them — see
+         * {@link LLMRequest#functionCall()}.
          *
          * @param functionCall the function call directive
          * @return this builder
@@ -279,6 +291,8 @@ public record LLMRequest(
 
         /**
          * Set number of completions to generate.
+         *
+         * <p>Validated but not honoured by any bundled adapter — see {@link LLMRequest#n()}.
          *
          * @param n number of completions
          * @return this builder
@@ -331,6 +345,9 @@ public record LLMRequest(
 
         /**
          * Set additional provider-specific parameters.
+         *
+         * <p>Honoured only where the provider exposes a generic escape hatch for them — see
+         * {@link LLMRequest#additionalParameters()}.
          *
          * @param additionalParameters map of additional parameters
          * @return this builder

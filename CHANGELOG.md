@@ -50,6 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Seven `LLMRequest` fields no adapter read now reach the client.** `topP`, `stop`,
+  `presencePenalty`, `frequencyPenalty` and `functionCall` ("none"/"auto"/"required") were
+  validated, documented and silently dropped on all three adapters; `additionalParameters` now
+  reaches OpenAI's own `customParameters`, the one provider-specific escape hatch a bundled
+  adapter exposes for it. `n` and a `functionCall` naming one specific function stay unhonoured
+  and are now documented as such — neither has an equivalent in the client library these
+  adapters build on, and guessing one from a string is not done here.
+
 - **LLM adapter failures are now classified into `LLMException.ErrorType`.** OpenAI and
   Anthropic used to let the underlying client's exception travel bare inside a
   `CompletionException`; Ollama wrapped every failure as `UNKNOWN` regardless of cause. All

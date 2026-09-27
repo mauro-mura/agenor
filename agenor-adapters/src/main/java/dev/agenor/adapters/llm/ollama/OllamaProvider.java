@@ -150,6 +150,7 @@ public class OllamaProvider implements LLMProvider {
                 if (request.maxTokens() != null) {
                     requestBuilder.maxOutputTokens(request.maxTokens());
                 }
+                LLMSupport.applyCommonParameters(requestBuilder, request);
 
                 ChatResponse response = chatModel.chat(requestBuilder.build());
 
@@ -189,6 +190,7 @@ public class OllamaProvider implements LLMProvider {
             if (request.maxTokens() != null) {
                 requestBuilder.maxOutputTokens(request.maxTokens());
             }
+            LLMSupport.applyCommonParameters(requestBuilder, request);
 
             streamingModel.chat(requestBuilder.build(), new StreamingChatResponseHandler() {
                 @Override

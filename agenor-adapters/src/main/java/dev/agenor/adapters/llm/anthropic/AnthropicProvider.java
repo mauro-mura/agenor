@@ -116,6 +116,7 @@ public class AnthropicProvider implements LLMProvider {
                     List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
                     chatRequestBuilder.toolSpecifications(toolSpecs);
                 }
+                LLMSupport.applyCommonParameters(chatRequestBuilder, request);
 
                 ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
@@ -177,6 +178,7 @@ public class AnthropicProvider implements LLMProvider {
             List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
             chatRequestBuilder.toolSpecifications(toolSpecs);
         }
+        LLMSupport.applyCommonParameters(chatRequestBuilder, request);
 
         streamingModel.chat(
                 chatRequestBuilder.build(),

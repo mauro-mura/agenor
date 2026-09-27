@@ -15,7 +15,10 @@ import dev.langchain4j.exception.RetriableException;
 import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.exception.UnresolvedModelServerException;
 import dev.langchain4j.exception.UnsupportedFeatureException;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.ToolChoice;
 
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -78,6 +81,67 @@ public final class LLMSupport {
         String requested = request.model();
         if (requested != null && !requested.isBlank()) return requested;
         return builtWith;
+    }
+
+    /**
+     * Applies every {@link LLMRequest} sampling field that {@link ChatRequest.Builder} exposes
+     * directly, skipping whatever the request left unset. Shared by all three adapters, which
+     * previously read none of these — a request could ask for {@code topP} or a stop sequence
+     * and every adapter would silently ignore it.
+     *
+     * <p>Deliberately not applied here: {@link LLMRequest#n()}, which no bundled adapter's
+     * client library can honour — LangChain4j has no multiple-completions parameter to set it
+     * on — and {@link LLMRequest#additionalParameters()}, which has no generic equivalent below
+     * {@link ChatRequest.Builder}; each adapter maps it through its own provider-specific escape
+     * hatch where one exists (OpenAI's {@code customParameters}) rather than pretending one
+     * generic mapping covers all three.
+     *
+     * @param builder the request being built for the client
+     * @param request the request as the caller specified it
+     */
+    public static void applyCommonParameters(ChatRequest.Builder builder, LLMRequest request) {
+        if (request.topP() != null) {
+            builder.topP(request.topP());
+        }
+        if (request.stop() != null && !request.stop().isEmpty()) {
+            builder.stopSequences(request.stop());
+        }
+        if (request.presencePenalty() != null) {
+            builder.presencePenalty(request.presencePenalty());
+        }
+        if (request.frequencyPenalty() != null) {
+            builder.frequencyPenalty(request.frequencyPenalty());
+        }
+        ToolChoice toolChoice = toToolChoice(request.functionCall());
+        if (toolChoice != null) {
+            builder.toolChoice(toolChoice);
+        }
+    }
+
+    /**
+     * Maps {@link LLMRequest#functionCall()}'s {@code "none"}/{@code "auto"} onto LangChain4j's
+     * generic {@link ToolChoice}, and a request to force some tool onto {@code REQUIRED}.
+     *
+     * <p>Deliberately not mapped: naming one specific function, e.g. {@code {"name":
+     * "get_weather"}} — OpenAI's documented shape for this field. {@code ToolChoice} has no
+     * "this one" value, only {@code AUTO}/{@code REQUIRED}/{@code NONE}; forcing a specific tool
+     * is provider-specific (Anthropic exposes it as a plain tool name on its own request
+     * parameters) and parsing an arbitrary JSON-ish string to reach it is not done here.
+     *
+     * @param functionCall the request's raw directive, or {@code null}
+     * @return the matching {@link ToolChoice}, or {@code null} if {@code functionCall} is absent
+     *         or names something more specific than this method maps
+     */
+    private static ToolChoice toToolChoice(String functionCall) {
+        if (functionCall == null) {
+            return null;
+        }
+        return switch (functionCall.trim().toLowerCase(Locale.ROOT)) {
+            case "none" -> ToolChoice.NONE;
+            case "auto" -> ToolChoice.AUTO;
+            case "required", "any" -> ToolChoice.REQUIRED;
+            default -> null;
+        };
     }
 
     /**

@@ -10,6 +10,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiChatRequestParameters;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 
 import java.time.Duration;
@@ -126,6 +127,8 @@ public class OpenAIProvider implements LLMProvider {
                     List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
                     chatRequestBuilder.toolSpecifications(toolSpecs);
                 }
+                LLMSupport.applyCommonParameters(chatRequestBuilder, request);
+                applyCustomParameters(chatRequestBuilder, request);
 
                 ChatResponse response = chatModel.chat(chatRequestBuilder.build());
 
@@ -187,6 +190,8 @@ public class OpenAIProvider implements LLMProvider {
             List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
             chatRequestBuilder.toolSpecifications(toolSpecs);
         }
+        LLMSupport.applyCommonParameters(chatRequestBuilder, request);
+        applyCustomParameters(chatRequestBuilder, request);
 
         streamingModel.chat(
                 chatRequestBuilder.build(),
@@ -269,6 +274,24 @@ public class OpenAIProvider implements LLMProvider {
 
     private static String orEmpty(String content) {
         return content == null ? "" : content;
+    }
+
+    /**
+     * Maps {@link LLMRequest#additionalParameters()} onto OpenAI's own escape hatch for
+     * anything the common request shape does not name.
+     *
+     * <p>Composes with {@link LLMSupport#applyCommonParameters}: a {@link ChatRequest.Builder}
+     * merges its individually-set fields (topP, stop sequences, penalties, tool choice) with
+     * whatever {@link ChatRequest.Builder#parameters} is also given, in either call order —
+     * neither clobbers the other.
+     */
+    private static void applyCustomParameters(ChatRequest.Builder builder, LLMRequest request) {
+        Map<String, Object> extra = request.additionalParameters();
+        if (extra != null && !extra.isEmpty()) {
+            builder.parameters(OpenAiChatRequestParameters.builder()
+                    .customParameters(extra)
+                    .build());
+        }
     }
 
     // ========================================================================
