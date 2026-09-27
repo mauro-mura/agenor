@@ -1,7 +1,6 @@
 package dev.agenor.examples.llm;
 
 import dev.agenor.adapters.llm.LLMProviderFactory;
-import dev.agenor.adapters.llm.openai.OpenAIProvider;
 import dev.agenor.core.llm.LLMProvider;
 
 import java.time.Duration;
@@ -30,7 +29,7 @@ import java.time.Duration;
 public final class ExampleLLMProvider {
 
     private static final String GROQ_BASE_URL = "https://api.groq.com/openai/v1";
-    private static final String DEFAULT_OPENAI_MODEL = OpenAIProvider.Models.GPT_4O_MINI.id;
+    private static final String DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
     private static final String DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
     private static final String DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307";
     private static final String DEFAULT_OLLAMA_MODEL = "llama3.2";

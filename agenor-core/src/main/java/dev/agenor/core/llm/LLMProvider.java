@@ -75,12 +75,14 @@ public interface LLMProvider {
     CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> chunkHandler);
 
     /**
-     * Get the list of available models from this provider.
+     * Return the models this provider recognises.
      *
-     * <p>Returns a list of model identifiers that can be used with this provider.
-     * Model names are provider-specific (e.g., "gpt-4", "claude-3-opus", "llama2").
+     * <p>Model names are provider-specific (e.g., "gpt-4", "claude-3-opus", "llama2"). This
+     * is not a live query against the provider's API: an adapter may report a fixed list it
+     * ships with, so a model missing from it can still be requested by name — see
+     * {@link LLMRequest.Builder#model(String)} — it simply will not appear here.
      *
-     * @return CompletableFuture containing list of available model names
+     * @return CompletableFuture containing the model identifiers this provider recognises
      */
     CompletableFuture<List<String>> getAvailableModels();
 

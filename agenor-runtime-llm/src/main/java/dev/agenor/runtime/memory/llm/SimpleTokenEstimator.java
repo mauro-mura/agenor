@@ -3,9 +3,13 @@ package dev.agenor.runtime.memory.llm;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.agenor.core.memory.llm.TokenEstimator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Simple character-based token estimator.
@@ -42,6 +46,15 @@ import java.util.Objects;
  * @since 0.6.0
  */
 public class SimpleTokenEstimator implements TokenEstimator {
+
+    private static final Logger log = LoggerFactory.getLogger(SimpleTokenEstimator.class);
+
+    /**
+     * Models this instance has already warned about falling back to
+     * {@link ModelTokenLimits#DEFAULT_LIMIT}. Warn once per distinct name, not once per
+     * call — a memory manager calls {@link #getContextWindowSize(String)} on every trim.
+     */
+    private static final Set<String> WARNED_UNKNOWN_MODELS = ConcurrentHashMap.newKeySet();
 
     /**
      * Characters per token (approximate).
@@ -118,6 +131,14 @@ public class SimpleTokenEstimator implements TokenEstimator {
     @Override
     public int getContextWindowSize(String model) {
         Objects.requireNonNull(model, "Model cannot be null");
+
+        if (!ModelTokenLimits.isKnown(model) && WARNED_UNKNOWN_MODELS.add(model)) {
+            log.warn("No context window registered for model '{}'; assuming the default of "
+                    + "{} tokens, so its conversation history may be trimmed far earlier than "
+                    + "the model actually allows. Register the real limit once with "
+                    + "ModelTokenLimits.register(\"{}\", <contextWindow>).",
+                    model, ModelTokenLimits.DEFAULT_LIMIT, model);
+        }
 
         // Delegate to ModelTokenLimits registry
         return ModelTokenLimits.getLimit(model);

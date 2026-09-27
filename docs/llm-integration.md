@@ -430,6 +430,23 @@ int limit = ModelTokenLimits.getLimit("unknown");    // DEFAULT_LIMIT (4096)
 ModelTokenLimits.register("my-fine-tuned-model", 16_384);
 ```
 
+A model not registered here does not fail — it silently gets `DEFAULT_LIMIT` (4,096 tokens),
+which can be far smaller than the model's real window and trims conversation history much
+earlier than necessary. `SimpleTokenEstimator` logs one warning per unrecognised model name the
+first time it is asked for that model's context window, naming the `register` call that fixes
+it; register the real limit once and the warning does not repeat.
+
+Each provider's `Models` enum (`OpenAIProvider.Models`, `AnthropicProvider.Models`,
+`OllamaProvider.Models`) is **deprecated as of 0.36.0** for this reason: a public enum of model
+constants goes stale the day the vendor ships a model it does not list, and removing a retired
+constant is itself a breaking API change — so maintaining one at all works against ever shipping
+a release with no breaking change. Name a model by its string id
+(`LLMRequest.builder().model("gpt-5")`) instead of the enum constant; every request has honoured
+a per-request model since 0.35.0, and each provider's `getDefaultModel()` still names a sensible
+default when none is given. `getAvailableModels()` is not a live query against the provider's
+API — it returns the fixed list of models this adapter recognises a context window for, so a
+model missing from it can still be requested by name; it simply will not appear in that list.
+
 ### Injecting LLMMemoryManager into the runtime
 
 Register it via `AgenorRuntime.builder()` so that it is automatically injected into `LLMAgent` instances:

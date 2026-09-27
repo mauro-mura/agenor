@@ -19,6 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * ModelTokenLimits.register("my-custom-model", 32_768);
  * }</pre>
  *
+ * <p>An unregistered model does not fail {@link #getLimit(String)} — it falls back to
+ * {@link #DEFAULT_LIMIT}, silently, which is 4,096 tokens on a model whose real window may be
+ * two orders of magnitude larger. {@link #isKnown(String)} lets a caller tell that fallback
+ * apart from a real answer, which is what {@code SimpleTokenEstimator} uses to warn once per
+ * model instead of trimming a conversation short with no explanation.
+ *
  * <p><b>Thread Safety:</b> This class uses a ConcurrentHashMap and is thread-safe.
  *
  * @since 0.15.0
@@ -41,7 +47,9 @@ public final class ModelTokenLimits {
      * <ol>
      *   <li>Exact match (case-insensitive)</li>
      *   <li>Prefix match — allows versioned aliases, e.g. {@code "gpt-4"} matches
-     *       {@code "gpt-4-0613"} and vice-versa</li>
+     *       {@code "gpt-4-0613"} and vice-versa. When more than one registered key matches,
+     *       the longer (more specific) one wins, deterministically — not whichever the
+     *       registry's internal map happens to visit first</li>
      *   <li>{@link #DEFAULT_LIMIT} for unknown models</li>
      * </ol>
      *
@@ -53,19 +61,8 @@ public final class ModelTokenLimits {
         if (model == null) {
             throw new IllegalArgumentException("Model cannot be null");
         }
-        String key = normalize(model);
-
-        Integer exact = LIMITS.get(key);
-        if (exact != null) {
-            return exact;
-        }
-
-        for (Map.Entry<String, Integer> entry : LIMITS.entrySet()) {
-            if (key.startsWith(entry.getKey()) || entry.getKey().startsWith(key)) {
-                return entry.getValue();
-            }
-        }
-        return DEFAULT_LIMIT;
+        Integer resolved = resolve(normalize(model));
+        return resolved != null ? resolved : DEFAULT_LIMIT;
     }
 
     /**
@@ -96,6 +93,24 @@ public final class ModelTokenLimits {
      */
     public static boolean hasModel(String model) {
         return model != null && LIMITS.containsKey(normalize(model));
+    }
+
+    /**
+     * Return true if {@link #getLimit(String)} would resolve a real registered limit for
+     * this model, by exact or prefix match — as opposed to falling back to
+     * {@link #DEFAULT_LIMIT}.
+     *
+     * <p>Unlike {@link #hasModel(String)}, this also accounts for the prefix match
+     * {@link #getLimit(String)} performs, so a caller can tell "this is a real answer"
+     * from "this is the registry shrugging" before deciding whether a fallback is worth a
+     * warning.
+     *
+     * @param model model identifier (may be null)
+     * @return true if a registered limit would be used instead of the default
+     * @since 0.36.0
+     */
+    public static boolean isKnown(String model) {
+        return model != null && resolve(normalize(model)) != null;
     }
 
     /**
@@ -135,23 +150,46 @@ public final class ModelTokenLimits {
         if (model == null) {
             return defaultValue;
         }
-        String key = normalize(model);
-
-        Integer exact = LIMITS.get(key);
-        if (exact != null) {
-            return exact;
-        }
-        for (Map.Entry<String, Integer> entry : LIMITS.entrySet()) {
-            if (key.startsWith(entry.getKey()) || entry.getKey().startsWith(key)) {
-                return entry.getValue();
-            }
-        }
-        return defaultValue;
+        Integer resolved = resolve(normalize(model));
+        return resolved != null ? resolved : defaultValue;
     }
 
     // -------------------------------------------------------------------------
 
     private static String normalize(String model) {
         return model.toLowerCase().trim();
+    }
+
+    /**
+     * Exact-or-prefix lookup shared by every public resolution method.
+     *
+     * <p>When several registered keys are in a prefix relationship with {@code key} — in
+     * either direction, per {@link #getLimit(String)}'s documented resolution order — the
+     * longest registered key wins. That is the one property a {@code ConcurrentHashMap}'s
+     * iteration order cannot be relied on to give: for {@code "gpt-4-turbo-2024-04-09"},
+     * both {@code "gpt-4"} and {@code "gpt-4-turbo"} are valid prefixes, and returning
+     * whichever the map visited first made the answer depend on hash-bucket layout instead
+     * of on which registration is more specific.
+     *
+     * @param key already-normalized model identifier
+     * @return the resolved limit, or {@code null} if nothing registered matches
+     */
+    private static Integer resolve(String key) {
+        Integer exact = LIMITS.get(key);
+        if (exact != null) {
+            return exact;
+        }
+
+        String bestKey = null;
+        Integer bestValue = null;
+        for (Map.Entry<String, Integer> entry : LIMITS.entrySet()) {
+            String candidate = entry.getKey();
+            boolean matches = key.startsWith(candidate) || candidate.startsWith(key);
+            if (matches && (bestKey == null || candidate.length() > bestKey.length())) {
+                bestKey = candidate;
+                bestValue = entry.getValue();
+            }
+        }
+        return bestValue;
     }
 }

@@ -1,11 +1,16 @@
 package dev.agenor.runtime.memory.llm;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.agenor.core.memory.llm.TokenEstimator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -153,5 +158,53 @@ class SimpleTokenEstimatorTest {
         int budget = ModelTokenLimits.getLimitOrDefault("non-existent-model", 16_384);
         List<LLMMessage> messages = List.of(LLMMessage.user("test"));
         assertThat(estimator.estimateTokens(messages)).isLessThan(budget);
+    }
+
+    // ========== UNKNOWN-MODEL WARNING ==========
+
+    @Test
+    void getContextWindowSize_shouldWarnOnceForAnUnregisteredModel() {
+        String unknownModel = "warn-once-unregistered-model";
+        assertThat(ModelTokenLimits.isKnown(unknownModel)).isFalse();
+
+        List<String> warnings = captureWarnings(() -> {
+            estimator.getContextWindowSize(unknownModel);
+            estimator.getContextWindowSize(unknownModel);
+            estimator.getContextWindowSize(unknownModel);
+        });
+
+        assertThat(warnings)
+            .as("three calls for the same unknown model must produce exactly one warning")
+            .hasSize(1);
+        assertThat(warnings.get(0)).contains(unknownModel).contains("ModelTokenLimits.register");
+    }
+
+    @Test
+    void getContextWindowSize_shouldNotWarnForARegisteredModel() {
+        List<String> warnings = captureWarnings(() -> estimator.getContextWindowSize(TEST_MODEL));
+        assertThat(warnings).isEmpty();
+    }
+
+    @Test
+    void getContextWindowSize_shouldStillReturnDefaultLimitForUnknownModel() {
+        assertThat(estimator.getContextWindowSize("another-unregistered-model"))
+            .isEqualTo(ModelTokenLimits.DEFAULT_LIMIT);
+    }
+
+    private List<String> captureWarnings(Runnable action) {
+        var logger = (Logger) LoggerFactory.getLogger(SimpleTokenEstimator.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+        return appender.list.stream()
+                .filter(event -> event.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
     }
 }

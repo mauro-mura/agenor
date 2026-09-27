@@ -24,10 +24,19 @@ public class OpenAIProvider implements LLMProvider {
     private final OpenAiStreamingChatModel streamingModel;
     private final String modelName;
 
-    // -------------------------------------------------------------------------
-    // Model enum — single source of truth for model ID + context window size.
-    // Source: https://platform.openai.com/docs/models — Last verified: 2026-04
-    // -------------------------------------------------------------------------
+    /**
+     * Known OpenAI model identifiers and their context window sizes.
+     *
+     * @deprecated since 0.36.0, for removal in 1.0.0. A public enum of model constants goes
+     *             stale the day OpenAI ships a model it does not list, and removing a retired
+     *             constant is itself a breaking change — so offering one at all works against
+     *             ever reaching a release with no breaking entry. Name a model by its string id
+     *             instead; every request has honoured one since 0.35.0, and
+     *             {@link #getDefaultModel()} still names a sensible default when none is given.
+     *             If the model needs a context window other than the fallback, register one
+     *             directly with {@link dev.agenor.core.memory.llm.ModelTokenLimits#register}.
+     */
+    @Deprecated(since = "0.36.0", forRemoval = true)
     public enum Models {
         // GPT-4.1 family (1M context)
         GPT_4_1             ("gpt-4.1",               1_000_000),
@@ -69,6 +78,12 @@ public class OpenAIProvider implements LLMProvider {
     }
 
     static {
+        registerContextWindows();
+    }
+
+    // Annotations cannot sit on a static initializer block itself, hence the indirection.
+    @SuppressWarnings("deprecation") // the deprecated Models enum is this registration's own data
+    private static void registerContextWindows() {
         Arrays.stream(Models.values())
             .forEach(m -> ModelTokenLimits.register(m.id, m.contextWindow));
     }
@@ -210,6 +225,7 @@ public class OpenAIProvider implements LLMProvider {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // Models is this list's data source until 1.0.0 removes it
     public CompletableFuture<List<String>> getAvailableModels() {
         return CompletableFuture.completedFuture(
             Arrays.stream(Models.values()).map(m -> m.id).toList()
@@ -222,6 +238,7 @@ public class OpenAIProvider implements LLMProvider {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public String getDefaultModel() { return Models.GPT_4O.id; }
 
 

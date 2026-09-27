@@ -25,12 +25,22 @@ public class OllamaProvider implements LLMProvider {
     private final String modelName;
     private final String baseUrl;
 
-    // -------------------------------------------------------------------------
-    // Model enum — family/base names with their context window size.
-    // Versioned tags (":8b", ":70b") share the base context window and are
-    // registered separately in the static block below.
-    // Source: https://ollama.com/library — Last verified: 2026-04
-    // -------------------------------------------------------------------------
+    /**
+     * Known Ollama model family/base names and their context window sizes.
+     *
+     * <p>Versioned tags ({@code ":8b"}, {@code ":70b"}) share the base context window and are
+     * registered separately, in this class's static initializer.
+     *
+     * @deprecated since 0.36.0, for removal in 1.0.0. A public enum of model constants goes
+     *             stale the day a new model lands in Ollama's library, and removing a retired
+     *             constant is itself a breaking change — so offering one at all works against
+     *             ever reaching a release with no breaking entry. Name a model by its string id
+     *             instead — any tag combination, not only the ones listed here — and
+     *             {@link #getDefaultModel()} still names a sensible default when none is given.
+     *             If the model needs a context window other than the fallback, register one
+     *             directly with {@link dev.agenor.core.memory.llm.ModelTokenLimits#register}.
+     */
+    @Deprecated(since = "0.36.0", forRemoval = true)
     public enum Models {
         // Llama 3.x (Meta)
         LLAMA_3_2     ("llama3.2",      128_000),
@@ -70,6 +80,12 @@ public class OllamaProvider implements LLMProvider {
     }
 
     static {
+        registerContextWindows();
+    }
+
+    // Annotations cannot sit on a static initializer block itself, hence the indirection.
+    @SuppressWarnings("deprecation") // the deprecated Models enum is this registration's own data
+    private static void registerContextWindows() {
         // Register base model names from enum
         Arrays.stream(Models.values())
             .forEach(m -> ModelTokenLimits.register(m.id, m.contextWindow));
@@ -219,8 +235,10 @@ public class OllamaProvider implements LLMProvider {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // Models is this list's data source until 1.0.0 removes it
     public CompletableFuture<List<String>> getAvailableModels() {
-        // Returns base model names only; versioned tags can be used freely via modelName(String).
+        // Base family names only; a versioned tag can still be named freely via
+        // modelName(String) — this list is knowledge of context windows, not availability.
         return CompletableFuture.completedFuture(
             Arrays.stream(Models.values()).map(m -> m.id).toList()
         );
@@ -242,6 +260,7 @@ public class OllamaProvider implements LLMProvider {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public String getDefaultModel() { return Models.LLAMA_3_2.id; }
 
     private List<ChatMessage> convertMessages(List<LLMMessage> messages) {

@@ -18,7 +18,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `senderPerforms` override after a real network hop. `Manager` gains a package-private
   `awaitedCommitment()` accessor for the third assertion.
 
+### Deprecated
+
+- **Each LLM adapter's `Models` enum is deprecated, for removal in `1.0.0`.**
+  `OpenAIProvider.Models`, `AnthropicProvider.Models` and `OllamaProvider.Models` go stale the
+  day the vendor ships a model they do not list, and removing a retired constant is itself a
+  breaking change — so offering one at all works against ever shipping a release with no
+  breaking entry. Name a model by its string id instead; every request has honoured one since
+  0.35.0, and each provider's `getDefaultModel()` still supplies a sensible default.
+  `getAvailableModels()`, on `LLMProvider` and all three adapters, is now documented for what it
+  always was: the models an adapter recognises a context window for, not a live query against
+  the vendor's API.
+
 ### Fixed
+
+- **`ModelTokenLimits` resolves an ambiguous prefix match deterministically.** `getLimit` and
+  `getLimitOrDefault` returned whichever registered key a `ConcurrentHashMap` happened to visit
+  first when more than one was a valid prefix of the requested model — for
+  `"gpt-4-turbo-2024-04-09"`, both `"gpt-4"` and `"gpt-4-turbo"` matched, and which one answered
+  depended on hash-bucket layout, not on which registration is more specific. The longer,
+  registered key now always wins. A new `ModelTokenLimits.isKnown(model)` lets a caller tell a
+  real registered limit apart from the `DEFAULT_LIMIT` fallback; `SimpleTokenEstimator` uses it
+  to log one warning per unrecognised model, naming the `register` call that fixes it, instead of
+  silently trimming that model's conversations to a 4,096-token budget.
 
 - **`agenor-spring-boot-starter`'s documented Quick Start now works on a consumer's own
   classpath.** `agenor-runtime-scanning` was `optional=true`, so declaring only the starter did not

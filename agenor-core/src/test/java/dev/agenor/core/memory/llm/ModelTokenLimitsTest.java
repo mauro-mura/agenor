@@ -27,6 +27,8 @@ class ModelTokenLimitsTest {
         ModelTokenLimits.unregister(PREFIX + "override");
         ModelTokenLimits.unregister(PREFIX + "case");
         ModelTokenLimits.unregister(PREFIX + "trim");
+        ModelTokenLimits.unregister(PREFIX + "amb");
+        ModelTokenLimits.unregister(PREFIX + "amb-longer");
     }
 
     // ========== REGISTRY LOOKUP ==========
@@ -78,6 +80,31 @@ class ModelTokenLimitsTest {
 
         // Versioned alias that starts with the registered key
         assertThat(ModelTokenLimits.getLimit(PREFIX + "a-20250101")).isEqualTo(128_000);
+    }
+
+    @Test
+    void getLimit_shouldPreferLongerPrefixWhenTwoRegisteredKeysBothMatch() {
+        // Mirrors the real gpt-4 / gpt-4-turbo collision: both are valid prefixes of
+        // "gpt-4-turbo-2024-04-09", and the more specific one is the correct answer.
+        // A map-iteration-order pick (the old behaviour) answers this correctly or not
+        // depending on hash bucket order, not on which key is more specific.
+        ModelTokenLimits.register(PREFIX + "amb", 8_192);
+        ModelTokenLimits.register(PREFIX + "amb-longer", 128_000);
+
+        assertThat(ModelTokenLimits.getLimit(PREFIX + "amb-longer-2024-04-09"))
+            .as("the longer, more specific registered prefix must win")
+            .isEqualTo(128_000);
+    }
+
+    @Test
+    void getLimit_shouldPreferLongerPrefixRegardlessOfRegistrationOrder() {
+        // Same collision, registered in the opposite order — pins that the outcome is a
+        // property of the keys, not of ConcurrentHashMap's iteration/hash-bucket order.
+        ModelTokenLimits.register(PREFIX + "amb-longer", 128_000);
+        ModelTokenLimits.register(PREFIX + "amb", 8_192);
+
+        assertThat(ModelTokenLimits.getLimit(PREFIX + "amb-longer-2024-04-09"))
+            .isEqualTo(128_000);
     }
 
     // ========== REGISTER / OVERRIDE ==========
@@ -177,6 +204,30 @@ class ModelTokenLimitsTest {
         int callerDefault = ModelTokenLimits.DEFAULT_LIMIT + 1;
         assertThat(ModelTokenLimits.getLimitOrDefault("unknown-xyz", callerDefault))
             .isEqualTo(callerDefault);
+    }
+
+    // ========== IS KNOWN ==========
+
+    @Test
+    void isKnown_shouldReturnTrueForExactMatch() {
+        ModelTokenLimits.register(PREFIX + "a", 8_192);
+        assertThat(ModelTokenLimits.isKnown(PREFIX + "a")).isTrue();
+    }
+
+    @Test
+    void isKnown_shouldReturnTrueForPrefixMatch() {
+        ModelTokenLimits.register(PREFIX + "a", 8_192);
+        assertThat(ModelTokenLimits.isKnown(PREFIX + "a-20250101")).isTrue();
+    }
+
+    @Test
+    void isKnown_shouldReturnFalseWhenGetLimitWouldFallBackToDefault() {
+        assertThat(ModelTokenLimits.isKnown("completely-unknown-xyz")).isFalse();
+    }
+
+    @Test
+    void isKnown_shouldReturnFalseForNull() {
+        assertThat(ModelTokenLimits.isKnown(null)).isFalse();
     }
 
     // ========== GET ALL MODELS ==========
