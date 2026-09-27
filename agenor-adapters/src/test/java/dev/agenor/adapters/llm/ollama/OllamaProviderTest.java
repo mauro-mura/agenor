@@ -154,7 +154,11 @@ class OllamaProviderTest {
             // and a catch (LLMException e) never fired at all - on an exception type that is
             // already unchecked, so the wrapper bought nothing.
             assertTrue(exception.getCause() instanceof LLMException);
-            assertEquals("Ollama chat request failed", exception.getCause().getMessage());
+            LLMException llmException = (LLMException) exception.getCause();
+            // A plain RuntimeException carries nothing this classifier recognises: UNKNOWN is
+            // the correct, honest answer, not a defect in the classifier.
+            assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+            assertTrue(llmException.getMessage().contains("API Error"));
         }
     }
 
@@ -288,7 +292,9 @@ class OllamaProviderTest {
             ExecutionException exception = assertThrows(ExecutionException.class,
                     () -> future.get(5, TimeUnit.SECONDS));
             assertTrue(exception.getCause() instanceof LLMException);
-            assertTrue(exception.getCause().getMessage().contains("Ollama streaming failed"));
+            LLMException llmException = (LLMException) exception.getCause();
+            assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+            assertTrue(llmException.getMessage().contains("Streaming error"));
         }
 
         @Test
@@ -308,7 +314,9 @@ class OllamaProviderTest {
             ExecutionException exception = assertThrows(ExecutionException.class,
                     () -> future.get(5, TimeUnit.SECONDS));
             assertTrue(exception.getCause() instanceof LLMException);
-            assertTrue(exception.getCause().getMessage().contains("Ollama streaming request failed"));
+            LLMException llmException = (LLMException) exception.getCause();
+            assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+            assertTrue(llmException.getMessage().contains("Setup error"));
         }
     }
 

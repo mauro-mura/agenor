@@ -164,7 +164,7 @@ public class OllamaProvider implements LLMProvider {
                         .build();
 
             } catch (Exception e) {
-                throw new LLMException("Ollama chat request failed", e);
+                throw LLMSupport.wrap(getProviderName(), resolvedModel, e);
             }
         });
     }
@@ -223,12 +223,15 @@ public class OllamaProvider implements LLMProvider {
 
                 @Override
                 public void onError(Throwable error) {
-                    result.completeExceptionally(new LLMException("Ollama streaming failed", error));
+                    result.completeExceptionally(
+                            LLMSupport.wrap(getProviderName(), resolvedModel, error));
                 }
             });
 
         } catch (Exception e) {
-            result.completeExceptionally(new LLMException("Ollama streaming request failed", e));
+            // resolvedModel is not in scope here: this catches a failure building the request
+            // itself (message conversion, model resolution), before any model was settled on.
+            result.completeExceptionally(LLMSupport.wrap(getProviderName(), modelName, e));
         }
 
         return result;

@@ -106,55 +106,57 @@ public class AnthropicProvider implements LLMProvider {
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
         final String resolvedModel = LLMSupport.resolveModel(request, modelName);
         return LLMSupport.supplyAsync(() -> {
+            try {
+                ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
+                        .modelName(resolvedModel)
+                        .messages(convertMessages(request));
 
-            ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
-                    .modelName(resolvedModel)
-                    .messages(convertMessages(request));
+                // ✅ ADD FUNCTION CALLING SUPPORT
+                if (request.hasFunctions()) {
+                    List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
+                    chatRequestBuilder.toolSpecifications(toolSpecs);
+                }
 
-            // ✅ ADD FUNCTION CALLING SUPPORT
-            if (request.hasFunctions()) {
-                List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
-                chatRequestBuilder.toolSpecifications(toolSpecs);
+                ChatResponse response = chatModel.chat(chatRequestBuilder.build());
+
+                LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
+                builder.role(LLMMessage.Role.ASSISTANT);
+
+                if (response.aiMessage() != null && response.aiMessage().text() != null) {
+                    builder.content(response.aiMessage().text());
+                }
+
+                // Handle tool execution requests (function calls)
+                if (response.aiMessage() != null && response.aiMessage().hasToolExecutionRequests()) {
+                    List<FunctionCall> functionCalls = new ArrayList<>();
+                    response.aiMessage().toolExecutionRequests().forEach(toolExecutionRequest -> {
+                        functionCalls.add(new FunctionCall(
+                                toolExecutionRequest.id(),
+                                toolExecutionRequest.name(),
+                                toolExecutionRequest.arguments()
+                        ));
+                    });
+                    builder.functionCalls(functionCalls);
+                }
+
+                if (response.tokenUsage() != null) {
+                    builder.usage(
+                            response.tokenUsage().inputTokenCount(),
+                            response.tokenUsage().outputTokenCount(),
+                            response.tokenUsage().totalTokenCount()
+                    );
+                }
+
+                if (response.finishReason() != null) {
+                    builder.finishReason(response.finishReason().toString());
+                }
+
+                Map<String, Object> metadata = new HashMap<>();
+                builder.metadata(metadata);
+                return builder.build();
+            } catch (Exception e) {
+                throw LLMSupport.wrap(getProviderName(), resolvedModel, e);
             }
-
-            ChatResponse response = chatModel.chat(chatRequestBuilder.build());
-
-            LLMResponse.Builder builder = LLMResponse.builder(response.id(), resolvedModel);
-            builder.role(LLMMessage.Role.ASSISTANT);
-
-            if (response.aiMessage() != null && response.aiMessage().text() != null) {
-                builder.content(response.aiMessage().text());
-            }
-
-            // Handle tool execution requests (function calls)
-            if (response.aiMessage() != null && response.aiMessage().hasToolExecutionRequests()) {
-                List<FunctionCall> functionCalls = new ArrayList<>();
-                response.aiMessage().toolExecutionRequests().forEach(toolExecutionRequest -> {
-                    functionCalls.add(new FunctionCall(
-                            toolExecutionRequest.id(),
-                            toolExecutionRequest.name(),
-                            toolExecutionRequest.arguments()
-                    ));
-                });
-                builder.functionCalls(functionCalls);
-            }
-
-            if (response.tokenUsage() != null) {
-                builder.usage(
-                        response.tokenUsage().inputTokenCount(),
-                        response.tokenUsage().outputTokenCount(),
-                        response.tokenUsage().totalTokenCount()
-                );
-            }
-
-            if (response.finishReason() != null) {
-                builder.finishReason(response.finishReason().toString());
-            }
-
-            Map<String, Object> metadata = new HashMap<>();
-            builder.metadata(metadata);
-            return builder.build();
-
         });
     }
 
@@ -209,7 +211,8 @@ public class AnthropicProvider implements LLMProvider {
 
                     @Override
                     public void onError(Throwable error) {
-                        future.completeExceptionally(error);
+                        future.completeExceptionally(
+                                LLMSupport.wrap(getProviderName(), resolvedModel, error));
                     }
                 }
         );

@@ -32,6 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **LLM adapter failures are now classified into `LLMException.ErrorType`.** OpenAI and
+  Anthropic used to let the underlying client's exception travel bare inside a
+  `CompletionException`; Ollama wrapped every failure as `UNKNOWN` regardless of cause. All
+  three now walk the whole cause chain and classify it, and populate `getStatusCode()` and
+  `isRetryable()` from the same pass:
+
+  - authentication, rate limit, model-not-found, network, server error, content-filtered and
+    unsupported-operation are all recognised, and a plain HTTP failure is classified by status
+    code when the client library raises nothing more specific;
+  - `QUOTA_EXCEEDED` and `CONTEXT_LENGTH_EXCEEDED` stay `UNKNOWN` on every adapter — neither has
+    a matching signal in the client library these adapters build on, and guessing from message
+    text is not done here.
+
+  The Level 4 `LLMProviderExample` now prints a next step instead of a bare message — which
+  backend to start, which model to pull — reading `getErrorType()` the same way a caller should.
+
 - **`ModelTokenLimits` resolves an ambiguous prefix match deterministically.** `getLimit` and
   `getLimitOrDefault` returned whichever registered key a `ConcurrentHashMap` happened to visit
   first when more than one was a valid prefix of the requested model — for

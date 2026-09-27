@@ -474,12 +474,17 @@ mySupportAgent.setLLMMemoryManager(memory);
 
 ## Error Handling (LLMException)
 
-`LLMException` carries an `ErrorType` a caller can branch on, and the code below is how to read
-it. **The three bundled adapters do not populate it.** OpenAI and Anthropic let the underlying
-client's exception travel as the cause of the `CompletionException`, and Ollama reports its
-failures as an `LLMException` of type `UNKNOWN`. So the branching below describes what the type
-offers, not what these three currently deliver; against a provider you have written yourself it
-works as written.
+`LLMException` carries an `ErrorType` a caller can branch on, and every bundled adapter —
+OpenAI, Anthropic and Ollama — now populates it: `chat()` and `chatStream()` both classify
+whatever the underlying client threw before the caller ever sees it, walking the whole cause
+chain rather than only the outermost frame. `getStatusCode()` and `isRetryable()` are populated
+too, from the same classification.
+
+Two values cannot come from classification and stay `UNKNOWN` on every adapter:
+`QUOTA_EXCEEDED` has no distinct signal from `RATE_LIMIT` in the client libraries these adapters
+build on, and `CONTEXT_LENGTH_EXCEEDED` has no matching exception type at all — both would need
+guessing from a provider's message text, which is not done here. A caller that distinguishes
+quota exhaustion from ordinary rate limiting still has to read the message.
 
 ```java
 provider.chat(request).exceptionally(ex -> {
@@ -494,16 +499,13 @@ provider.chat(request).exceptionally(ex -> {
             case AUTHENTICATION -> {
                 log.error("Invalid API key for provider: {}", llmEx.getProvider());
             }
-            case CONTEXT_LENGTH_EXCEEDED -> {
-                log.warn("Prompt too long, trimming history");
-                // Reduce maxTokens or clear history
+            case MODEL_NOT_FOUND -> {
+                log.error("Model {} not found on {}", llmEx.getModel(), llmEx.getProvider());
+                // Ollama: run `ollama pull <model>` first
             }
             case NETWORK -> {
                 log.warn("Network error, retrying...");
                 // Retry around the call
-            }
-            case QUOTA_EXCEEDED -> {
-                log.error("Quota exhausted for provider: {}", llmEx.getProvider());
             }
             default -> log.error("LLM error [{}]: {}", llmEx.getErrorType(), llmEx.getMessage());
         }
@@ -518,16 +520,15 @@ provider.chat(request).exceptionally(ex -> {
 
 ### Retry pattern
 
-`ErrorType` is what makes a retry decision possible: `RATE_LIMIT` and `NETWORK` are worth
-retrying, `AUTHENTICATION` and `QUOTA_EXCEEDED` are not. Wrap the provider call in a resilience
-library — Resilience4j and Failsafe both take a predicate over the thrown exception — and let it
-own the back-off:
+`isRetryable()` is the retry decision already made — it comes from the same classification as
+`ErrorType`, not from re-deriving it per type: a `RATE_LIMIT` or a 5xx `SERVER_ERROR` is
+retryable, an `AUTHENTICATION` failure or a plain 4xx is not. Wrap the provider call in a
+resilience library — Resilience4j and Failsafe both take a predicate over the thrown exception —
+and let it own the back-off:
 
 ```java
 boolean worthRetrying(Throwable t) {
-    return t instanceof LLMException llmEx
-        && (llmEx.getErrorType() == LLMException.ErrorType.RATE_LIMIT
-         || llmEx.getErrorType() == LLMException.ErrorType.NETWORK);
+    return t instanceof LLMException llmEx && llmEx.isRetryable();
 }
 ```
 

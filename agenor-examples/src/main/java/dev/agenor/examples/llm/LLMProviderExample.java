@@ -56,7 +56,7 @@ public class LLMProviderExample {
             System.out.println("Tokens used: " + response.usage().totalTokens());
             System.out.println();
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            printError(e);
         }
     }
 
@@ -83,7 +83,8 @@ public class LLMProviderExample {
             future.get();
             System.out.println("\n");
         } catch (Exception e) {
-            System.err.println("\nError: " + e.getMessage());
+            System.out.println();
+            printError(e);
         }
     }
 
@@ -107,7 +108,7 @@ public class LLMProviderExample {
             System.out.println("Response: " + response.content());
             System.out.println();
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            printError(e);
         }
     }
 
@@ -147,7 +148,7 @@ public class LLMProviderExample {
             }
             System.out.println();
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            printError(e);
         }
     }
 
@@ -204,8 +205,36 @@ public class LLMProviderExample {
                 conversation.addMessage(LLMMessage.assistant(response.toString()));
             }
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            printError(e);
         }
+    }
+
+    /**
+     * Prints a failed request with a next step, not just a message.
+     *
+     * <p>{@code future.get()} wraps whatever the provider threw in an
+     * {@link java.util.concurrent.ExecutionException}; the classified {@link LLMException}
+     * underneath — every adapter now produces one, not only Ollama — is what tells the reader
+     * what to actually do, which the message text alone does not.
+     */
+    private void printError(Exception e) {
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        if (!(cause instanceof LLMException llmEx)) {
+            System.err.println("Error: " + e.getMessage());
+            return;
+        }
+        String nextStep = switch (llmEx.getErrorType()) {
+            case NETWORK -> "is the backend running? The default is local Ollama "
+                    + "(`ollama serve`); set LLM_BACKEND=groq for a free cloud alternative.";
+            case MODEL_NOT_FOUND -> "pull the model first: `ollama pull "
+                    + (llmEx.getModel() != null ? llmEx.getModel() : "<model>") + "`.";
+            case AUTHENTICATION -> "check the API key for the " + llmEx.getProvider() + " backend.";
+            case RATE_LIMIT -> "rate limited — wait a moment and retry"
+                    + (llmEx.isRetryable() ? "" : " once the quota resets") + ".";
+            default -> null;
+        };
+        System.err.println("Error [" + llmEx.getErrorType() + "]: " + llmEx.getMessage()
+                + (nextStep != null ? "\n  -> " + nextStep : ""));
     }
 
     // Helper class to manage conversation history

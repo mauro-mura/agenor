@@ -33,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.agenor.adapters.llm.LLMProviderFactory;
 import dev.agenor.core.llm.FunctionDefinition;
+import dev.agenor.core.llm.LLMException;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
@@ -194,7 +195,13 @@ class AnthropicProviderTest {
                 .build();
 
         CompletableFuture<LLMResponse> future = provider.chat(request);
-        assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+        ExecutionException exception = assertThrows(ExecutionException.class,
+                () -> future.get(5, TimeUnit.SECONDS));
+        assertTrue(exception.getCause() instanceof LLMException);
+        LLMException llmException = (LLMException) exception.getCause();
+        assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+        assertEquals("Anthropic", llmException.getProvider());
+        assertTrue(llmException.getMessage().contains("Anthropic API down"));
     }
 
     // -----------------------------------------------------------------------
@@ -281,7 +288,12 @@ class AnthropicProviderTest {
                 .build();
 
         CompletableFuture<Void> future = provider.chatStream(request, chunk -> {});
-        assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+        ExecutionException exception = assertThrows(ExecutionException.class,
+                () -> future.get(5, TimeUnit.SECONDS));
+        assertTrue(exception.getCause() instanceof LLMException);
+        LLMException llmException = (LLMException) exception.getCause();
+        assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+        assertTrue(llmException.getMessage().contains("Streaming failed"));
     }
 
     // -----------------------------------------------------------------------

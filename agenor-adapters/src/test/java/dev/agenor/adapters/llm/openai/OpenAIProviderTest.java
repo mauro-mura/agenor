@@ -36,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.agenor.adapters.llm.ToolConversionUtils;
 import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
+import dev.agenor.core.llm.LLMException;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
@@ -220,7 +221,15 @@ class OpenAIProviderTest {
 
         CompletableFuture<LLMResponse> future = provider.chat(request);
 
-        assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+        ExecutionException exception = assertThrows(ExecutionException.class,
+                () -> future.get(5, TimeUnit.SECONDS));
+        // Before classification, the bare LangChain4j (here plain RuntimeException) exception
+        // travelled inside the ExecutionException with nothing a caller could branch on.
+        assertTrue(exception.getCause() instanceof LLMException);
+        LLMException llmException = (LLMException) exception.getCause();
+        assertEquals(LLMException.ErrorType.UNKNOWN, llmException.getErrorType());
+        assertEquals("OpenAI", llmException.getProvider());
+        assertTrue(llmException.getMessage().contains("API error"));
     }
 
     // -----------------------------------------------------------------------
