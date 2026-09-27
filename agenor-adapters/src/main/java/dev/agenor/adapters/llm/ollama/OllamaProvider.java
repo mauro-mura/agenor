@@ -277,7 +277,10 @@ public class OllamaProvider implements LLMProvider {
             case SYSTEM -> SystemMessage.from(message.content());
             case USER -> UserMessage.from(message.content());
             case ASSISTANT -> AiMessage.from(message.content());
-            default -> throw new IllegalArgumentException("Unsupported message role: " + message.role());
+            // supportsFunctionCalling() is false: no tool spec is ever attached to a request,
+            // so no FUNCTION-role result should exist to convert. A clear, classified failure
+            // beats a generic IllegalArgumentException a caller has nothing to branch on.
+            case FUNCTION -> throw LLMException.unsupportedOperation(getProviderName(), "function calling");
         };
     }
 

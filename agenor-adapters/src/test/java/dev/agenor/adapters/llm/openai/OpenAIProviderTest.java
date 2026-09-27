@@ -535,7 +535,7 @@ class OpenAIProviderTest {
             assertDoesNotThrow(() -> {
                 FunctionCall call = new FunctionCall("id", "func", "{}");
                 LLMRequest.builder()
-                        .addMessage(new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call)))
+                        .addMessage(new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call), null))
                         .build();
             });
         }

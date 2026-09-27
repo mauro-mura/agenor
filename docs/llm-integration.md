@@ -160,10 +160,10 @@ LLMRequest request = LLMRequest.builder()
 ### LLMMessage roles
 
 ```java
-LLMMessage.system("You are an assistant.");  // SYSTEM
-LLMMessage.user("Hello!");                   // USER
-LLMMessage.assistant("Hi there!");           // ASSISTANT
-LLMMessage.function("fn_name", resultJson);  // FUNCTION (tool result)
+LLMMessage.system("You are an assistant.");   // SYSTEM
+LLMMessage.user("Hello!");                    // USER
+LLMMessage.assistant("Hi there!");            // ASSISTANT
+LLMMessage.function(call, resultJson);        // FUNCTION (tool result), paired to its call
 ```
 
 ### Reading LLMResponse
@@ -196,8 +196,9 @@ provider.chatStream(request, chunk -> {
 
 OpenAI and Anthropic support function/tool calling. `OllamaProvider` does not: it reports
 `supportsFunctionCalling()` as `false` and never passes tool definitions to the model, so
-functions on a request sent through it are silently ignored. Check the flag before building a
-tool loop against a provider chosen at runtime.
+functions on a request sent through it are silently ignored — but a `FUNCTION`-role result sent
+to it anyway now fails with a classified `LLMException` (`UNSUPPORTED_OPERATION`) rather than a
+generic one. Check the flag before building a tool loop against a provider chosen at runtime.
 
 ### Define a function
 
@@ -230,11 +231,13 @@ provider.chat(request).thenAccept(response -> {
         // Execute the function
         String result = fetchWeather(location, unit);
 
-        // Continue conversation with the function result
+        // Continue conversation with the function result, paired to the call it answers —
+        // needed to disambiguate two parallel calls to the same function, and required
+        // outright by Anthropic, which pairs tool_use to tool_result server-side.
         LLMRequest followUp = LLMRequest.builder()
             .messages(request.messages())
             .addMessage(response.toMessage())
-            .addMessage(LLMMessage.function("get_weather", result))
+            .addMessage(LLMMessage.function(call, result))
             .build();
 
         provider.chat(followUp).thenAccept(final_ ->

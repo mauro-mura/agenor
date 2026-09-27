@@ -252,14 +252,23 @@ public class OpenAIProvider implements LLMProvider {
     // ========================================================================
 
     private List<ChatMessage> convertMessages(LLMRequest request) {
-        return request.messages().stream().map(msg -> {
-            String content = msg.content() == null ? "" : msg.content();
-            return switch (msg.role()) {
-                case SYSTEM -> (ChatMessage) SystemMessage.from(content);
-                case ASSISTANT -> (ChatMessage) AiMessage.from(content);
-                default -> (ChatMessage) UserMessage.from(content);
-            };
-        }).collect(Collectors.toList());
+        return request.messages().stream()
+                .map(msg -> (ChatMessage) switch (msg.role()) {
+                    case SYSTEM -> SystemMessage.from(orEmpty(msg.content()));
+                    case USER -> UserMessage.from(orEmpty(msg.content()));
+                    case ASSISTANT -> msg.hasFunctionCalls()
+                            ? AiMessage.from(msg.content(),
+                                    ToolConversionUtils.convertFunctionCallsToToolExecutionRequests(
+                                            msg.functionCalls()))
+                            : AiMessage.from(orEmpty(msg.content()));
+                    case FUNCTION -> ToolConversionUtils
+                            .convertFunctionResultToToolExecutionResultMessage(getProviderName(), msg);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private static String orEmpty(String content) {
+        return content == null ? "" : content;
     }
 
     // ========================================================================

@@ -24,8 +24,8 @@ import java.util.Objects;
  *     // Execute the function
  *     String result = executeFunction(functionName, args);
  *
- *     // Send result back to LLM
- *     request = request.withFunctionResult(functionName, result);
+ *     // Send the result back paired to this call, not just to the function's name
+ *     LLMMessage resultMessage = LLMMessage.function(call, result);
  * }
  * }</pre>
  *

@@ -238,14 +238,19 @@ public class AnthropicProvider implements LLMProvider {
 
 
     private List<ChatMessage> convertMessages(LLMRequest request) {
-        return request.messages().stream().map(msg -> {
-            return switch (msg.role()) {
-                case SYSTEM -> (ChatMessage) SystemMessage.from(msg.content());
-                case USER -> (ChatMessage) UserMessage.from(msg.content());
-                case ASSISTANT -> (ChatMessage) AiMessage.from(msg.content());
-                default -> (ChatMessage) UserMessage.from(msg.content());
-            };
-        }).collect(Collectors.toList());
+        return request.messages().stream()
+                .map(msg -> (ChatMessage) switch (msg.role()) {
+                    case SYSTEM -> SystemMessage.from(msg.content());
+                    case USER -> UserMessage.from(msg.content());
+                    case ASSISTANT -> msg.hasFunctionCalls()
+                            ? AiMessage.from(msg.content(),
+                                    ToolConversionUtils.convertFunctionCallsToToolExecutionRequests(
+                                            msg.functionCalls()))
+                            : AiMessage.from(msg.content());
+                    case FUNCTION -> ToolConversionUtils
+                            .convertFunctionResultToToolExecutionResultMessage(getProviderName(), msg);
+                })
+                .collect(Collectors.toList());
     }
 
 

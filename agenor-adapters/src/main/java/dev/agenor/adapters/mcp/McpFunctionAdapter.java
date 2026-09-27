@@ -82,7 +82,7 @@ public class McpFunctionAdapter {
     public CompletableFuture<LLMMessage> execute(FunctionCall call) {
         Map<String, Object> args = parseArguments(call.arguments());
         return registry.callTool(call.name(), args)
-                .thenApply(result -> LLMMessage.function(call.name(), result.content()));
+                .thenApply(result -> LLMMessage.function(call, result.content()));
     }
 
     // -------------------------------------------------------------------------

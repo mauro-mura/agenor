@@ -135,6 +135,8 @@ class McpFunctionAdapterTest {
         assertTrue(result.isFunction());
         assertEquals("file content here", result.content());
         assertEquals("read_file", result.name());
+        // Paired to the call it answers, not just named after it.
+        assertEquals("call-1", result.functionCallId());
     }
 
     @Test

@@ -62,6 +62,7 @@ class LLMMessageTest {
 
     @Test
     @DisplayName("Should create function result message")
+    @SuppressWarnings("deprecation") // exercising the deprecated overload itself
     void testFunctionMessage() {
         LLMMessage message = LLMMessage.function("get_weather",
             "{\"temperature\": 22, \"condition\": \"sunny\"}");
@@ -69,14 +70,34 @@ class LLMMessageTest {
         assertEquals(LLMMessage.Role.FUNCTION, message.role());
         assertEquals("{\"temperature\": 22, \"condition\": \"sunny\"}", message.content());
         assertEquals("get_weather", message.name());
+        assertNull(message.functionCallId());
         assertTrue(message.isFunction());
+    }
+
+    @Test
+    @DisplayName("Should create function result message paired to its call")
+    void testFunctionMessagePairedToCall() {
+        FunctionCall call = FunctionCall.of("get_weather", "{\"location\": \"Paris\"}");
+        LLMMessage message = LLMMessage.function(call, "{\"temperature\": 22}");
+
+        assertEquals(LLMMessage.Role.FUNCTION, message.role());
+        assertEquals("{\"temperature\": 22}", message.content());
+        assertEquals("get_weather", message.name());
+        assertEquals(call.id(), message.functionCallId());
+    }
+
+    @Test
+    @DisplayName("Should reject a null FunctionCall when pairing a result")
+    void testFunctionMessageRejectsNullCall() {
+        assertThrows(NullPointerException.class,
+                () -> LLMMessage.function((FunctionCall) null, "result"));
     }
 
     @Test
     @DisplayName("Should reject null role")
     void testNullRole() {
         assertThrows(NullPointerException.class, () -> {
-            new LLMMessage(null, "content", null, null);
+            new LLMMessage(null, "content", null, null, null);
         });
     }
 
@@ -84,7 +105,7 @@ class LLMMessageTest {
     @DisplayName("Should reject message without content or function calls")
     void testNoContentOrFunctions() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, null);
+            new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, null, null);
         });
     }
 
@@ -92,7 +113,7 @@ class LLMMessageTest {
     @DisplayName("Should allow assistant message with only function calls")
     void testAssistantWithOnlyFunctionCalls() {
         FunctionCall call = FunctionCall.of("calculate", "{\"a\": 5, \"b\": 3}");
-        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call));
+        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call), null);
 
         assertNull(message.content());
         assertTrue(message.hasFunctionCalls());
@@ -123,7 +144,7 @@ class LLMMessageTest {
     @DisplayName("Should handle null content in truncation")
     void testTruncateNullContent() {
         FunctionCall call = FunctionCall.of("test", "{}");
-        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call));
+        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, null, null, List.of(call), null);
 
         String truncated = message.truncatedContent(20);
         assertEquals("[no content]", truncated);
@@ -136,7 +157,7 @@ class LLMMessageTest {
         List<FunctionCall> calls = new java.util.ArrayList<>();
         calls.add(call);
 
-        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, "test", null, calls);
+        LLMMessage message = new LLMMessage(LLMMessage.Role.ASSISTANT, "test", null, calls, null);
 
         // Original list modification should not affect message
         calls.clear();
@@ -164,7 +185,7 @@ class LLMMessageTest {
         LLMMessage system = LLMMessage.system("System");
         LLMMessage user = LLMMessage.user("User");
         LLMMessage assistant = LLMMessage.assistant("Assistant");
-        LLMMessage function = LLMMessage.function("func", "result");
+        LLMMessage function = LLMMessage.function(FunctionCall.of("func"), "result");
 
         assertTrue(system.isSystem() && !system.isUser() && !system.isAssistant() && !system.isFunction());
         assertTrue(user.isUser() && !user.isSystem() && !user.isAssistant() && !user.isFunction());

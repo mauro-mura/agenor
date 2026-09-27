@@ -24,7 +24,8 @@ import java.time.Duration;
  * <p>Note: Agenor's Ollama adapter does not wire up function calling, so examples
  * that use {@code FunctionDefinition}/tools should check
  * {@link LLMProvider#supportsFunctionCalling()} and point users at
- * {@code LLM_BACKEND=groq} or {@code LLM_BACKEND=openai} for the full demo.
+ * {@code LLM_BACKEND=groq} or {@code LLM_BACKEND=openai} for the full demo. A tool result sent
+ * anyway fails with a classified {@code LLMException} rather than a generic one.
  */
 public final class ExampleLLMProvider {
 

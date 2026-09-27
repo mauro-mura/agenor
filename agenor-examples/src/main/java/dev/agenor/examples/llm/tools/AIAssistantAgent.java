@@ -242,10 +242,10 @@ public class AIAssistantAgent extends BaseAgent {
                 // Add assistant message with function calls to history
                 conversationHistory.add(LLMMessage.assistant(response.content(), response.functionCalls()));
 
-                // Add function results to history
+                // Add function results to history, each paired to the call it answers
                 for (CompletableFuture<FunctionCallResult> future : functionFutures) {
                     FunctionCallResult result = future.join();
-                    conversationHistory.add(LLMMessage.function(result.functionName(), result.result()));
+                    conversationHistory.add(LLMMessage.function(result.call(), result.result()));
                 }
 
                 // Make follow-up request with function results
@@ -271,16 +271,16 @@ public class AIAssistantAgent extends BaseAgent {
             Map<String, Object> args = parseJsonArguments(call.arguments());
 
             return toolRegistry.executeTool(call.name(), args)
-                .thenApply(result -> new FunctionCallResult(call.name(), result.toString()))
+                .thenApply(result -> new FunctionCallResult(call, result.toString()))
                 .exceptionally(throwable -> {
                     log.warn("Function call failed: {}", call.name(), throwable);
-                    return new FunctionCallResult(call.name(), "Error: " + throwable.getMessage());
+                    return new FunctionCallResult(call, "Error: " + throwable.getMessage());
                 });
 
         } catch (Exception e) {
             log.warn("Error parsing function call arguments: {}", call.arguments(), e);
             return CompletableFuture.completedFuture(
-                new FunctionCallResult(call.name(), "Error: Invalid arguments")
+                new FunctionCallResult(call, "Error: Invalid arguments")
             );
         }
     }
@@ -680,8 +680,15 @@ public class AIAssistantAgent extends BaseAgent {
         String error
     ) {}
 
+    /**
+     * The originating {@link FunctionCall} together with what executing it produced.
+     *
+     * <p>Carrying {@code call} rather than just its name is what lets
+     * {@link LLMMessage#function(FunctionCall, String)} pair this result back to the call it
+     * answers.
+     */
     public record FunctionCallResult(
-        String functionName,
+        FunctionCall call,
         String result
     ) {}
 }

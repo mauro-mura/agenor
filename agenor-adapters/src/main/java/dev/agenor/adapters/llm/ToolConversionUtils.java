@@ -1,7 +1,12 @@
 package dev.agenor.adapters.llm;
 
+import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
+import dev.agenor.core.llm.LLMException;
+import dev.agenor.core.llm.LLMMessage;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.model.chat.request.json.*;
 
 import java.util.List;
@@ -9,7 +14,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Utility class for converting Agenor function definitions to LangChain4j tool specifications.
+ * Utility class for converting Agenor function definitions to LangChain4j tool specifications,
+ * and Agenor function-calling messages to and from LangChain4j's tool-execution types.
  */
 public final class ToolConversionUtils {
 
@@ -24,6 +30,44 @@ public final class ToolConversionUtils {
         return functions.stream()
                 .map(ToolConversionUtils::convertFunctionToToolSpec)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts an {@code ASSISTANT} message's {@link FunctionCall}s into the requests LangChain4j
+     * attaches to its own {@code AiMessage} — the outbound half of a tool-calling round trip.
+     */
+    public static List<ToolExecutionRequest> convertFunctionCallsToToolExecutionRequests(
+            List<FunctionCall> functionCalls) {
+        return functionCalls.stream()
+                .map(call -> ToolExecutionRequest.builder()
+                        .id(call.id())
+                        .name(call.name())
+                        .arguments(call.arguments())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts a {@code FUNCTION}-role message into the {@code tool_result} LangChain4j expects
+     * — the return half of a tool-calling round trip.
+     *
+     * @param provider the provider name, used only in the exception message
+     * @param message  a message with role {@code FUNCTION}
+     * @throws LLMException {@code INVALID_REQUEST} if {@code message} carries no
+     *         {@link LLMMessage#functionCallId()} — built with the deprecated
+     *         {@link LLMMessage#function(String, String)} rather than
+     *         {@link LLMMessage#function(FunctionCall, String)} — since a provider cannot pair an
+     *         unidentified result to the call it answers
+     */
+    public static ToolExecutionResultMessage convertFunctionResultToToolExecutionResultMessage(
+            String provider, LLMMessage message) {
+        if (message.functionCallId() == null) {
+            throw LLMException.invalidRequest(provider + ": FUNCTION message for '" + message.name()
+                    + "' has no functionCallId — build it with LLMMessage.function(FunctionCall, "
+                    + "String), not the deprecated two-argument overload, so the result can be "
+                    + "paired to the call it answers");
+        }
+        return ToolExecutionResultMessage.from(message.functionCallId(), message.name(), message.content());
     }
 
     /**

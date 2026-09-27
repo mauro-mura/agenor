@@ -18,7 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `senderPerforms` override after a real network hop. `Manager` gains a package-private
   `awaitedCommitment()` accessor for the third assertion.
 
+### Changed
+
+- **BREAKING: `LLMMessage` carries the id of the function call a result answers.** A new fifth
+  record component, `functionCallId`, is populated by `LLMMessage.function(FunctionCall,
+  String)`; the two-argument overload cannot pair a result to its call, which Anthropic's
+  server-side `tool_use`/`tool_result` pairing rejects outright. OpenAI and Anthropic now map a
+  `FUNCTION`-role message to a real tool result instead of an ordinary user message, and an
+  assistant turn's function calls survive onto the outgoing request instead of being dropped.
+  See ADR-007's amendment for the full account, including what this does not decide (no
+  automatic tool loop).
+
+  Migration: replace `LLMMessage.function(name, result)` with `LLMMessage.function(call,
+  result)`, using the `FunctionCall` already in hand from `response.functionCalls()`.
+
 ### Deprecated
+
+- **`LLMMessage.function(String, String)` is deprecated, for removal in `1.0.0`.** It has no way
+  to carry a call id, which every provider's tool-result mapping now needs; use
+  `LLMMessage.function(FunctionCall, String)` instead.
 
 - **Each LLM adapter's `Models` enum is deprecated, for removal in `1.0.0`.**
   `OpenAIProvider.Models`, `AnthropicProvider.Models` and `OllamaProvider.Models` go stale the

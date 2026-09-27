@@ -28,6 +28,11 @@ import java.util.Objects;
  * @param content the textual content of the message
  * @param name optional name identifier for the message sender
  * @param functionCalls optional list of function calls (for assistant role)
+ * @param functionCallId for a {@code FUNCTION}-role message, the {@link FunctionCall#id()} of
+ *        the call this message answers; {@code null} for every other role. Pairing a result to
+ *        its call needs this id — two parallel calls to the same function are otherwise
+ *        ambiguous — and a provider that requires the pairing (Anthropic's {@code tool_use} /
+ *        {@code tool_result}) rejects the request without it
  *
  * @since 0.3.0
  */
@@ -35,7 +40,8 @@ public record LLMMessage(
     Role role,
     String content,
     String name,
-    List<FunctionCall> functionCalls
+    List<FunctionCall> functionCalls,
+    String functionCallId
 ) {
 
     /**
@@ -94,7 +100,7 @@ public record LLMMessage(
      * @return a new system message
      */
     public static LLMMessage system(String content) {
-        return new LLMMessage(Role.SYSTEM, content, null, null);
+        return new LLMMessage(Role.SYSTEM, content, null, null, null);
     }
 
     /**
@@ -106,7 +112,7 @@ public record LLMMessage(
      * @return a new user message
      */
     public static LLMMessage user(String content) {
-        return new LLMMessage(Role.USER, content, null, null);
+        return new LLMMessage(Role.USER, content, null, null, null);
     }
 
     /**
@@ -118,7 +124,7 @@ public record LLMMessage(
      * @return a new assistant message
      */
     public static LLMMessage assistant(String content) {
-        return new LLMMessage(Role.ASSISTANT, content, null, null);
+        return new LLMMessage(Role.ASSISTANT, content, null, null, null);
     }
 
     /**
@@ -131,20 +137,43 @@ public record LLMMessage(
      * @return a new assistant message with function calls
      */
     public static LLMMessage assistant(String content, List<FunctionCall> functionCalls) {
-        return new LLMMessage(Role.ASSISTANT, content, null, functionCalls);
+        return new LLMMessage(Role.ASSISTANT, content, null, functionCalls, null);
     }
 
     /**
-     * Create a function result message.
+     * Create a function result message, paired to the call it answers.
      *
-     * <p>Function messages contain the results of function calls.
+     * <p>This is the factory to use: the id lets a provider pair the result to its call — a
+     * requirement Anthropic enforces server-side — and disambiguates two parallel calls to the
+     * same function, which {@link #function(String, String)} cannot.
+     *
+     * @param call the {@link FunctionCall} this message answers; its {@link FunctionCall#id()}
+     *             and {@link FunctionCall#name()} are carried onto the message
+     * @param result the function result (typically JSON)
+     * @return a new function message, paired to {@code call}
+     * @since 0.36.0
+     */
+    public static LLMMessage function(FunctionCall call, String result) {
+        Objects.requireNonNull(call, "FunctionCall cannot be null");
+        return new LLMMessage(Role.FUNCTION, result, call.name(), null, call.id());
+    }
+
+    /**
+     * Create a function result message, without the id of the call it answers.
      *
      * @param functionName the name of the function that was called
      * @param result the function result (typically JSON)
      * @return a new function message
+     * @deprecated since 0.36.0, for removal in 1.0.0. A result with no call id cannot be paired
+     *             to the call it answers — Anthropic rejects the request outright, OpenAI
+     *             accepts it as an ordinary user message instead of a tool result, and two
+     *             parallel calls to the same function are ambiguous by construction. Use
+     *             {@link #function(FunctionCall, String)}, which every caller that still has the
+     *             originating {@code FunctionCall} in scope can call instead.
      */
+    @Deprecated(since = "0.36.0", forRemoval = true)
     public static LLMMessage function(String functionName, String result) {
-        return new LLMMessage(Role.FUNCTION, result, functionName, null);
+        return new LLMMessage(Role.FUNCTION, result, functionName, null, null);
     }
 
     // ========================================================================

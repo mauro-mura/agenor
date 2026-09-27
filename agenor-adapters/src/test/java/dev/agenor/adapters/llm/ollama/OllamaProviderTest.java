@@ -362,38 +362,27 @@ class OllamaProviderTest {
         }
 
         @Test
-        @DisplayName("should throw exception for unsupported message role")
-        void convertMessage_unsupportedRole_shouldThrowException() {
+        @DisplayName("should throw a classified exception for a FUNCTION-role message")
+        void convertMessage_functionRole_shouldThrowUnsupportedOperation() {
             OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
 
-            // FUNCTION role is not supported by Ollama's convertMessage method
-            LLMMessage functionMessage = new LLMMessage(LLMMessage.Role.FUNCTION, "Function result", "test_function", null);
+            // FUNCTION role is not supported: supportsFunctionCalling() is false, and no tool
+            // spec is ever attached to an Ollama request.
+            FunctionCall call = FunctionCall.of("test_function", "{}");
+            LLMMessage functionMessage = LLMMessage.function(call, "Function result");
             LLMRequest request = LLMRequest.builder()
                     .addMessage(functionMessage)
                     .build();
 
             CompletableFuture<LLMResponse> future = provider.chat(request);
 
-            // Should throw ExecutionException containing the conversion error
             ExecutionException exception = assertThrows(ExecutionException.class,
                     () -> future.get(5, TimeUnit.SECONDS));
 
-            assertNotNull(exception.getCause());
-            // The exception chain should contain "Unsupported message role"
-            String message = getCauseMessage(exception);
-            assertTrue(message.contains("Unsupported message role") || message.contains("FUNCTION"),
-                    "Exception should mention unsupported role, got: " + message);
-        }
-
-        private String getCauseMessage(Throwable throwable) {
-            Throwable current = throwable;
-            while (current != null) {
-                if (current.getMessage() != null && current.getMessage().contains("Unsupported")) {
-                    return current.getMessage();
-                }
-                current = current.getCause();
-            }
-            return throwable.getMessage();
+            assertTrue(exception.getCause() instanceof LLMException);
+            LLMException llmException = (LLMException) exception.getCause();
+            assertEquals(LLMException.ErrorType.UNSUPPORTED_OPERATION, llmException.getErrorType());
+            assertTrue(llmException.getMessage().contains("function calling"));
         }
     }
 
