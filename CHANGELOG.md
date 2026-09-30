@@ -50,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two cross-runtime integration tests no longer race Postgres's own startup.**
+  `ContractNetCrossRuntimeIT` and `CrossRuntimeDialogueIT` now wait for the second "ready to
+  accept connections" line, as the three ITs in `agenor-adapters-persistence` already did; before,
+  a client connecting while `initdb`'s temporary server was up failed with "the database system is
+  starting up", which made the nightly `Integration Tests` run intermittently red.
+
 - **`EmbeddingProviderContractTest`'s own self-check now actually runs.** Its stub
   implementation was a static class nested inside the abstract test itself, which the normal
   build never collects — only a test filter naming it explicitly does, and no build step did.
