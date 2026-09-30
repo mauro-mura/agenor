@@ -205,4 +205,16 @@ class RedisMessageTransportIT {
 
         assertThat(future).succeedsWithin(2, TimeUnit.SECONDS);
     }
+
+    @Test
+    @DisplayName("subscribe fails when the server refuses the consumer connection")
+    void subscribe_serverRefusesConnection_propagates() {
+        var uri = "redis://" + valkey.getHost() + ":" + valkey.getMappedPort(6379);
+        try (var exhaustion = RedisConnectionExhaustion.afterWriteConnection(uri)) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    transport.subscribe(new TransportEndpoint("redis", nodeId, Map.of()),
+                            msg -> CompletableFuture.completedFuture(null)))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
 }

@@ -150,4 +150,15 @@ class RedisTopicPublisherIT {
         assertThat(r.content()).isEqualTo("rich-payload");
         assertThat(r.headers()).containsEntry("priority", "HIGH").containsEntry("region", "EU");
     }
+
+    @Test
+    @DisplayName("subscribeTopic fails when the server refuses the consumer connection")
+    void subscribeTopic_serverRefusesConnection_propagates() {
+        var uri = "redis://" + valkey.getHost() + ":" + valkey.getMappedPort(6379);
+        try (var exhaustion = RedisConnectionExhaustion.afterWriteConnection(uri)) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    publisher.subscribeTopic("test.refused", msg -> CompletableFuture.completedFuture(null)))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
 }

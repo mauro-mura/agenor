@@ -204,4 +204,16 @@ class RedisTopicPublisherTest {
         publisher.subscribeTopic("b", msg -> java.util.concurrent.CompletableFuture.completedFuture(null));
         publisher.close(); // must not throw
     }
+
+    @Test
+    @DisplayName("subscribeTopic propagates a connection failure and hands out no Subscription")
+    void subscribeTopic_connectionFailure_propagates() {
+        when(streamClient.newConsumerConnection())
+                .thenThrow(new IllegalStateException("connection refused"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        publisher.subscribeTopic("a", msg -> java.util.concurrent.CompletableFuture.completedFuture(null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("connection refused");
+    }
 }

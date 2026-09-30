@@ -50,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Redis subscription whose connection fails now fails at `subscribeTopic` / `subscribe`.** The
+  consumer connection used to be opened on the loop's own thread, so a refusal killed that thread
+  unobserved and left a `Subscription` that was live by every signal and delivered nothing; it is
+  opened on the caller's thread now, and `ConsumerLoop.stop()` waits a bounded time for the loop
+  to close it, so closing the factory cannot shut the client down under a running loop.
+
 - **Two cross-runtime integration tests no longer race Postgres's own startup.**
   `ContractNetCrossRuntimeIT` and `CrossRuntimeDialogueIT` now wait for the second "ready to
   accept connections" line, as the three ITs in `agenor-adapters-persistence` already did; before,

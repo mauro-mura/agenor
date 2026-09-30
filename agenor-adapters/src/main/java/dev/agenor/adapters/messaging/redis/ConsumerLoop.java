@@ -98,20 +98,45 @@ final class ConsumerLoop {
      * now on. A node's inbound group starts at {@code 0}, because its entries are
      * addressed to an agent rather than to a subscription, and one written before the
      * group existed would otherwise be skipped permanently.
+     *
+     * <p>The connection is opened here, on the caller's thread, and handed to the loop. A
+     * failure to connect therefore reaches whoever subscribed, instead of ending an
+     * unobserved thread and leaving a subscription that is alive by every signal and delivers
+     * nothing. The loop stays stopped, so a later {@code start()} tries again.
      */
     void start() {
         if (!running.compareAndSet(false, true)) return;
-        loopThread = Thread.startVirtualThread(this::run);
+        StatefulRedisConnection<String, String> conn;
+        try {
+            conn = client.newConsumerConnection();
+        } catch (RuntimeException e) {
+            running.set(false);
+            throw e;
+        }
+        loopThread = Thread.startVirtualThread(() -> run(conn));
     }
 
+    /**
+     * Stops the loop and waits, for a bounded time, until its thread has closed the connection,
+     * so that closing the client afterwards cannot pull it from under a running loop. One block
+     * of {@code XREADGROUP} is the longest the thread can be away from its {@code running} check.
+     * Called from the loop's own thread — a handler cancelling its own subscription — it does
+     * not wait: a thread cannot join itself.
+     */
     void stop() {
         running.set(false);
         var t = loopThread;
-        if (t != null) t.interrupt();
+        if (t == null) return;
+        t.interrupt();
+        if (t == Thread.currentThread()) return;
+        try {
+            t.join(config.readBlockTimeoutMs() + 1_000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
-    private void run() {
-        var conn = client.newConsumerConnection();
+    private void run(StatefulRedisConnection<String, String> conn) {
         try {
             loop(conn);
         } finally {

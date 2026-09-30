@@ -215,4 +215,17 @@ class RedisMessageTransportTest {
         transport.subscribe(local, msg -> java.util.concurrent.CompletableFuture.completedFuture(null));
         transport.close();
     }
+
+    @Test
+    @DisplayName("subscribe propagates a connection failure and hands out no Subscription")
+    void subscribe_connectionFailure_propagates() {
+        when(streamClient.newConsumerConnection())
+                .thenThrow(new IllegalStateException("connection refused"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        transport.subscribe(TransportEndpoint.local("node-1"),
+                                msg -> java.util.concurrent.CompletableFuture.completedFuture(null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("connection refused");
+    }
 }
