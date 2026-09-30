@@ -19,6 +19,8 @@ jobs:
   containers:
     name: Integration tests (containers)
     runs-on: ubuntu-latest
+    # Green runs finish in under 4 minutes; the default of 360 lets a stuck image pull burn six hours.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v5
@@ -44,6 +46,11 @@ jobs:
         if: always()
         run: bash tools/assert-integration-tests-ran.sh
 
+      - name: Name the failed tests
+        # Job logs and artifacts need admin rights; check-run annotations do not.
+        if: failure()
+        run: bash tools/ci-test-failures.sh
+
       - name: Upload failsafe reports
         if: always()
         uses: actions/upload-artifact@v6
@@ -60,6 +67,7 @@ jobs:
     name: Integration tests (Ollama, nightly)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v5
@@ -86,6 +94,11 @@ jobs:
       - name: Assert nothing was skipped
         if: always()
         run: bash tools/assert-integration-tests-ran.sh
+
+      - name: Name the failed tests
+        # Job logs and artifacts need admin rights; check-run annotations do not.
+        if: failure()
+        run: bash tools/ci-test-failures.sh
 
       - name: Upload failsafe reports
         if: always()

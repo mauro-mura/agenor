@@ -50,6 +50,11 @@ jobs:
       - name: Check public references
         run: bash tools/public-refs-check.sh
 
+      - name: Name the failed tests
+        # Job logs and artifacts need admin rights; check-run annotations do not.
+        if: failure()
+        run: bash tools/ci-test-failures.sh
+
       # Globbed, not enumerated: the enumeration listed 4 of the 11 modules and
       # went stale the moment ADR-027 split the runtime into four.
       - name: Upload coverage reports
