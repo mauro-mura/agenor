@@ -28,6 +28,10 @@ import static dev.agenor.core.dialogue.protocol.ProtocolState.*;
  *     |                             |
  * }</pre>
  *
+ * <p>Each participant has its own conversation, so a {@code REFUSE} from either side, a
+ * participant declining the call or the initiator rejecting a proposal, ends that
+ * conversation in {@code REFUSED} and makes it eligible for cleanup.
+ *
  * @since 0.5.0
  */
 public class ContractNetProtocol implements Protocol {
@@ -54,7 +58,8 @@ public class ContractNetProtocol implements Protocol {
         return switch (current) {
             case INITIATED -> received == CFP ? AWAITING_RESPONSE : current;
             case AWAITING_RESPONSE -> switch (received) {
-                case PROPOSE, REFUSE -> AWAITING_RESPONSE; // collecting proposals
+                case PROPOSE -> AWAITING_RESPONSE; // a proposal does not end the exchange
+                case REFUSE -> REFUSED;            // either side declining ends this exchange
                 case AGREE -> AGREED;
                 case CANCEL -> CANCELLED;
                 default -> current;

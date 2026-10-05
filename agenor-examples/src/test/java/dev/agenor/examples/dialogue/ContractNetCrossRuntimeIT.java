@@ -6,6 +6,7 @@ import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.dialogue.Commitment;
 import dev.agenor.core.dialogue.CommitmentState;
+import dev.agenor.core.dialogue.protocol.ProtocolState;
 import dev.agenor.examples.dialogue.ContractNetExample.Manager;
 import dev.agenor.examples.dialogue.ContractNetExample.Task;
 import dev.agenor.examples.dialogue.ContractNetExample.Worker;
@@ -88,6 +89,8 @@ class ContractNetCrossRuntimeIT {
     private AgenorRuntime managerRuntime;
     private AgenorRuntime workerRuntime;
     private Manager manager;
+    private Worker worker1;
+    private Worker worker3;
 
     @BeforeEach
     void setUp() {
@@ -122,9 +125,11 @@ class ContractNetCrossRuntimeIT {
         // efficient, so it is the one the lowest-cost comparator has to pick.
         manager = new Manager();
         managerRuntime.registerAgent(manager);
-        workerRuntime.registerAgent(new Worker("worker-1", 0.6));
+        worker1 = new Worker("worker-1", 0.6);
+        worker3 = new Worker("worker-3", 0.4);
+        workerRuntime.registerAgent(worker1);
         workerRuntime.registerAgent(new Worker("worker-2", 0.9));
-        workerRuntime.registerAgent(new Worker("worker-3", 0.4));
+        workerRuntime.registerAgent(worker3);
 
         managerRuntime.start().join();
         workerRuntime.start().join();
@@ -178,6 +183,36 @@ class ContractNetCrossRuntimeIT {
         // performer is the worker that bid, not the manager that sent it.
         assertThat(commitment.getPerformer()).isEqualTo("worker-2");
         assertThat(commitment.getRequester()).isEqualTo("manager");
+    }
+
+    @Test
+    @DisplayName("the losing proposers' conversations end REFUSED on both sides of the wire")
+    void losingConversationsAreClosed() throws Exception {
+        awaitAllWorkers();
+
+        manager.allocateTask(new Task("data-processing", 100), WORKER_IDS)
+                .get(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+
+        // worker-2 wins; the REFUSE crosses the transport to the other two, so both ends
+        // must become terminal or the retention sweep never collects them.
+        assertEventually(() -> manager.conversationStatesWith("worker-1"), ProtocolState.REFUSED);
+        assertEventually(() -> manager.conversationStatesWith("worker-3"), ProtocolState.REFUSED);
+        assertEventually(() -> worker1.conversationStatesWith("manager"), ProtocolState.REFUSED);
+        assertEventually(() -> worker3.conversationStatesWith("manager"), ProtocolState.REFUSED);
+    }
+
+    private void assertEventually(java.util.function.Supplier<List<ProtocolState>> states,
+                                  ProtocolState expected) {
+        var deadline = Instant.now().plus(TIMEOUT);
+        List<ProtocolState> last = List.of();
+        while (Instant.now().isBefore(deadline)) {
+            last = states.get();
+            if (!last.isEmpty() && last.stream().allMatch(s -> s == expected)) {
+                return;
+            }
+            sleep();
+        }
+        throw new AssertionError("Conversations never all reached " + expected + " — last seen: " + last);
     }
 
     /**

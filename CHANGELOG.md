@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `senderPerforms` override after a real network hop. `Manager` gains a package-private
   `awaitedCommitment()` accessor for the third assertion.
 
+### Fixed
+
+- **Contract Net: a `REFUSE` now ends the conversation it is sent on.** `ContractNetProtocol`
+  kept a conversation in `AWAITING_RESPONSE` after a `REFUSE`, so a worker declining a
+  call-for-proposals and a manager rejecting a proposal both left a non-terminal conversation
+  that the retention sweep never removed. `callForProposals` opens one conversation per
+  participant, so the transition is now `REFUSED`, as in the request and query protocols.
+  `ContractNetExample`'s manager now sends that `REFUSE` to every proposer it does not select.
+  Not marked BREAKING: a participant that sends `PROPOSE` after its own `REFUSE` on the same
+  conversation is now checked against a terminal state. Also in the example: the time estimate
+  no longer truncates before applying efficiency, and a negative complexity is refused.
+
 ### Changed
 
 - **BREAKING: `LLMMessage` carries the id of the function call a result answers.** A new fifth

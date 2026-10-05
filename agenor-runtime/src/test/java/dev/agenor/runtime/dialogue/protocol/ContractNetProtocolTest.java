@@ -35,10 +35,10 @@ class ContractNetProtocolTest {
     }
 
     @Test
-    void shouldStayAwaitingOnRefuse() {
-        // Participants can refuse
-        var next = protocol.nextState(AWAITING_RESPONSE, REFUSE, true);
-        assertThat(next).isEqualTo(AWAITING_RESPONSE);
+    void shouldEndRefusedOnRefuse() {
+        // Each participant has its own conversation: a REFUSE from either side ends it
+        assertThat(protocol.nextState(AWAITING_RESPONSE, REFUSE, true)).isEqualTo(REFUSED);
+        assertThat(protocol.nextState(AWAITING_RESPONSE, REFUSE, false)).isEqualTo(REFUSED);
     }
 
     @Test

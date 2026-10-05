@@ -2,9 +2,11 @@ package dev.agenor.examples.dialogue;
 
 import dev.agenor.core.annotations.Agent;
 import dev.agenor.core.dialogue.Commitment;
+import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.DialogueHandler;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.core.dialogue.protocol.ProtocolState;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
 import dev.agenor.runtime.dialogue.DialogueCapability;
@@ -138,6 +140,14 @@ public class ContractNetExample {
                     // with the task rather than with a congratulation.
                     dialogue.reply(best, Performative.AGREE, task);
 
+                    // Each proposer has its own conversation. Without a REFUSE the losers'
+                    // stay AWAITING_RESPONSE on both sides and the retention sweep, which
+                    // removes only terminal conversations, never collects them.
+                    proposals.stream()
+                        .filter(p -> p != best)
+                        .forEach(p -> dialogue.reply(p, Performative.REFUSE,
+                            "Another proposal was selected"));
+
                     // Accepting a proposal creates a commitment, and the manager can read it
                     // back: it is now owed this task by the worker it chose. Which party is
                     // bound depends on the protocol — under Contract Net the AGREE binds its
@@ -172,6 +182,18 @@ public class ContractNetExample {
             return awaitedCommitmentId == null
                     ? Optional.empty()
                     : dialogue.getCommitmentTracker().get(awaitedCommitmentId);
+        }
+
+        /**
+         * State of every conversation this manager holds with {@code agentId}.
+         *
+         * <p>Package-private, for {@code ContractNetCrossRuntimeIT}: a conversation that never
+         * becomes terminal is invisible in the example's output.
+         */
+        List<ProtocolState> conversationStatesWith(String agentId) {
+            return dialogue.getConversationManager().getConversationsWith(agentId).stream()
+                    .map(Conversation::getState)
+                    .toList();
         }
 
         @DialogueHandler(performatives = Performative.INFORM)
@@ -215,6 +237,13 @@ public class ContractNetExample {
             System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
         }
 
+        /** Package-private, for {@code ContractNetCrossRuntimeIT}; see {@code Manager}. */
+        List<ProtocolState> conversationStatesWith(String agentId) {
+            return dialogue.getConversationManager().getConversationsWith(agentId).stream()
+                    .map(Conversation::getState)
+                    .toList();
+        }
+
         @DialogueHandler(performatives = Performative.CFP)
         public void handleCFP(DialogueMessage msg) {
             System.out.println("[" + id + "] Received CFP");
@@ -229,14 +258,14 @@ public class ContractNetExample {
             } catch (IllegalArgumentException e) {
                 task = null;
             }
-            if (task == null || task.type() == null) {
+            if (task == null || task.type() == null || task.complexity() < 0) {
                 dialogue.refuse(msg, "Invalid task");
                 return;
             }
 
             // Calculate bid
             double cost = task.complexity() / efficiency * (0.9 + random.nextDouble() * 0.2);
-            int time = (int) (task.complexity() / 10 / efficiency);
+            int time = (int) (task.complexity() / 10.0 / efficiency);
 
             Bid bid = new Bid(cost, time);
             System.out.printf("[%s] PROPOSE: cost=%.2f%n", id, cost);
