@@ -18,37 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `senderPerforms` override after a real network hop. `Manager` gains a package-private
   `awaitedCommitment()` accessor for the third assertion.
 
-### Fixed
-
-- **Contract Net: a `REFUSE` now ends the conversation it is sent on.** `ContractNetProtocol`
-  kept a conversation in `AWAITING_RESPONSE` after a `REFUSE`, so a worker declining a
-  call-for-proposals and a manager rejecting a proposal both left a non-terminal conversation
-  that the retention sweep never removed. `callForProposals` opens one conversation per
-  participant, so the transition is now `REFUSED`, as in the request and query protocols.
-  `ContractNetExample`'s manager now sends that `REFUSE` to every proposer it does not select.
-  Not marked BREAKING: a participant that sends `PROPOSE` after its own `REFUSE` on the same
-  conversation is now checked against a terminal state. Also in the example: the time estimate
-  no longer truncates before applying efficiency, and a negative complexity is refused.
-
 ### Changed
 
-- **BREAKING: `LLMMessage` carries the id of the function call a result answers.** A new fifth
-  record component, `functionCallId`, is populated by `LLMMessage.function(FunctionCall,
-  String)`; the two-argument overload cannot pair a result to its call, which Anthropic's
-  server-side `tool_use`/`tool_result` pairing rejects outright. OpenAI and Anthropic now map a
-  `FUNCTION`-role message to a real tool result instead of an ordinary user message, and an
-  assistant turn's function calls survive onto the outgoing request instead of being dropped.
-  See ADR-007's amendment for the full account, including what this does not decide (no
-  automatic tool loop).
+- **BREAKING: `LLMMessage` carries the id of the function call a result answers.** A fifth
+  record component, `functionCallId`, changes the canonical constructor and every record
+  pattern over `LLMMessage`. OpenAI and Anthropic now send a `FUNCTION`-role message as a tool
+  result paired to its call, and keep an assistant turn's function calls on the outgoing
+  request; a `FUNCTION` message with no id now fails with `LLMException` `INVALID_REQUEST` on
+  both, where it used to go out as an ordinary user message. See ADR-007's amendment.
 
   Migration: replace `LLMMessage.function(name, result)` with `LLMMessage.function(call,
-  result)`, using the `FunctionCall` already in hand from `response.functionCalls()`.
+  result)`, using the `FunctionCall` from `response.functionCalls()`. A direct
+  `new LLMMessage(...)` passes `null` as the fifth argument.
 
 ### Deprecated
 
-- **`LLMMessage.function(String, String)` is deprecated, for removal in `1.0.0`.** It has no way
-  to carry a call id, which every provider's tool-result mapping now needs; use
-  `LLMMessage.function(FunctionCall, String)` instead.
+- **`LLMMessage.function(String, String)` is deprecated, for removal in `1.0.0`.** It still
+  compiles, but OpenAI and Anthropic now reject the message it builds, since it carries no call
+  id; use `LLMMessage.function(FunctionCall, String)` instead.
 
 - **Each LLM adapter's `Models` enum is deprecated, for removal in `1.0.0`.**
   `OpenAIProvider.Models`, `AnthropicProvider.Models` and `OllamaProvider.Models` go stale the
@@ -61,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the vendor's API.
 
 ### Fixed
+
+- **Contract Net: a `REFUSE` now ends the conversation it is sent on.** `ContractNetProtocol`
+  kept a conversation in `AWAITING_RESPONSE` after a `REFUSE`, so a worker declining a
+  call-for-proposals and a manager rejecting a proposal both left a non-terminal conversation
+  that the retention sweep never removed. `callForProposals` opens one conversation per
+  participant, so the transition is now `REFUSED`, as in the request and query protocols.
+  `ContractNetExample`'s manager now sends that `REFUSE` to every proposer it does not select.
+  Not marked BREAKING: a participant that sends `PROPOSE` after its own `REFUSE` on the same
+  conversation is now checked against a terminal state. Also in the example: the time estimate
+  no longer truncates before applying efficiency, and a negative complexity is refused.
 
 - **A Redis subscription whose connection fails now fails at `subscribeTopic` / `subscribe`.** The
   consumer connection used to be opened on the loop's own thread, so a refusal killed that thread
