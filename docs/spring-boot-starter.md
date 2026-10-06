@@ -10,7 +10,7 @@ and Agenor starts with the Spring context.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.35.0</version>
+    <version>0.36.0</version>
 </dependency>
 ```
 
@@ -25,7 +25,7 @@ who does not use classpath discovery can exclude it:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.35.0</version>
+    <version>0.36.0</version>
     <exclusions>
         <exclusion>
             <groupId>dev.agenor</groupId>
