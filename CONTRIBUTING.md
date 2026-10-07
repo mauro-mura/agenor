@@ -438,6 +438,8 @@ cannot check against something is a formality.
       verdicts moved: one that improved because a page was deleted has not improved.
       `tools/api-census-diff.sh <before.md> <after.md>` does the comparison per type instead of
       by eye — save the report before the change, rerun, then diff the two.
+- [ ] **The site builds** — `bash tools/docs-check.sh` exits 0: `mkdocs build --strict`, which
+      `deploy-docs.yml` otherwise runs for the first time after the tag is pushed.
 - [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
       changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
 - [ ] **CHANGELOG budget** — `bash tools/changelog-budget.sh --check` exits 0: no entry over its
