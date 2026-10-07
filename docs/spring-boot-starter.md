@@ -17,7 +17,7 @@ and Agenor starts with the Spring context.
 All Spring Boot dependencies are declared `optional=true` — they do not appear on the
 transitive classpath of non-Spring consumers. `agenor-runtime-scanning` is **not** optional:
 it is what makes `agenor.agents.base-package` below work, and it is a small module with no
-third-party dependencies of its own (see [`agenor-runtime-scanning`](../README.md#agenor-runtime-scanning)
+third-party dependencies of its own (see [`agenor-runtime-scanning`](https://github.com/mauro-mura/agenor/blob/main/README.md#agenor-runtime-scanning)
 in the README). A consumer building for GraalVM native-image
 who does not use classpath discovery can exclude it:
 
