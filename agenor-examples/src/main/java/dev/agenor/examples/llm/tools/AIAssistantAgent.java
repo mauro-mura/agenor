@@ -48,8 +48,12 @@ public class AIAssistantAgent extends BaseAgent {
 
     private final LLMProvider llmProvider;
     private final ToolRegistry toolRegistry;
+    private final List<FunctionDefinition> functions;
     private final List<LLMMessage> conversationHistory;
     private final int maxHistorySize = 20;
+
+    /** Upper bound on consecutive tool-calling rounds in one turn. */
+    static final int MAX_TOOL_ROUNDS = 5;
 
     /**
      * Constructor with dependency injection.
@@ -60,6 +64,11 @@ public class AIAssistantAgent extends BaseAgent {
         super("ai-assistant", "AI Assistant Agent");
         this.llmProvider = Objects.requireNonNull(llmProvider, "LLM provider cannot be null");
         this.toolRegistry = new ToolRegistry();
+        this.functions = List.of(
+            createWeatherFunction(),
+            createCalculatorFunction(),
+            createTimeFunction(),
+            createDatabaseFunction());
         this.conversationHistory = new ArrayList<>();
 
         // Register available tools
@@ -198,35 +207,44 @@ public class AIAssistantAgent extends BaseAgent {
     /**
      * Process user request with LLM and function calling.
      */
-    private CompletableFuture<String> processUserRequest(String userInput, String correlationId) {
+    CompletableFuture<String> processUserRequest(String userInput, String correlationId) {
         // Add user message to conversation history
         conversationHistory.add(LLMMessage.user(userInput));
         trimConversationHistory();
 
-        // Create LLM request with available functions
-        LLMRequest request = LLMRequest.builder()
+        return llmProvider.chat(buildRequest())
+            .thenCompose(response -> handleLLMResponse(response, correlationId, 0));
+    }
+
+    /**
+     * Every request of a turn carries the same functions: the model may ask for another tool after
+     * seeing a result, and a server answers 400 when it does so on a request that declared none.
+     */
+    private LLMRequest buildRequest() {
+        return LLMRequest.builder()
             .messages(conversationHistory)
-            .addFunction(createWeatherFunction())
-            .addFunction(createCalculatorFunction())
-            .addFunction(createTimeFunction())
-            .addFunction(createDatabaseFunction())
+            .functions(functions)
             .functionCall("auto")
             .temperature(0.7)
             .maxTokens(1500)
             .build();
-
-        return llmProvider.chat(request)
-            .thenCompose(response -> handleLLMResponse(response, correlationId));
     }
 
     /**
-     * Handle LLM response and execute any requested functions.
+     * Handle an LLM response: execute any requested functions and ask again, until the model
+     * answers in text or {@link #MAX_TOOL_ROUNDS} rounds have run.
      */
-    private CompletableFuture<String> handleLLMResponse(LLMResponse response, String correlationId) {
+    private CompletableFuture<String> handleLLMResponse(LLMResponse response, String correlationId, int round) {
         if (!response.hasFunctionCalls()) {
             // No function calls, add response to history and return
             conversationHistory.add(LLMMessage.assistant(response.content()));
             return CompletableFuture.completedFuture(response.content());
+        }
+
+        if (round >= MAX_TOOL_ROUNDS) {
+            log.warn("Tool budget of {} rounds exhausted for request {}", MAX_TOOL_ROUNDS, correlationId);
+            return CompletableFuture.completedFuture(
+                "I could not finish: the request needed more than " + MAX_TOOL_ROUNDS + " tool rounds.");
         }
 
         log.debug("LLM requested {} function call(s)", response.functionCalls().size());
@@ -248,19 +266,10 @@ public class AIAssistantAgent extends BaseAgent {
                     conversationHistory.add(LLMMessage.function(result.call(), result.result()));
                 }
 
-                // Make follow-up request with function results
-                LLMRequest followUpRequest = LLMRequest.builder()
-                    .messages(conversationHistory)
-                    .temperature(0.7)
-                    .maxTokens(1500)
-                    .build();
-
-                return llmProvider.chat(followUpRequest);
+                // Ask again: the answer may be text, or a further tool call
+                return llmProvider.chat(buildRequest());
             })
-            .thenApply(finalResponse -> {
-                conversationHistory.add(LLMMessage.assistant(finalResponse.content()));
-                return finalResponse.content();
-            });
+            .thenCompose(next -> handleLLMResponse(next, correlationId, round + 1));
     }
 
     /**

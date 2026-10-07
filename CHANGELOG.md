@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`AIAssistantExample` no longer loses the turn when a model chains tool calls one at a time.**
+  `AIAssistantAgent`'s follow-up request carried no functions, so a model that asked for a second
+  tool after seeing the first result got `400 Tool choice is none, but model called a tool` from the
+  server (seen with `openai/gpt-oss-20b` on Groq, London then Rome). Every request of a turn now
+  declares the same functions and the agent keeps executing calls until the model answers in text,
+  up to five rounds. This is a loop in the example, not a tool loop in the framework. A mocked
+  provider never showed the defect; `AIAssistantAgentTest` scripts the chained calls.
+- **The default Anthropic model is `claude-haiku-4-5-20251001`, in the Spring Boot starter and the
+  examples.** `claude-3-haiku-20240307` answers `404 not_found_error`, so `agenor.llm.provider=anthropic`
+  with no `agenor.llm.model` failed on the first request, and so did `LLM_BACKEND=anthropic`. The
+  starter keeps defaulting to the smallest tier, not to `AnthropicProvider.getDefaultModel()`; set
+  `agenor.llm.model` to keep a different model.
+- **The examples' default Groq model is `openai/gpt-oss-20b`.** `llama-3.3-70b-versatile` answered
+  `404 model_not_found`, so `LLM_BACKEND=groq` failed before the first request unless `GROQ_MODEL`
+  was set. Both `ExampleLLMProvider` and the support chatbot's `LLMConfig` carried the old value.
+
 ## [0.36.0] - 2026-10-07
 
 ### Added

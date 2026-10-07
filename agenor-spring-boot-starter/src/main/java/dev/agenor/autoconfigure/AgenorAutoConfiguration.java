@@ -291,8 +291,11 @@ public class AgenorAutoConfiguration {
         // GPT_4O and CLAUDE_SONNET_4_6, and matching them would silently move a Spring Boot
         // user from the smaller, cheaper model this starter has always defaulted to onto a
         // larger, pricier one nobody asked to change.
+        // The Anthropic default is a dated id on purpose: claude-3-haiku-20240307 answered 404 on
+        // 2026-10-07, and an undated alias is not registered in ModelTokenLimits, so the memory
+        // manager would budget 4096 tokens for it.
         private static final String DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
-        private static final String DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+        private static final String DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
         private static final String DEFAULT_OLLAMA_MODEL = "llama3.2";
         private static final String DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 

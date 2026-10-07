@@ -101,7 +101,7 @@ class AgenorLlmAutoConfigurationTest {
             .withPropertyValues(
                 "agenor.llm.provider=anthropic",
                 "agenor.llm.api-key=sk-ant-test",
-                "agenor.llm.model=claude-3-haiku-20240307"
+                "agenor.llm.model=claude-haiku-4-5-20251001"
             )
             .run(ctx -> {
                 assertThat(ctx).hasSingleBean(LLMProvider.class);

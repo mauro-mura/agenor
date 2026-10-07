@@ -31,8 +31,11 @@ public final class ExampleLLMProvider {
 
     private static final String GROQ_BASE_URL = "https://api.groq.com/openai/v1";
     private static final String DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
-    private static final String DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
-    private static final String DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+    // Groq retires models: llama-3.3-70b-versatile answered 404 model_not_found on 2026-10-06.
+    // This one ran AIAssistantExample, tool calls included, the same day. Override with GROQ_MODEL.
+    private static final String DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+    // claude-3-haiku-20240307 answered 404 not_found_error on 2026-10-07.
+    private static final String DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
     private static final String DEFAULT_OLLAMA_MODEL = "llama3.2";
     private static final String DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 
