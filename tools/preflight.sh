@@ -88,11 +88,11 @@ run "removal schedule" "no deprecation overdue or undeclared" bash tools/api-cen
 run "changelog budget" "every entry within its prose budget"  bash tools/changelog-budget.sh --check
 run "public refs"      "nothing points at unpublished material" bash tools/public-refs-check.sh
 
-# Exit 3 is "mkdocs is not installed": unknown, not broken, so it is a SKIP and not a FAIL.
+# Exit 3 is "mkdocs could not be had": unknown, not broken, so it is a SKIP and not a FAIL.
 if bash tools/docs-check.sh >"$OUT/docs.log" 2>&1; then
     row PASS "docs site" "mkdocs build --strict"
 elif [ $? -eq 3 ]; then
-    skip "docs site" "mkdocs is not installed: pip install mkdocs-material==9.7.2"
+    skip "docs site" "mkdocs unavailable and could not be installed into a virtualenv"
 else
     row FAIL "docs site" "$(tail -n 1 "$OUT/docs.log")"
     sed 's/^/       /' "$OUT/docs.log" >>"$OUT/failures"

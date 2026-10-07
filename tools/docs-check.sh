@@ -11,16 +11,33 @@
 # api/index.html, so a stub stands in for it, in a throwaway copy: the working tree is untouched.
 # Everything else, links and anchors included, is checked as the real build checks it.
 #
-#   bash tools/docs-check.sh        exit 0 holds, 1 broken, 3 mkdocs is not installed
+# mkdocs does not have to be installed. When it is not on the PATH, the script builds a virtualenv
+# with the version deploy-docs.yml pins and keeps it under ~/.cache, so the download happens once
+# and a clean machine still runs the check. Only when that cannot be done (no python3, no venv
+# module, no network on the first run) is the answer "unknown", not "broken".
+#
+#   bash tools/docs-check.sh        exit 0 holds, 1 broken, 3 mkdocs unavailable
 #
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Keep in step with deploy-docs.yml.
+MKDOCS_PIN="mkdocs-material==9.7.2"
+
 if ! command -v mkdocs >/dev/null 2>&1; then
-    echo "mkdocs is not installed: pip install mkdocs-material==9.7.2" >&2
-    exit 3
+    VENV="${XDG_CACHE_HOME:-$HOME/.cache}/agenor/docs-venv-${MKDOCS_PIN##*==}"
+    if [ ! -x "$VENV/bin/mkdocs" ]; then
+        echo "installing $MKDOCS_PIN into $VENV" >&2
+        rm -rf "$VENV"
+        if ! { python3 -m venv "$VENV" && "$VENV/bin/pip" install -q "$MKDOCS_PIN"; } >&2; then
+            rm -rf "$VENV"
+            echo "mkdocs unavailable: could not install $MKDOCS_PIN into a virtualenv" >&2
+            exit 3
+        fi
+    fi
+    PATH="$VENV/bin:$PATH"
 fi
 
 TMP="$(mktemp -d)"
