@@ -70,7 +70,7 @@ LLMProvider openai = LLMProviderFactory.openai()
 // Anthropic
 LLMProvider anthropic = LLMProviderFactory.anthropic()
     .apiKey(System.getenv("ANTHROPIC_API_KEY"))
-    .modelName("claude-3-5-sonnet-20241022")  // default
+    .modelName("claude-sonnet-4-6")  // default
     .temperature(0.7)
     .maxTokens(4096)
     .build();
@@ -552,20 +552,20 @@ boolean worthRetrying(Throwable t) {
 | `logRequests(boolean)` | `false` | Log request payload |
 | `logResponses(boolean)` | `false` | Log response payload |
 
-Available models: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo`.
+Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `1.0.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
 
 ### Anthropic builder options
 
-Same fields. Default model: `claude-3-5-sonnet-20241022`.
+Same fields. Default model: `claude-sonnet-4-6`.
 
-Available models: `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`, `claude-3-opus-20240229`, `claude-3-sonnet-20240229`, `claude-3-haiku-20240307`.
+Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `1.0.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
 
 ### Ollama builder options
 
 | Method | Default | Description |
 |--------|---------|-------------|
 | `baseUrl(String)` | `http://localhost:11434` | Ollama server URL |
-| `modelName(String)` | — | Required. Local model name |
+| `modelName(String)` | `"llama3.2"` | Local model name |
 | `temperature(Double)` | `0.7` | |
 | `timeout(Duration)` | `5m` | Longer for large local models |
 | `logRequests/logResponses` | `false` | |

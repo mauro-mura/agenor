@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/llm-integration.md` no longer names a default model that does not exist.** It said
+  Anthropic's default is `claude-3-5-sonnet-20241022`; `getDefaultModel()` returns
+  `claude-sonnet-4-6`, and the Ollama table called `modelName` required when it defaults to
+  `llama3.2`. The two hand-written "Available models" lists, which documented the
+  `Models` enums scheduled for removal at `1.0.0`, are replaced by a pointer to the section that
+  explains why. `tools/docs-defaults-check.sh`, run by `tools/preflight.sh`, now fails when a
+  documentation line says "default" and names a model that no adapter or the starter returns.
 - **`AIAssistantExample` no longer loses the turn when a model chains tool calls one at a time.**
   `AIAssistantAgent`'s follow-up request carried no functions, so a model that asked for a second
   tool after seeing the first result got `400 Tool choice is none, but model called a tool` from the

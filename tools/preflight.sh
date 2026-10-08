@@ -87,6 +87,7 @@ printf '%-4s %-22s %s\n' "----" "----------------------" "----------------------
 run "removal schedule" "no deprecation overdue or undeclared" bash tools/api-census.sh --check
 run "changelog budget" "every entry within its prose budget"  bash tools/changelog-budget.sh --check
 run "public refs"      "nothing points at unpublished material" bash tools/public-refs-check.sh
+run "doc defaults"     "documented default models match the code" bash tools/docs-defaults-check.sh
 
 # Exit 3 is "mkdocs could not be had": unknown, not broken, so it is a SKIP and not a FAIL.
 if bash tools/docs-check.sh >"$OUT/docs.log" 2>&1; then
