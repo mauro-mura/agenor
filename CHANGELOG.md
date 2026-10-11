@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **ADR-003 records why Agenor ships no `module-info.java` yet.** Compiled against draft
+  descriptors until `javac -Xlint:exports` was clean, the six modules that could carry one hide 8
+  of 61 packages, none in `agenor-core`; the adapters cannot carry one while LangChain4j, A2A, MCP
+  and Flyway declare no stable module name. Every module keeps its `Automatic-Module-Name`, and
+  nothing changes for anyone. An application on the module path already needs one `opens` line
+  for Agenor's annotations, which no page documents yet. The amendment gives the measurements, the
+  cost at `1.0.0`, and what would reopen the question.
+
 ### Fixed
 
 - **`docs/llm-integration.md` no longer names a default model that does not exist.** It said
