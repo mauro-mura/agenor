@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DialogueHandlerRegistryTest {
 
@@ -183,6 +184,80 @@ class DialogueHandlerRegistryTest {
         registry.scan(handler);
 
         assertThat(registry.size()).isEqualTo(3);
+    }
+
+    @Test
+    void shouldRethrowTheHandlersOwnExceptionInsteadOfSwallowingIt() {
+        // Until 0.37.0 this was caught and logged, so the mailbox saw a success and the
+        // transport acknowledged a message whose handler had failed (ADR-033 D-5)
+        registry.scan(new ThrowingHandler());
+
+        assertThatThrownBy(() -> registry.dispatch(DialogueMessage.builder()
+            .senderId("sender")
+            .performative(Performative.REQUEST)
+            .build()))
+            .isExactlyInstanceOf(IllegalStateException.class)
+            .hasMessage("request failed");
+    }
+
+    @Test
+    void shouldRunEveryMatchingHandlerAndAttachLaterFailuresAsSuppressed() {
+        var handler = new TwoFailingHandlers();
+        registry.scan(handler);
+
+        assertThatThrownBy(() -> registry.dispatch(DialogueMessage.builder()
+            .senderId("sender")
+            .performative(Performative.INFORM)
+            .build()))
+            .hasMessage("first failed")
+            .satisfies(e -> assertThat(e.getSuppressed())
+                .singleElement()
+                .extracting(Throwable::getMessage)
+                .isEqualTo("second failed"));
+        assertThat(handler.calls.get()).isEqualTo(2);
+    }
+
+    @Test
+    void shouldWrapACheckedExceptionKeepingItAsTheCause() {
+        registry.scan(new CheckedThrowingHandler());
+
+        assertThatThrownBy(() -> registry.dispatch(DialogueMessage.builder()
+            .senderId("sender")
+            .performative(Performative.QUERY)
+            .build()))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("query")
+            .hasCauseExactlyInstanceOf(java.io.IOException.class);
+    }
+
+    static class ThrowingHandler {
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage msg) {
+            throw new IllegalStateException("request failed");
+        }
+    }
+
+    static class TwoFailingHandlers {
+        final AtomicInteger calls = new AtomicInteger();
+
+        @DialogueHandler(performatives = Performative.INFORM, priority = 10)
+        public void first(DialogueMessage msg) {
+            calls.incrementAndGet();
+            throw new IllegalStateException("first failed");
+        }
+
+        @DialogueHandler(performatives = Performative.INFORM, priority = 1)
+        public void second(DialogueMessage msg) {
+            calls.incrementAndGet();
+            throw new IllegalArgumentException("second failed");
+        }
+    }
+
+    static class CheckedThrowingHandler {
+        @DialogueHandler(performatives = Performative.QUERY)
+        public void query(DialogueMessage msg) throws java.io.IOException {
+            throw new java.io.IOException("disk gone");
+        }
     }
 
     // Base class carrying a shared handler - the natural OOP pattern

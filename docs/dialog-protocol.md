@@ -115,13 +115,18 @@ routes each message to exactly one consumer: anything carrying a known performat
 dialogue, everything else goes to the direct-message path. `initialize()` registers that
 consumer and `shutdown()` withdraws it.
 
-Two consequences worth knowing:
+Three consequences worth knowing:
 
 - **A dialogue message no longer also reaches `onDirectMessage()`.** ADR-029 D3 allowed that
   fallthrough; ADR-032 amends it in scope. An agent that watched its own dialogue traffic from
   `onDirectMessage()` must use a `@DialogueHandler` instead.
 - **An agent that is not a `BaseAgent` has no mailbox**, so dialogue subscribes to the
   recipient channel directly, exactly as before, and its own classifier guard still applies.
+- **A `@DialogueHandler` that throws is retried, then dead-lettered**, exactly like an
+  `@AgenorMessageHandler` — see [When delivery fails for good](messaging.md#when-delivery-fails-for-good).
+  Before 0.37.0 the exception was logged and the message acknowledged. On Redis the handler
+  sees the message again, so make it idempotent; to contain a failure instead, catch it in the
+  handler and answer `failure(...)`, which also tells the peer.
 
 ### Handlers on a base class
 

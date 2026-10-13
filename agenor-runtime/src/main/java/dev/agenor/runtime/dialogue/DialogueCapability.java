@@ -385,21 +385,22 @@ public class DialogueCapability {
             }
             return;
         }
-        try {
-            DialogueMessage dialogueMessage = DialogueMessage.fromMessage(message);
+        // No catch here, deliberately. A failure — a @DialogueHandler that throws, or a message
+        // that cannot be read as dialogue — has to reach the mailbox's outcome so the transport
+        // can redeliver it and, eventually, dead-letter it. Logging and returning, as this did
+        // until 0.37.0, acknowledged every failed dialogue message as a success: the dialogue
+        // half of the defect ADR-033 D-5 fixed for @AgenorMessageHandler.
+        DialogueMessage dialogueMessage = DialogueMessage.fromMessage(message);
 
-            // Let conversation manager handle state tracking
-            conversationManager.handleIncoming(dialogueMessage);
+        // Let conversation manager handle state tracking
+        conversationManager.handleIncoming(dialogueMessage);
 
-            // Dispatch to registered handlers
-            boolean handled = handlerRegistry.dispatch(dialogueMessage);
+        // Dispatch to registered handlers
+        boolean handled = handlerRegistry.dispatch(dialogueMessage);
 
-            if (!handled) {
-                log.debug("No handler found for message: performative={}, protocol={}",
-                    dialogueMessage.performative(), dialogueMessage.protocol());
-            }
-        } catch (Exception e) {
-            log.error("Error handling dialogue message: {}", e.getMessage(), e);
+        if (!handled) {
+            log.debug("No handler found for message: performative={}, protocol={}",
+                dialogueMessage.performative(), dialogueMessage.protocol());
         }
     }
 
