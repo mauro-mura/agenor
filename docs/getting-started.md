@@ -83,6 +83,36 @@ see [Installation](https://github.com/mauro-mura/agenor#installation) in the REA
 Human-in-the-Loop behaviors require an extra `agenor-runtime-ext` dependency (ADR-027) — see the
 [Behaviors Overview](behaviors/README.md).
 
+### On the module path
+
+Skip this if your application has no `module-info.java`: on the classpath, which is where Maven
+`exec`, the Spring Boot starter and every example run, none of it applies.
+
+Agenor's JARs are automatic modules (`dev.agenor.core`, `dev.agenor.runtime`, …). An automatic
+module declares no dependencies, so your module has to bring two of Agenor's into the module
+graph itself, and has to open the package that holds your agents to the modules that call them
+reflectively:
+
+```java
+module com.example.agents {
+    requires dev.agenor.core;
+    requires dev.agenor.runtime;
+    requires org.slf4j;
+    requires com.fasterxml.jackson.databind;
+
+    opens com.example.agents to dev.agenor.runtime, dev.agenor.runtime.scanning,
+                                com.fasterxml.jackson.databind;
+}
+```
+
+Leave the `opens` line out and `start()` still succeeds, but the agent does nothing: every
+`@Behavior` and `@AgenorMessageHandler` fails with `InaccessibleObjectException`, and
+`scanPackage` cannot instantiate the agents it finds. The only trace is an `ERROR` line in the log.
+Jackson is in the list because it builds your own content types, such as a record read with
+`message.getContent(MyRecord.class)`, from the `Map` that a payload becomes after crossing Redis.
+Leave out the two `requires` lines and the runtime fails with `NoClassDefFoundError` when it first
+logs or builds a `Message`.
+
 ## Next Steps
 
 | I want to… | Go to |

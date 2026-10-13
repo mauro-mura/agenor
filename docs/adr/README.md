@@ -185,7 +185,8 @@ graph TD
   modules against draft descriptors: `javac -Xlint:exports` leaves 8 of their 61 packages
   hideable, none in `agenor-core`, while three modules cannot carry a descriptor because their
   dependencies have no stable module name. A module-path application needs one `opens` line for
-  Agenor's annotations either way — today included. Builds on ADR-018, ADR-025 and ADR-027
+  Agenor's annotations either way — today included, together with two `requires` lines that the
+  automatic modules cannot declare (corrected 2026-10-13). Builds on ADR-018, ADR-025 and ADR-027
 - **ADR-006** (Annotations) builds on **ADR-005** (Message Format)
 - **ADR-015** (HITL) builds on ADR-001, ADR-005, ADR-006, ADR-014
 - **ADR-016** (Spring Boot Starter) builds on ADR-003, ADR-004, ADR-007

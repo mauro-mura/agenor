@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
-**Last Modified**: 2026-10-11 (Amendment: no JPMS module descriptors yet)  
+**Last Modified**: 2026-10-13 (Amendment: no JPMS module descriptors yet; point 4 corrected)  
 **Authors**: Project Team  
 
 ### Context
@@ -164,8 +164,12 @@ flagged until none was left. A minimal user module with an `@Agent`, an `@Behavi
    With it, manual registration and `scanPackage` both work and `ServiceLoader` resolves every
    optional module through `uses`/`provides`. Without it, `start()` succeeds and the agent does
    nothing: behaviours and handlers fail with `InaccessibleObjectException`, visible only as a log
-   line. **The published JARs, as automatic modules, behave identically today.** No page under
-   `docs/` mentions the module path.
+   line. **The published JARs, as automatic modules, behave identically today**, with one more
+   cost (corrected 2026-10-13). An automatic module declares no `requires`, so the user module
+   must also declare `requires org.slf4j` and `requires com.fasterxml.jackson.databind`.
+   Otherwise the runtime fails with `NoClassDefFoundError`. The pilot's descriptors declared both,
+   which is why it did not see this. Getting Started's *On the module path* section documents
+   both lines.
 5. **Build cost.** Qualified exports to downstream modules warn `module not found` when the
    reactor compiles upstream first, and Surefire moves 157 test files (22 using Mockito) onto the
    module path unless `useModulePath` is turned off.
