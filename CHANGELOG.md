@@ -13,9 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   descriptors until `javac -Xlint:exports` was clean, the six modules that could carry one hide 8
   of 61 packages, none in `agenor-core`; the adapters cannot carry one while LangChain4j, A2A, MCP
   and Flyway declare no stable module name. Every module keeps its `Automatic-Module-Name`, and
-  nothing changes for anyone. An application on the module path already needs one `opens` line
-  for Agenor's annotations, which no page documents yet. The amendment gives the measurements, the
-  cost at `1.0.0`, and what would reopen the question.
+  nothing changes for anyone. The amendment gives the measurements, the cost at `1.0.0`, and what
+  would reopen the question.
+
+### Fixed
+
+- **An application on the module path can now find out what it needs.** Getting Started's new
+  *On the module path* section gives the descriptor: one `opens` line, plus `requires org.slf4j`
+  and `requires com.fasterxml.jackson.databind`, because automatic modules bring none of their
+  dependencies into the graph. Without the `opens` line the runtime starts and the agents do
+  nothing. ADR-003's amendment had said the `opens` line was enough; it now names the two
+  `requires` lines too.
 
 ### Fixed
 
