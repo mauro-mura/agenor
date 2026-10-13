@@ -241,3 +241,42 @@ needs it.
 This is an amendment rather than ADR-034 because it is the observational tail of the decision
 this ADR already took. A new document would have left the clause above standing beside one that
 contradicted it — two places to look, one of them wrong.
+
+---
+
+## Amendment (2026-10-13) — D-5 covers the dialogue lane too
+
+D-5 removed the catch in `BaseAgent.handleDirectMessage` and stopped there. The mailbox has two
+consumers, and the other one — the dialogue lane ADR-032 routes performative-bearing messages
+to — ended the chain in the same way, twice over. `DialogueHandlerRegistry`'s reflective
+invoker caught whatever a `@DialogueHandler` threw and logged it, and
+`DialogueCapability.handleIncomingMessage` wrapped the whole dispatch in a second catch for
+anything left. The mailbox saw a success, the transport acknowledged, and a failed dialogue
+message was neither redelivered nor dead-lettered on any transport. The **Good** paragraph
+above counts three places that used to end the chain; there were five.
+
+It went unnoticed for the reason D-5's own case did: every test of the dialogue lane used a
+handler that succeeds. It surfaced while planning an application on top of Contract Net, where
+the question "what happens to a job whose handler throws" had an answer in
+`docs/messaging.md` — dead-lettered, "the same on every transport" — that the code did not
+give. A Redis test with a throwing handler on each lane of the same agent showed the direct one
+redelivered and dead-lettered, and the dialogue one invoked once and acknowledged.
+
+**What changes.** The dialogue lane now behaves as D-5 describes for annotated handlers.
+`DialogueHandlerRegistry.dispatch` runs every matching handler and rethrows the first failure
+with the rest attached as suppressed. It rethrows the handler's own exception rather than the
+`InvocationTargetException` reflection wraps it in, which had no message of its own — the log
+line read `Error invoking dialogue handler handleRequest: null`, and a dead letter recording it
+would have named the wrapper instead of the failure. A checked exception is wrapped in an
+`IllegalStateException` that keeps it as the cause. `DialogueCapability` no longer catches at
+all, so a message that cannot be read as dialogue fails the same way.
+`MailboxDeliverySemanticsIT` holds the Redis case and `DialogueHandlerFailureTest` the
+in-memory one.
+
+**The cost is D-5's.** A `@DialogueHandler` that throws is now run again on a transport that
+redelivers, so one that sent a reply before failing sends it again; the conversation records the
+message twice and logs a protocol violation for the repeat, without changing its state. The
+remedy is the same: make handlers idempotent, and catch in the handler a failure that should be
+contained — answering `failure(...)` is usually what the peer needs anyway.
+
+This is an amendment because it is D-5, applied to the half of the mailbox D-5 did not look at.

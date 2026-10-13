@@ -7,6 +7,7 @@ import dev.agenor.runtime.support.MethodHierarchy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -87,11 +88,17 @@ public class DialogueHandlerRegistry {
 
         String protocol = annotation.protocol().isEmpty() ? null : annotation.protocol();
 
+        // Rethrows what the handler threw, not the reflective wrapper: InvocationTargetException
+        // has no message of its own, so logging it read "...: null", and a dead letter
+        // recording it would name the wrapper instead of the failure.
         Consumer<DialogueMessage> invoker = msg -> {
             try {
                 method.invoke(target, msg);
-            } catch (Exception e) {
-                log.error("Error invoking dialogue handler {}: {}", method.getName(), e.getMessage(), e);
+            } catch (InvocationTargetException e) {
+                throw unchecked(method, e.getCause());
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException(
+                    "Cannot invoke @DialogueHandler " + method.getName(), e);
             }
         };
 
@@ -119,11 +126,28 @@ public class DialogueHandlerRegistry {
             method.getName(), performatives, protocol);
     }
 
+    private static RuntimeException unchecked(Method method, Throwable cause) {
+        if (cause instanceof RuntimeException runtime) {
+            return runtime;
+        }
+        if (cause instanceof Error error) {
+            throw error;
+        }
+        return new IllegalStateException(
+            "@DialogueHandler " + method.getName() + " failed: " + cause, cause);
+    }
+
     /**
      * Dispatches a message to matching handlers.
      *
+     * <p>Every matching handler runs even when an earlier one fails, but a failure is not
+     * swallowed: the first is rethrown with the rest attached as suppressed, so the mailbox can
+     * fail this message's outcome and the transport can redeliver or dead-letter it — the same
+     * guarantee ADR-033 D-5 gives an {@code @AgenorMessageHandler}.
+     *
      * @param message the message to dispatch
      * @return true if at least one handler was invoked
+     * @throws RuntimeException the first handler failure, when any handler fails
      */
     public boolean dispatch(DialogueMessage message) {
         List<HandlerEntry> matching = findMatchingHandlers(message);
@@ -132,8 +156,22 @@ public class DialogueHandlerRegistry {
             return false;
         }
 
+        RuntimeException failure = null;
         for (HandlerEntry handler : matching) {
-            handler.invoker.accept(message);
+            try {
+                handler.invoker.accept(message);
+            } catch (RuntimeException e) {
+                log.error("@DialogueHandler {} failed on {} from {}: {}",
+                    handler.name, message.performative(), message.senderId(), e.toString(), e);
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure;
         }
 
         return true;

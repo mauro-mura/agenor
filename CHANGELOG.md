@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A `@DialogueHandler` that throws is now redelivered and dead-lettered instead of being
+  swallowed.** `DialogueHandlerRegistry` and `DialogueCapability` both caught the exception, so
+  the message was acknowledged as a success: no redelivery on Redis and no dead letter on either
+  transport, although `docs/messaging.md` promised one. The dialogue lane now behaves like an
+  `@AgenorMessageHandler` since 0.28.0, and the dead letter names the handler's own exception
+  rather than `InvocationTargetException`. The ADR-033 amendment has the details.
+
+  *Migration*: make dialogue handlers idempotent — on Redis a failing one sees the message again
+  and resends any reply it sent before throwing. To contain a failure, catch it and answer
+  `failure(...)`.
+
 - **An application on the module path can now find out what it needs.** Getting Started's new
   *On the module path* section gives the descriptor: one `opens` line, plus `requires org.slf4j`
   and `requires com.fasterxml.jackson.databind`, because automatic modules bring none of their

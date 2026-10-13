@@ -3,8 +3,12 @@ package dev.agenor.examples.distributed;
 import dev.agenor.adapters.messaging.redis.RedisMessagingFactory;
 import dev.agenor.core.Message;
 import dev.agenor.core.annotations.AgenorMessageHandler;
+import dev.agenor.core.dialogue.DialogueHandler;
+import dev.agenor.core.dialogue.DialogueMessage;
+import dev.agenor.core.dialogue.Performative;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.dialogue.DialogueCapability;
 import dev.agenor.runtime.directory.InMemoryAgentDirectory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * transports, and that is where the cross-transport question now lives. What stays here is the
  * half it still cannot reach: that the chain survives passing <em>through a mailbox</em>, and
  * through an {@code @AgenorMessageHandler} that fails either by throwing or by returning a
- * failed future.
+ * failed future, or through a {@code @DialogueHandler} that throws.
  *
  * <p>Before ADR-033 this failed. {@code BaseAgent} handed the consumer loop
  * {@code MessageHandler.sync(box::offer)}, which returned as soon as the message was queued,
@@ -70,6 +74,7 @@ class MailboxDeliverySemanticsIT {
     private AgenorRuntime receiver;
     private FailingAgent agent;
     private AsyncFailingAgent asyncAgent;
+    private DialogueFailingAgent dialogueAgent;
 
     @BeforeEach
     void setUp() {
@@ -100,11 +105,14 @@ class MailboxDeliverySemanticsIT {
         receiver.registerAgent(agent);
         asyncAgent = new AsyncFailingAgent();
         receiver.registerAgent(asyncAgent);
+        dialogueAgent = new DialogueFailingAgent();
+        receiver.registerAgent(dialogueAgent);
 
         sender.start().join();
         receiver.start().join();
         awaitResolvable("always-fails");
         awaitResolvable("fails-later");
+        awaitResolvable("dialogue-fails");
 
     }
 
@@ -136,7 +144,10 @@ class MailboxDeliverySemanticsIT {
         // ...and after maxDeliveryAttempts it landed in the dead-letter queue, asked through
         // the framework. Until 0.32.0 this assertion had to rebuild the Redis key by hand and
         // run XLEN on a connection of its own, because nothing could read the DLQ back.
-        awaitUntil(() -> !deadLetters.recent(10).isEmpty());
+        // Wait for this test's own entry: the container, and so the dead-letter stream, is
+        // shared by every test in the class, and "not empty" can be another test's leftover.
+        awaitUntil(() -> deadLetters.recent(10).stream()
+                .anyMatch(dl -> "task.explode".equals(dl.message().topic())));
 
         assertThat(agent.attempts.get()).isGreaterThan(1);
         assertThat(deadLetters.recent(10))
@@ -174,6 +185,39 @@ class MailboxDeliverySemanticsIT {
                 .anySatisfy(dl -> {
                     assertThat(dl.message().topic()).isEqualTo("task.explode.later");
                     assertThat(dl.recipientId()).isEqualTo("fails-later");
+                });
+    }
+
+    @Test
+    @DisplayName("a @DialogueHandler that throws is redelivered, then dead-lettered")
+    void failingDialogueHandlerIsRedeliveredThenDeadLettered() {
+        var deadLetters = receiverFactory.deadLetterQueue();
+
+        // Until 0.37.0 the dialogue lane ended the chain twice over: DialogueHandlerRegistry
+        // caught what the handler threw, and DialogueCapability caught anything left. The
+        // mailbox saw a success, the entry was acknowledged, and the handler ran exactly once.
+        var request = DialogueMessage.builder()
+                .conversationId("conv-dialogue-fails")
+                .senderId("coordinator")
+                .receiverId("dialogue-fails")
+                .performative(Performative.REQUEST)
+                .content("this will throw")
+                .build()
+                .toMessage();
+        sender.getMessageDispatcher().sendTo(request);
+
+        awaitUntil(() -> dialogueAgent.attempts.get() > 1);
+        awaitUntil(() -> deadLetters.recent(10).stream()
+                .anyMatch(dl -> request.id().equals(dl.message().id())));
+
+        assertThat(dialogueAgent.attempts.get()).isGreaterThan(1);
+        assertThat(deadLetters.recent(10))
+                .anySatisfy(dl -> {
+                    assertThat(dl.message().id()).isEqualTo(request.id());
+                    assertThat(dl.recipientId()).isEqualTo("dialogue-fails");
+                    // The handler's own exception, not InvocationTargetException: the reflective
+                    // wrapper has no message, and a reason naming it would say nothing.
+                    assertThat(dl.reason()).startsWith("IllegalStateException: dialogue handler failed");
                 });
     }
 
@@ -243,6 +287,23 @@ class MailboxDeliverySemanticsIT {
             return CompletableFuture.supplyAsync(() -> {
                 throw new IllegalStateException("async handler failed on purpose: " + message.id());
             });
+        }
+    }
+
+    /** The dialogue lane's counterpart of {@link FailingAgent}. */
+    static class DialogueFailingAgent extends BaseAgent {
+
+        final DialogueCapability dialogue = new DialogueCapability(this);
+        final AtomicInteger attempts = new AtomicInteger();
+
+        DialogueFailingAgent() {
+            super("dialogue-fails", "Dialogue Fails");
+        }
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage message) {
+            attempts.incrementAndGet();
+            throw new IllegalStateException("dialogue handler failed on purpose: " + message.id());
         }
     }
 }
