@@ -35,9 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependencies into the graph. Without the `opens` line the runtime starts and the agents do
   nothing. ADR-003's amendment had said the `opens` line was enough; it now names the two
   `requires` lines too.
-
-### Fixed
-
 - **`docs/llm-integration.md` no longer names a default model that does not exist.** It said
   Anthropic's default is `claude-3-5-sonnet-20241022`; `getDefaultModel()` returns
   `claude-sonnet-4-6`, and the Ollama table called `modelName` required when it defaults to
