@@ -41,6 +41,22 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: GPG_PASSPHRASE
 
+      # The runner's own Maven is whatever the image ships and changes under us:
+      # the 0.37.0 bundle came out holding maven-metadata-local.xml and
+      # _remote.repositories, which Central rejects as content with no .pom. This
+      # is the version a bundle was verified clean with. Pinned by checksum.
+      - name: Pin Maven
+        env:
+          MAVEN_VERSION: 3.9.12
+        run: |
+          base=https://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries
+          tar_gz=apache-maven-$MAVEN_VERSION-bin.tar.gz
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "$base/$tar_gz"
+          echo "$(curl -fsSL "$base/$tar_gz.sha512")  $tar_gz" | sha512sum -c -
+          tar -xzf "$tar_gz"
+          echo "$RUNNER_TEMP/apache-maven-$MAVEN_VERSION/bin" >> "$GITHUB_PATH"
+
       # A release is immutable once Central has it. Both ways of getting the
       # wrong thing there are cheap to rule out first: a SNAPSHOT (dispatching
       # this workflow from `main`, where the version is always -SNAPSHOT), and a
@@ -72,7 +88,7 @@ jobs:
       # checklist is a human process that this does not depend on. `-P release`
       # adds sources, javadoc, GPG signatures and the Central publishing plugin.
       - name: Deploy to Central
-        run: mvn -B -P release clean deploy
+        run: mvn -B -V -P release clean deploy
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
@@ -84,6 +100,7 @@ jobs:
       - name: What the bundle held
         if: failure()
         run: |
+          mvn -v
           zip=agenor-bom/target/central-publishing/central-bundle.zip
           ls -la agenor-bom/target/central-publishing agenor-bom/target/central-staging || true
           if [ -f "$zip" ]; then
