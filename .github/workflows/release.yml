@@ -78,6 +78,21 @@ jobs:
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
+      # Central's validation message names directories and not what is in them, and
+      # the portal lists no files for a failed deployment. The bundle stays on the
+      # runner after the upload, so say what it held.
+      - name: What the bundle held
+        if: failure()
+        run: |
+          zip=agenor-bom/target/central-publishing/central-bundle.zip
+          ls -la agenor-bom/target/central-publishing agenor-bom/target/central-staging || true
+          if [ -f "$zip" ]; then
+            echo "bundle entries: $(unzip -Z1 "$zip" | wc -l)"
+            unzip -l "$zip" | head -150
+          else
+            echo "no $zip on the runner"
+          fi
+
       - name: Next step is manual
         if: success()
         run: |
