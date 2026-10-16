@@ -97,6 +97,23 @@ class AgenorAutoConfigurationTest {
     }
 
     @Test
+    void jdbcApprovalGateSharesTheDirectoryDatabaseWhenItHasNoUrlOfItsOwn() {
+        // The documented fallback: HITL reuses agenor.directory.jdbc.url, so both schemas are
+        // migrated into one database. Up to 0.37.0 the second migration failed validation.
+        runner.withPropertyValues(
+                        "agenor.directory.provider=jdbc",
+                        "agenor.directory.jdbc.url=jdbc:h2:mem:shared_ac_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+                        "agenor.hitl.provider=jdbc")
+                .run(ctx -> {
+                    assertThat(ctx).hasNotFailed();
+                    assertThat(ctx).hasSingleBean(
+                            dev.agenor.adapters.persistence.directory.JdbcAgentDirectory.class);
+                    assertThat(ctx.getBean(ApprovalGate.class))
+                            .isInstanceOf(dev.agenor.adapters.persistence.hitl.JdbcApprovalGate.class);
+                });
+    }
+
+    @Test
     void inMemoryApprovalGateIsDefaultWhenHitlProviderNotSet() {
         runner.run(ctx -> assertThat(ctx).doesNotHaveBean(ApprovalGate.class));
     }

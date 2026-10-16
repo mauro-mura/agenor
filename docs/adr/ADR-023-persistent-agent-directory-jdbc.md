@@ -417,3 +417,28 @@ The engineering judgement underneath — that a relational store is a poor fit f
 *high-frequency* liveness — stands. ADR-028 bounds it to the frequency it was actually about,
 recommends a 15–30 second cadence, and makes the heartbeat driver opt-in precisely so that no
 existing deployment starts writing without asking.
+
+---
+
+## Amendment — 2026-10-16: one history table per schema
+
+**Scope: "Migration file placement", and the line under "Flyway" that names
+`flyway_schema_history`.** Everything else stands.
+
+The section promised independent configuration instances for the directory and HITL. They were
+independent in location only. Both recorded themselves in Flyway's default history table, and
+both have a `V1`. On one database, which the starter's HITL URL fallback produces by default,
+whichever migrated second failed validation with a checksum mismatch for version 1. Running the
+`repair` that Flyway suggests made HITL report success without creating its table. Found by
+building on 0.37.0 from outside, then confirmed on PostgreSQL and H2.
+
+**Decided**: each schema keeps its own history table, `agenor_directory_schema_history` and
+`agenor_hitl_schema_history` (`SchemaMigrations`). The default table is left to the application.
+When a schema's history table does not exist yet, the baseline is chosen from its own marker
+table rather than from whether the database is empty. If the marker exists, the baseline is 1:
+the database was migrated by 0.37.0, which had only `V1`. Otherwise it is 0, so `V1` runs next to
+any other tables. The default baseline of 1 had skipped the directory's `V1` silently on any
+database that already held a table.
+
+The SQL scripts are unchanged. Making them idempotent would have changed their checksums and
+needed `CREATE INDEX IF NOT EXISTS`, which MySQL does not have.

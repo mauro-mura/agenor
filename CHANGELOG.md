@@ -9,12 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The JDBC directory and HITL queue can share a database.** Both recorded themselves in
+  `flyway_schema_history` with a `V1`, so whichever migrated second failed validation. That broke
+  the starter's default of reusing `agenor.directory.jdbc.url` for HITL. Each schema now has its
+  own history table. A database that already holds other tables no longer makes the directory
+  skip its `V1` silently. The ADR-023 amendment has the details.
+
+  Migration: none. A 0.37.0 database is picked up as it is. Its old row in `flyway_schema_history`
+  can be deleted if your application migrates into that table.
+
 - **`docs/observability.md` § 2b compiles.** It called `otlpHttpExporter(...)`, which
   `OtelTelemetryFactory.Builder` does not have; it now uses `exporter(...)` and `endpoint(...)`.
-- **`docs/adapters/jdbc-directory.md` no longer calls the directory migration safe on any
-  database.** On a database that already holds other tables, Flyway's default baseline skips
-  `V1` silently and every agent crashes. The page now gives the order and the settings that
-  avoid this.
+- **`docs/adapters/jdbc-directory.md` shows how to put your own schema next to the
+  directory.** With Flyway's default baseline, an application's `V1` is skipped silently on a
+  database that already holds Agenor's tables. The page gives the settings that avoid this.
 - **Four behaviours that surprised an external application are now written down.** The third
   legitimate `Protocol violation` warning (a reply after a restart), and that duplicates are the
   handler's to detect. How each handler lane fills a dead letter's `reason`. The span volume of

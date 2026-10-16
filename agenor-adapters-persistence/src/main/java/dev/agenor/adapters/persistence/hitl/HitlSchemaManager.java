@@ -1,6 +1,6 @@
 package dev.agenor.adapters.persistence.hitl;
 
-import org.flywaydb.core.Flyway;
+import dev.agenor.adapters.persistence.SchemaMigrations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,6 +8,9 @@ import javax.sql.DataSource;
 
 /**
  * Runs Flyway migrations for the HITL approval queue schema on startup.
+ *
+ * <p>History is kept in {@code agenor_hitl_schema_history}, so the queue can share a database
+ * with the agent directory and with an application's own schema; see {@link SchemaMigrations}.
  *
  * @since 0.23.0
  */
@@ -30,16 +33,13 @@ public final class HitlSchemaManager {
     }
 
     /**
-     * Applies all pending Flyway migrations. Idempotent — safe to call on every startup.
+     * Applies all pending Flyway migrations. Safe to call on every startup, on a database of
+     * its own or shared with the directory and an application's schema.
      */
     public void migrate() {
         log.info("Running HITL schema migrations from {}", migrationLocation);
-        var flyway = Flyway.configure()
-                .dataSource(dataSource)
-                .locations(migrationLocation)
-                .baselineOnMigrate(true)
-                .load();
-        var result = flyway.migrate();
-        log.info("HITL schema migrations applied: {}", result.migrationsExecuted);
+        int executed = SchemaMigrations.migrate(dataSource, migrationLocation,
+                "agenor_hitl_schema_history", "agenor_hitl_requests");
+        log.info("HITL schema migrations applied: {}", executed);
     }
 }

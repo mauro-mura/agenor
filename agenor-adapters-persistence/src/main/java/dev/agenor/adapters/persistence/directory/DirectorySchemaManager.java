@@ -1,6 +1,6 @@
 package dev.agenor.adapters.persistence.directory;
 
-import org.flywaydb.core.Flyway;
+import dev.agenor.adapters.persistence.SchemaMigrations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,6 +8,9 @@ import javax.sql.DataSource;
 
 /**
  * Runs Flyway migrations for the agent directory schema on startup.
+ *
+ * <p>History is kept in {@code agenor_directory_schema_history}, so the directory can share a
+ * database with the HITL queue and with an application's own schema; see {@link SchemaMigrations}.
  *
  * @since 0.22.0
  */
@@ -25,12 +28,8 @@ public final class DirectorySchemaManager {
 
     public void migrate() {
         log.info("Running agent directory schema migrations from {}", migrationLocation);
-        var flyway = Flyway.configure()
-                .dataSource(dataSource)
-                .locations(migrationLocation)
-                .baselineOnMigrate(true)
-                .load();
-        var result = flyway.migrate();
-        log.info("Agent directory migrations applied: {}", result.migrationsExecuted);
+        int executed = SchemaMigrations.migrate(dataSource, migrationLocation,
+                "agenor_directory_schema_history", "agenor_agents");
+        log.info("Agent directory migrations applied: {}", executed);
     }
 }

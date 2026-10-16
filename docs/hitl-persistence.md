@@ -85,7 +85,11 @@ If `agenor.hitl.jdbc.url` is not set, the auto-configuration falls back to
 
 ## Schema
 
-The schema is managed by Flyway from location `classpath:db/migration/agenor-hitl`.
+The schema is managed by Flyway from location `classpath:db/migration/agenor-hitl`, with
+its own history table, `agenor_hitl_schema_history`. It can therefore share a database with the
+JDBC directory, which is what the URL fallback above does. Up to 0.37.0 that combination failed at
+startup with a Flyway checksum mismatch for version 1. A database migrated by 0.37.0 or earlier is
+picked up without any action. See [JDBC Agent Directory § Schema](adapters/jdbc-directory.md#schema).
 
 ```sql
 CREATE TABLE agenor_hitl_requests (

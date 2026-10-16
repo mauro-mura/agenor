@@ -75,23 +75,20 @@ Flyway manages the schema automatically. The first migration
 | `agenor_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
 
 The migration location defaults to `classpath:db/migration/agenor-directory` and runs
-on every `JdbcAgentDirectory.create()` call, recording itself in Flyway's default history
-table (`flyway_schema_history`). Calling it again on a database the directory created is
-idempotent.
+on every `JdbcAgentDirectory.create()` call. It records itself in a history table of its own,
+`agenor_directory_schema_history`, and the HITL queue does the same in
+`agenor_hitl_schema_history`. Calling it again is idempotent, and the directory can share a
+database with the HITL queue and with your own schema, created in any order.
 
-!!! warning "On a database you share with your own schema, create the directory first"
-    The migration runs with `baselineOnMigrate=true` at Flyway's default baseline version, 1.
-    If the database already holds *any* table and no `flyway_schema_history`, Flyway baselines
-    instead of migrating: `V1__create_agent_directory.sql` is marked as applied and skipped,
-    with no error or warning. `agenor_agents` then does not exist, and every agent goes to
-    `CRASHED` on start.
+Flyway's default history table, `flyway_schema_history`, is left to your application. Up to
+0.37.0 the directory recorded itself there. A database migrated by 0.37.0 or earlier is picked up
+without any action, because the directory finds `agenor_agents` already present. Its old row in
+`flyway_schema_history` stays. Delete it by hand if your own migrations use that table.
 
-    The same thing happens the other way round. Migrate your own schema *after* the directory,
-    with its own history table and the default baseline, and Flyway again finds a non-empty
-    database with no history of its own. It skips your `V1`, with no error or warning.
-
-    So: call `JdbcAgentDirectory.create()` before migrating your own tables, and give your
-    schema a history table and a location of its own, with a baseline below its first version:
+!!! tip "Your own schema next to the directory"
+    Give it a history table and a location of its own. Set its baseline below its first version.
+    With Flyway's default baseline (1), `baselineOnMigrate` on a database that already holds
+    Agenor's tables marks your `V1` as applied and skips it, with no error or warning:
 
     ```java
     Flyway.configure()
@@ -103,9 +100,6 @@ idempotent.
             .load()
             .migrate();
     ```
-
-    Using a separate database for the directory avoids the question entirely, and also hides it.
-    A test suite that keeps the two apart will not catch the problem.
 
 ---
 
