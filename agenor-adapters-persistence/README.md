@@ -132,8 +132,9 @@ Flyway manages all DDL via two migration locations:
 
 Migrations run automatically on factory method / constructor invocation. They are idempotent.
 
-Supported databases: **PostgreSQL** (primary), **MySQL / MariaDB** (optional driver),
-**H2** (tests and development).
+Supported databases: **PostgreSQL** (primary), **MySQL** (needs the optional driver and
+`flyway-mysql`; see `docs/adapters/jdbc-directory.md` § On MySQL), **H2** (tests and
+development). MariaDB uses the same Flyway module but has not been tested.
 
 ---
 

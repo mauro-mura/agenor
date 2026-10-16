@@ -80,6 +80,14 @@
             <version>9.3.0</version>
             <optional>true</optional>
         </dependency>
+        <!-- Flyway's MySQL / MariaDB support — optional like the driver; without it Flyway
+             answers "Unsupported Database" and neither schema migrates -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <version>${flyway.version}</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- H2 — test only (fast in-process DB for unit tests) -->
         <dependency>

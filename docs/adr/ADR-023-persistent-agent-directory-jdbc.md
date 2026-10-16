@@ -442,3 +442,16 @@ database that already held a table.
 
 The SQL scripts are unchanged. Making them idempotent would have changed their checksums and
 needed `CREATE INDEX IF NOT EXISTS`, which MySQL does not have.
+
+---
+
+## Amendment — 2026-10-16: the MySQL integration test exists, and MySQL needed `flyway-mysql`
+
+**Scope: "Testing", the MySQL row.** That test was planned but never written. The module said it
+supported MySQL while shipping Flyway's PostgreSQL support only. On MySQL 8.4 both schemas failed
+with `Unsupported Database`, so neither the directory nor HITL could start. The SQL was portable
+all along.
+
+`flyway-mysql` is now an `optional` dependency, like the MySQL driver. Consumers on MySQL declare
+both. `JdbcPersistenceMySqlIT` and `SharedDatabaseMigrationMySqlIT` cover the row. MariaDB remains
+untested.
