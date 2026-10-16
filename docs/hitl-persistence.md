@@ -38,6 +38,9 @@ classpath.
 </dependency>
 ```
 
+On MySQL, add the driver and `flyway-mysql` instead. See
+[JDBC Agent Directory § On MySQL](adapters/jdbc-directory.md#on-mysql).
+
 ### 2. Wire the gate manually (without Spring Boot)
 
 ```java

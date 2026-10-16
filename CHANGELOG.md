@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The JDBC directory and HITL queue start on MySQL.** The module shipped Flyway's PostgreSQL
+  support only, so on MySQL both migrations failed with `Unsupported Database`, although MySQL was
+  documented as supported. `flyway-mysql` is now an optional dependency, like the driver, and
+  MySQL 8.4 has integration tests. See `docs/adapters/jdbc-directory.md` § On MySQL.
+
+  Migration: on MySQL, declare `org.flywaydb:flyway-mysql` next to `mysql-connector-j`, at your
+  `flyway-core` version (omit it under Spring Boot).
+
 - **The JDBC directory and HITL queue can share a database.** Both recorded themselves in
   `flyway_schema_history` with a `V1`, so whichever migrated second failed validation. That broke
   the starter's default of reusing `agenor.directory.jdbc.url` for HITL. Each schema now has its

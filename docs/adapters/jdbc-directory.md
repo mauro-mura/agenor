@@ -62,6 +62,37 @@ explicitly:
 Consumers that declare only `agenor-runtime` continue to use `InMemoryAgentDirectory` —
 no configuration required, no classpath impact.
 
+### On MySQL
+
+PostgreSQL and H2 work with the module alone. MySQL needs two optional dependencies, the driver
+and Flyway's MySQL support. Without the second one, the first migration fails with
+`FlywayException: Unsupported Database: MySQL 8.4`, so neither the directory nor the HITL queue
+starts:
+
+```xml
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>9.3.0</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-mysql</artifactId>
+    <!-- with Spring Boot, omit the version: Boot manages the whole Flyway family -->
+    <version>10.21.0</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+`flyway-mysql` must have the same version as the `flyway-core` your build resolves. On its own,
+this module brings 10.21.0. Under Spring Boot's dependency management it becomes Boot's version
+(11.14.1 with the starter today), which is why the version is omitted there.
+`mvn dependency:tree -Dincludes=org.flywaydb` shows the version you actually get.
+
+Tested on MySQL 8.4. MariaDB is covered by the same Flyway module, but this module has not been
+tested against it.
+
 ---
 
 ## Schema
