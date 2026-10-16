@@ -50,21 +50,18 @@ explicitly:
     <artifactId>agenor-adapters-persistence</artifactId>
     <version>0.37.0</version>
 </dependency>
-<!-- Runtime JDBC driver — choose one -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <version>42.7.5</version>
-    <scope>runtime</scope>
-</dependency>
 ```
+
+PostgreSQL is the primary database: its JDBC driver and Flyway support come with the module, so
+there is nothing else to declare. On MySQL, add the two dependencies in [§ On MySQL](#on-mysql).
+For H2, declare `com.h2database:h2` yourself, usually in `test` scope.
 
 Consumers that declare only `agenor-runtime` continue to use `InMemoryAgentDirectory` —
 no configuration required, no classpath impact.
 
 ### On MySQL
 
-PostgreSQL and H2 work with the module alone. MySQL needs two optional dependencies, the driver
+PostgreSQL works with the module alone, and H2 needs only its driver. MySQL needs two optional dependencies, the driver
 and Flyway's MySQL support. Without the second one, the first migration fails with
 `FlywayException: Unsupported Database: MySQL 8.4`, so neither the directory nor the HITL queue
 starts:

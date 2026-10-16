@@ -29,17 +29,12 @@ classpath.
     <artifactId>agenor-adapters-persistence</artifactId>
     <version>0.37.0</version>
 </dependency>
-<!-- PostgreSQL driver (or H2 for testing) -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <version>42.7.5</version>
-    <scope>runtime</scope>
-</dependency>
 ```
 
-On MySQL, add the driver and `flyway-mysql` instead. See
-[JDBC Agent Directory § On MySQL](adapters/jdbc-directory.md#on-mysql).
+PostgreSQL is the primary database: its JDBC driver and Flyway support come with the module, so
+there is nothing else to declare. On MySQL, add the two dependencies in
+[JDBC Agent Directory § On MySQL](adapters/jdbc-directory.md#on-mysql). For H2, declare
+`com.h2database:h2` yourself, usually in `test` scope.
 
 ### 2. Wire the gate manually (without Spring Boot)
 

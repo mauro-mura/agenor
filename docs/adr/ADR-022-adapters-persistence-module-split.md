@@ -195,3 +195,23 @@ startup code runs.
 - ADR-018: Optional adapter dependencies pattern — this module is the "dedicated sub-module" case
 - ADR-020: Core API refactor — `AgentRegistry`, `AgentDiscovery`, `AgentResolver` are the
   interfaces this module implements; `AgentPresence` is deliberately omitted
+
+---
+
+## Amendment — 2026-10-16: a supported database needs its Flyway module too
+
+**Scope: the table under "Dependencies in `agenor-adapters-persistence/pom.xml`".** Everything
+else stands.
+
+The table listed drivers only. Since Flyway 10, support for each database is a separate artifact,
+so a driver alone does not make a database work. The table left out `flyway-database-postgresql`
+(`runtime`, included), and MySQL shipped without `flyway-mysql` until ADR-023's amendment of the
+same date made it `runtime`, `optional=true`.
+
+**Rule**: a database declared supported needs both its driver and its Flyway module, with the
+same scope and optionality.
+
+**Confirmed**: the PostgreSQL driver stays included, not optional. In the adoption phase the
+primary database should need no coordinates beyond the module. The user documentation had told
+consumers to declare the driver themselves, at a fixed version that under Spring Boot downgraded
+Boot's. It now says the driver comes with the module.
