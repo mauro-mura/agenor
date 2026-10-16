@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docs/observability.md` § 2b compiles.** It called `otlpHttpExporter(...)`, which
+  `OtelTelemetryFactory.Builder` does not have; it now uses `exporter(...)` and `endpoint(...)`.
+- **`docs/adapters/jdbc-directory.md` no longer calls the directory migration safe on any
+  database.** On a database that already holds other tables, Flyway's default baseline skips
+  `V1` silently and every agent crashes. The page now gives the order and the settings that
+  avoid this.
+- **Four behaviours that surprised an external application are now written down.** The third
+  legitimate `Protocol violation` warning (a reply after a restart), and that duplicates are the
+  handler's to detect. How each handler lane fills a dead letter's `reason`. The span volume of
+  an idle service, and `directory.heartbeat` in the span taxonomy. That `start()` succeeds when
+  one agent fails to start. Found by building `agenor-jobs` against 0.37.0.
+
 ## [0.37.0] - 2026-10-14
 
 ### Changed

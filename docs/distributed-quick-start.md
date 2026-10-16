@@ -91,6 +91,14 @@ runtime.registerAgent(new MyAgent());
 runtime.start().join();
 ```
 
+!!! note "`start()` completing does not mean every agent started"
+    An agent that fails to start is isolated by design. The runtime logs `Failed to start agent`,
+    sets that agent's directory status to `ERROR`, and starts the others, and `start()` still
+    completes normally with `Agenor Runtime started successfully`. The process stays up, so an
+    orchestrator has no reason to restart it. If a node is useless without its agents, check
+    their status after `start()` (from the directory, or `GET /api/agents` on the console) and
+    exit non-zero yourself.
+
 The second node is the same code with `nodeId("node-2")` and its own agents. Nothing else
 differs: same Redis URI, same JDBC URL, same consumer-group prefix.
 

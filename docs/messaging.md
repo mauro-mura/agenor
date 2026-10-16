@@ -240,6 +240,13 @@ AgenorRuntime.builder()
         .build();
 ```
 
+How a handler fails decides what `reason()` says. A `@DialogueHandler` that throws is recorded
+with its own exception. An `@AgenorMessageHandler` that throws is recorded with a wrapper,
+`RuntimeException: Error executing message handler: <method>`, and the real cause is nested out of
+sight. To get the cause into the dead letter from a topic or direct handler, return
+`CompletableFuture.failedFuture(e)` instead of throwing. A failure carried by a returned stage is
+passed through untouched.
+
 Recording is not retrying, and it is not supervision: nothing restarts an agent or backs off on
 its behalf. The failure becomes visible; deciding what to do about it is still yours.
 
