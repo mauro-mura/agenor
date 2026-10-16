@@ -78,14 +78,12 @@ See `agenor-examples/.../hitl/PersistentHitlExample.java` for a runnable example
     <artifactId>agenor-adapters-persistence</artifactId>
     <version>0.37.0</version>
 </dependency>
-<!-- Choose a JDBC driver -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <version>42.7.5</version>
-    <scope>runtime</scope>
-</dependency>
 ```
+
+PostgreSQL is the primary database: its JDBC driver and Flyway support come with the module, so
+there is nothing else to declare. On MySQL, add the two dependencies in
+`docs/adapters/jdbc-directory.md` § On MySQL. For H2, declare `com.h2database:h2` yourself,
+usually in `test` scope.
 
 ---
 

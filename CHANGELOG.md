@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Migration: none. A 0.37.0 database is picked up as it is. Its old row in `flyway_schema_history`
   can be deleted if your application migrates into that table.
 
+- **The persistence docs no longer ask you to declare the PostgreSQL driver.** The module already
+  includes it, with Flyway's PostgreSQL support. The copied block pinned 42.7.5, which under
+  Spring Boot downgraded the version Boot manages. An ADR-022 amendment records that a supported
+  database needs its Flyway module as well as its driver.
+
 - **`docs/observability.md` § 2b compiles.** It called `otlpHttpExporter(...)`, which
   `OtelTelemetryFactory.Builder` does not have; it now uses `exporter(...)` and `endpoint(...)`.
 - **`docs/adapters/jdbc-directory.md` shows how to put your own schema next to the
