@@ -258,9 +258,24 @@ Nothing is rejected: the message still enters the history and the state machine 
 non-compliant peer degrades exactly as before — you just find out about it. The check is made
 from the **sender's** point of view, so a normal reply is never flagged.
 
-Two legitimate situations do produce a warning, and they are not bugs: a reply that arrives after
-the initiator's timeout (state `TIMEOUT`) or after `cancel()` (state `CANCELLED`). Neither state
-allows anything, because the conversation is over — the reply really did arrive out of protocol.
+Three legitimate situations do produce a warning, and they are not bugs. The first two are a reply
+that arrives after the initiator's timeout (state `TIMEOUT`) or after `cancel()` (state
+`CANCELLED`). Neither state allows anything, because the conversation is over, so the reply really
+did arrive out of protocol. The third is a reply that reaches an agent restarted since it opened
+the conversation. Conversations live in memory, so the reply opens a new one in `INITIATED`, and
+an `INFORM` that answers an `AGREE` from before the restart gets flagged:
+
+```
+Protocol violation in conversation <id> (contract-net): worker-1 sent INFORM in state INITIATED,
+which allows [CFP]
+```
+
+The message still reaches its `@DialogueHandler`.
+
+Because nothing is rejected, a duplicate is not rejected either. If an `AGREE` is redelivered or
+sent twice, both copies reach the participant, and the only sign is a warning on each side. On a
+transport with at-least-once delivery, duplicate detection belongs to the handler. The protocol
+check will not do it.
 
 A conversation with no protocol is never checked; there is no state machine to check against.
 

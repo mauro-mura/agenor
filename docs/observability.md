@@ -59,7 +59,8 @@ import dev.agenor.core.telemetry.AgenorTelemetry;
 
 AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
         .serviceName("my-agent-service")
-        .otlpHttpExporter("http://localhost:4318")
+        .exporter("otlp-http")                 // the default; also otlp-grpc | none
+        .endpoint("http://localhost:4318")     // /v1/traces is appended when absent
         .build();
 
 AgenorRuntime runtime = AgenorRuntime.builder()
@@ -89,6 +90,7 @@ The table below lists every span emitted by Agenor components. Spans marked
 | `directory.register` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
 | `directory.unregister` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id` |
 | `directory.update_status` | `JdbcAgentRegistry` (**JDBC adapter**) | `agent.id`, `agent.status` |
+| `directory.heartbeat` | `JdbcAgentPresence` (**JDBC adapter**) | `agent.id` |
 | `directory.find` | `JdbcAgentDiscovery` (**JDBC adapter**) | `directory.find.type` (`by_id`\|`by_capability`\|`by_type`\|`query`), `directory.find.result_count` |
 | `message.publish` | `RedisTopicPublisher` (**Redis adapter**) | `message.topic`, `message.id`, `agent.sender`, `transport.type` |
 | `transport.send` | `RedisMessageTransport` (**Redis adapter**) | `transport.type`, `transport.endpoint`, `message.id`, `agent.sender` |
@@ -100,6 +102,15 @@ Exceptions are recorded via `Span.recordException(Throwable)`.
 The `message.correlation_id` attribute on `message.receive` spans carries the same value
 set by the publisher, enabling correlation between `message.publish` and
 `message.receive` spans in your APM tool even without native OTel span links.
+
+### An idle service is not a quiet one
+
+`behavior.execute` is emitted on every tick of a cyclic behavior, whether or not the tick found
+work, and `directory.heartbeat` on every beat of every agent. A manager with two one-second cycles
+and two agents beating every ten seconds was measured at 66 spans in 30 seconds while doing
+nothing — about 190,000 a day, almost all of them `behavior.execute`. The interval is fixed in
+`@Behavior(interval = ...)` and the runtime has no switch to turn one behavior's spans off, so the
+place to cut this volume is sampling in the collector. That mitigation has not been measured here.
 
 ### `agent.receive` is the transport-independent one
 

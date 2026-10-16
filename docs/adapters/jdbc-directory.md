@@ -75,8 +75,37 @@ Flyway manages the schema automatically. The first migration
 | `agenor_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
 
 The migration location defaults to `classpath:db/migration/agenor-directory` and runs
-on every `JdbcAgentDirectory.create()` call. Flyway's `baselineOnMigrate=true` makes
-the migration idempotent — safe to call repeatedly.
+on every `JdbcAgentDirectory.create()` call, recording itself in Flyway's default history
+table (`flyway_schema_history`). Calling it again on a database the directory created is
+idempotent.
+
+!!! warning "On a database you share with your own schema, create the directory first"
+    The migration runs with `baselineOnMigrate=true` at Flyway's default baseline version, 1.
+    If the database already holds *any* table and no `flyway_schema_history`, Flyway baselines
+    instead of migrating: `V1__create_agent_directory.sql` is marked as applied and skipped,
+    with no error or warning. `agenor_agents` then does not exist, and every agent goes to
+    `CRASHED` on start.
+
+    The same thing happens the other way round. Migrate your own schema *after* the directory,
+    with its own history table and the default baseline, and Flyway again finds a non-empty
+    database with no history of its own. It skips your `V1`, with no error or warning.
+
+    So: call `JdbcAgentDirectory.create()` before migrating your own tables, and give your
+    schema a history table and a location of its own, with a baseline below its first version:
+
+    ```java
+    Flyway.configure()
+            .dataSource(dataSource)
+            .table("myapp_schema_history")
+            .locations("classpath:db/migration/myapp")
+            .baselineOnMigrate(true)
+            .baselineVersion("0")
+            .load()
+            .migrate();
+    ```
+
+    Using a separate database for the directory avoids the question entirely, and also hides it.
+    A test suite that keeps the two apart will not catch the problem.
 
 ---
 
