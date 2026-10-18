@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -753,7 +754,11 @@ public class AgenorRuntime {
     }
 
     /**
-     * Log summary of discovered and registered agents
+     * Log summary of discovered and registered agents.
+     *
+     * <p>Type and capabilities come from the directory row, not from {@code @Agent}: an agent may
+     * advertise capabilities it only knows at runtime, and the row is what a peer's
+     * {@code findByCapability} sees. The annotation is the fallback when the row cannot be read.
      */
     private void logAgentSummary() {
         if (agents.isEmpty()) {
@@ -763,15 +768,16 @@ public class AgenorRuntime {
 
         log.info("Agent Summary:");
         agents.values().forEach(agent -> {
-            Agent annotation = agent.getClass().getAnnotation(Agent.class);
-            String type = annotation != null ? annotation.type() : "unknown";
-            String[] capabilities = annotation != null ? annotation.capabilities() : new String[0];
+            AgentDescriptor descriptor = agentDirectory.findById(agent.getAgentId())
+                    .exceptionally(throwable -> Optional.empty())
+                    .join()
+                    .orElseGet(() -> AgentDescriptors.create(agent.getClass(), agent));
 
             log.info("  - {} ({}) - Type: {}, Capabilities: [{}], Running: {}",
                     agent.getAgentName(),
                     agent.getAgentId(),
-                    type.isEmpty() ? agent.getClass().getSimpleName() : type,
-                    String.join(", ", capabilities),
+                    descriptor.agentType(),
+                    String.join(", ", new TreeSet<>(descriptor.capabilities())),
                     agent.isRunning());
         });
     }
