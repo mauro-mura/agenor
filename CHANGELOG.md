@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The startup agent summary reports what each agent advertises.** It read type and
+  capabilities from `@Agent`, so an agent that declares its capabilities at runtime was logged
+  with `Capabilities: []` while its directory row held them. The summary now reads the directory
+  row, and falls back to the annotation when the row cannot be read.
+
 - **The JDBC directory and HITL queue start on MySQL.** The module shipped Flyway's PostgreSQL
   support only, so on MySQL both migrations failed with `Unsupported Database`, although MySQL was
   documented as supported. `flyway-mysql` is now an optional dependency, like the driver, and
