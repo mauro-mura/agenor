@@ -21,14 +21,17 @@ explicitly pull it in your own `pom.xml`:
         <artifactId>agenor-adapters</artifactId>
     </dependency>
 
-    <!-- Opt-in: OTel SDK + OTLP exporter -->
+    <!-- Opt-in: OTel SDK + OTLP exporter.
+         With Spring Boot, omit both versions: Boot manages the OpenTelemetry family -->
     <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-sdk</artifactId>
+        <version>1.51.0</version>
     </dependency>
     <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-exporter-otlp</artifactId>
+        <version>1.51.0</version>
     </dependency>
 </dependencies>
 ```

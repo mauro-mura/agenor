@@ -86,7 +86,8 @@ Add the OTel SDK alongside `agenor-adapters` in your POM:
 <dependency>
     <groupId>io.opentelemetry</groupId>
     <artifactId>opentelemetry-sdk</artifactId>
-    <version>${opentelemetry.version}</version>
+    <!-- with Spring Boot, omit the version: Boot manages the OpenTelemetry family -->
+    <version>1.51.0</version>
 </dependency>
 ```
 
@@ -105,7 +106,7 @@ needed beyond `agenor.telemetry.enabled: true`.
 <dependency>
     <groupId>io.lettuce</groupId>
     <artifactId>lettuce-core</artifactId>
-    <version>${lettuce.version}</version>
+    <version>7.5.1.RELEASE</version>
 </dependency>
 ```
 
