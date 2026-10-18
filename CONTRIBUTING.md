@@ -443,6 +443,8 @@ cannot check against something is a formality.
       mkdocs into a cached virtualenv when it is absent, so there is nothing to set up first.
 - [ ] **Documented defaults** — `bash tools/docs-defaults-check.sh` exits 0: every docs line that
       says "default" and names a model names one that `getDefaultModel()` or the starter returns.
+- [ ] **Documented versions** — `bash tools/docs-versions-check.sh` exits 0: every snippet that
+      declares Lettuce, OpenTelemetry or a Flyway module names the version the POMs build against.
 - [ ] **CHANGELOG** — `## [x.y.z] - <date>` opened under an empty `## [Unreleased]`, breaking
       changes marked, and the two new link rows pointing at `mauro-mura/agenor`.
 - [ ] **CHANGELOG budget** — `bash tools/changelog-budget.sh --check` exits 0: no entry over its

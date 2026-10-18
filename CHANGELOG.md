@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   handler's to detect. How each handler lane fills a dead letter's `reason`. The span volume of
   an idle service, and `directory.heartbeat` in the span taxonomy. That `start()` succeeds when
   one agent fails to start. Found by building `agenor-jobs` against 0.37.0.
+- **The Lettuce and OpenTelemetry snippets resolve outside Spring Boot.** Three of them used
+  `${lettuce.version}` or `${opentelemetry.version}`, properties a consumer does not define, and
+  `docs/observability.md` gave no version at all. They now name the versions the adapters are
+  built against, and `tools/docs-versions-check.sh` fails when a page and the POMs disagree.
 
 ## [0.37.0] - 2026-10-14
 
