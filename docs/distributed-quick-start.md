@@ -54,7 +54,7 @@ yourself:
 <dependency>
     <groupId>io.lettuce</groupId>
     <artifactId>lettuce-core</artifactId>
-    <version>${lettuce.version}</version>
+    <version>7.5.1.RELEASE</version>
 </dependency>
 ```
 
