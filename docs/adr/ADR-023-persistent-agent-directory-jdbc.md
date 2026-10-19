@@ -455,3 +455,26 @@ all along.
 `flyway-mysql` is now an `optional` dependency, like the MySQL driver. Consumers on MySQL declare
 both. `JdbcPersistenceMySqlIT` and `SharedDatabaseMigrationMySqlIT` cover the row. MariaDB remains
 untested.
+
+---
+
+## Amendment — 2026-10-19: the migrations move out of `db/migration`, and the starter migrates after Spring Boot
+
+**Scope: "Migration file placement".** Everything else stands.
+
+The tree that section draws put both schemas under `db/migration/`. That is Spring Boot's
+default Flyway location, and Boot scans it recursively. An application using the starter
+with Flyway of its own found Agenor's two `V1`s next to its own `V1`, and failed to start with
+`Found more than one migration with version 1`. The migrations now live in
+`db/agenor/directory/` and `db/agenor/hitl/`. The files are unchanged, so their checksums and
+script names still match the history of existing databases. A caller that still passes a
+`db/migration/agenor-*` location is moved to the new one with a warning until `1.0.0`. Without
+that, Flyway would resolve the old location to nothing and create no tables, with no error.
+
+The one-history-table amendment above made a second problem visible. The starter created both
+schemas while building its beans, before Boot's `flywayInitializer` ran. Boot then found a
+non-empty schema with no history table of its own and refused to migrate. The starter's JDBC
+beans are now `@DependsOnDatabaseInitialization`, so the application's Flyway always runs first.
+Agenor's baseline is chosen from its own marker tables, so it does not care what is already
+there. Both problems were found by building on 0.37.0 from outside, and confirmed against the
+0.38.0 snapshot.

@@ -51,7 +51,7 @@ public class PersistentHitlExample {
         cfg.setMaximumPoolSize(5);
         var dataSource = new HikariDataSource(cfg);
 
-        new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+        new HitlSchemaManager(dataSource, "classpath:db/agenor/hitl").migrate();
 
         var gate = new JdbcApprovalGate(dataSource, "jdbc:h2:mem:...");
         gate.recoverExpired();  // no-op here, but would mark stale rows on a real restart

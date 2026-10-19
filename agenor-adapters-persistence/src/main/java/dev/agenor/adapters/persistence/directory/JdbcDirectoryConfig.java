@@ -31,6 +31,6 @@ public record JdbcDirectoryConfig(
     public static JdbcDirectoryConfig of(String jdbcUrl, String username, String password) {
         return new JdbcDirectoryConfig(
                 jdbcUrl, username, password, 10,
-                "classpath:db/migration/agenor-directory");
+                "classpath:db/agenor/directory");
     }
 }

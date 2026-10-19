@@ -8,6 +8,9 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Internal Flyway runner shared by the directory and HITL schema managers.
@@ -29,11 +32,24 @@ import java.util.Locale;
  * </ul>
  * Once the history table exists the baseline plays no part.
  *
+ * <p>The migrations live under {@code db/agenor/}. Up to 0.37.0 they were under
+ * {@code db/migration/}, which Spring Boot's Flyway scans recursively by default, so an
+ * application with Flyway of its own found Agenor's {@code V1}s next to its own and failed with
+ * "more than one migration with version 1". A caller still passing an old location is moved to
+ * the new one with a warning, until {@code 1.0.0}.
+ *
  * @since 0.38.0
  */
 public final class SchemaMigrations {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaMigrations.class);
+
+    /** Locations used up to 0.37.0, and where the same files are now. */
+    private static final Map<String, String> MOVED_LOCATIONS = Map.of(
+            "db/migration/agenor-directory", "classpath:db/agenor/directory",
+            "db/migration/agenor-hitl", "classpath:db/agenor/hitl");
+
+    private static final Set<String> warned = ConcurrentHashMap.newKeySet();
 
     private SchemaMigrations() {}
 
@@ -48,6 +64,7 @@ public final class SchemaMigrations {
      */
     public static int migrate(DataSource dataSource, String location,
                               String historyTable, String markerTable) {
+        location = currentLocation(location);
         var config = Flyway.configure()
                 .dataSource(dataSource)
                 .locations(location)
@@ -64,6 +81,27 @@ public final class SchemaMigrations {
             throw new IllegalStateException("Could not inspect the schema before migrating " + location, e);
         }
         return config.load().migrate().migrationsExecuted;
+    }
+
+    /**
+     * Maps a location used up to 0.37.0 to where its migrations are now, warning once per
+     * location; any other location is returned as it is.
+     *
+     * @param location the Flyway location a caller passed
+     * @return the location to migrate from
+     */
+    static String currentLocation(String location) {
+        var path = location.startsWith("classpath:")
+                ? location.substring("classpath:".length()) : location;
+        var moved = MOVED_LOCATIONS.get(path.replaceAll("^/+|/+$", ""));
+        if (moved == null) {
+            return location;
+        }
+        if (warned.add(location)) {
+            log.warn("Flyway location {} moved to {} in 0.38.0; pass the new one. "
+                    + "The old location will stop working in 1.0.0", location, moved);
+        }
+        return moved;
     }
 
     /** Looks in the connection's own schema, as Flyway does, under both identifier cases. */

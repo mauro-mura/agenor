@@ -128,6 +128,10 @@ agenor:
 The `jdbc.*` sub-section is only read when `provider=jdbc` and `agenor-adapters-persistence` is on the classpath.
 Flyway schema migration runs automatically on startup.
 
+Your application's own Flyway (`spring-boot-starter-flyway`) can use the same database with
+Boot's defaults. Agenor's migrations are outside `db/migration` and run after Boot's Flyway, and
+each schema keeps its own history table, so `spring.flyway.*` needs no setting for Agenor.
+
 JDBC example:
 ```yaml
 agenor:

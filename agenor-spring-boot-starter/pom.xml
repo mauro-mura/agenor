@@ -92,6 +92,15 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- @DependsOnDatabaseInitialization: the JDBC beans wait for the application's own
+             Flyway. Optional: an application with Boot's JDBC support already has it, and
+             without it the annotation is simply not seen. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-sql</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -112,6 +121,17 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>2.3.232</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Boot's own Flyway next to Agenor's, in one database: AgenorBootFlywayCoexistenceTest -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jdbc</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Testcontainers in test scope: StarterTwoNodeRedisJdbcIT runs two starter contexts

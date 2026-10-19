@@ -55,7 +55,7 @@ See `agenor-examples/.../jdbc/JdbcDirectoryExample.java` for a runnable example.
 import dev.agenor.adapters.persistence.hitl.HitlSchemaManager;
 import dev.agenor.adapters.persistence.hitl.JdbcApprovalGate;
 
-new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+new HitlSchemaManager(dataSource, "classpath:db/agenor/hitl").migrate();
 
 var gate = new JdbcApprovalGate(dataSource, jdbcUrl);
 gate.recoverExpired();   // mark stale rows EXPIRED on startup
@@ -125,8 +125,8 @@ Flyway manages all DDL via two migration locations:
 
 | Location | Tables | Feature |
 |---|---|---|
-| `classpath:db/migration/agenor-directory` | `agenor_agents`, `agenor_agent_capabilities` | Agent directory |
-| `classpath:db/migration/agenor-hitl`      | `agenor_hitl_requests` | HITL approval queue |
+| `classpath:db/agenor/directory` | `agenor_agents`, `agenor_agent_capabilities` | Agent directory |
+| `classpath:db/agenor/hitl`      | `agenor_hitl_requests` | HITL approval queue |
 
 Migrations run automatically on factory method / constructor invocation. They are idempotent.
 
