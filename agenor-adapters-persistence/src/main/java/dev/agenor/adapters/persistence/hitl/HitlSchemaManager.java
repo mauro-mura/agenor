@@ -25,7 +25,7 @@ public final class HitlSchemaManager {
      * Creates a schema manager that will run Flyway migrations from the given location.
      *
      * @param dataSource        the JDBC data source; must not be null
-     * @param migrationLocation Flyway location, e.g. {@code classpath:db/migration/agenor-hitl}
+     * @param migrationLocation Flyway location, e.g. {@code classpath:db/agenor/hitl}
      */
     public HitlSchemaManager(DataSource dataSource, String migrationLocation) {
         this.dataSource = dataSource;

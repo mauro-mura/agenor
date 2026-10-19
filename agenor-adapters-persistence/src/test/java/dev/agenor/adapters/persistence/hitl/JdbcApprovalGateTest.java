@@ -51,7 +51,7 @@ class JdbcApprovalGateTest {
         cfg.setMaximumPoolSize(5);
         dataSource = new HikariDataSource(cfg);
 
-        new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+        new HitlSchemaManager(dataSource, "classpath:db/agenor/hitl").migrate();
 
         scheduler = Executors.newSingleThreadScheduledExecutor();
         gate = new JdbcApprovalGate(

@@ -55,7 +55,7 @@ class JdbcAgentPresenceTest implements AgentPresenceContractTests {
         cfg.setMaximumPoolSize(5);
         dataSource = new HikariDataSource(cfg);
 
-        new DirectorySchemaManager(dataSource, "classpath:db/migration/agenor-directory").migrate();
+        new DirectorySchemaManager(dataSource, "classpath:db/agenor/directory").migrate();
 
         helper = new JdbcHelper(dataSource);
         registry = new JdbcAgentRegistry(helper, AgenorTelemetry.noop());

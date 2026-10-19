@@ -87,7 +87,7 @@ class JdbcPersistenceMySqlIT {
         cfg.setUsername("root");
         cfg.setPassword(MySqlContainers.ROOT_PASSWORD);
         try (var dataSource = new HikariDataSource(cfg)) {
-            new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+            new HitlSchemaManager(dataSource, "classpath:db/agenor/hitl").migrate();
 
             try (var gate = new JdbcApprovalGate(dataSource, url())) {
                 gate.recoverExpired();

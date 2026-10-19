@@ -102,11 +102,15 @@ Flyway manages the schema automatically. The first migration
 | `agenor_agents` | `agent_id` | Stores agent registration, status, endpoint, and metadata |
 | `agenor_agent_capabilities` | `(agent_id, capability)` | Normalised capability set; FK cascade-deletes on agent removal |
 
-The migration location defaults to `classpath:db/migration/agenor-directory` and runs
+The migration location defaults to `classpath:db/agenor/directory` and runs
 on every `JdbcAgentDirectory.create()` call. It records itself in a history table of its own,
 `agenor_directory_schema_history`, and the HITL queue does the same in
 `agenor_hitl_schema_history`. Calling it again is idempotent, and the directory can share a
 database with the HITL queue and with your own schema, created in any order.
+
+Up to 0.37.0 the location was `classpath:db/migration/agenor-directory`. That is inside Spring
+Boot's default Flyway location, which made an application's own Flyway pick Agenor's `V1` up as
+its own. The old location still works, with a warning, until 1.0.0.
 
 Flyway's default history table, `flyway_schema_history`, is left to your application. Up to
 0.37.0 the directory recorded itself there. A database migrated by 0.37.0 or earlier is picked up
@@ -114,6 +118,10 @@ without any action, because the directory finds `agenor_agents` already present.
 `flyway_schema_history` stays. Delete it by hand if your own migrations use that table.
 
 !!! tip "Your own schema next to the directory"
+    Under Spring Boot, `spring.flyway.*` needs nothing for this. The starter runs Agenor's
+    migrations after Boot's Flyway, and each keeps its own history. The rest of this tip is for a
+    Flyway you configure by hand.
+
     Give it a history table and a location of its own. Set its baseline below its first version.
     With Flyway's default baseline (1), `baselineOnMigrate` on a database that already holds
     Agenor's tables marks your `V1` as applied and skips it, with no error or warning:
@@ -192,7 +200,7 @@ the exact conditions.
 | `username` | — | Database username |
 | `password` | — | Database password |
 | `maximumPoolSize` | `10` | HikariCP max pool size |
-| `migrationLocation` | `classpath:db/migration/agenor-directory` | Flyway migration classpath location |
+| `migrationLocation` | `classpath:db/agenor/directory` | Flyway migration classpath location |
 
 Spring Boot YAML keys (`agenor.directory.jdbc.*`):
 

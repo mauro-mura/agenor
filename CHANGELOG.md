@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Spring Boot application with its own Flyway starts with Boot's defaults.** Agenor's
+  migrations were under `db/migration`, which Boot's Flyway scans, and failed it with `more than
+  one migration with version 1`. They are now in `db/agenor/`. The starter also migrated Agenor's
+  tables before Boot's Flyway, which then refused the non-empty schema. Its JDBC beans now wait
+  for it.
+
+  Migration: if you pass `classpath:db/migration/agenor-*` yourself, switch to
+  `classpath:db/agenor/directory` or `classpath:db/agenor/hitl`. Unchanged files keep existing
+  histories valid.
+
 - **The Spring Boot starter puts Redis messaging and a JDBC directory in the same runtime.**
   Each backend had its own runtime factory, and only one could win. With
   `agenor.messaging.provider=redis` and `agenor.directory.provider=jdbc` the JDBC one won, so the
@@ -61,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `${lettuce.version}` or `${opentelemetry.version}`, properties a consumer does not define, and
   `docs/observability.md` gave no version at all. They now name the versions the adapters are
   built against, and `tools/docs-versions-check.sh` fails when a page and the POMs disagree.
+
+### Deprecated
+
+- **The migration locations `classpath:db/migration/agenor-directory` and
+  `classpath:db/migration/agenor-hitl` are deprecated, for removal in `1.0.0`.** They are mapped to
+  `db/agenor/` with a warning; Flyway would otherwise resolve them to nothing and create no tables.
 
 ## [0.37.0] - 2026-10-14
 

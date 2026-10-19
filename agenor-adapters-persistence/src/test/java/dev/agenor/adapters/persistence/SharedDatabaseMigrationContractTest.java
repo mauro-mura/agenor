@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public abstract class SharedDatabaseMigrationContractTest {
 
-    private static final String DIRECTORY = "classpath:db/migration/agenor-directory";
-    private static final String HITL = "classpath:db/migration/agenor-hitl";
+    private static final String DIRECTORY = "classpath:db/agenor/directory";
+    private static final String HITL = "classpath:db/agenor/hitl";
     private static final String APP = "classpath:db/migration/test-app";
 
     /** Returns a data source on an empty database that no other test uses. */
@@ -127,6 +127,17 @@ public abstract class SharedDatabaseMigrationContractTest {
         // Then its tables are created rather than baselined away
         assertSchemasExist();
         assertThat(tableExists("app_jobs")).isTrue();
+    }
+
+    @Test
+    @DisplayName("a location from 0.37.0 still creates both schemas, from where they are now")
+    void oldLocationsStillMigrate() {
+        // Given callers that still pass the locations used up to 0.37.0, under db/migration
+        new DirectorySchemaManager(dataSource, "classpath:db/migration/agenor-directory").migrate();
+        new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+
+        // Then the tables exist: no location that resolves to nothing, and no silent no-op
+        assertSchemasExist();
     }
 
     // -------------------------------------------------------------------------

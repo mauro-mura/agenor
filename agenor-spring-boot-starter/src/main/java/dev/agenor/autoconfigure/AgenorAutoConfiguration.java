@@ -19,6 +19,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -505,6 +506,9 @@ public class AgenorAutoConfiguration {
 
         @Bean(destroyMethod = "close")
         @ConditionalOnMissingBean
+        // Migrates on creation: wait for the application's own Flyway, which refuses a schema
+        // that already holds tables when it has no history of its own
+        @DependsOnDatabaseInitialization
         public dev.agenor.adapters.persistence.directory.JdbcAgentDirectory jdbcAgentDirectory(
                 AgenorProperties props,
                 ObjectProvider<AgenorTelemetry> telemetry) {
@@ -515,7 +519,7 @@ public class AgenorAutoConfiguration {
             }
             var config = new dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig(
                     jdbc.url(), jdbc.username(), jdbc.password(), jdbc.poolSize(),
-                    "classpath:db/migration/agenor-directory");
+                    "classpath:db/agenor/directory");
             log.debug("Creating JdbcAgentDirectory (url={})", jdbc.url());
             return dev.agenor.adapters.persistence.directory.JdbcAgentDirectory.create(
                     config, telemetry.getIfAvailable(AgenorTelemetry::noop));
@@ -666,6 +670,9 @@ public class AgenorAutoConfiguration {
 
         @Bean(destroyMethod = "close")
         @ConditionalOnMissingBean(ApprovalGate.class)
+        // Migrates on creation: wait for the application's own Flyway, which refuses a schema
+        // that already holds tables when it has no history of its own
+        @DependsOnDatabaseInitialization
         public dev.agenor.adapters.persistence.hitl.JdbcApprovalGate jdbcApprovalGate(
                 AgenorProperties props) {
             String url = resolveHitlUrl(props);
@@ -680,12 +687,12 @@ public class AgenorAutoConfiguration {
 
             var config = new dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig(
                     url, username, password, poolSize,
-                    "classpath:db/migration/agenor-hitl");
+                    "classpath:db/agenor/hitl");
             log.debug("Creating JdbcApprovalGate (url={})", url);
 
             var dataSource = createHitlDataSource(config);
             new dev.agenor.adapters.persistence.hitl.HitlSchemaManager(
-                    dataSource, "classpath:db/migration/agenor-hitl").migrate();
+                    dataSource, "classpath:db/agenor/hitl").migrate();
 
             var gate = new dev.agenor.adapters.persistence.hitl.JdbcApprovalGate(dataSource, url);
             gate.recoverExpired();

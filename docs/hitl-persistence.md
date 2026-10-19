@@ -46,7 +46,7 @@ cfg.setPassword("secret");
 var dataSource = new HikariDataSource(cfg);
 
 // Run the Flyway migration (idempotent)
-new HitlSchemaManager(dataSource, "classpath:db/migration/agenor-hitl").migrate();
+new HitlSchemaManager(dataSource, "classpath:db/agenor/hitl").migrate();
 
 // Create and initialise the gate
 var gate = new JdbcApprovalGate(dataSource, cfg.getJdbcUrl());
@@ -83,11 +83,13 @@ If `agenor.hitl.jdbc.url` is not set, the auto-configuration falls back to
 
 ## Schema
 
-The schema is managed by Flyway from location `classpath:db/migration/agenor-hitl`, with
+The schema is managed by Flyway from location `classpath:db/agenor/hitl`, with
 its own history table, `agenor_hitl_schema_history`. It can therefore share a database with the
 JDBC directory, which is what the URL fallback above does. Up to 0.37.0 that combination failed at
 startup with a Flyway checksum mismatch for version 1. A database migrated by 0.37.0 or earlier is
-picked up without any action. See [JDBC Agent Directory § Schema](adapters/jdbc-directory.md#schema).
+picked up without any action. The location was `classpath:db/migration/agenor-hitl` up to
+0.37.0, and the old one still works with a warning until 1.0.0. See
+[JDBC Agent Directory § Schema](adapters/jdbc-directory.md#schema).
 
 ```sql
 CREATE TABLE agenor_hitl_requests (
