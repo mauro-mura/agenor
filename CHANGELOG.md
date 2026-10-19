@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Spring Boot starter puts Redis messaging and a JDBC directory in the same runtime.**
+  Each backend had its own runtime factory, and only one could win. With
+  `agenor.messaging.provider=redis` and `agenor.directory.provider=jdbc` the JDBC one won, so the
+  runtime kept the in-memory dispatcher. Agents were then advertised with a blank `node_id` and
+  transport `local`, and a message to an agent on another node was lost with no error and no
+  warning. The starter now builds a single runtime, and each backend contributes its part.
+  `docs/spring-boot-starter.md` § More than one node shows the configuration, and
+  `StarterTwoNodeRedisJdbcIT` covers it with two nodes on Valkey.
+
+  Migration: none. An application that declares its own `AgenorRuntime` bean is not affected.
+
 - **The startup agent summary reports what each agent advertises.** It read type and
   capabilities from `@Agent`, so an agent that declares its capabilities at runtime was logged
   with `Capabilities: []` while its directory row held them. The summary now reads the directory

@@ -139,6 +139,33 @@ agenor:
       password: ${DB_PASSWORD}
 ```
 
+### More than one node
+
+A deployment across several JVMs needs both backends: Redis to carry messages between nodes,
+and a shared JDBC directory so that each node can find which node owns an agent. Set both
+providers; the starter builds one runtime with both:
+
+```yaml
+agenor:
+  messaging:
+    provider: redis
+    redis:
+      uri: redis://localhost:6379
+  directory:
+    provider: jdbc
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/mydb
+      username: agenor
+      password: ${DB_PASSWORD}
+```
+
+Every node uses the same Redis URI, the same JDBC URL and the same `consumer-group-prefix`.
+The starter generates a node id per JVM, and there is no property to set it. Each agent is
+advertised in `agenor_agents` under that id with `endpoint_transport_type = redis`. A row with a
+blank `node_id` or transport `local` means messages to that agent from another node are lost
+without an error. [Distributed quick start](distributed-quick-start.md) shows the same setup
+built by hand, with a fixed node id per node.
+
 ### `agenor.llm`
 
 | Key | Default | Description |

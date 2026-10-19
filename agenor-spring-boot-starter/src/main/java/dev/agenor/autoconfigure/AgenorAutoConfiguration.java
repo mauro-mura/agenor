@@ -54,13 +54,18 @@ public class AgenorAutoConfiguration {
      * {@link AgenorRuntime.Builder#service}. If no provider bean is present (the default when
      * {@code agenor.llm.provider=none}), the runtime starts without LLM support.
      *
-     * <p>The runtime builds its own default messaging and directory components internally
-     * ({@code InMemoryMessageDispatcher} and {@code InMemoryAgentDirectory}). These are
-     * exposed as individual capability beans by the methods below so that application code
-     * can inject the narrowest interface it needs. To replace a capability with a custom
-     * implementation, declare your own {@link AgenorRuntime} bean and configure it via
-     * {@link AgenorRuntime.Builder} directly — user-declared beans always win due to
-     * {@code @ConditionalOnMissingBean}.
+     * <p>This is the only runtime factory. Optional backends — Redis messaging
+     * ({@link RedisMessagingConfiguration}) and the JDBC directory
+     * ({@link JdbcDirectoryConfiguration}) — each contribute their components through a
+     * {@link RuntimeBuilderContributor}, so any combination of them ends up in the same
+     * runtime. Whatever no backend replaces stays the runtime's in-memory default
+     * ({@code InMemoryMessageDispatcher}, {@code InMemoryAgentDirectory}).
+     *
+     * <p>The runtime's components are exposed as individual capability beans by the methods
+     * below so that application code can inject the narrowest interface it needs. To replace a
+     * capability with a custom implementation, declare your own {@link AgenorRuntime} bean and
+     * configure it via {@link AgenorRuntime.Builder} directly — user-declared beans always win
+     * due to {@code @ConditionalOnMissingBean}.
      *
      * <p>Lifecycle is handled separately by {@link #AgenorRuntimeLifecycle}.
      */
@@ -70,7 +75,8 @@ public class AgenorAutoConfiguration {
     public AgenorRuntime AgenorRuntime(AgenorProperties props,
                                        ObjectProvider<LLMProvider> llmProvider,
                                        ObjectProvider<AgenorTelemetry> telemetry,
-                                       ObjectProvider<ApprovalGate> approvalGate) {
+                                       ObjectProvider<ApprovalGate> approvalGate,
+                                       ObjectProvider<RuntimeBuilderContributor> contributors) {
         AgenorRuntime.Builder builder = AgenorRuntime.builder()
                 .withConfiguration(props.toAgenorConfiguration());
 
@@ -84,8 +90,9 @@ public class AgenorAutoConfiguration {
             builder.approvalGate(gate);
         });
         applyHeartbeatInterval(builder, props);
+        contributors.orderedStream().forEach(contributor -> contributor.contribute(builder));
 
-        log.debug("Building AgenorRuntime (in-memory messaging): runtime.name={}", props.runtime().name());
+        log.debug("Building AgenorRuntime: runtime.name={}", props.runtime().name());
         return builder.build();
     }
 
@@ -408,9 +415,9 @@ public class AgenorAutoConfiguration {
      *   <li>{@code agenor.messaging.provider=redis} is configured</li>
      * </ul>
      *
-     * <p>The {@link MessageDispatcher} bean is picked up by the {@link #AgenorRuntime}
-     * bean via {@code ObjectProvider}, so the runtime uses Redis Streams for all agent
-     * messaging without any changes to its internals.
+     * <p>The {@link MessageDispatcher} bean reaches the {@link #AgenorRuntime} bean through a
+     * {@link RuntimeBuilderContributor}, so the runtime uses Redis Streams for all agent
+     * messaging — alongside a JDBC directory when one is configured too.
      *
      * <p>The factory is closed automatically on context shutdown via {@code destroyMethod}.
      *
@@ -455,30 +462,19 @@ public class AgenorAutoConfiguration {
         }
 
         /**
-         * Creates the {@link AgenorRuntime} wired with the Redis {@link MessageDispatcher}.
+         * Hands the Redis {@link MessageDispatcher} to the runtime, which then stamps the
+         * dispatcher's node endpoint on every agent it registers.
          *
          * <p>No cycle: {@code redisMessageDispatcher} depends only on
          * {@code RedisMessagingFactory} and a lazy {@code ObjectProvider<AgentResolver>}
          * (resolved at {@code sendTo()} call time, never at construction time).
          */
-        @SuppressWarnings("deprecation")
-        @Bean("AgenorRuntime")
-        @ConditionalOnMissingBean(AgenorRuntime.class)
-        public AgenorRuntime AgenorRuntimeWithRedis(
-                AgenorProperties props,
-                MessageDispatcher redisMessageDispatcher,
-                ObjectProvider<LLMProvider> llmProvider,
-                ObjectProvider<AgenorTelemetry> telemetry,
-                ObjectProvider<ApprovalGate> approvalGate) {
-            var builder = AgenorRuntime.builder()
-                    .withConfiguration(props.toAgenorConfiguration())
-                    .messageDispatcher(redisMessageDispatcher);
-            llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
-            builder.telemetry(telemetry.getIfAvailable(AgenorTelemetry::noop));
-            approvalGate.ifAvailable(builder::approvalGate);
-            applyHeartbeatInterval(builder, props);
-            log.debug("Building AgenorRuntime (Redis messaging): runtime.name={}", props.runtime().name());
-            return builder.build();
+        @Bean
+        RuntimeBuilderContributor redisRuntimeContributor(MessageDispatcher redisMessageDispatcher) {
+            return builder -> {
+                log.debug("Wiring Redis MessageDispatcher into AgenorRuntime");
+                builder.messageDispatcher(redisMessageDispatcher);
+            };
         }
     }
 
@@ -531,7 +527,7 @@ public class AgenorAutoConfiguration {
          * <p>{@link #AgenorAgentDirectory} exposes the runtime's directory, and
          * {@code AgentDirectory} extends all four capability interfaces — so it answers to
          * {@code AgentRegistry} as well. With a second registry bean present, every injection
-         * by capability type has two candidates, and the runtime factory below cannot be
+         * by capability type has two candidates, and the runtime contributor below cannot be
          * constructed at all: the context fails to refresh with
          * {@code NoUniqueBeanDefinitionException}. Marking the JDBC beans primary settles it
          * in favour of the backend the user actually asked for.
@@ -619,35 +615,25 @@ public class AgenorAutoConfiguration {
         }
 
         /**
-         * Creates the {@link AgenorRuntime} wired with JDBC directory capabilities.
+         * Hands the JDBC directory capabilities to the runtime.
          *
          * <p>Registry, discovery, and resolver are backed by the JDBC store. Presence joins
          * them only when {@code agenor.directory.presence=jdbc}; otherwise it stays in-memory.
          */
-        @Bean("AgenorRuntime")
-        @ConditionalOnMissingBean(AgenorRuntime.class)
-        public AgenorRuntime AgenorRuntimeWithJdbcDirectory(
-                AgenorProperties props,
+        @Bean
+        RuntimeBuilderContributor jdbcDirectoryRuntimeContributor(
                 dev.agenor.core.directory.AgentRegistry agentRegistry,
                 dev.agenor.core.directory.AgentDiscovery agentDiscovery,
                 dev.agenor.core.directory.AgentResolver agentResolver,
                 ObjectProvider<dev.agenor.adapters.persistence.directory.JdbcAgentPresence>
-                        jdbcAgentPresence,
-                ObjectProvider<LLMProvider> llmProvider,
-                ObjectProvider<AgenorTelemetry> telemetry,
-                ObjectProvider<ApprovalGate> approvalGate) {
-            var builder = AgenorRuntime.builder()
-                    .withConfiguration(props.toAgenorConfiguration())
-                    .agentRegistry(agentRegistry)
-                    .agentDiscovery(agentDiscovery)
-                    .agentResolver(agentResolver);
-            jdbcAgentPresence.ifAvailable(builder::agentPresence);
-            applyHeartbeatInterval(builder, props);
-            llmProvider.ifAvailable(p -> builder.service(LLMProvider.class, p));
-            builder.telemetry(telemetry.getIfAvailable(AgenorTelemetry::noop));
-            approvalGate.ifAvailable(builder::approvalGate);
-            log.debug("Building AgenorRuntime (JDBC directory): runtime.name={}", props.runtime().name());
-            return builder.build();
+                        jdbcAgentPresence) {
+            return builder -> {
+                log.debug("Wiring JDBC directory capabilities into AgenorRuntime");
+                builder.agentRegistry(agentRegistry)
+                        .agentDiscovery(agentDiscovery)
+                        .agentResolver(agentResolver);
+                jdbcAgentPresence.ifAvailable(builder::agentPresence);
+            };
         }
     }
 
