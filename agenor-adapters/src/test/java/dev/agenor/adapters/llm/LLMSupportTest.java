@@ -182,6 +182,39 @@ class LLMSupportTest {
     }
 
     @Test
+    void wrap_shouldMarkAnUnreachableDaemonAsRetryable() {
+        // How LangChain4j's Ollama model reports a daemon that is not running: no
+        // RetriableException/NonRetriableException in the chain, only the ConnectException.
+        var wrapped = LLMSupport.wrap(PROVIDER, MODEL,
+                new RuntimeException(new java.net.ConnectException("Connection refused")));
+        assertThat(wrapped.getErrorType()).isEqualTo(ErrorType.NETWORK);
+        assertThat(wrapped.isRetryable()).isTrue();
+    }
+
+    @Test
+    void wrap_shouldMarkPlainIOExceptionAsRetryable() {
+        assertThat(LLMSupport.wrap(PROVIDER, MODEL, new IOException("connection reset"))
+                .isRetryable()).isTrue();
+    }
+
+    @Test
+    void wrap_shouldMarkTimeoutAsRetryable() {
+        // TimeoutException extends RetriableException.
+        assertThat(LLMSupport.wrap(PROVIDER, MODEL, new TimeoutException("timed out"))
+                .isRetryable()).isTrue();
+    }
+
+    @Test
+    void wrap_shouldLeaveAnUnresolvableServerNotRetryable() {
+        // UnresolvedModelServerException extends NonRetriableException: a host that does not
+        // resolve is a configuration error, and LangChain4j's own verdict stands.
+        var wrapped = LLMSupport.wrap(PROVIDER, MODEL,
+                new UnresolvedModelServerException("cannot reach host"));
+        assertThat(wrapped.getErrorType()).isEqualTo(ErrorType.NETWORK);
+        assertThat(wrapped.isRetryable()).isFalse();
+    }
+
+    @Test
     void wrap_shouldMarkUnrecognisedExceptionAsNotRetryable() {
         assertThat(LLMSupport.wrap(PROVIDER, MODEL, new RuntimeException("who knows"))
                 .isRetryable()).isFalse();

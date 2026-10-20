@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`LLMException.isRetryable()` is `true` when the LLM server cannot be reached.** A stopped
+  Ollama daemon surfaced as `NETWORK` with `isRetryable() == false`, so code following
+  `docs/llm-integration.md` gave up on a failure that clears once the daemon is up. A plain
+  `IOException` in the cause chain is now retryable. Where LangChain4j marks the exception
+  itself, as for a host that does not resolve, its verdict still stands. The page now says that
+  the client has already retried before the exception arrives. Found by an external
+  application on 0.37.0.
+
 - **An approval payload reads the same from every gate.** `JdbcApprovalGate.getPendingRequests()`
   returned each payload as the JSON it stored, where the in-memory gate returned the object, so
   code tested in memory threw on JDBC. A `Modified` decision submitted on another node reached

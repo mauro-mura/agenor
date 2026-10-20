@@ -524,8 +524,15 @@ provider.chat(request).exceptionally(ex -> {
 ### Retry pattern
 
 `isRetryable()` is the retry decision already made — it comes from the same classification as
-`ErrorType`, not from re-deriving it per type: a `RATE_LIMIT` or a 5xx `SERVER_ERROR` is
-retryable, an `AUTHENTICATION` failure or a plain 4xx is not. Wrap the provider call in a
+`ErrorType`, not from re-deriving it per type: a `RATE_LIMIT`, a 5xx `SERVER_ERROR` or a
+`NETWORK` failure is retryable, an `AUTHENTICATION` failure or a plain 4xx is not. A daemon
+that is not running, such as a stopped Ollama, is `NETWORK` and retryable. One `NETWORK` case is
+not: a host that does not resolve, which LangChain4j reports as a configuration error.
+
+The exception reaches you after the LangChain4j client has made its own attempts. Agenor does
+not set `maxRetries`, so the client's default applies, and they show only as `WARN` lines in
+the log. Your retry is a second layer on top: space it in seconds or minutes, not milliseconds.
+Wrap the provider call in a
 resilience library — Resilience4j and Failsafe both take a predicate over the thrown exception —
 and let it own the back-off:
 
