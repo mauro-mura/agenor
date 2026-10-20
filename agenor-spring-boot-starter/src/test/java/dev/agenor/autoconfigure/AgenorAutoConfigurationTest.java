@@ -6,6 +6,7 @@ import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.runtime.AgenorRuntime;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
@@ -129,6 +130,49 @@ class AgenorAutoConfigurationTest {
     @Test
     void inMemoryApprovalGateIsDefaultWhenHitlProviderNotSet() {
         runner.run(ctx -> assertThat(ctx).doesNotHaveBean(ApprovalGate.class));
+    }
+
+    // --- a provider named without its module fails startup ---
+
+    @Test
+    void startupFailsWhenJdbcDirectoryIsConfiguredWithoutThePersistenceModule() {
+        runner.withClassLoader(new FilteredClassLoader("dev.agenor.adapters.persistence"))
+                .withPropertyValues("agenor.directory.provider=jdbc",
+                        "agenor.directory.jdbc.url=jdbc:h2:mem:missing_module;DB_CLOSE_DELAY=-1")
+                .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+                        .hasMessageContaining("agenor.directory.provider=jdbc requires 'agenor-adapters-persistence'"));
+    }
+
+    @Test
+    void startupFailsWhenJdbcHitlIsConfiguredWithoutThePersistenceModule() {
+        runner.withClassLoader(new FilteredClassLoader("dev.agenor.adapters.persistence"))
+                .withPropertyValues("agenor.hitl.provider=jdbc")
+                .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+                        .hasMessageContaining("agenor.hitl.provider=jdbc requires 'agenor-adapters-persistence'"));
+    }
+
+    @Test
+    void startupFailsWhenATelemetryExporterIsConfiguredWithoutTheAdapters() {
+        runner.withClassLoader(new FilteredClassLoader("dev.agenor.adapters"))
+                .withPropertyValues("agenor.telemetry.exporter=otlp-http")
+                .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+                        .hasMessageContaining("agenor.telemetry.exporter=otlp-http requires 'agenor-adapters'"));
+    }
+
+    @Test
+    void bothJdbcProvidersAreNamedWhenThePersistenceModuleIsMissing() {
+        runner.withClassLoader(new FilteredClassLoader("dev.agenor.adapters.persistence"))
+                .withPropertyValues("agenor.directory.provider=jdbc", "agenor.hitl.provider=jdbc",
+                        "agenor.directory.jdbc.url=jdbc:h2:mem:missing_both;DB_CLOSE_DELAY=-1")
+                .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+                        .hasMessageContaining("agenor.directory.provider=jdbc and agenor.hitl.provider=jdbc"));
+    }
+
+    @Test
+    void defaultsAndDisabledTelemetryNeedNoModule() {
+        runner.withClassLoader(new FilteredClassLoader("dev.agenor.adapters", "io.lettuce"))
+                .withPropertyValues("agenor.telemetry.exporter=otlp-http", "agenor.telemetry.enabled=false")
+                .run(ctx -> assertThat(ctx).hasNotFailed());
     }
 
     // --- test support configs ---

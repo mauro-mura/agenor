@@ -93,7 +93,12 @@ the starter that is not optional at the dependency level — see the exclusion n
 | `redis.pending-entries-timeout-ms` | `30000` | Idle time before redelivery of pending entries (ms) |
 | `redis.max-delivery-attempts` | `3` | Attempts before moving to dead-letter |
 
-The `redis.*` sub-section is only read when `provider=redis` and `agenor-adapters` is on the classpath.
+The `redis.*` sub-section is only read when `provider=redis`. That setting needs `agenor-adapters`
+and `lettuce-core` on the classpath, and startup fails naming the missing artifact if one is
+absent. The same holds for `agenor.directory.provider=jdbc` and `agenor.hitl.provider=jdbc`
+(`agenor-adapters-persistence`), `agenor.llm.provider` and `agenor.telemetry.exporter`
+(`agenor-adapters`). Up to 0.37.0 only the LLM provider failed; the others fell back to their
+in-memory default with no error.
 `@ConditionalOnMissingBean` allows providing a custom `RedisMessagingFactory` bean to override all defaults.
 
 **Dead letters exist on both providers, and only their reach differs.** The two `redis.*` keys
