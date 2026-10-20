@@ -84,12 +84,16 @@ new PiiRedactionGuardrail(EnumSet.of(PiiType.EMAIL, PiiType.IBAN))
 | `PiiType` | Pattern |
 |-----------|---------|
 | `EMAIL` | Standard email addresses |
-| `PHONE_IT` | Italian mobile numbers (+39 prefix optional) |
+| `PHONE_IT` | Italian mobile numbers (+39 prefix optional), compact or in groups (`347 123 4567`) |
 | `CODICE_FISCALE` | 16-char Italian fiscal code (case-insensitive) |
 | `IBAN` | International Bank Account Number |
 | `CREDIT_CARD` | 13–19 digit card numbers (spaces/dashes optional) |
 
 Returns `Modified(redactedContent)` if at least one match is found, `Passed` otherwise.
+
+Nothing outside this table is detected: landline numbers, VAT numbers (partita IVA), postal
+addresses and personal names pass through unchanged. If customer text can carry them and the
+provider is not local, add your own `InputGuardrail` for them.
 
 ---
 
