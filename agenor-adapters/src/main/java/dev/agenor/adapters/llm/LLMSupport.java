@@ -221,7 +221,9 @@ public final class LLMSupport {
      * Whether retrying the same request later has a chance of succeeding, read from
      * LangChain4j's own {@link RetriableException}/{@link NonRetriableException} split where
      * the thrown type says so, and from the status code for the plain {@link HttpException}
-     * that split does not cover.
+     * that split does not cover. A plain {@link java.io.IOException} is not covered either: it
+     * is how an Ollama daemon that is not running surfaces, as a {@code ConnectException}
+     * under a bare {@code RuntimeException}, and the next attempt can succeed once it is up.
      */
     private static boolean isRetryable(Throwable t) {
         for (var c = t; c != null; c = c.getCause()) {
@@ -230,6 +232,7 @@ public final class LLMSupport {
             if (c instanceof HttpException httpEx) {
                 return httpEx.statusCode() == 429 || httpEx.statusCode() >= 500;
             }
+            if (c instanceof java.io.IOException) return true;
             if (c.getCause() == c) break;
         }
         return false;
