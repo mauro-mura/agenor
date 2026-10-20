@@ -147,9 +147,8 @@ public class JdbcAgentPresence implements AgentPresence {
                 .startSpan();
         return helper.<AgentStatus>query(conn -> {
             var row = helper.queryOne(conn, SELECT_STATUS, List.of(agentId), rs -> {
-                var lastSeen = rs.getTimestamp("last_seen");
                 return new StatusRow(AgentStatus.valueOf(rs.getString("status")),
-                        lastSeen != null ? lastSeen.toInstant() : null);
+                        JdbcHelper.readInstant(rs, "last_seen"));
             });
             if (row == null) {
                 return AgentStatus.UNKNOWN;

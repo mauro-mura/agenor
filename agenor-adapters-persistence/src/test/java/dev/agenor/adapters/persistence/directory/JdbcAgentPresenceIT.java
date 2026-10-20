@@ -1,5 +1,6 @@
 package dev.agenor.adapters.persistence.directory;
 
+import dev.agenor.adapters.persistence.JdbcHelper;
 import dev.agenor.core.AgentDescriptor;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.AgentStatus;
@@ -101,9 +102,9 @@ class JdbcAgentPresenceIT {
         var after = Instant.now();
 
         // Then the value PostgreSQL stored maps back to that moment. The column is a
-        // TIMESTAMP without time zone and the driver converts through the JVM's default
-        // zone in both directions: a mismatch would shift last_seen by whole hours, and
-        // every agent would read as permanently fresh or permanently stale.
+        // TIMESTAMP without time zone, written and read as UTC: a mismatch would shift
+        // last_seen by whole hours, and every agent would read as permanently fresh or
+        // permanently stale. Nodes in different zones: TimestampTimeZoneIT.
         var stored = readLastSeen("round-trip");
         assertThat(stored).isBetween(before.minusMillis(1000), after.plusMillis(1000));
     }
@@ -290,7 +291,7 @@ class JdbcAgentPresenceIT {
             stmt.setString(1, agentId);
             try (var rs = stmt.executeQuery()) {
                 assertThat(rs.next()).as("row for %s", agentId).isTrue();
-                return rs.getTimestamp("last_seen").toInstant();
+                return JdbcHelper.readInstant(rs, "last_seen");
             }
         }
     }

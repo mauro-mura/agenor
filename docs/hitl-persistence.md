@@ -109,6 +109,10 @@ CREATE TABLE agenor_hitl_requests (
 );
 ```
 
+The `TIMESTAMP` columns hold UTC wall-clock times, here and in `agenor_agents`, whatever the
+time zone of the node that wrote them. Read them as UTC if you query the table yourself; in
+JDBC, `rs.getTimestamp(column, Calendar.getInstance(TimeZone.getTimeZone("UTC")))`.
+
 ### Status values
 
 | Status     | Meaning                                            |
