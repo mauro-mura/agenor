@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/guardrails.md` says where a guardrail chain runs.** The page called `agent.ask(...)`,
+  which exists on no Agenor type, and the `LLMAgent.setGuardrailChain` Javadoc said the chain ran
+  "around every LLM call". `LLMAgent` makes no LLM call of its own, so a chain that was set but
+  never called let customer text reach the provider unredacted. The page and the Javadoc now
+  show the two hooks the agent calls, and `GuardrailChain.applyInput` for code outside an
+  `LLMAgent`. Found by an external application on 0.37.0.
+
 - **`PiiRedactionGuardrail` redacts an Italian mobile written in groups.** `PHONE_IT` allowed
   one separator after the `3xx` prefix, so `347 123 4567`, the most common way to write the
   number, reached the LLM unchanged. Groups of 3-3-4, 3-4-3 and 3-3-3 digits are now matched,
