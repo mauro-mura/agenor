@@ -234,6 +234,31 @@ public MyLlmAgent()                     { this.provider = null; }   // fallback
 `AgentFactory` prefers the most-parameter constructor. If `LLMProvider` is not available,
 it falls back to the no-arg constructor.
 
+### Giving an agent anything else
+
+A discovered agent's constructor can receive the `LLMProvider` and the runtime's own services
+(`MessageDispatcher`, `AgentDirectory`, `BehaviorScheduler`, `MemoryStore`, `AgentContext`), and
+nothing else. The `ApprovalGate` bean is wired into the runtime for `@RequiresApproval`, not
+into constructors, and the application's own beans are not seen at all.
+
+For an agent that needs either, leave it out of `agenor.agents.base-package`, build it as a
+Spring bean, and register it with the runtime. The starter starts the runtime after the
+context's beans are created, so an agent registered from a `@Bean` method starts with the
+others:
+
+```java
+@Configuration
+class AgentConfig {
+
+    @Bean
+    ReviewAgent reviewAgent(AgenorRuntime runtime, ApprovalGate approvals, TicketStore tickets) {
+        var agent = new ReviewAgent(approvals, tickets);
+        runtime.registerAgent(agent);
+        return agent;
+    }
+}
+```
+
 ## Lifecycle
 
 The starter uses `SmartLifecycle` with `phase = Integer.MAX_VALUE - 1`. This means:
@@ -316,6 +341,25 @@ public AgenorRuntime agenorRuntime() {
 The starter targets Spring Boot **4.0.x** (adopted in 0.18.0, see `ADR-016`).
 The auto-configuration API (`AutoConfiguration.imports`, `@ConditionalOnMissingBean`, etc.)
 is stable across Spring Boot 4.x versions.
+
+### Versions Spring Boot replaces
+
+An application whose parent is `spring-boot-starter-parent` gets Spring Boot's versions of the
+libraries both manage, not Agenor's. Up to Boot 4.0.8, two of them are below what Agenor is
+built against, and need setting back:
+
+```xml
+<properties>
+    <!-- Boot 4.0.x manages 2.21.x; LangChain4j in agenor-adapters needs 2.22 -->
+    <jackson-2-bom.version>2.22.1</jackson-2-bom.version>
+    <!-- Only with Redis messaging. Boot 4.0.x manages 6.8.2 -->
+    <lettuce.version>7.5.1.RELEASE</lettuce.version>
+</properties>
+```
+
+Flyway and HikariCP go the other way: Boot manages a major version above the persistence
+module's (Flyway 11, HikariCP 7). Leave them to Boot: the starter's own tests run on Boot's
+versions.
 
 ## See Also
 

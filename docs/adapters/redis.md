@@ -163,6 +163,13 @@ topic each receive a copy even within the same JVM.
 `subscribeRecipient` also starts a node-stream consumer loop on the first call (lazy,
 thread-safe double-checked locking). Subsequent registrations share the same loop.
 
+**A test on one node does not test Redis point-to-point.** When sender and recipient share a
+runtime, the local fast-path delivers without a Redis hop, so a direct message or a dialogue
+passes the same way it would in memory. Only topics go through Redis on a single node. To verify
+the transport, put the two agents in two runtimes, each with its own `RedisMessagingFactory` and
+a directory both can read. `CrossRuntimeDialogueIT` in `agenor-examples` does this with two
+runtimes in one JVM, and `StarterTwoNodeRedisJdbcIT` does it with two Spring contexts.
+
 **A node stream is a mailbox, not a broadcast.** Its consumer group is created at offset `0`,
 when `RedisMessagingFactory.build()` constructs the transport — before any agent has subscribed
 and independently of whether one ever does. A message addressed to an agent on a node that is
