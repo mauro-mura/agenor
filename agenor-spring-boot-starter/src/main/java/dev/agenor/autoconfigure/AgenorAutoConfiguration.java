@@ -770,6 +770,79 @@ public class AgenorAutoConfiguration {
     }
 
     /**
+     * Fail-fast guard: active only when Lettuce is absent. The bean method throws if
+     * {@code agenor.messaging.provider=redis}: without it the Redis configuration was skipped and
+     * the runtime kept the in-memory dispatcher, so every node started alone with no error.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnMissingClass("io.lettuce.core.RedisClient")
+    static class RedisMissingLettuceGuard {
+
+        @Bean
+        public String AgenorRedisLettuceMissingGuard(AgenorProperties props) {
+            if ("redis".equalsIgnoreCase(props.messaging().provider())) {
+                throw new IllegalStateException(
+                        "agenor.messaging.provider=redis requires 'lettuce-core' on the classpath. "
+                        + "Add <dependency><groupId>io.lettuce</groupId>"
+                        + "<artifactId>lettuce-core</artifactId></dependency> to your pom.xml,"
+                        + " at the version in docs/adapters/redis.md.");
+            }
+            return "redis-lettuce-guard-noop";
+        }
+    }
+
+    /**
+     * Fail-fast guard: active only when {@code agenor-adapters-persistence} is absent. The bean
+     * method throws if the directory or the HITL queue is set to {@code jdbc}: without it each
+     * stayed in memory with no error, and nothing survived a restart.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnMissingClass("dev.agenor.adapters.persistence.directory.JdbcAgentDirectory")
+    static class JdbcMissingPersistenceGuard {
+
+        @Bean
+        public String AgenorJdbcPersistenceMissingGuard(AgenorProperties props) {
+            var configured = new java.util.ArrayList<String>();
+            if ("jdbc".equalsIgnoreCase(props.directory().provider())) {
+                configured.add("agenor.directory.provider=jdbc");
+            }
+            if ("jdbc".equalsIgnoreCase(props.hitl().provider())) {
+                configured.add("agenor.hitl.provider=jdbc");
+            }
+            if (!configured.isEmpty()) {
+                throw new IllegalStateException(
+                        String.join(" and ", configured)
+                        + " requires 'agenor-adapters-persistence' on the classpath. "
+                        + "Add <dependency><groupId>dev.agenor</groupId>"
+                        + "<artifactId>agenor-adapters-persistence</artifactId></dependency> to your pom.xml.");
+            }
+            return "jdbc-persistence-guard-noop";
+        }
+    }
+
+    /**
+     * Fail-fast guard: active only when {@code agenor-adapters} is absent. The bean method throws
+     * if telemetry is enabled with an exporter other than {@code none}: without it the telemetry
+     * configuration was skipped and no span was exported, with no error.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnMissingClass("dev.agenor.adapters.telemetry.OtelTelemetryFactory")
+    static class TelemetryMissingAdaptersGuard {
+
+        @Bean
+        public String AgenorTelemetryAdaptersMissingGuard(AgenorProperties props) {
+            var t = props.telemetry();
+            if (t.enabled() && !"none".equalsIgnoreCase(t.exporter())) {
+                throw new IllegalStateException(
+                        "agenor.telemetry.exporter=" + t.exporter()
+                        + " requires 'agenor-adapters' and the OpenTelemetry SDK on the classpath."
+                        + " See docs/observability.md for the dependencies and their versions.");
+            }
+            return "telemetry-adapters-guard-noop";
+        }
+    }
+
+    /**
      * Fail-fast guard: active only when {@code agenor-runtime-scanning} is absent from the
      * classpath — which happens only when a consumer explicitly excludes it (the starter
      * declares it as a mandatory, non-optional dependency; see the starter's {@code pom.xml}

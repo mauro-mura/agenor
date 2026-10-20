@@ -56,17 +56,19 @@ class AgenorRedisMessagingAutoConfigurationTest {
     }
 
     // -------------------------------------------------------------------------
-    // No Redis beans when provider=redis but Lettuce is absent
+    // provider=redis without Lettuce fails startup instead of staying in memory
     // -------------------------------------------------------------------------
 
     @Test
-    void redisFactoryAbsentWhenLettuceNotOnClasspath() {
+    void startupFailsWhenRedisIsConfiguredButLettuceIsAbsent() {
+        // Up to 0.37.0 the Redis configuration vanished and the runtime kept the in-memory
+        // dispatcher, so a multi-node application started as N unconnected single nodes
         runner
             .withClassLoader(new FilteredClassLoader("io.lettuce.core.RedisClient"))
             .withPropertyValues("agenor.messaging.provider=redis")
-            .run(ctx ->
-                assertThat(ctx).doesNotHaveBean(
-                        RedisMessagingFactory.class));
+            .run(ctx -> assertThat(ctx.getStartupFailure())
+                    .rootCause()
+                    .hasMessageContaining("agenor.messaging.provider=redis requires 'lettuce-core'"));
     }
 
     // -------------------------------------------------------------------------

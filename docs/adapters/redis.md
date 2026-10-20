@@ -366,6 +366,9 @@ Add the starter and Lettuce to your POM:
 </dependency>
 ```
 
+Without Lettuce, `provider: redis` fails startup with a message naming `lettuce-core`. Up to
+0.37.0 the application started on the in-memory dispatcher instead, with no error.
+
 Then set the provider in `application.yml`:
 
 ```yaml

@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fails with an `AgentNotFoundException` that names the endpoint, and the message is
   dead-lettered. Found by two external applications on 0.37.0.
 
+- **The starter fails startup when a configured provider's module is missing.** With
+  `agenor.messaging.provider=redis` and no Lettuce, the Redis configuration was skipped and the
+  runtime kept the in-memory dispatcher: each node started alone, with no error. A JDBC directory
+  or HITL queue without `agenor-adapters-persistence`, and a telemetry exporter without
+  `agenor-adapters`, fell back the same way. Each now fails with a message naming the artifact,
+  as `agenor.llm.provider` already did. Found by an external application on 0.37.0.
+
+  Migration: an application that sets one of these properties without the module stops
+  starting. Add the module, or remove the property to keep the in-memory default.
+
 - **Nodes in different time zones agree on `last_seen` and on an approval's deadline.** The
   JDBC directory and HITL queue store `TIMESTAMP` columns without a zone, and converted them
   with each JVM's default zone. A node nine hours ahead of the one that wrote a row read it as
