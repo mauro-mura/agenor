@@ -126,7 +126,7 @@ public class HitlExample {
                                     case ApprovalDecision.Rejected r ->
                                         log.warn("❌ REJECTED  — {} | reason: {}", transfer.id(), r.reason());
                                     case ApprovalDecision.Modified m -> {
-                                        WireTransfer revised = (WireTransfer) m.newPayload();
+                                        WireTransfer revised = m.newPayloadAs(WireTransfer.class);
                                         log.info("✏️  MODIFIED  — executing revised {}", revised);
                                         executeTransfer(revised);
                                     }
@@ -177,9 +177,7 @@ public class HitlExample {
             // Simulate operator reaction time: decide after the first poll finds requests
             for (dev.agenor.core.hitl.ApprovalRequest req : pending) {
                 String id = req.requestId();
-                Object payload = req.payload();
-
-                if (!(payload instanceof WireTransfer transfer)) continue;
+                WireTransfer transfer = req.payloadAs(WireTransfer.class);
 
                 log.info("Operator reviewing: {} (€ {})", transfer.id(), transfer.amount());
 

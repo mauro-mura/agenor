@@ -140,6 +140,69 @@ class HitlCoreTypesTest {
     }
 
     // =========================================================================
+    // payloadAs / newPayloadAs
+    // =========================================================================
+
+    record Draft(String ticketId, String text) {}
+
+    @Nested
+    @DisplayName("payloadAs / newPayloadAs")
+    class PayloadConversionTests {
+
+        private ApprovalRequest withPayload(Object payload) {
+            return ApprovalRequest.of("agent", "send-reply", payload, Duration.ofMinutes(1));
+        }
+
+        @Test
+        @DisplayName("an in-memory payload is returned as the same reference")
+        void sameReference() {
+            var draft = new Draft("T-1", "Hello");
+            assertThat(withPayload(draft).payloadAs(Draft.class)).isSameAs(draft);
+        }
+
+        @Test
+        @DisplayName("the JSON a persistent gate stored is read back as the original type")
+        void jsonString_converted() {
+            var req = withPayload("{\"ticketId\":\"T-1\",\"text\":\"Hello\"}");
+            assertThat(req.payloadAs(Draft.class)).isEqualTo(new Draft("T-1", "Hello"));
+        }
+
+        @Test
+        @DisplayName("a payload that crossed a transport as a Map is converted")
+        void map_converted() {
+            var req = withPayload(Map.of("ticketId", "T-1", "text", "Hello"));
+            assertThat(req.payloadAs(Draft.class)).isEqualTo(new Draft("T-1", "Hello"));
+        }
+
+        @Test
+        @DisplayName("a String payload read as String is returned unparsed")
+        void string_asString() {
+            assertThat(withPayload("€500").payloadAs(String.class)).isEqualTo("€500");
+        }
+
+        @Test
+        @DisplayName("a String that is not JSON, read as another type, throws")
+        void nonJsonString_throws() {
+            assertThatThrownBy(() -> withPayload("€500").payloadAs(Draft.class))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("not JSON");
+        }
+
+        @Test
+        @DisplayName("a null payload reads as null")
+        void null_isNull() {
+            assertThat(withPayload(null).payloadAs(Draft.class)).isNull();
+        }
+
+        @Test
+        @DisplayName("Modified.newPayloadAs converts the JSON a decision crossed nodes as")
+        void modified_jsonString_converted() {
+            var modified = new ApprovalDecision.Modified("{\"ticketId\":\"T-1\",\"text\":\"Hi\"}");
+            assertThat(modified.newPayloadAs(Draft.class)).isEqualTo(new Draft("T-1", "Hi"));
+        }
+    }
+
+    // =========================================================================
     // ApprovalTimeoutException
     // =========================================================================
 

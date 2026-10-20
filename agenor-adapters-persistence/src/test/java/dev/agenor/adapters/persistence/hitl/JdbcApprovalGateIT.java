@@ -163,6 +163,25 @@ class JdbcApprovalGateIT {
         }
     }
 
+    record Draft(String ticketId, String text) {}
+
+    @Test
+    @DisplayName("a MODIFIED decision submitted on another node is read back with newPayloadAs")
+    void modifiedOnAnotherNode_readWithNewPayloadAs() throws Exception {
+        var request = ApprovalRequest.of("agent-a", "send-reply", new Draft("T-1", "draft"),
+                Duration.ofMinutes(5));
+        var future = gate.requestApproval(request);
+
+        var revised = new Draft("T-1", "revised by the operator");
+        try (var gate2 = new JdbcApprovalGate(dataSource, jdbcUrl)) {
+            gate2.submit(request.requestId(), new ApprovalDecision.Modified(revised));
+        }
+
+        var decision = future.get(5, TimeUnit.SECONDS);
+        assertThat(decision).isInstanceOf(ApprovalDecision.Modified.class);
+        assertThat(((ApprovalDecision.Modified) decision).newPayloadAs(Draft.class)).isEqualTo(revised);
+    }
+
     // -------------------------------------------------------------------------
     // DB assertion helper
     // -------------------------------------------------------------------------

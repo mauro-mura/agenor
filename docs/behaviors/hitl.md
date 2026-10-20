@@ -63,7 +63,7 @@ var checkpoint = new HumanCheckpointBehavior<>(
         decision -> switch (decision) {
             case ApprovalDecision.Approved  a -> processPayment(paymentPayload);
             case ApprovalDecision.Rejected  r -> log.warn("Rejected: {}", r.reason());
-            case ApprovalDecision.Modified  m -> processPayment((Payment) m.newPayload());
+            case ApprovalDecision.Modified  m -> processPayment(m.newPayloadAs(Payment.class));
         }
 );
 agent.addBehavior(checkpoint);
@@ -114,7 +114,12 @@ service.modify(requestId, new Payment(originalId, reducedAmount));
 
 // Query pending requests (for dashboards / polling UIs)
 List<ApprovalRequest> pending = service.getPendingRequests();
+Payment payment = pending.get(0).payloadAs(Payment.class);
 ```
+
+Read payloads with `payloadAs(Class)` and `newPayloadAs(Class)` rather than casting
+`payload()`: a persistent gate returns the JSON it stored, and the cast that works in memory
+throws there (`docs/hitl-persistence.md` § Cross-node behaviour).
 
 ---
 
