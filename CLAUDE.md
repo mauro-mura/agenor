@@ -14,18 +14,20 @@ each checkable with a `grep`:
    documented. An example that exists only to demonstrate one API is not a use of it. Never add
    a third way to do something when two existing ways are unused.
 2. **Write for the other transport.** Behaviour verified only against
-   `InMemoryMessageDispatcher` is not verified. This defect class has occurred three times.
+   `InMemoryMessageDispatcher` is not verified. This defect class has occurred four times; the
+   fourth (`f2a3527`) lost on Redis what the in-memory dispatcher dead-lettered.
 3. **Concept budget, measured by what leaves.** The number is
    `grep -r "forRemoval = true" --include="*.java" */src/main | wc -l`: the public surface
-   actually scheduled for removal, and it is **0** on `main`. This is not a freeze, and a release
-   may add types; but one that ships without moving this number means the census produced a
-   document instead of a decision.
+   actually scheduled for removal, and it is **4** on `main`: the `Models` enums of the three LLM
+   providers and `LLMMessage.function(String, String)`, scheduled in 0.36.0 for removal in
+   1.0.0. This is not a freeze, and a release may add types; but one that ships without moving
+   this number means the census produced a document instead of a decision.
 
 ### Reading that number
 
-**Zero is not a terminal state.** It means nothing is currently scheduled, not that nothing
-should ever be. The next entry earns its place from evidence, the way the paid ones did — not
-from a sweep looking for candidates.
+**Zero is not a terminal state.** When the count is zero, that means nothing is currently
+scheduled, not that nothing should ever be. The next entry earns its place from evidence, the
+way the paid ones did — not from a sweep looking for candidates.
 
 **Paying a deprecation lowers the count, and that is correct**: it measures surface still
 scheduled, not work done. Do not read a drop as a regression, and do not read a rise as progress
@@ -46,7 +48,7 @@ census itself, it runs on its own — in `build.yml` and in `bash tools/prefligh
 ### What the census cannot decide
 
 Run `bash tools/api-census.sh` (it writes to stdout — redirect it) for the per-type verdicts.
-**documented, unnamed** sits at 95 of 263 types across all nine modules that contain code — read
+**documented, unnamed** sits at 95 of 265 types across all nine modules that contain code — read
 it as a diagnostic, not an agenda. **dead surface** is at **0**.
 
 Applied to the types that differentiate Agenor from an LLM wrapper, both verdicts the census can
