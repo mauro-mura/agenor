@@ -1,12 +1,15 @@
 package dev.agenor.adapters.messaging.redis;
 
 import dev.agenor.core.AgentEndpoint;
+import dev.agenor.core.Message;
+import dev.agenor.core.exceptions.AgentNotFoundException;
 import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.directory.AgentResolver;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.MessageDispatcherContractTests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -19,6 +22,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Proves that {@link RedisMessageDispatcher} satisfies {@link MessageDispatcherContractTests} —
@@ -94,6 +100,30 @@ class RedisMessageDispatcherContractIT implements MessageDispatcherContractTests
     @Override
     public Duration deadLetterTimeout() {
         return Duration.ofSeconds(20);
+    }
+
+    /**
+     * Not part of the shared suite, because only a transport that crosses nodes can be handed an
+     * endpoint it cannot reach. Two applications on 0.37.0 hit it: a runtime without a Redis
+     * dispatcher advertised its agents as {@code nodeId="", transportType="local"}, and every
+     * message sent to them was written to a stream no consumer reads, with the send reported as
+     * a success.
+     */
+    @Test
+    @DisplayName("an endpoint without a node fails the send and is dead-lettered")
+    void endpointWithoutNodeIsNotSilentlyLost() {
+        var dispatcher = createDispatcher();
+        endpoints.put("unreachable", new AgentEndpoint("", "local", Map.of()));
+
+        var future = dispatcher.sendTo(Message.builder()
+                .senderId("sender").receiverId("unreachable").content("x").build());
+
+        assertThat(future).failsWithin(5, TimeUnit.SECONDS)
+                .withThrowableOfType(Exception.class)
+                .havingCause()
+                .isInstanceOf(AgentNotFoundException.class);
+        assertThat(deadLetters().recent(10)).singleElement()
+                .satisfies(dl -> assertThat(dl.recipientId()).isEqualTo("unreachable"));
     }
 
     private AgentResolver resolver() {

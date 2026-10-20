@@ -3,6 +3,8 @@ package dev.agenor.adapters.messaging.redis;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.Message;
 import dev.agenor.core.TransportEndpoint;
+import dev.agenor.core.deadletter.DeadLetter;
+import dev.agenor.core.deadletter.DeadLetterQueue;
 import dev.agenor.core.directory.AgentResolver;
 import dev.agenor.core.exceptions.AgentNotFoundException;
 import dev.agenor.core.messaging.Subscription;
@@ -15,6 +17,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -213,6 +217,46 @@ class RedisMessageDispatcherTest {
         }
 
         @Test
+        @DisplayName("fails and dead-letters, without writing to Redis, when the endpoint has no node")
+        void sendTo_remote_blankLocalEndpoint_failsAndDeadLetters() {
+            var deadLetters = new ArrayList<DeadLetter>();
+            var dlqDispatcher = new RedisMessageDispatcher(topicPublisher, messageTransport,
+                    () -> agentResolver, config, recordingQueue(deadLetters));
+            // What a runtime without a LocalEndpointProvider dispatcher advertises
+            when(agentResolver.resolveEndpoint("elsewhere"))
+                    .thenReturn(CompletableFuture.completedFuture(
+                            Optional.of(new AgentEndpoint("", "local", Map.of()))));
+
+            var msg = Message.builder().receiverId("elsewhere").content("x").build();
+            var future = dlqDispatcher.sendTo(msg);
+
+            assertThat(future).failsWithin(2, TimeUnit.SECONDS)
+                    .withThrowableOfType(Exception.class)
+                    .havingCause()
+                    .isInstanceOf(AgentNotFoundException.class)
+                    .withMessageContaining("transportType='local'");
+            verify(messageTransport, never()).send(any(), any());
+            assertThat(deadLetters).singleElement()
+                    .satisfies(dl -> assertThat(dl.recipientId()).isEqualTo("elsewhere"));
+        }
+
+        @Test
+        @DisplayName("fails when the endpoint names a node but another transport")
+        void sendTo_remote_foreignTransport_fails() {
+            when(agentResolver.resolveEndpoint("elsewhere"))
+                    .thenReturn(CompletableFuture.completedFuture(
+                            Optional.of(new AgentEndpoint("node-2", "local", Map.of()))));
+
+            var future = dispatcher.sendTo(Message.builder().receiverId("elsewhere").content("x").build());
+
+            assertThat(future).failsWithin(2, TimeUnit.SECONDS)
+                    .withThrowableOfType(Exception.class)
+                    .havingCause()
+                    .isInstanceOf(AgentNotFoundException.class);
+            verify(messageTransport, never()).send(any(), any());
+        }
+
+        @Test
         @DisplayName("fails with AgentNotFoundException when no resolver is configured")
         void sendTo_noResolver_fails() {
             var noResolverDispatcher = new RedisMessageDispatcher(
@@ -391,5 +435,12 @@ class RedisMessageDispatcherTest {
             verify(messageTransport).send(captor.capture(), any(Message.class));
             assertThat(captor.getValue().address()).isEqualTo("node-1");
         }
+    }
+
+    private static DeadLetterQueue recordingQueue(List<DeadLetter> sink) {
+        return new DeadLetterQueue() {
+            @Override public void record(DeadLetter deadLetter) { sink.add(deadLetter); }
+            @Override public List<DeadLetter> recent(int limit) { return List.copyOf(sink); }
+        };
     }
 }

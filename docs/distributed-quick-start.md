@@ -146,9 +146,10 @@ var endpoint = runtime.getAgentDirectory().resolveEndpoint("pricing-service").jo
 ```
 
 A blank `nodeId`, or `transportType = "local"`, means the owning node registered without
-advertising how to reach it. Messages sent to that agent will be written to a stream with no
-consumer and will disappear **without any exception** — `sendTo` even returns a successfully
-completed future. If you see this, the dispatcher is not implementing `LocalEndpointProvider`
+advertising how to reach it. A Redis node that sends to that agent fails the send with an
+`AgentNotFoundException` naming the endpoint, logs a WARN, and dead-letters the message. Up to
+0.37.0 the message was written to a stream with no consumer and disappeared without any
+exception. Either way, the owning node's dispatcher does not implement `LocalEndpointProvider`
 (only networked transports do; the in-memory one deliberately does not).
 
 Inspect the directory directly when in doubt:
