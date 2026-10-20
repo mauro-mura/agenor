@@ -155,6 +155,17 @@
             <version>2.0.2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Capability contract suites (ADR-028 D-6), held here against Redis for the runtime
+             pieces agenor-adapters cannot see. Version is explicit because the BOM manages the
+             main artifact only; the test-jar stays internal to the reactor. -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-core</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <!--
           Executable module: it needs a logging backend at run time. The parent declares
           Logback at test scope so that no consumer of the library inherits one, so an

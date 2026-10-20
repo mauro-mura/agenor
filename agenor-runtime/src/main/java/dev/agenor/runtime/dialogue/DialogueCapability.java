@@ -421,7 +421,8 @@ public class DialogueCapability {
      * @param targetAgentId the agent to send the REQUEST to
      * @param content       the request payload; any type the transport's codec can serialise
      * @return a future completing with the final reply, or failing with a
-     *         {@code TimeoutException} after 30 seconds
+     *         {@code TimeoutException} after 30 seconds; a REQUEST that cannot be sent, to an
+     *         agent that does not exist or cannot be reached, fails it at once with the cause
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content) {
         return request(targetAgentId, content, DEFAULT_TIMEOUT);
@@ -433,7 +434,8 @@ public class DialogueCapability {
      * @param targetAgentId the agent to send the REQUEST to
      * @param content       the request payload
      * @param timeout       how long to wait before the future fails
-     * @return a future completing with the final reply, or failing on timeout
+     * @return a future completing with the final reply, or failing on timeout, or at once
+     *         when the REQUEST cannot be sent
      * @see #request(String, Object)
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content, Duration timeout) {
@@ -445,7 +447,8 @@ public class DialogueCapability {
      *
      * <p>QUERY expects a single {@code INFORM} reply; unlike REQUEST it does not
      * produce an intermediate AGREE, so the future typically resolves with the result.
-     * The future fails with a {@code TimeoutException} after 30 seconds.
+     * The future fails with a {@code TimeoutException} after 30 seconds, or at once with the
+     * cause when the QUERY cannot be sent.
      */
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query) {
         return query(targetAgentId, query, DEFAULT_TIMEOUT);
@@ -465,7 +468,8 @@ public class DialogueCapability {
      *
      * <p>The future completes when every participant has answered, or at {@code deadline}
      * with the answers received so far; a participant that never answers costs the whole
-     * deadline.
+     * deadline. A participant the CFP cannot be sent to is left out without waiting, and the
+     * future fails with the cause when no participant can be sent to.
      */
     public CompletableFuture<List<DialogueMessage>> callForProposals(
             List<String> participants, Object taskSpec, Duration deadline) {

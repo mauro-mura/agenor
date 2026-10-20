@@ -168,7 +168,9 @@ public class Example {
 ```
 
 `request(target, content)` and `query(target, query)` without a `Duration` wait **30 seconds**,
-then fail with a `TimeoutException`. A reply that arrives later does not complete the future; it
+then fail with a `TimeoutException`. A message that cannot be sent does not wait: when the target
+does not exist or its endpoint cannot be reached, the future fails at once with the dispatcher's
+cause, usually `AgentNotFoundException`. A reply that arrives later does not complete the future; it
 is logged as a [protocol violation](#protocol-violations-are-reported-not-enforced). For a wait measured in hours, such as a human
 approval, do not raise the timeout. Close the request early and keep the wait somewhere else:
 see [Restart and failover semantics](#restart-and-failover-semantics).
@@ -201,7 +203,9 @@ public class NegotiationExample {
 answers received so far. It does not return early on the first proposal. One participant that
 never answers, such as a dead node whose directory row is still there, costs the whole
 deadline on every call. Before calling, drop the participants whose `lastSeen` is older than
-your heartbeat allows.
+your heartbeat allows. A participant the CFP cannot be sent to — unknown, or advertised at an
+endpoint the transport cannot reach — is different: it is left out of the result with a WARN
+and costs nothing. If no participant can be sent to, the future fails with the cause.
 
 ## Protocols
 

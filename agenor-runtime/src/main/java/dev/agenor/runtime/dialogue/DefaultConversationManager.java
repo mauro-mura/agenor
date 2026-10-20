@@ -9,6 +9,8 @@ import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.protocol.Protocol;
 import dev.agenor.core.dialogue.protocol.ProtocolState;
 import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,8 +19,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 /**
@@ -27,6 +32,8 @@ import java.util.function.Consumer;
  * @since 0.5.0
  */
 public class DefaultConversationManager implements ConversationManager {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultConversationManager.class);
 
     private final String localAgentId;
     private final MessageDispatcher messageDispatcher;
@@ -111,6 +118,7 @@ public class DefaultConversationManager implements ConversationManager {
         var responses = new ConcurrentHashMap<String, DialogueMessage>();
         var responseFutures = new java.util.ArrayList<CompletableFuture<DialogueMessage>>();
         var cfpMessageIds = new java.util.ArrayList<String>();
+        var sendFailures = new CopyOnWriteArrayList<Throwable>();
 
         for (String participant : participants) {
             var conversation = new DefaultConversation(
@@ -138,13 +146,28 @@ public class DefaultConversationManager implements ConversationManager {
             pendingResponses.put(message.id(), responseFuture);
             cfpMessageIds.add(message.id());
 
-            // Chain to collect responses
+            // Chain to collect responses; null stands for a participant that will never answer
             responseFutures.add(responseFuture.thenApply(response -> {
-                responses.put(participant, response);
+                if (response != null) {
+                    responses.put(participant, response);
+                }
                 return response;
             }));
 
-            sendMessage(message);
+            // A participant the CFP could not reach will not answer, so it must not hold the
+            // call to its deadline. Its future completes rather than fails: failing it would
+            // close allOf before the reachable participants have answered.
+            sendMessage(message).whenComplete((ignored, failure) -> {
+                if (failure != null && !responseFuture.isDone()) {
+                    var cause = unwrap(failure);
+                    log.warn("CFP {} not delivered to participant '{}': {}",
+                        conversation.getId(), participant, cause.getMessage());
+                    conversation.setState(ProtocolState.FAILED);
+                    pendingResponses.remove(message.id());
+                    sendFailures.add(cause);
+                    responseFuture.complete(null);
+                }
+            });
         }
 
         return CompletableFuture.allOf(responseFutures.toArray(new CompletableFuture[0]))
@@ -153,6 +176,12 @@ public class DefaultConversationManager implements ConversationManager {
                 // Participants that never answered leave their future pending forever;
                 // drop their entries so the map stays bounded by in-flight CFPs only.
                 cfpMessageIds.forEach(pendingResponses::remove);
+                if (!participants.isEmpty() && sendFailures.size() == participants.size()) {
+                    // Nobody received the CFP: an empty list would read as nobody proposing.
+                    var first = sendFailures.getFirst();
+                    sendFailures.stream().skip(1).forEach(first::addSuppressed);
+                    throw new CompletionException(first);
+                }
                 return List.copyOf(responses.values());
             });
     }
@@ -258,6 +287,8 @@ public class DefaultConversationManager implements ConversationManager {
                 .protocol(conversation.getProtocol().map(Protocol::getId).orElse(null))
                 .build();
 
+            // Outcome deliberately ignored: the conversation is already CANCELLED here, and a
+            // peer the CANCEL cannot reach has nothing to cancel.
             sendMessage(cancelMsg);
         }
     }
@@ -359,29 +390,58 @@ public class DefaultConversationManager implements ConversationManager {
         conversation.addMessage(message);
 
         // Create commitment for REQUEST
-        if (performative == Performative.REQUEST) {
-            commitmentTracker.createFromMessage(message);
-        }
+        var commitment = performative == Performative.REQUEST
+            ? commitmentTracker.createFromMessage(message)
+            : null;
 
         var responseFuture = new CompletableFuture<DialogueMessage>();
         pendingResponses.put(message.id(), responseFuture);
 
-        sendMessage(message);
+        // A send the dispatcher reports as failed will never be answered: fail now with its
+        // cause instead of waiting out the timeout. A no-op if a reply has already arrived.
+        sendMessage(message).whenComplete((ignored, failure) -> {
+            if (failure != null) {
+                responseFuture.completeExceptionally(unwrap(failure));
+            }
+        });
 
         return responseFuture
             .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
             .whenComplete((response, ex) -> {
                 // Unconditional: on the success path handleIncoming() has already removed it,
-                // on the timeout path nothing else ever would.
+                // on the failure paths nothing else ever would.
                 pendingResponses.remove(message.id());
-                if (ex != null) {
+                if (ex == null) {
+                    return;
+                }
+                var cause = unwrap(ex);
+                if (cause instanceof TimeoutException) {
                     conversation.setState(ProtocolState.TIMEOUT);
+                    return;
+                }
+                // Never sent, so nobody is bound: a commitment left open would be declared
+                // VIOLATED at its deadline, against an agent that never received the request.
+                conversation.setState(ProtocolState.FAILED);
+                if (commitment != null) {
+                    commitmentTracker.cancel(commitment.getId(),
+                        "REQUEST was never delivered: " + cause.getMessage());
                 }
             });
     }
 
     private CompletableFuture<Void> sendMessage(DialogueMessage dialogueMessage) {
         var message = dialogueMessage.toMessage();
-        return messageDispatcher.sendTo(message);
+        try {
+            return messageDispatcher.sendTo(message);
+        } catch (RuntimeException e) {
+            // One channel for failure: a dispatcher may reject a message before returning
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    private static Throwable unwrap(Throwable failure) {
+        return failure instanceof CompletionException && failure.getCause() != null
+            ? failure.getCause()
+            : failure;
     }
 }

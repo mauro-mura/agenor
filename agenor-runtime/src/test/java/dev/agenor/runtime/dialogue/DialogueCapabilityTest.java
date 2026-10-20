@@ -316,8 +316,10 @@ class DialogueCapabilityTest {
         try {
             // Then dialogue works without initialize() ever being called by hand
             assertThat(hookAgent.dialogue.getActiveConversations()).isEmpty();
+            // "someone" does not exist, so the conversation fails at once: count it, not its state
             hookAgent.dialogue.request("someone", "task", Duration.ofMillis(50));
-            assertThat(hookAgent.dialogue.getActiveConversations()).hasSize(1);
+            assertThat(hookAgent.dialogue.getConversationManager().getConversationsWith("someone"))
+                .hasSize(1);
         } finally {
             hookAgent.stop().join();
         }
