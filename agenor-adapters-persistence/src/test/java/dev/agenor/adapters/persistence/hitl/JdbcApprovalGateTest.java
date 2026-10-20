@@ -38,6 +38,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("JdbcApprovalGate")
 class JdbcApprovalGateTest {
 
+    record Draft(String ticketId, String text) {}
+
     private HikariDataSource dataSource;
     private JdbcApprovalGate gate;
     private ScheduledExecutorService scheduler;
@@ -405,6 +407,20 @@ class JdbcApprovalGateTest {
             assertThat(pending)
                     .extracting(ApprovalRequest::requestId)
                     .contains(r1.requestId(), r2.requestId());
+        }
+
+        @Test
+        @DisplayName("payloadAs reads the stored JSON back as the type that was submitted")
+        void payloadAs_readsStoredJsonAsOriginalType() {
+            var draft = new Draft("T-1", "Your refund is on its way");
+            var request = ApprovalRequest.of("agent-1", "send-reply", draft, Duration.ofMinutes(5));
+            gate.requestApproval(request);
+
+            var pending = gate.getPendingRequests().stream()
+                    .filter(r -> r.requestId().equals(request.requestId()))
+                    .findFirst().orElseThrow();
+
+            assertThat(pending.payloadAs(Draft.class)).isEqualTo(draft);
         }
 
         @Test

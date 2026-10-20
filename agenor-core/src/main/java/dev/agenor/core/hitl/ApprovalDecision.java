@@ -10,9 +10,9 @@ package dev.agenor.core.hitl;
  * <pre>{@code
  * ApprovalDecision decision = gate.requestApproval(request).join();
  * switch (decision) {
- *     case ApprovalDecision.Approved a  -> executeAction(request.payload());
+ *     case ApprovalDecision.Approved a  -> executeAction(request.payloadAs(Action.class));
  *     case ApprovalDecision.Rejected r  -> log.warn("Rejected: {}", r.reason());
- *     case ApprovalDecision.Modified m  -> executeAction(m.newPayload());
+ *     case ApprovalDecision.Modified m  -> executeAction(m.newPayloadAs(Action.class));
  * }
  * }</pre>
  *
@@ -48,6 +48,24 @@ public sealed interface ApprovalDecision
     record Modified(Object newPayload) implements ApprovalDecision {
         public Modified {
             if (newPayload == null) throw new IllegalArgumentException("newPayload must not be null");
+        }
+
+        /**
+         * Reads {@link #newPayload()} as the requested type, converting it if necessary.
+         *
+         * <p>A decision submitted on another node reaches a persistent gate's future as the
+         * JSON it stored, not as the submitter's object, so a cast that works in memory throws
+         * there. Same conversion as {@link ApprovalRequest#payloadAs(Class)}.
+         *
+         * @param <T> the expected type of the payload
+         * @param type the class of the expected type; must not be null
+         * @return the new payload as type T
+         * @throws IllegalArgumentException if the payload is neither an instance of {@code type}
+         *         nor convertible to it
+         * @since 0.38.0
+         */
+        public <T> T newPayloadAs(Class<T> type) {
+            return PayloadConversion.as(newPayload, type);
         }
     }
 }

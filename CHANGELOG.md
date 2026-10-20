@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An approval payload reads the same from every gate.** `JdbcApprovalGate.getPendingRequests()`
+  returned each payload as the JSON it stored, where the in-memory gate returned the object, so
+  code tested in memory threw on JDBC. A `Modified` decision submitted on another node reached
+  the waiting future the same way. `ApprovalRequest.payloadAs(Class)` and
+  `ApprovalDecision.Modified.newPayloadAs(Class)` convert either form, like
+  `DialogueMessage.contentAs`. Found by an external application on 0.37.0.
+
+  Migration: replace casts of `payload()` and `newPayload()` with the two accessors.
+
 - **A Spring Boot application with its own Flyway starts with Boot's defaults.** Agenor's
   migrations were under `db/migration`, which Boot's Flyway scans, and failed it with `more than
   one migration with version 1`. They are now in `db/agenor/`. The starter also migrated Agenor's

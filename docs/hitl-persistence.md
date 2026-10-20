@@ -142,6 +142,17 @@ The Spring Boot auto-configuration calls this automatically.
 the current node. This means a dashboard or operator UI on any node can see every pending
 request and submit decisions.
 
+A request read back from the database carries its payload as the JSON that was stored, not as
+the object passed to `requestApproval`; a `Modified` decision submitted on another node reaches
+the waiting future the same way. Read both with `payloadAs(Class)` and `newPayloadAs(Class)`,
+which give the same result on the in-memory gate. A cast works in memory and throws here:
+
+```java
+for (ApprovalRequest pending : gate.getPendingRequests()) {
+    Draft draft = pending.payloadAs(Draft.class);   // not (Draft) pending.payload()
+}
+```
+
 ### Postgres LISTEN/NOTIFY (automatic)
 
 When the JDBC URL contains `postgresql`, `JdbcApprovalGate` activates

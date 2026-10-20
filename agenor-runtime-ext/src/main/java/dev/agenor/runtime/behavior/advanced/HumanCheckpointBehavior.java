@@ -42,7 +42,7 @@ import java.util.function.Consumer;
  *     decision -> switch (decision) {
  *         case ApprovalDecision.Approved  a -> processPayment(paymentPayload);
  *         case ApprovalDecision.Rejected  r -> log.warn("Rejected: {}", r.reason());
- *         case ApprovalDecision.Modified  m -> processPayment((PaymentRequest) m.newPayload());
+ *         case ApprovalDecision.Modified  m -> processPayment(m.newPayloadAs(PaymentRequest.class));
  *     }
  * )
  * }</pre>

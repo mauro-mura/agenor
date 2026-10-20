@@ -52,7 +52,9 @@ public interface ApprovalGate {
     /**
      * Returns a snapshot of approval requests that are still pending.
      *
-     * <p>Expired or already-decided requests are not included.
+     * <p>Expired or already-decided requests are not included. A persistent gate returns each
+     * payload as the JSON it stored, not as the object passed to {@link #requestApproval}: read
+     * it with {@link ApprovalRequest#payloadAs(Class)}, which gives the same result on every gate.
      *
      * @return immutable list of pending {@link ApprovalRequest}s
      */
