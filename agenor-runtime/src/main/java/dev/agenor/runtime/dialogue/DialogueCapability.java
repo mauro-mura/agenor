@@ -420,7 +420,8 @@ public class DialogueCapability {
      *
      * @param targetAgentId the agent to send the REQUEST to
      * @param content       the request payload; any type the transport's codec can serialise
-     * @return a future completing with the final reply, or failing on timeout
+     * @return a future completing with the final reply, or failing with a
+     *         {@code TimeoutException} after 30 seconds
      */
     public CompletableFuture<DialogueMessage> request(String targetAgentId, Object content) {
         return request(targetAgentId, content, DEFAULT_TIMEOUT);
@@ -444,6 +445,7 @@ public class DialogueCapability {
      *
      * <p>QUERY expects a single {@code INFORM} reply; unlike REQUEST it does not
      * produce an intermediate AGREE, so the future typically resolves with the result.
+     * The future fails with a {@code TimeoutException} after 30 seconds.
      */
     public CompletableFuture<DialogueMessage> query(String targetAgentId, Object query) {
         return query(targetAgentId, query, DEFAULT_TIMEOUT);
@@ -460,6 +462,10 @@ public class DialogueCapability {
 
     /**
      * Initiates a call for proposals.
+     *
+     * <p>The future completes when every participant has answered, or at {@code deadline}
+     * with the answers received so far; a participant that never answers costs the whole
+     * deadline.
      */
     public CompletableFuture<List<DialogueMessage>> callForProposals(
             List<String> participants, Object taskSpec, Duration deadline) {

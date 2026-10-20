@@ -28,17 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   starting. Add the module, or remove the property to keep the in-memory default.
 
 - **Nodes in different time zones agree on `last_seen` and on an approval's deadline.** The
-  JDBC directory and HITL queue store `TIMESTAMP` columns without a zone, and converted them
-  with each JVM's default zone. A node nine hours ahead of the one that wrote a row read it as
-  nine hours older: a live agent read as `UNKNOWN` with a `lastSeen` hours in the past, and an
-  approval with an hour left was no longer pending. Both now write and read UTC.
-  `TimeZoneIT` and `TimeZoneMySqlIT` run each case as two nodes in different zones. Found by
-  reading the code while building an external application on 0.37.0.
+  JDBC directory and HITL queue converted their zone-less `TIMESTAMP` columns with each JVM's
+  default zone, so a node nine hours ahead read a live agent as `UNKNOWN` and an approval with an
+  hour left as expired. Both now write and read UTC. Found while building an external
+  application on 0.37.0.
 
-  Migration: none for the schema. Rows written before the upgrade by a node whose zone is not
-  UTC are read shifted by that zone's offset once. `last_seen` corrects itself at the agent's
-  next heartbeat or registration. A `PENDING` approval created before the upgrade has its
-  deadline moved by the same offset; decide or re-request it if that matters.
+  Migration: rows written before the upgrade by a non-UTC node are read shifted by its offset
+  once. `last_seen` heals at the next heartbeat; a `PENDING` approval's deadline moves.
+
+- **Five things an external application had to find in the source are now written down.**
+  The 30-second default of `request` and `query`, and when `callForProposals` returns. The
+  5-minute commitment deadline, and how to change it without losing the protocol registry. That
+  a Redis test on one node never crosses Redis. How a starter agent gets an `ApprovalGate` or an
+  application bean, and which versions Spring Boot replaces. What `decision_data` holds.
+  `tools/docs-versions-check.sh` now also checks the `jackson-2-bom.version` and
+  `lettuce.version` overrides in snippets. Found by building `agenor-support` against 0.37.0.
 
 - **`docs/spring-boot-starter.md` no longer asks for a lifecycle bean next to your own runtime.**
   The starter's lifecycle bean starts any `AgenorRuntime` in the context, so the one the page

@@ -12,11 +12,14 @@
 # The expected versions are read from the POMs, not written here:
 #
 #   - lettuce.version and opentelemetry.version from agenor-adapters/pom.xml;
-#   - flyway.version from agenor-adapters-persistence/pom.xml.
+#   - flyway.version from agenor-adapters-persistence/pom.xml;
+#   - jackson.version from the root pom.xml.
 #
 # Every <dependency> on io.lettuce:lettuce-core, io.opentelemetry:opentelemetry-* or
 # org.flywaydb:flyway-*, inside an xml fence of docs/**/*.md (ADRs excepted: they are a record),
-# README.md or a module README.md, must carry exactly that version.
+# README.md or a module README.md, must carry exactly that version. So must the two properties
+# a Spring Boot application sets to override what Boot manages below Agenor's needs:
+# <lettuce.version> and <jackson-2-bom.version>.
 #
 # What it cannot prove: it reads Maven XML only. A Gradle coordinate or a version named in prose
 # is out of scope by design. It is a tripwire for the form of claim that has already gone wrong,
@@ -50,6 +53,10 @@ def prop(pom, name):
 lettuce = prop("agenor-adapters/pom.xml", "lettuce.version")
 otel = prop("agenor-adapters/pom.xml", "opentelemetry.version")
 flyway = prop("agenor-adapters-persistence/pom.xml", "flyway.version")
+jackson = prop("pom.xml", "jackson.version")
+
+# Spring Boot property overrides: the snippet sets the property Boot's BOM reads
+OVERRIDES = {"lettuce.version": lettuce, "jackson-2-bom.version": jackson}
 
 def expected(group, artifact):
     if group == "io.lettuce" and artifact == "lettuce-core":
@@ -65,6 +72,7 @@ pages += [pathlib.Path("README.md"), *pathlib.Path(".").glob("*/README.md")]
 
 FENCE = re.compile(r"^[ \t]*```xml[^\n]*\n(.*?)^[ \t]*```", re.S | re.M)
 DEP = re.compile(r"<dependency>(.*?)</dependency>", re.S)
+OVERRIDE = re.compile(r"<(lettuce\.version|jackson-2-bom\.version)>\s*([^<]*?)\s*</\1>")
 
 def tag(body, name):
     m = re.search(rf"<{name}>\s*([^<]*?)\s*</{name}>", body)
@@ -87,6 +95,14 @@ for page in sorted(set(pages)):
                 print(f"{page}:{line}: {coordinate} names version {version or '(none)'}, "
                       f"the POMs build against {want[0]} ({want[1]})", file=sys.stderr)
                 breaches += 1
+        for override in OVERRIDE.finditer(fence.group(1)):
+            checked += 1
+            name, version = override.group(1), override.group(2)
+            line = text.count("\n", 0, fence.start(1) + override.start()) + 1
+            if version != OVERRIDES[name]:
+                print(f"{page}:{line}: <{name}> is {version}, the POMs build against "
+                      f"{OVERRIDES[name]}", file=sys.stderr)
+                breaches += 1
 
 if breaches:
     sys.exit(1)
@@ -94,5 +110,5 @@ if checked == 0:
     sys.exit("no snippet declares Lettuce, OpenTelemetry or Flyway; the pages moved, "
              "so this check would pass vacuously")
 print(f"documented versions agree with the POMs ({checked} snippets: lettuce {lettuce}, "
-      f"opentelemetry {otel}, flyway {flyway})")
+      f"opentelemetry {otel}, flyway {flyway}, jackson {jackson})")
 PY

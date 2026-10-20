@@ -102,12 +102,18 @@ CREATE TABLE agenor_hitl_requests (
     expires_at      TIMESTAMP    NOT NULL,
     status          VARCHAR(50)  NOT NULL,  -- see below
     decision_type   VARCHAR(50),
-    decision_data   TEXT,           -- rejection reason or modified payload
+    decision_data   TEXT,           -- see below
     decided_at      TIMESTAMP,
     decided_by      VARCHAR(255),
     CONSTRAINT pk_agenor_hitl_requests PRIMARY KEY (request_id)
 );
 ```
+
+`payload` and `decision_data` hold text as it was given, or JSON otherwise. A `String` payload is
+stored unchanged and any other object as Jackson JSON. `decision_data` depends on
+`decision_type`: empty for `APPROVED`, the reason for `REJECTED`, and the new payload for
+`MODIFIED`, stored the same way as `payload`. Through the gate, `ApprovalRequest.payloadAs(Class)`
+and `ApprovalDecision.Modified.newPayloadAs(Class)` read either form back into your type.
 
 The `TIMESTAMP` columns hold UTC wall-clock times, here and in `agenor_agents`, whatever the
 time zone of the node that wrote them. Read them as UTC if you query the table yourself; in

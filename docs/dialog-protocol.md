@@ -167,6 +167,12 @@ public class Example {
 }
 ```
 
+`request(target, content)` and `query(target, query)` without a `Duration` wait **30 seconds**,
+then fail with a `TimeoutException`. A reply that arrives later does not complete the future; it
+is logged as a [protocol violation](#protocol-violations-are-reported-not-enforced). For a wait measured in hours, such as a human
+approval, do not raise the timeout. Close the request early and keep the wait somewhere else:
+see [Restart and failover semantics](#restart-and-failover-semantics).
+
 ### 3. Contract-Net (Multi-Party Negotiation)
 
 ```java
@@ -190,6 +196,12 @@ public class NegotiationExample {
     }
 }
 ```
+
+`callForProposals` completes when every participant has answered, or at the deadline with the
+answers received so far. It does not return early on the first proposal. One participant that
+never answers, such as a dead node whose directory row is still there, costs the whole
+deadline on every call. Before calling, drop the participants whose `lastSeen` is older than
+your heartbeat allows.
 
 ## Protocols
 
@@ -308,6 +320,23 @@ var waitingFor = dialogue.getCommitmentTracker()
 var violations = dialogue.getCommitmentTracker()
     .checkViolations();
 ```
+
+A commitment is overdue **5 minutes** after it is created, the default deadline of
+`DefaultCommitmentTracker`. The deadline is set per agent, not per commitment, by giving the
+builder a tracker of your own. Give it the same `ProtocolRegistry` as the capability. A tracker
+built without one reads every protocol as request-shaped, so under Contract Net it records the
+manager, not the worker, as the party that performs:
+
+```java
+private final ProtocolRegistry protocols = new ProtocolRegistry();
+private final DialogueCapability dialogue = DialogueCapability.builder(this)
+    .protocolRegistry(protocols)
+    .commitmentTracker(new DefaultCommitmentTracker(Duration.ofMinutes(30), protocols))
+    .build();
+```
+
+`VIOLATED` is an observation, not an action. Nothing is cancelled or blocked, and a reply that
+arrives after the deadline is still delivered.
 
 While the capability is initialized, its background sweep marks overdue commitments as
 `VIOLATED` on its own and logs each one at WARN. Detection is delayed by at most one sweep
