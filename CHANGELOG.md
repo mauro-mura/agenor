@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/spring-boot-starter.md` no longer asks for a lifecycle bean next to your own runtime.**
+  The starter's lifecycle bean starts any `AgenorRuntime` in the context, so the one the page
+  recommended made the runtime start twice. The page now says to declare the runtime alone, and
+  `AgenorAutoConfigurationTest` checks it is started once. Found by an external application on
+  0.37.0.
+
 - **`docs/guardrails.md` says where a guardrail chain runs.** The page called `agent.ask(...)`,
   which exists on no Agenor type, and the `LLMAgent.setGuardrailChain` Javadoc said the chain ran
   "around every LLM call". `LLMAgent` makes no LLM call of its own, so a chain that was set but

@@ -280,19 +280,14 @@ public class MyAgenorConfig {
                 .fromClasspathConfig("my-agenor.yml")   // use a custom YAML file
                 .build();
     }
-
-    // Must also provide the lifecycle bean when overriding the runtime
-    @Bean
-    public SmartLifecycle AgenorRuntimeLifecycle(AgenorRuntime agenorRuntime) {
-        return new SmartLifecycle() {
-            private volatile boolean running = false;
-            public void start() { agenorRuntime.start().join(); running = true; }
-            public void stop()  { agenorRuntime.stop().join();  running = false; }
-            public boolean isRunning() { return running; }
-        };
-    }
 }
 ```
+
+Do not declare a lifecycle bean next to it. The starter's `AgenorRuntimeLifecycle` starts and
+stops whichever `AgenorRuntime` is in the context, yours included. A second `SmartLifecycle` that
+calls `start()` only starts the runtime twice: the second call returns at once, but the runtime
+is no longer started from one place. Override `AgenorRuntimeLifecycle` by that bean name only to
+change how the runtime starts, not to make it start.
 
 ## Relationship with `agenor.yml`
 

@@ -66,6 +66,19 @@ class AgenorAutoConfigurationTest {
         });
     }
 
+    @Test
+    void userRuntimeBeanIsStartedOnceByTheStarterLifecycle() {
+        // docs/spring-boot-starter.md used to ask for a lifecycle bean of your own next to the
+        // runtime. The starter's lifecycle bean starts whatever AgenorRuntime is in the context,
+        // so a second one only meant a second start().
+        runner.withUserConfiguration(UserRuntimeConfig.class).run(ctx -> {
+            AgenorRuntime runtime = ctx.getBean(AgenorRuntime.class);
+            assertThat(runtime.isRunning()).isTrue();
+            assertThat(ctx.getBeansOfType(SmartLifecycle.class)).containsOnlyKeys("AgenorRuntimeLifecycle");
+            verify(runtime, times(1)).start();
+        });
+    }
+
     // --- LLM wiring ---
 
     @Test
@@ -124,23 +137,12 @@ class AgenorAutoConfigurationTest {
     static class UserRuntimeConfig {
         @Bean
         AgenorRuntime AgenorRuntime() {
-            return AgenorRuntime.builder()
+            return spy(AgenorRuntime.builder()
                     .withConfiguration(new AgenorConfiguration(
                             new AgenorConfiguration.RuntimeConfig(
                                     "user-runtime", "test", null),
                             null, null, null, null))
-                    .build();
-        }
-
-        // User must also provide the lifecycle bean when overriding the runtime
-        @Bean
-        SmartLifecycle AgenorRuntimeLifecycle(AgenorRuntime runtime) {
-            return new SmartLifecycle() {
-                private volatile boolean running = false;
-                public void start() { runtime.start().join(); running = true; }
-                public void stop()  { runtime.stop().join();  running = false; }
-                public boolean isRunning() { return running; }
-            };
+                    .build());
         }
     }
 
