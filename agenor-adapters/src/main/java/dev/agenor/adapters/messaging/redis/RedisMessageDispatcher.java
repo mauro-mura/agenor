@@ -121,7 +121,10 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
      * to {@link RedisMessageTransport#send}.
      *
      * @throws IllegalArgumentException if {@code msg.receiverId()} is null or blank
-     * @throws AgentNotFoundException   if the recipient is neither local nor resolvable
+     * @throws AgentNotFoundException   if the recipient is neither local nor resolvable, or
+     *                                  resolves to an endpoint without a node or with a
+     *                                  transport other than {@code redis}; the latter is also
+     *                                  dead-lettered
      */
     @Override
     public CompletableFuture<Void> sendTo(Message msg) {
@@ -159,6 +162,20 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
                 return CompletableFuture.failedFuture(new AgentNotFoundException(receiverId));
             }
             var ep = opt.get();
+            // An endpoint this transport cannot reach would otherwise be written to a stream no
+            // consumer reads - for a blank nodeId, "<prefix>:node:" - and the message would be
+            // gone with the send reported as a success. That is what a runtime whose dispatcher
+            // does not implement LocalEndpointProvider advertises, so fail where it is visible.
+            if (ep.nodeId() == null || ep.nodeId().isBlank() || !"redis".equals(ep.transportType())) {
+                var cause = new AgentNotFoundException(receiverId, "Agent '" + receiverId
+                        + "' is advertised at an endpoint Redis cannot reach (nodeId='"
+                        + (ep.nodeId() == null ? "" : ep.nodeId()) + "', transportType='"
+                        + ep.transportType() + "'). The runtime that registered it is not using"
+                        + " a Redis dispatcher, or its dispatcher does not implement LocalEndpointProvider");
+                log.warn("{}: dead-lettering message {}", cause.getMessage(), msg.id());
+                deadLetters.record(DeadLetter.of(msg, receiverId, cause));
+                return CompletableFuture.failedFuture(cause);
+            }
             var dest = new TransportEndpoint(ep.transportType(), ep.nodeId(), ep.transportProps());
             return messageTransport.send(dest, msg);
         });

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Redis send to an agent it cannot reach fails instead of vanishing.** An agent registered
+  by a runtime without a Redis dispatcher is advertised with a blank `nodeId` and transport
+  `local`. `RedisMessageDispatcher.sendTo` wrote messages for it to `agenor:node:`, a stream no
+  consumer reads, and reported success: a call for proposals completed with no proposals, and a
+  request timed out. The in-memory dispatcher already dead-lettered the same case. The send now
+  fails with an `AgentNotFoundException` that names the endpoint, and the message is
+  dead-lettered. Found by two external applications on 0.37.0.
+
 - **`docs/spring-boot-starter.md` no longer asks for a lifecycle bean next to your own runtime.**
   The starter's lifecycle bean starts any `AgenorRuntime` in the context, so the one the page
   recommended made the runtime start twice. The page now says to declare the runtime alone, and
