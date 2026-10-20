@@ -15,9 +15,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -131,7 +133,9 @@ public final class JdbcHelper {
         for (int i = 0; i < params.size(); i++) {
             var value = params.get(i);
             if (value instanceof Instant instant) {
-                ps.setTimestamp(i + 1, Timestamp.from(instant));
+                ps.setTimestamp(i + 1, Timestamp.from(instant), utc());
+            } else if (value instanceof Timestamp timestamp) {
+                ps.setTimestamp(i + 1, timestamp, utc());
             } else {
                 ps.setObject(i + 1, value);
             }
@@ -186,8 +190,8 @@ public final class JdbcHelper {
                 .capabilities(capabilities)
                 .metadata(parseJson(rs.getString("metadata")))
                 .endpoint(mapEndpoint(rs))
-                .registeredAt(toInstant(rs.getTimestamp("registered_at")))
-                .lastSeen(toInstant(rs.getTimestamp("last_seen")))
+                .registeredAt(toInstant(readInstant(rs, "registered_at")))
+                .lastSeen(toInstant(readInstant(rs, "last_seen")))
                 .build();
     }
 
@@ -225,7 +229,30 @@ public final class JdbcHelper {
     // Misc
     // -------------------------------------------------------------------------
 
-    private Instant toInstant(Timestamp ts) {
-        return ts != null ? ts.toInstant() : Instant.now();
+    /**
+     * Reads a {@code TIMESTAMP} column whose value was bound through this helper.
+     *
+     * <p>Agenor's timestamp columns carry no zone, so the value stored is a wall-clock time and
+     * means an instant only together with the zone it was written in. Both directions use UTC,
+     * never the JVM default: nodes in different zones share these tables, and with the default
+     * a node nine hours ahead read every {@code last_seen} as nine hours old.
+     *
+     * @param rs     the result set, positioned on a row
+     * @param column the column to read
+     * @return the instant, or {@code null} when the column is null
+     * @throws SQLException if the column cannot be read
+     */
+    public static Instant readInstant(ResultSet rs, String column) throws SQLException {
+        var ts = rs.getTimestamp(column, utc());
+        return ts != null ? ts.toInstant() : null;
+    }
+
+    // A new Calendar per call: drivers may set fields on the one they are given
+    private static Calendar utc() {
+        return Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    }
+
+    private Instant toInstant(Instant instant) {
+        return instant != null ? instant : Instant.now();
     }
 }

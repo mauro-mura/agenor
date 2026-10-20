@@ -198,7 +198,7 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
                                     rs.getString("agent_id"),
                                     rs.getString("action"),
                                     rs.getString("payload"),
-                                    rs.getTimestamp("expires_at").toInstant(),
+                                    JdbcHelper.readInstant(rs, "expires_at"),
                                     metadata
                             );
                         })

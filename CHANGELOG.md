@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fails with an `AgentNotFoundException` that names the endpoint, and the message is
   dead-lettered. Found by two external applications on 0.37.0.
 
+- **Nodes in different time zones agree on `last_seen` and on an approval's deadline.** The
+  JDBC directory and HITL queue store `TIMESTAMP` columns without a zone, and converted them
+  with each JVM's default zone. A node nine hours ahead of the one that wrote a row read it as
+  nine hours older: a live agent read as `UNKNOWN` with a `lastSeen` hours in the past, and an
+  approval with an hour left was no longer pending. Both now write and read UTC.
+  `TimeZoneIT` and `TimeZoneMySqlIT` run each case as two nodes in different zones. Found by
+  reading the code while building an external application on 0.37.0.
+
+  Migration: none for the schema. Rows written before the upgrade by a node whose zone is not
+  UTC are read shifted by that zone's offset once. `last_seen` corrects itself at the agent's
+  next heartbeat or registration. A `PENDING` approval created before the upgrade has its
+  deadline moved by the same offset; decide or re-request it if that matters.
+
 - **`docs/spring-boot-starter.md` no longer asks for a lifecycle bean next to your own runtime.**
   The starter's lifecycle bean starts any `AgenorRuntime` in the context, so the one the page
   recommended made the runtime start twice. The page now says to declare the runtime alone, and
