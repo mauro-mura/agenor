@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A dialogue whose message cannot be sent fails at once.** `DefaultConversationManager`
+  discarded the future `sendTo` returns. A request to an agent that does not exist, or that Redis
+  cannot reach, failed with a `TimeoutException` after 30 seconds, and its commitment was later
+  declared violated; a call for proposals waited its deadline for such a participant. The request
+  now fails with the dispatcher's cause and cancels its commitment. The CFP leaves the participant
+  out with a WARN, and fails when it reached nobody. Found by re-running agenor-jobs against
+  0.38.0-SNAPSHOT.
+
+  Migration: code expecting a `TimeoutException` for an unknown target receives
+  `AgentNotFoundException`; a CFP that reaches no participant fails instead of returning an
+  empty list.
+
 - **A Redis send to an agent it cannot reach fails instead of vanishing.** An agent registered
   by a runtime without a Redis dispatcher is advertised with a blank `nodeId` and transport
   `local`. `RedisMessageDispatcher.sendTo` wrote messages for it to `agenor:node:`, a stream no
