@@ -128,7 +128,7 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	private ReflectionStrategy reflectionStrategy;
 
 	/**
-	 * Optional guardrail chain applied pre-input and post-output. {@code null}
+	 * Optional guardrail chain, run by the two guardrail hooks. {@code null}
 	 * means no guardrails are active (backward-compatible default).
 	 *
 	 * @since 0.13.0
@@ -255,8 +255,14 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	}
 
 	/**
-	 * Injects the {@link GuardrailChain} that will be executed around every LLM
-	 * call.
+	 * Injects the {@link GuardrailChain} that {@link #applyInputGuardrails} and
+	 * {@link #applyOutputGuardrails} run.
+	 *
+	 * <p>
+	 * Setting a chain does not apply it: {@code LLMAgent} makes no LLM call of
+	 * its own, so a subclass calls {@link #applyInputGuardrails} before its
+	 * provider call and {@link #applyOutputGuardrails} after. Text that skips
+	 * them reaches the provider unchanged.
 	 *
 	 * <p>
 	 * Called by {@code AgenorRuntime} when an agent is annotated with

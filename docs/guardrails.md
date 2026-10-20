@@ -11,6 +11,37 @@ User input
   → Consumer
 ```
 
+**The chain runs where your agent calls it.** `LLMAgent` makes no LLM call of its own, so
+setting a chain, or declaring one with `@WithGuardrails`, does not apply it: the agent calls
+`applyInputGuardrails` before `provider.chat(...)` and `applyOutputGuardrails` after. Both are
+`protected`. Text that never passes through them reaches the provider unchanged.
+
+```java
+@WithGuardrails(input = { PiiRedactionGuardrail.class })
+public class FinanceAgent extends LLMAgent {
+
+    private final LLMProvider provider;
+
+    public FinanceAgent(LLMProvider provider) {
+        super("finance-agent");
+        this.provider = provider;
+    }
+
+    public String ask(String userInput) throws GuardrailViolationException {
+        GuardrailContext ctx = GuardrailContext.of(getAgentId(), "finance");
+        String safeInput = applyInputGuardrails(userInput, ctx);
+        LLMRequest request = LLMRequest.builder()
+                .addMessage(LLMMessage.user(safeInput))
+                .build();
+        String rawOutput = provider.chat(request).join().content();
+        return applyOutputGuardrails(rawOutput, ctx);
+    }
+}
+```
+
+Code that is not an `LLMAgent`, such as an embedding call, uses the chain directly:
+`chain.applyInput(text, ctx)` and `chain.applyOutput(text, ctx)` are public.
+
 ---
 
 ## Available guardrails
@@ -182,9 +213,11 @@ passing contextual information from the agent to its guardrails.
 `GuardrailViolationException` extends `AgenorException` (unchecked). Catch it
 explicitly when you need to react to policy violations:
 
+Around the agent's own method, `ask` in the example above:
+
 ```java
 try {
-    String response = agent.ask(userInput);
+    String response = financeAgent.ask(userInput);
 } catch (GuardrailViolationException e) {
     log.warn("Guardrail [{}] blocked content: {}", e.blockedBy(), e.reason());
     return "Your request could not be processed due to content policy.";
