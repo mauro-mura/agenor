@@ -59,6 +59,9 @@ class PiiRedactionGuardrailTest {
     @DisplayName("PHONE_IT")
     class PhoneItTests {
 
+        private final PiiRedactionGuardrail phoneOnly =
+                new PiiRedactionGuardrail(EnumSet.of(PiiRedactionGuardrail.PiiType.PHONE_IT));
+
         @ParameterizedTest(name = "[{index}] {0}")
         @ValueSource(strings = {
                 "3331234567",
@@ -76,6 +79,36 @@ class PiiRedactionGuardrailTest {
         void detectsPhoneIt(String phone) {
             GuardrailResult result = guardrail.redact("Call me at " + phone + ".");
             assertThat(result).isInstanceOf(GuardrailResult.Modified.class);
+        }
+
+        @ParameterizedTest(name = "[{index}] {0}")
+        @ValueSource(strings = {
+                "347 123 4567",
+                "347-123-4567",
+                "347.123.4567",
+                "+39 347 123 4567",
+                "+39 347 1234 567",
+                "347 123 456",
+                "347 1234 567"
+        })
+        @DisplayName("redacts the whole number when it is written in groups")
+        void redactsGroupedPhoneIt(String phone) {
+            GuardrailResult result = phoneOnly.redact("Call me at " + phone + ".");
+            assertThat(result).isInstanceOf(GuardrailResult.Modified.class);
+            assertThat(((GuardrailResult.Modified) result).newContent())
+                    .isEqualTo("Call me at " + REDACTED + ".");
+        }
+
+        @ParameterizedTest(name = "[{index}] {0}")
+        @ValueSource(strings = {
+                "P.IVA 01234567890",
+                "ufficio 02 12345678",
+                "riferimento 3471234567890",
+                "pratica n. 2026-00042"
+        })
+        @DisplayName("leaves numbers that are not a mobile alone")
+        void ignoresOtherNumbers(String text) {
+            assertThat(phoneOnly.redact(text)).isInstanceOf(GuardrailResult.Passed.class);
         }
     }
 
