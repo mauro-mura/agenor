@@ -21,7 +21,7 @@ public class SendWelcomeMessageBehavior extends OneShotBehavior {
 
     @Override
     protected void action() {
-        messageService.send(Message.builder()
+        getAgent().getMessageDispatcher().publish(Message.builder()
             .topic("agent.started")
             .content(getAgent().getAgentId())
             .build());

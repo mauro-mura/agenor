@@ -227,7 +227,7 @@ public class OrderProcessorAgent extends BaseAgent {
             .headerIn("status", "pending", "confirmed")
             .build();
 
-        ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(filter, this::handleOrder);
+        ((FilterableSubscriber) getMessageDispatcher()).subscribeFiltered(filter, MessageHandler.sync(this::handleOrder));
     }
 
     private void handleOrder(Message msg) {
@@ -277,7 +277,7 @@ public class OrderEnricherAgent extends BaseAgent {
             .and(TopicFilter.startsWith("orders.internal.").negate());
 
         ((FilterableSubscriber) getMessageDispatcher())
-            .subscribeFiltered(filter, this::enrichOrder);
+            .subscribeFiltered(filter, MessageHandler.sync(this::enrichOrder));
     }
 
     private void enrichOrder(Message msg) {

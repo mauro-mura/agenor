@@ -34,7 +34,7 @@ public class HelloAgent extends BaseAgent {
 
     @AgenorMessageHandler("greetings")
     public void handleGreeting(Message message) {
-        log.info("Received: {}", message.getContent());
+        log.info("Received: {}", message.content());
     }
 }
 ```

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
+  `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
+  `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is
+  expected. Fixed in `llm-integration.md`, `memory.md`, `spring-boot-starter.md`,
+  `agent-development.md`, `message-filtering.md` and `behaviors/OneShotBehavior.md`; each was
+  compiled against 0.39.0-SNAPSHOT. Found by agenor-research.
+
 ## [0.38.0] - 2026-10-21
 
 ### Fixed

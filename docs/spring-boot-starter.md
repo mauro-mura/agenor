@@ -213,9 +213,9 @@ public class MyLlmAgent extends BaseAgent {
         this.provider = provider;
     }
 
-    @Behavior(type = AgenorBehaviorType.CYCLIC, interval = "30s")
+    @Behavior(type = BehaviorType.CYCLIC, interval = "30s")
     public void analyze() {
-        LLMRequest req = LLMRequest.builder(provider.getProviderName())
+        LLMRequest req = LLMRequest.builder()
                 .userMessage("Summarize the current system status.")
                 .maxTokens(200)
                 .build();

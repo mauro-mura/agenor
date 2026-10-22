@@ -331,7 +331,7 @@ public class SupportAgent extends LLMAgent {
         // Store a key fact from the conversation
         storeFact("last-query", question).join();
 
-        messageService.send(Message.builder()
+        getMessageDispatcher().publish(Message.builder()
             .topic("support.response")
             .content(answer)
             .build());
