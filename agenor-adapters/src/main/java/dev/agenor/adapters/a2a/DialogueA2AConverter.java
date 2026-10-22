@@ -106,6 +106,7 @@ public class DialogueA2AConverter {
         return switch (state) {
             case COMPLETED -> Performative.INFORM;
             case FAILED -> Performative.FAILURE;
+            case REJECTED -> Performative.REFUSE;
             case CANCELED -> Performative.CANCEL;
             case WORKING, SUBMITTED -> Performative.AGREE;
             case INPUT_REQUIRED -> Performative.QUERY;

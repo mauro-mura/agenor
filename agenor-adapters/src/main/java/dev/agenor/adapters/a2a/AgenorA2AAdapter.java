@@ -1,6 +1,10 @@
 package dev.agenor.adapters.a2a;
 
+import dev.agenor.core.AgentDescriptor;
+import dev.agenor.core.AgentEndpoint;
+import dev.agenor.core.AgentStatus;
 import dev.agenor.core.directory.AgentDirectory;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -10,7 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -117,6 +123,11 @@ public class AgenorA2AAdapter {
      * intermediate {@code AGREE} is observed but does not resolve the future; the
      * subscription stays open until a non-{@code AGREE} reply (typically {@code INFORM},
      * {@code FAILURE}, or an immediate {@code REFUSE}) arrives. See ADR-026.
+     *
+     * <p>On a networked dispatcher (a {@link LocalEndpointProvider}) the target's node finds the
+     * reply recipient only through the directory. If the directory does not know it, the
+     * recipient is registered at this node's endpoint before the message is sent and unregistered
+     * when the call ends. A recipient the directory already knows is left as it is.
      */
     public CompletableFuture<DialogueMessage> sendInternal(DialogueMessage message) {
         CompletableFuture<DialogueMessage> replyFuture = new CompletableFuture<>();
@@ -128,10 +139,59 @@ public class AgenorA2AAdapter {
             }
             return CompletableFuture.completedFuture(null);
         });
-        messageDispatcher.sendTo(message.toMessage());
+        CompletableFuture<Boolean> registered = registerIfUnknown(replyTo);
+        registered
+                .thenCompose(ignored -> messageDispatcher.sendTo(message.toMessage()))
+                .whenComplete((ignored, ex) -> {
+                    if (ex != null) {
+                        replyFuture.completeExceptionally(
+                                ex instanceof CompletionException && ex.getCause() != null ? ex.getCause() : ex);
+                    }
+                });
         return replyFuture
                 .orTimeout(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
-                .whenComplete((r, ex) -> subscription.unsubscribe());
+                .whenComplete((r, ex) -> {
+                    subscription.unsubscribe();
+                    registered.thenAccept(did -> {
+                        if (did) {
+                            unregister(replyTo);
+                        }
+                    });
+                });
+    }
+
+    /**
+     * Registers {@code recipientId} at this node's endpoint when replies may come from another
+     * node and the directory does not know it.
+     *
+     * @return whether it was registered, and so has to be unregistered
+     */
+    private CompletableFuture<Boolean> registerIfUnknown(String recipientId) {
+        if (!(messageDispatcher instanceof LocalEndpointProvider provider)) {
+            return CompletableFuture.completedFuture(false);
+        }
+        Optional<AgentEndpoint> endpoint = provider.localEndpoint();
+        if (endpoint.isEmpty()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return agentDirectory.findById(recipientId).thenCompose(found -> found.isPresent()
+                ? CompletableFuture.completedFuture(false)
+                : agentDirectory.register(AgentDescriptor.builder(recipientId)
+                                .agentName("A2A reply recipient " + recipientId)
+                                .agentType("a2a-client")
+                                .status(AgentStatus.RUNNING)
+                                .endpoint(endpoint.get())
+                                .build())
+                        .thenApply(ignored -> true));
+    }
+
+    private void unregister(String recipientId) {
+        agentDirectory.unregister(recipientId).whenComplete((ignored, ex) -> {
+            if (ex != null) {
+                log.warn("Could not unregister A2A reply recipient '{}' from the directory: {}",
+                        recipientId, ex.getMessage());
+            }
+        });
     }
 
     /**

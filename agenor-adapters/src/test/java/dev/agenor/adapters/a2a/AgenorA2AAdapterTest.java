@@ -1,25 +1,30 @@
 package dev.agenor.adapters.a2a;
 
 import dev.agenor.core.AgentDescriptor;
+import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.directory.AgentDirectory;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,9 +32,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 /**
  * Tests for AgenorA2AAdapter.
@@ -377,8 +386,104 @@ class AgenorA2AAdapterTest {
     }
 
     // -----------------------------------------------------------------------
+    // sendInternal across nodes
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sendInternal_registersAnUnknownSenderBeforeSendingAndUnregistersItAfter() throws Exception {
+        var endpoint = new AgentEndpoint("node-1", "redis", Map.of());
+        MessageDispatcher networked = networkedDispatcher(endpoint);
+        adapter = new AgenorA2AAdapter(networked, agentDirectory, "local-agent", Duration.ofSeconds(30));
+        when(agentDirectory.findById("client-agent"))
+                .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+        when(agentDirectory.register(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(agentDirectory.unregister(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        replyOnSend(networked, informFrom("agent-a", "client-agent"));
+
+        DialogueMessage response = adapter.sendInternal(request("client-agent")).get(5, TimeUnit.SECONDS);
+
+        assertThat(response.performative()).isEqualTo(Performative.INFORM);
+        var order = inOrder(agentDirectory, networked);
+        ArgumentCaptor<AgentDescriptor> registered = ArgumentCaptor.forClass(AgentDescriptor.class);
+        order.verify(agentDirectory).register(registered.capture());
+        order.verify(networked).sendTo(any(Message.class));
+        order.verify(agentDirectory, timeout(1000)).unregister("client-agent");
+        assertThat(registered.getValue().agentId()).isEqualTo("client-agent");
+        assertThat(registered.getValue().endpoint()).isEqualTo(endpoint);
+    }
+
+    @Test
+    void sendInternal_leavesARegisteredSenderAlone() throws Exception {
+        MessageDispatcher networked = networkedDispatcher(new AgentEndpoint("node-1", "redis", Map.of()));
+        adapter = new AgenorA2AAdapter(networked, agentDirectory, "local-agent", Duration.ofSeconds(30));
+        when(agentDirectory.findById("real-agent")).thenReturn(CompletableFuture.completedFuture(
+                Optional.of(AgentDescriptor.builder("real-agent").build())));
+        replyOnSend(networked, informFrom("agent-a", "real-agent"));
+
+        adapter.sendInternal(request("real-agent")).get(5, TimeUnit.SECONDS);
+
+        // Registering over a real agent's row, then unregistering it, would delete the agent
+        verify(agentDirectory, never()).register(any());
+        verify(agentDirectory, never()).unregister(anyString());
+    }
+
+    @Test
+    void sendInternal_failsAtOnceWhenTheRequestCannotBeSent() {
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenReturn(mock(Subscription.class));
+        when(messageDispatcher.sendTo(any(Message.class)))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no route")));
+
+        // The adapter's timeout is 30 s: waiting it out is the defect
+        assertThatThrownBy(() -> adapter.sendInternal(request("local-agent")).get(2, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasRootCauseMessage("no route");
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /** A dispatcher that, like Redis, tells the directory how this node is reached. */
+    private static MessageDispatcher networkedDispatcher(AgentEndpoint endpoint) {
+        MessageDispatcher dispatcher = mock(MessageDispatcher.class,
+                withSettings().extraInterfaces(LocalEndpointProvider.class));
+        when(((LocalEndpointProvider) dispatcher).localEndpoint()).thenReturn(Optional.of(endpoint));
+        return dispatcher;
+    }
+
+    private static DialogueMessage request(String senderId) {
+        return DialogueMessage.builder()
+                .conversationId("c-1")
+                .senderId(senderId)
+                .receiverId("agent-a")
+                .performative(Performative.REQUEST)
+                .build();
+    }
+
+    private static Message informFrom(String sender, String receiver) {
+        return DialogueMessage.builder()
+                .conversationId("c-1")
+                .senderId(sender)
+                .receiverId(receiver)
+                .performative(Performative.INFORM)
+                .content("done")
+                .build()
+                .toMessage();
+    }
+
+    /** Delivers {@code reply} to the reply subscription when the request is sent, not before. */
+    private static void replyOnSend(MessageDispatcher dispatcher, Message reply) {
+        AtomicReference<MessageHandler> handler = new AtomicReference<>();
+        when(dispatcher.subscribeRecipient(anyString(), any(MessageHandler.class))).thenAnswer(inv -> {
+            handler.set(inv.getArgument(1));
+            return mock(Subscription.class);
+        });
+        when(dispatcher.sendTo(any(Message.class))).thenAnswer(inv -> {
+            handler.get().handle(reply);
+            return CompletableFuture.completedFuture(null);
+        });
+    }
 
     /**
      * Stubs the dispatcher to immediately invoke the MessageHandler registered via

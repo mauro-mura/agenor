@@ -120,6 +120,24 @@ dependency, which changes its public constructor (used by `SupportA2AServer` and
 `A2AIntegrationExample`). This is deliberately out of scope for this ADR and is deferred to a
 separate branch/PR, following the same pattern ADR-009 used to defer this fix.
 
+## Amendment, 2026-10-22 (0.39.0) — the executor resolves on the final reply
+
+The limitation above is closed, and without the `ConversationManager` dependency it assumed.
+`AgenorAgentExecutor` plays the same role as `sendInternal()`: the initiator of one
+request/response exchange, through a per-task temporary subscription. So it takes the same local
+rule: an `AGREE` leaves the task `working` and the subscription open, and the task ends on the
+next reply. The constructor did not change.
+
+The final reply now maps one performative to one task state, with no default success: `INFORM`
+→ `completed`, `FAILURE` → `failed`, `REFUSE` → `rejected`, anything else → `failed`. A timeout,
+or a request the dispatcher cannot send, fails the task with a message saying which. A
+`tasks/cancel` sends `CANCEL` from the requester's id, `a2a-client-<taskId>`, and ends the wait;
+`RequestProtocol` allows an initiator's `CANCEL` in `AGREED`.
+
+Found by agenor-research. Before the fix, an ADR-026 agent behind the executor gave the A2A client
+`completed` with the `AGREE`'s empty text. A `FAILURE` after the `AGREE` was reported as success.
+The real `INFORM` failed with `AgentNotFoundException`, because the subscription was already gone.
+
 ## Related ADRs
 
 - ADR-009: Agent Dialogue Protocol (documents the original limitation this ADR resolves)

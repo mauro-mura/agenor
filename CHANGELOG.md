@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BREAKING: An agent exposed over A2A is answered by its final reply, not its `AGREE`.**
+  `AgenorAgentExecutor` completed the task on the first reply, so an agent following ADR-026
+  returned `completed` with empty text, a `FAILURE` after the `AGREE` became a success, and the
+  real `INFORM` was lost. The task stays `working` until `INFORM` (`completed`), `FAILURE`
+  (`failed`) or `REFUSE` (`rejected`); any other reply, a timeout, or an unsendable request fails
+  it with a message saying why. `tasks/cancel` reaches the agent from the requester's id and
+  ends the wait. See the ADR-026 amendment.
+
+  Migration: a client that read `failed` as a refusal receives `rejected`; the
+  refusal text is in the status message, no longer in an artifact. `AgenorA2AClient` reads
+  `rejected` as `REFUSE`.
+
+- **An agent on another node can answer an A2A request.** `AgenorAgentExecutor` waited on a
+  recipient no directory knew, so on Redis an agent on another node failed every reply with
+  `AgentNotFoundException`. A new constructor takes the `AgentRegistry` (the runtime's
+  `AgentDirectory`) and registers that recipient for the life of the task; the old one logs a
+  WARN on a distributed dispatcher. `AgenorA2AAdapter.sendInternal` had the same defect and now
+  registers an unknown sender the same way, and fails at once when the message cannot be sent.
+
 - **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
   `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
   `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is
