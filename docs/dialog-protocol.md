@@ -395,10 +395,18 @@ public class A2AExample {
 hand it to the SDK's request handler, and each A2A task becomes a `REQUEST` to one Agenor agent.
 
 ```java
-AgentExecutor executor =
-    new AgenorAgentExecutor("support-agent", runtime.getMessageDispatcher(), Duration.ofMinutes(2));
+AgentExecutor executor = new AgenorAgentExecutor(
+    "support-agent", runtime.getMessageDispatcher(), runtime.getAgentDirectory(), Duration.ofMinutes(2));
 // The SDK invokes executor.execute(RequestContext, EventQueue) for each message/send
 ```
+
+The agent replies to a recipient that exists only for the task, `a2a-client-<taskId>`. On a
+distributed transport such as Redis, an agent on another node finds that recipient through the
+directory, so the executor registers it there for the life of the task, and needs the directory
+to do so. The three-argument constructor, without one, works only when the agent is on the
+executor's node, and logs a WARN at construction when the dispatcher is distributed.
+`AgenorA2AAdapter` does the same for the sender of a message it sends to an internal agent, when
+the directory does not already know that sender.
 
 `SupportA2AServer` in `agenor-examples` (`dev.agenor.examples.support.a2a`) wires it end to end.
 

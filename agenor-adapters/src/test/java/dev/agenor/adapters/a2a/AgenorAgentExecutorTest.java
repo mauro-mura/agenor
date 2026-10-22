@@ -1,7 +1,11 @@
 package dev.agenor.adapters.a2a;
 
+import dev.agenor.core.AgentDescriptor;
+import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
+import dev.agenor.core.directory.AgentRegistry;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.messaging.Subscription;
 import dev.agenor.core.dialogue.DialogueMessage;
@@ -25,6 +29,8 @@ import org.mockito.stubbing.Answer;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -546,8 +552,64 @@ class AgenorAgentExecutorTest {
     }
 
     // -----------------------------------------------------------------------
+    // The requester is resolvable from other nodes
+    // -----------------------------------------------------------------------
+
+    @Test
+    void registersTheRequesterAtTheDispatchersEndpointBeforeSendingAndUnregistersAfter() {
+        var endpoint = new AgentEndpoint("node-1", "redis", Map.of());
+        MessageDispatcher networked = networkedDispatcher(endpoint);
+        AgentRegistry registry = mock(AgentRegistry.class);
+        when(registry.register(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(registry.unregister(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        messageDispatcher = networked;
+        executor = new AgenorAgentExecutor("test-agent", networked, registry, Duration.ofSeconds(5));
+        givenRequest("task-cross-node");
+        stubDispatcherToReply(reply("task-cross-node", Performative.INFORM, "from node 2"));
+
+        executor.execute(requestContext, eventQueue);
+
+        var order = inOrder(registry, networked);
+        ArgumentCaptor<AgentDescriptor> registered = ArgumentCaptor.forClass(AgentDescriptor.class);
+        order.verify(registry).register(registered.capture());
+        order.verify(networked).sendTo(any(Message.class));
+        order.verify(registry).unregister("a2a-client-task-cross-node");
+        assertThat(registered.getValue().agentId()).isEqualTo("a2a-client-task-cross-node");
+        assertThat(registered.getValue().endpoint()).isEqualTo(endpoint);
+        assertThat(lastStatus().state()).isEqualTo(TaskState.COMPLETED);
+    }
+
+    @Test
+    void aRequesterThatCannotBeRegisteredFailsTheTaskWithoutSending() {
+        MessageDispatcher networked = networkedDispatcher(new AgentEndpoint("node-1", "redis", Map.of()));
+        AgentRegistry registry = mock(AgentRegistry.class);
+        when(registry.register(any()))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("directory down")));
+        when(registry.unregister(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        when(networked.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenReturn(mock(Subscription.class));
+        executor = new AgenorAgentExecutor("test-agent", networked, registry, Duration.ofSeconds(5));
+        givenRequest("task-unregistered");
+
+        executor.execute(requestContext, eventQueue);
+
+        verify(networked, never()).sendTo(any(Message.class));
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.FAILED);
+        assertThat(text(last.message())).contains("directory down");
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /** A dispatcher that, like Redis, tells the directory how this node is reached. */
+    private static MessageDispatcher networkedDispatcher(AgentEndpoint endpoint) {
+        MessageDispatcher dispatcher = mock(MessageDispatcher.class,
+                withSettings().extraInterfaces(LocalEndpointProvider.class));
+        when(((LocalEndpointProvider) dispatcher).localEndpoint()).thenReturn(Optional.of(endpoint));
+        return dispatcher;
+    }
 
     private void givenRequest(String taskId) {
         when(requestContext.getTaskId()).thenReturn(taskId);

@@ -1,5 +1,10 @@
 package dev.agenor.adapters.a2a;
 
+import dev.agenor.core.AgentDescriptor;
+import dev.agenor.core.AgentEndpoint;
+import dev.agenor.core.AgentStatus;
+import dev.agenor.core.directory.AgentRegistry;
+import dev.agenor.core.messaging.LocalEndpointProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -18,8 +23,10 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -51,9 +58,13 @@ import java.util.concurrent.TimeoutException;
  *     @Inject
  *     MessageDispatcher messageDispatcher;
  *
+ *     @Inject
+ *     AgentDirectory agentDirectory;
+ *
  *     @Produces
  *     public AgentExecutor createExecutor() {
- *         return new AgenorAgentExecutor("my-agent", messageDispatcher, Duration.ofMinutes(5));
+ *         return new AgenorAgentExecutor("my-agent", messageDispatcher, agentDirectory,
+ *                 Duration.ofMinutes(5));
  *     }
  * }
  * }</pre>
@@ -66,6 +77,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
 
     private final String internalAgentId;
     private final MessageDispatcher messageDispatcher;
+    private final AgentRegistry agentRegistry;
     private final Duration timeout;
 
     /** Final replies still awaited by {@link #execute}, by task id, so that cancel can end them. */
@@ -79,8 +91,34 @@ public class AgenorAgentExecutor implements AgentExecutor {
      * @since 0.20.0
      */
     public AgenorAgentExecutor(String internalAgentId, MessageDispatcher messageDispatcher, Duration timeout) {
+        this(internalAgentId, messageDispatcher, null, timeout);
+        if (messageDispatcher instanceof LocalEndpointProvider provider && provider.localEndpoint().isPresent()) {
+            log.warn("AgenorAgentExecutor for '{}' has no AgentRegistry on a networked dispatcher: an agent"
+                    + " on another node cannot reply, because the reply recipient is not in the directory."
+                    + " Pass the runtime's AgentDirectory to the four-argument constructor", internalAgentId);
+        }
+    }
+
+    /**
+     * Creates an executor whose agent may live on another node.
+     *
+     * <p>The agent replies to a per-task recipient, {@code a2a-client-<taskId>}. On a networked
+     * dispatcher (one that is a {@link LocalEndpointProvider}) the agent's node finds that
+     * recipient only through the directory, so the executor registers it there, at this node's
+     * endpoint, for the life of the task. Without a networked dispatcher nothing is registered.
+     *
+     * @param internalAgentId   the Agenor agent ID to route A2A requests to
+     * @param messageDispatcher the runtime message dispatcher
+     * @param agentRegistry     the registry the agent's node resolves recipients from, typically
+     *                          the runtime's {@code AgentDirectory}
+     * @param timeout           per-request timeout
+     * @since 0.39.0
+     */
+    public AgenorAgentExecutor(String internalAgentId, MessageDispatcher messageDispatcher,
+                               AgentRegistry agentRegistry, Duration timeout) {
         this.internalAgentId = internalAgentId;
         this.messageDispatcher = messageDispatcher;
+        this.agentRegistry = agentRegistry;
         this.timeout = timeout;
     }
 
@@ -131,16 +169,35 @@ public class AgenorAgentExecutor implements AgentExecutor {
                 return CompletableFuture.completedFuture(null);
             });
             DialogueMessage reply;
+            boolean registered = false;
             try {
-                messageDispatcher.sendTo(incomingMsg.toMessage()).whenComplete((ignored, ex) -> {
-                    if (ex != null) {
-                        finalReply.completeExceptionally(ex);
-                    }
-                });
+                // The requester has to be resolvable before the agent can answer it from another node
+                Optional<AgentEndpoint> endpoint = networkedEndpoint();
+                registered = endpoint.isPresent();
+                CompletableFuture<Void> resolvable = endpoint
+                        .map(ep -> agentRegistry.register(AgentDescriptor.builder(externalSenderId)
+                                .agentName("A2A client, task " + taskId)
+                                .agentType("a2a-client")
+                                .status(AgentStatus.RUNNING)
+                                .endpoint(ep)
+                                .build()))
+                        .orElseGet(() -> CompletableFuture.completedFuture(null));
+                resolvable
+                        .thenCompose(ignored -> messageDispatcher.sendTo(incomingMsg.toMessage()))
+                        .whenComplete((ignored, ex) -> {
+                            if (ex != null) {
+                                finalReply.completeExceptionally(
+                                        ex instanceof CompletionException && ex.getCause() != null
+                                                ? ex.getCause() : ex);
+                            }
+                        });
                 reply = finalReply.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } finally {
                 subscription.unsubscribe();
                 awaitingFinalReply.remove(taskId, finalReply);
+                if (registered) {
+                    unregister(externalSenderId);
+                }
             }
 
             endTask(updater, reply);
@@ -225,6 +282,23 @@ public class AgenorAgentExecutor implements AgentExecutor {
 
     private static String requesterId(String taskId) {
         return "a2a-client-" + taskId;
+    }
+
+    /** This node's endpoint, when replies may come from another node and there is a registry. */
+    private Optional<AgentEndpoint> networkedEndpoint() {
+        if (agentRegistry != null && messageDispatcher instanceof LocalEndpointProvider provider) {
+            return provider.localEndpoint();
+        }
+        return Optional.empty();
+    }
+
+    private void unregister(String requester) {
+        agentRegistry.unregister(requester).whenComplete((ignored, ex) -> {
+            if (ex != null) {
+                log.warn("Could not unregister A2A requester '{}' from the directory: {}",
+                        requester, ex.getMessage());
+            }
+        });
     }
 
     /** The agent accepted: the task stays working, with what the agent said about it. */

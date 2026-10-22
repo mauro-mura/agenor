@@ -302,6 +302,7 @@ boolean isA2A = client.isA2AAgent("https://some-service.example.com").join();
 AgentExecutor executor = new AgenorAgentExecutor(
     "target-agent-id",   // internal Agenor agent to route requests to
     messageDispatcher,
+    agentDirectory,      // lets an agent on another node reply; see docs/dialog-protocol.md
     Duration.ofMinutes(5)
 );
 ```

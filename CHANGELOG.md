@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An agent on another node can answer an A2A request.** `AgenorAgentExecutor` waited on a
+  recipient no directory knew, so on Redis an agent on another node failed every reply with
+  `AgentNotFoundException`. A new constructor takes the `AgentRegistry` (the runtime's
+  `AgentDirectory`) and registers that recipient for the life of the task; the old one logs a
+  WARN on a distributed dispatcher. `AgenorA2AAdapter.sendInternal` had the same defect and now
+  registers an unknown sender the same way, and fails at once when the message cannot be sent.
+
 - **BREAKING: An agent exposed over A2A is answered by its final reply, not its `AGREE`.**
   `AgenorAgentExecutor` completed the task on the first reply, so an agent following ADR-026
   returned `completed` with empty text, a `FAILURE` after the `AGREE` became a success, and the
