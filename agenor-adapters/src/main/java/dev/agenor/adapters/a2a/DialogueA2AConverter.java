@@ -54,6 +54,23 @@ public class DialogueA2AConverter {
     }
 
     /**
+     * Converts an agent's reply that came as a message rather than a task. A message ends the
+     * exchange with its text, so it is an {@code INFORM}.
+     */
+    DialogueMessage fromReply(Message reply, String localAgentId) {
+        String conversationId = reply.getTaskId() != null ? reply.getTaskId()
+                : reply.getContextId() != null ? reply.getContextId() : reply.getMessageId();
+        return DialogueMessage.builder()
+            .id(UUID.randomUUID().toString())
+            .conversationId(getMetadataString(reply.getMetadata(), META_CONVERSATION_ID, conversationId))
+            .senderId("external-agent")
+            .receiverId(localAgentId)
+            .performative(Performative.INFORM)
+            .content(extractTextFromParts(reply.getParts()))
+            .build();
+    }
+
+    /**
      * Converts A2A Message to DialogueMessage (for incoming requests).
      */
     public DialogueMessage fromA2AMessage(Message a2aMessage, String taskId, String senderId, String receiverId) {

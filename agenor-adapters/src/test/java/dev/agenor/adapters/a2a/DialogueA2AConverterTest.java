@@ -213,6 +213,24 @@ class DialogueA2AConverterTest {
         assertThat(msg.content()).isEqualTo("not allowed");
     }
 
+    /** An agent may answer with a message instead of a task; that ends the exchange too. */
+    @Test
+    void aReplyMessageIsAnInformWithItsText() {
+        Message reply = new Message.Builder()
+            .messageId("reply-1")
+            .role(Message.Role.AGENT)
+            .contextId("ctx-1")
+            .parts(List.of(new TextPart("echo: hello", null)))
+            .build();
+
+        DialogueMessage msg = converter.fromReply(reply, "local-agent");
+
+        assertThat(msg.performative()).isEqualTo(Performative.INFORM);
+        assertThat(msg.content()).isEqualTo("echo: hello");
+        assertThat(msg.conversationId()).isEqualTo("ctx-1");
+        assertThat(msg.receiverId()).isEqualTo("local-agent");
+    }
+
     @Test
     void shouldUseDefaultSenderIdWhenNotInMetadata() {
         TaskStatus status = new TaskStatus(TaskState.COMPLETED, null, null);
