@@ -215,7 +215,7 @@ Key behaviours:
 
 `BaseAgent` provides protected convenience methods so agents do not need to interact with `MemoryStore` directly. All keys are automatically **namespaced** as `agent:<agentId>:<key>` to avoid collisions between agents.
 
-`MemoryStore` must be injected by the runtime (or set via `setMemoryStore()`) before these methods can be used. All methods throw `IllegalStateException` if no store is configured; use `hasMemory()` as a guard.
+`MemoryStore` must be injected by the runtime (or set via `setMemoryStore()`) before these methods can be used. All methods throw `IllegalStateException` if no store is configured.
 
 ### Short-term memory (volatile)
 
@@ -288,11 +288,6 @@ log.info("Short-term: {}, Long-term: {}, ~{} tokens",
 @Agent("preferences-agent")
 public class PreferencesAgent extends BaseAgent {
 
-    @Override
-    protected void onStart() {
-        log.info("Memory ready: {}", hasMemory());
-    }
-
     @AgenorMessageHandler("user.update-preference")
     public void storePreference(Message msg) {
         String value = msg.getContent(String.class);
@@ -306,7 +301,7 @@ public class PreferencesAgent extends BaseAgent {
     public void getPreference(Message msg) {
         recall("theme", MemoryScope.LONG_TERM).thenAccept(opt -> {
             String theme = opt.orElse("system");
-            messageService.send(Message.builder()
+            getMessageDispatcher().publish(Message.builder()
                 .topic("user.preference-result")
                 .content(theme)
                 .build());
