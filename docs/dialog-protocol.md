@@ -391,16 +391,34 @@ public class A2AExample {
 
 ### Exposing Agenor Agent as A2A Server
 
+`AgenorAgentExecutor` implements the A2A SDK's `AgentExecutor`. The SDK calls it, not your code:
+hand it to the SDK's request handler, and each A2A task becomes a `REQUEST` to one Agenor agent.
+
 ```java
-public class A2AServerExample {
-    public void execute(AgenorAgentExecutor executor, Object a2aRequest) {
-        // Handle incoming A2A request
-        executor.execute(a2aRequest, status -> {
-            // Status updates: "working", "completed", "failed"
-        });
-    }
-}
+AgentExecutor executor =
+    new AgenorAgentExecutor("support-agent", runtime.getMessageDispatcher(), Duration.ofMinutes(2));
+// The SDK invokes executor.execute(RequestContext, EventQueue) for each message/send
 ```
+
+`SupportA2AServer` in `agenor-examples` (`dev.agenor.examples.support.a2a`) wires it end to end.
+
+The task ends on the agent's **final** reply, as `request()` does (ADR-026):
+
+| Agent replies | A2A task |
+|---|---|
+| `AGREE` | stays `working`; the AGREE's text becomes a status message |
+| `INFORM` | `completed`, its content as the artifact |
+| `FAILURE` | `failed`, its content as the status message |
+| `REFUSE` | `rejected`, its content as the status message |
+| any other performative | `failed`, with a status message naming it |
+| nothing within the timeout | `failed`: `No final reply from '<agent>' within <timeout>` |
+
+`tasks/cancel` sends `CANCEL` to the agent, from the requester's id, and ends the task `canceled`.
+
+A blocking `message/send` returns when the task ends or when the SDK stops waiting, whichever
+comes first. `DefaultRequestHandler.create(...)` stops after 5 seconds, so an agent that works
+longer answers a blocking client with `working`, and the client reads the outcome with
+`tasks/get`.
 
 ## Package Structure
 

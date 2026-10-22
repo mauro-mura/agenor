@@ -8,9 +8,12 @@ import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
+import io.a2a.spec.Event;
 import io.a2a.spec.Task;
+import io.a2a.spec.TaskArtifactUpdateEvent;
 import io.a2a.spec.TaskState;
 import io.a2a.spec.TaskStatus;
+import io.a2a.spec.TaskStatusUpdateEvent;
 import io.a2a.spec.TextPart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,9 @@ import org.mockito.stubbing.Answer;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -382,8 +388,235 @@ class AgenorAgentExecutorTest {
     }
 
     // -----------------------------------------------------------------------
+    // The task ends on the final reply, not the first one (ADR-026)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void agreeThenInformCompletesOnceWithTheInformText() {
+        givenRequest("task-agree-inform");
+        stubDispatcherToReply(
+                reply("task-agree-inform", Performative.AGREE, "on it"),
+                reply("task-agree-inform", Performative.INFORM, "the answer"));
+
+        executor.execute(requestContext, eventQueue);
+
+        List<TaskStatus> statuses = publishedStatuses();
+        assertThat(statuses).extracting(TaskStatus::state)
+                .containsExactly(TaskState.SUBMITTED, TaskState.WORKING, TaskState.WORKING,
+                        TaskState.COMPLETED);
+        assertThat(text(statuses.get(2).message())).isEqualTo("on it");
+        assertThat(publishedArtifactTexts()).containsExactly("the answer");
+    }
+
+    @Test
+    void failureAfterAgreeFailsTheTaskWithItsText() {
+        givenRequest("task-agree-failure");
+        stubDispatcherToReply(
+                reply("task-agree-failure", Performative.AGREE, null),
+                reply("task-agree-failure", Performative.FAILURE, "disk full"));
+
+        executor.execute(requestContext, eventQueue);
+
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.FAILED);
+        assertThat(text(last.message())).isEqualTo("disk full");
+        assertThat(publishedArtifactTexts()).isEmpty();
+    }
+
+    @Test
+    void refuseRejectsTheTask() {
+        givenRequest("task-refuse");
+        stubDispatcherToReply(reply("task-refuse", Performative.REFUSE, "not allowed"));
+
+        executor.execute(requestContext, eventQueue);
+
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.REJECTED);
+        assertThat(text(last.message())).isEqualTo("not allowed");
+    }
+
+    @Test
+    void aPerformativeThatDoesNotEndARequestFailsTheTaskAndNamesIt() {
+        givenRequest("task-propose");
+        stubDispatcherToReply(reply("task-propose", Performative.PROPOSE, "how about"));
+
+        executor.execute(requestContext, eventQueue);
+
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.FAILED);
+        assertThat(text(last.message())).contains("PROPOSE");
+    }
+
+    @Test
+    void timeoutFailsTheTaskSayingWhoDidNotReplyAndAfterHowLong() {
+        executor = new AgenorAgentExecutor("test-agent", messageDispatcher, Duration.ofMillis(50));
+        givenRequest("task-silent");
+        stubDispatcherToReply(reply("task-silent", Performative.AGREE, null));
+
+        executor.execute(requestContext, eventQueue);
+
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.FAILED);
+        assertThat(text(last.message()))
+                .isEqualTo("No final reply from 'test-agent' within PT0.05S");
+    }
+
+    @Test
+    void undeliverableRequestFailsAtOnceWithTheCause() {
+        givenRequest("task-undeliverable");
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenReturn(mock(Subscription.class));
+        when(messageDispatcher.sendTo(any(Message.class)))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no route")));
+
+        long start = System.nanoTime();
+        executor.execute(requestContext, eventQueue);
+        Duration took = Duration.ofNanos(System.nanoTime() - start);
+
+        // The configured timeout is 5 s: waiting it out is the defect
+        assertThat(took).isLessThan(Duration.ofSeconds(1));
+        TaskStatus last = lastStatus();
+        assertThat(last.state()).isEqualTo(TaskState.FAILED);
+        assertThat(text(last.message())).contains("test-agent").contains("no route");
+    }
+
+    @Test
+    void cancelAfterAgreeTellsTheAgentAsTheRequesterAndEndsTheWait() throws Exception {
+        String taskId = "task-cancel-agreed";
+        givenRequest(taskId);
+        CountDownLatch agreed = new CountDownLatch(1);
+        AtomicReference<MessageHandler> handler = new AtomicReference<>();
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenAnswer(inv -> {
+                    handler.set(inv.getArgument(1));
+                    return mock(Subscription.class);
+                });
+        when(messageDispatcher.sendTo(any(Message.class))).thenAnswer(inv -> {
+            Message sent = inv.getArgument(0);
+            if (DialogueMessage.fromMessage(sent).performative() == Performative.REQUEST) {
+                handler.get().handle(reply(taskId, Performative.AGREE, null));
+                agreed.countDown();
+            }
+            return CompletableFuture.completedFuture(null);
+        });
+
+        var running = CompletableFuture.runAsync(() -> executor.execute(requestContext, eventQueue));
+        assertThat(agreed.await(2, TimeUnit.SECONDS)).isTrue();
+
+        RequestContext cancelContext = mock(RequestContext.class);
+        EventQueue cancelQueue = mock(EventQueue.class);
+        when(cancelContext.getTaskId()).thenReturn(taskId);
+        when(cancelContext.getContextId()).thenReturn("ctx-" + taskId);
+        executor.cancel(cancelContext, cancelQueue);
+
+        // execute returns well inside its 5 s timeout, and reports nothing of its own
+        running.get(1, TimeUnit.SECONDS);
+        assertThat(publishedStatuses()).extracting(TaskStatus::state)
+                .containsExactly(TaskState.SUBMITTED, TaskState.WORKING);
+
+        ArgumentCaptor<Message> sent = ArgumentCaptor.forClass(Message.class);
+        verify(messageDispatcher, times(2)).sendTo(sent.capture());
+        DialogueMessage cancel = DialogueMessage.fromMessage(sent.getAllValues().get(1));
+        assertThat(cancel.performative()).isEqualTo(Performative.CANCEL);
+        assertThat(cancel.senderId()).isEqualTo("a2a-client-" + taskId);
+
+        ArgumentCaptor<Event> cancelEvents = ArgumentCaptor.forClass(Event.class);
+        verify(cancelQueue, atLeastOnce()).enqueueEvent(cancelEvents.capture());
+        assertThat(cancelEvents.getAllValues()).filteredOn(TaskStatusUpdateEvent.class::isInstance)
+                .extracting(e -> ((TaskStatusUpdateEvent) e).getStatus().state())
+                .containsExactly(TaskState.CANCELED);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCancellingRejectedTask() {
+        // Lenient: a cancel that wrongly goes ahead must be able to succeed, so that only the
+        // state check can make this test pass
+        lenient().when(requestContext.getContextId()).thenReturn("ctx-rejected");
+        lenient().when(messageDispatcher.sendTo(any(Message.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        when(requestContext.getTaskId()).thenReturn("task-rejected");
+        when(requestContext.getTask()).thenReturn(new Task.Builder()
+                .id("task-rejected")
+                .contextId("ctx-rejected")
+                .status(new TaskStatus(TaskState.REJECTED, null, null))
+                .build());
+
+        assertThatThrownBy(() -> executor.cancel(requestContext, eventQueue))
+                .isInstanceOf(io.a2a.spec.TaskNotCancelableError.class);
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    private void givenRequest(String taskId) {
+        when(requestContext.getTaskId()).thenReturn(taskId);
+        when(requestContext.getContextId()).thenReturn("ctx-" + taskId);
+        when(requestContext.getTask()).thenReturn(null);
+        when(requestContext.getMessage()).thenReturn(new io.a2a.spec.Message.Builder()
+                .messageId("msg-" + taskId)
+                .role(io.a2a.spec.Message.Role.USER)
+                .parts(List.of(new TextPart("Request", null)))
+                .build());
+    }
+
+    private static Message reply(String taskId, Performative performative, Object content) {
+        return DialogueMessage.builder()
+                .conversationId(taskId)
+                .senderId("test-agent")
+                .receiverId("a2a-client-" + taskId)
+                .performative(performative)
+                .content(content)
+                .build()
+                .toMessage();
+    }
+
+    /** Delivers {@code replies}, in order, to the reply subscription once the request is sent. */
+    private void stubDispatcherToReply(Message... replies) {
+        AtomicReference<MessageHandler> handler = new AtomicReference<>();
+        when(messageDispatcher.subscribeRecipient(anyString(), any(MessageHandler.class)))
+                .thenAnswer(inv -> {
+                    handler.set(inv.getArgument(1));
+                    return mock(Subscription.class);
+                });
+        when(messageDispatcher.sendTo(any(Message.class))).thenAnswer(inv -> {
+            for (Message reply : replies) {
+                handler.get().handle(reply);
+            }
+            return CompletableFuture.completedFuture(null);
+        });
+    }
+
+    private List<TaskStatus> publishedStatuses() {
+        ArgumentCaptor<Event> events = ArgumentCaptor.forClass(Event.class);
+        verify(eventQueue, atLeastOnce()).enqueueEvent(events.capture());
+        return events.getAllValues().stream()
+                .filter(TaskStatusUpdateEvent.class::isInstance)
+                .map(e -> ((TaskStatusUpdateEvent) e).getStatus())
+                .toList();
+    }
+
+    private TaskStatus lastStatus() {
+        List<TaskStatus> statuses = publishedStatuses();
+        return statuses.get(statuses.size() - 1);
+    }
+
+    private List<String> publishedArtifactTexts() {
+        ArgumentCaptor<Event> events = ArgumentCaptor.forClass(Event.class);
+        verify(eventQueue, atLeastOnce()).enqueueEvent(events.capture());
+        return events.getAllValues().stream()
+                .filter(TaskArtifactUpdateEvent.class::isInstance)
+                .flatMap(e -> ((TaskArtifactUpdateEvent) e).getArtifact().parts().stream())
+                .map(p -> ((TextPart) p).getText())
+                .toList();
+    }
+
+    private static String text(io.a2a.spec.Message message) {
+        assertThat(message).as("status message").isNotNull();
+        return message.getParts().stream()
+                .map(p -> ((TextPart) p).getText())
+                .reduce("", String::concat);
+    }
 
     private void stubDispatcherToReplyImmediately(Message replyMsg) throws Exception {
         Subscription mockSub = mock(Subscription.class);

@@ -188,6 +188,31 @@ class DialogueA2AConverterTest {
         assertThat(msg.content()).isEqualTo("Status message content");
     }
 
+    /**
+     * AgenorAgentExecutor reports an agent's REFUSE as {@code rejected}, with the refusal text in
+     * the status message. A caller on AgenorA2AClient has to read that back as a refusal, not as
+     * the INFORM the default mapping used to give it.
+     */
+    @Test
+    void rejectedTaskIsARefusalWithItsText() {
+        Message statusMessage = new Message.Builder()
+            .messageId("status-msg")
+            .role(Message.Role.AGENT)
+            .parts(List.of(new TextPart("not allowed", null)))
+            .build();
+
+        Task task = new Task.Builder()
+            .id("task-rejected")
+            .status(new TaskStatus(TaskState.REJECTED, statusMessage, null))
+            .contextId("ctx-1")
+            .build();
+
+        DialogueMessage msg = converter.fromTask(task, "local-agent");
+
+        assertThat(msg.performative()).isEqualTo(Performative.REFUSE);
+        assertThat(msg.content()).isEqualTo("not allowed");
+    }
+
     @Test
     void shouldUseDefaultSenderIdWhenNotInMetadata() {
         TaskStatus status = new TaskStatus(TaskState.COMPLETED, null, null);

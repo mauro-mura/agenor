@@ -1,6 +1,5 @@
 package dev.agenor.adapters.a2a;
 
-import dev.agenor.core.Message;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
@@ -18,14 +17,32 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Implements A2A SDK AgentExecutor to expose Agenor agents as A2A servers.
  *
  * <p>Routes incoming A2A requests to internal Agenor agents via MessageDispatcher.
  * Uses the official A2A Java SDK v0.3.2.Final API.
+ *
+ * <p>The task ends on the agent's <em>final</em> reply, as {@code ConversationManager.request()}
+ * does (ADR-026). An {@code AGREE} leaves the task {@code working}, with its text as a status
+ * message. The final reply maps to a task state:
+ * <ul>
+ *   <li>{@code INFORM} — {@code completed}, its content as the artifact</li>
+ *   <li>{@code FAILURE} — {@code failed}, its content as the status message</li>
+ *   <li>{@code REFUSE} — {@code rejected}, its content as the status message</li>
+ *   <li>any other performative — {@code failed}, with a status message naming it</li>
+ * </ul>
+ * No final reply within the timeout, or a request that cannot be sent, also fails the task with a
+ * message saying why. {@code tasks/cancel} sends {@code CANCEL} to the agent from the requester's
+ * id and ends the wait.
  *
  * <p>Usage with CDI/Quarkus:
  * <pre>{@code
@@ -50,7 +67,10 @@ public class AgenorAgentExecutor implements AgentExecutor {
     private final String internalAgentId;
     private final MessageDispatcher messageDispatcher;
     private final Duration timeout;
-    private final DialogueA2AConverter converter;
+
+    /** Final replies still awaited by {@link #execute}, by task id, so that cancel can end them. */
+    private final Map<String, CompletableFuture<DialogueMessage>> awaitingFinalReply =
+            new ConcurrentHashMap<>();
 
     /**
      * @param internalAgentId   the Agenor agent ID to route A2A requests to
@@ -62,7 +82,6 @@ public class AgenorAgentExecutor implements AgentExecutor {
         this.internalAgentId = internalAgentId;
         this.messageDispatcher = messageDispatcher;
         this.timeout = timeout;
-        this.converter = new DialogueA2AConverter();
     }
 
     @Override
@@ -89,7 +108,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
             String userMessage = extractTextFromMessage(a2aMessage);
 
             // Convert to Agenor DialogueMessage
-            String externalSenderId = "a2a-client-" + taskId;
+            String externalSenderId = requesterId(taskId);
             DialogueMessage incomingMsg = DialogueMessage.builder()
                 .conversationId(taskId)
                 .senderId(externalSenderId)
@@ -98,47 +117,58 @@ public class AgenorAgentExecutor implements AgentExecutor {
                 .content(userMessage)
                 .build();
 
-            // Subscribe for the reply before sending to avoid races; unsubscribe when done
-            CompletableFuture<Message> replyFuture = new CompletableFuture<>();
-            var subscription = messageDispatcher.subscribeRecipient(externalSenderId,
-                    msg -> { replyFuture.complete(msg); return java.util.concurrent.CompletableFuture.completedFuture(null); });
-            Message responseMsg;
+            // Subscribe before sending to avoid races. An AGREE is progress, not the answer: the
+            // subscription stays open until the final reply, the timeout, or a cancel (ADR-026).
+            CompletableFuture<DialogueMessage> finalReply = new CompletableFuture<>();
+            awaitingFinalReply.put(taskId, finalReply);
+            var subscription = messageDispatcher.subscribeRecipient(externalSenderId, msg -> {
+                DialogueMessage reply = DialogueMessage.fromMessage(msg);
+                if (reply.performative() == Performative.AGREE) {
+                    reportAgreed(updater, reply, finalReply);
+                } else {
+                    finalReply.complete(reply);
+                }
+                return CompletableFuture.completedFuture(null);
+            });
+            DialogueMessage reply;
             try {
-                messageDispatcher.sendTo(incomingMsg.toMessage());
-                responseMsg = replyFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                messageDispatcher.sendTo(incomingMsg.toMessage()).whenComplete((ignored, ex) -> {
+                    if (ex != null) {
+                        finalReply.completeExceptionally(ex);
+                    }
+                });
+                reply = finalReply.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } finally {
                 subscription.unsubscribe();
+                awaitingFinalReply.remove(taskId, finalReply);
             }
 
-            // Convert response
-            DialogueMessage responseDialogue = DialogueMessage.fromMessage(responseMsg);
+            endTask(updater, reply);
+            log.info("A2A request ended: taskId={}, reply={}", taskId, reply.performative());
 
-            // Create response part
-            String responseText = responseDialogue.content() != null
-                ? responseDialogue.content().toString()
-                : "";
-            TextPart responsePart = new TextPart(responseText, null);
-            List<Part<?>> parts = List.of(responsePart);
+        } catch (CancellationException e) {
+            // cancel() has told the agent and reported the task cancelled: nothing left to say
+            log.info("A2A request cancelled: taskId={}", taskId);
 
-            // Add artifact and complete based on performative
-            updater.addArtifact(parts, null, null, null);
-
-            if (responseDialogue.performative() == Performative.FAILURE ||
-                responseDialogue.performative() == Performative.REFUSE) {
-                updater.fail();
-            } else {
-                updater.complete();
-            }
-
-            log.info("A2A request completed: taskId={}", taskId);
-
-        } catch (java.util.concurrent.TimeoutException e) {
+        } catch (TimeoutException e) {
             log.error("A2A request timeout: taskId={}", taskId);
-            updater.fail();
+            updater.fail(agentText(updater,
+                    "No final reply from '" + internalAgentId + "' within " + timeout));
+
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            log.error("A2A request could not be sent: taskId={}, error={}", taskId, cause.getMessage(), cause);
+            updater.fail(agentText(updater,
+                    "Could not send the request to '" + internalAgentId + "': " + cause.getMessage()));
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("A2A request interrupted: taskId={}", taskId);
+            updater.fail(agentText(updater, "Interrupted while waiting for '" + internalAgentId + "'"));
 
         } catch (Exception e) {
             log.error("A2A request failed: taskId={}, error={}", taskId, e.getMessage(), e);
-            updater.fail();
+            updater.fail(agentText(updater, "A2A request failed: " + e.getMessage()));
         }
     }
 
@@ -150,32 +180,40 @@ public class AgenorAgentExecutor implements AgentExecutor {
         TaskUpdater updater = new TaskUpdater(context, eventQueue);
 
         // Check if task can be cancelled
-        if (context.getTask() != null) {
-            TaskState state = context.getTask().getStatus().state();
-            if (state == TaskState.CANCELED || state == TaskState.COMPLETED) {
-                throw new TaskNotCancelableError();
-            }
+        if (context.getTask() != null && context.getTask().getStatus().state().isFinal()) {
+            throw new TaskNotCancelableError();
         }
 
         try {
-            // Send CANCEL message to internal agent
+            // CANCEL comes from the requester, the participant the agent is talking to
             DialogueMessage cancelMsg = DialogueMessage.builder()
                 .conversationId(taskId)
-                .senderId("a2a-cancel")
+                .senderId(requesterId(taskId))
                 .receiverId(internalAgentId)
                 .performative(Performative.CANCEL)
                 .content("Cancelled by A2A client")
                 .build();
 
-            messageDispatcher.sendTo(cancelMsg.toMessage());
-
-            // Update A2A task status
-            updater.cancel();
+            messageDispatcher.sendTo(cancelMsg.toMessage()).whenComplete((ignored, ex) -> {
+                if (ex != null) {
+                    log.warn("CANCEL for A2A task {} did not reach '{}': {}",
+                            taskId, internalAgentId, ex.getMessage());
+                }
+            });
 
         } catch (Exception e) {
             log.error("Failed to cancel A2A request: taskId={}", taskId, e);
             throw new TaskNotCancelableError();
         }
+
+        // A final reply that arrived first has already ended the task in execute()
+        CompletableFuture<DialogueMessage> waiting = awaitingFinalReply.remove(taskId);
+        if (waiting != null && !waiting.cancel(false)) {
+            throw new TaskNotCancelableError();
+        }
+
+        // Update A2A task status
+        updater.cancel();
     }
 
     /**
@@ -183,6 +221,52 @@ public class AgenorAgentExecutor implements AgentExecutor {
      */
     public String getInternalAgentId() {
         return internalAgentId;
+    }
+
+    private static String requesterId(String taskId) {
+        return "a2a-client-" + taskId;
+    }
+
+    /** The agent accepted: the task stays working, with what the agent said about it. */
+    private void reportAgreed(TaskUpdater updater, DialogueMessage agree,
+                              CompletableFuture<DialogueMessage> finalReply) {
+        String text = contentText(agree);
+        // An AGREE after the task has ended (late, or after a timeout) has no task to update
+        if (text.isEmpty() || finalReply.isDone()) {
+            return;
+        }
+        try {
+            updater.updateStatus(TaskState.WORKING, agentText(updater, text));
+        } catch (IllegalStateException e) {
+            log.debug("AGREE arrived after the task ended: taskId={}", updater.getTaskId());
+        }
+    }
+
+    /** Maps the final reply to the task's terminal state. No performative completes by default. */
+    private void endTask(TaskUpdater updater, DialogueMessage reply) {
+        String text = contentText(reply);
+        switch (reply.performative()) {
+            case INFORM -> {
+                updater.addArtifact(List.of(new TextPart(text, null)), null, null, null);
+                updater.complete();
+            }
+            case FAILURE -> updater.fail(agentText(updater,
+                    text.isEmpty() ? "'" + internalAgentId + "' replied FAILURE" : text));
+            case REFUSE -> updater.reject(agentText(updater,
+                    text.isEmpty() ? "'" + internalAgentId + "' replied REFUSE" : text));
+            default -> updater.fail(agentText(updater,
+                    "'" + internalAgentId + "' replied " + reply.performative()
+                            + ", which does not end a request"));
+        }
+    }
+
+    private static String contentText(DialogueMessage message) {
+        return message.content() != null ? message.content().toString() : "";
+    }
+
+    private static io.a2a.spec.Message agentText(TaskUpdater updater, String text) {
+        List<Part<?>> parts = List.of(new TextPart(text, null));
+        return updater.newAgentMessage(parts, null);
     }
 
     /**

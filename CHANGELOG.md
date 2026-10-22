@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BREAKING: An agent exposed over A2A is answered by its final reply, not its `AGREE`.**
+  `AgenorAgentExecutor` completed the task on the first reply, so an agent following ADR-026
+  returned `completed` with empty text, a `FAILURE` after the `AGREE` became a success, and the
+  real `INFORM` was lost. The task stays `working` until `INFORM` (`completed`), `FAILURE`
+  (`failed`) or `REFUSE` (`rejected`); any other reply, a timeout, or an unsendable request fails
+  it with a message saying why. `tasks/cancel` reaches the agent from the requester's id and
+  ends the wait. See the ADR-026 amendment.
+
+  Migration: a client that read `failed` as a refusal receives `rejected`; the
+  refusal text is in the status message, no longer in an artifact. `AgenorA2AClient` reads
+  `rejected` as `REFUSE`.
+
 ## [0.38.0] - 2026-10-21
 
 ### Fixed

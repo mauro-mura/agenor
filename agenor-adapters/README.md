@@ -225,20 +225,20 @@ The A2A adapter implements the [Google Agent-to-Agent (A2A) protocol](https://go
 External A2A Agent ←──────────────────────────────→ Agenor agent
 (any framework)       AgenorA2AAdapter               (BaseAgent subclass)
                         │
-                        ├── isInternalAgent()?  → MessageService (direct)
+                        ├── isInternalAgent()?  → MessageDispatcher (direct)
                         └── isExternalA2AUrl()? → AgenorA2AClient (HTTP/JSON-RPC)
 
-Incoming A2A request ──→ AgenorAgentExecutor ──→ MessageService ──→ Agenor agent
+Incoming A2A request ──→ AgenorAgentExecutor ──→ MessageDispatcher ──→ Agenor agent
                          (A2A server side)
 ```
 
 ### AgenorA2AAdapter — smart router
 
-`AgenorA2AAdapter` routes outgoing messages: if the `receiverId` matches a registered agent in `AgentDirectory` it sends internally via `MessageService`; if it looks like an HTTP/HTTPS URL it sends externally via `AgenorA2AClient`.
+`AgenorA2AAdapter` routes outgoing messages: if the `receiverId` matches a registered agent in `AgentDirectory` it sends internally via `MessageDispatcher`; if it looks like an HTTP/HTTPS URL it sends externally via `AgenorA2AClient`.
 
 ```java
 var adapter = new AgenorA2AAdapter(
-    messageService,
+    messageDispatcher,
     agentDirectory,
     "my-agent-id",
     Duration.ofMinutes(5)
@@ -295,13 +295,13 @@ boolean isA2A = client.isA2AAgent("https://some-service.example.com").join();
 
 ### AgenorAgentExecutor — expose Agenor agent as A2A server
 
-`AgenorAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Agenor `DialogueMessage` objects, dispatches them to the target agent via `MessageService`, and maps the reply back to an A2A task result.
+`AgenorAgentExecutor` implements the A2A SDK `AgentExecutor` interface. It receives incoming A2A tasks, converts them to Agenor `DialogueMessage` objects, dispatches them to the target agent via `MessageDispatcher`, and maps the reply back to an A2A task result.
 
 ```java
 // Standalone usage
 AgentExecutor executor = new AgenorAgentExecutor(
     "target-agent-id",   // internal Agenor agent to route requests to
-    messageService,
+    messageDispatcher,
     Duration.ofMinutes(5)
 );
 ```
@@ -313,16 +313,16 @@ With CDI / Quarkus:
 public class MyExecutorProducer {
 
     @Inject
-    MessageService messageService;
+    MessageDispatcher messageDispatcher;
 
     @Produces
     public AgentExecutor createExecutor() {
-        return new AgenorAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
+        return new AgenorAgentExecutor("my-agent", messageDispatcher, Duration.ofMinutes(5));
     }
 }
 ```
 
-Task states managed automatically: `SUBMITTED → WORKING → COMPLETED` (or `FAILED` if the Agenor agent replies with `Performative.FAILURE`/`REFUSE`). Cancellation is forwarded as `Performative.CANCEL`.
+The task ends on the agent's final reply (ADR-026): an `AGREE` leaves it `WORKING`, then `INFORM` → `COMPLETED`, `FAILURE` → `FAILED`, `REFUSE` → `REJECTED`, any other performative or a timeout → `FAILED` with a message saying why. Cancellation is forwarded to the agent as `Performative.CANCEL`, from the requester's id. The full table is in [docs/dialog-protocol.md](../docs/dialog-protocol.md#exposing-agenor-agent-as-a2a-server).
 
 ### A2AAdapterConfig — build an AgentCard
 
