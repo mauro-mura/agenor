@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   WARN on a distributed dispatcher. `AgenorA2AAdapter.sendInternal` had the same defect and now
   registers an unknown sender the same way, and fails at once when the message cannot be sent.
 
+- **An external A2A agent's answer arrives, and on time.** Against an agent whose card declares
+  streaming, every `AgenorA2AClient` call failed with `Request cancelled`: the SDK reports
+  closing its own stream as an error, and the client never read streamed events. Without
+  streaming, every call waited out its whole timeout, because the answer arrived before the wait
+  began. The client now completes on the answer (a final task, `input-required`, or a message),
+  sends non-blocking and reads the task until it ends, since an SDK server drops what arrives
+  after 5 s of a blocking call. `sendWithStreaming` falls back when the card does not stream.
+  Found by agenor-research.
+
 - **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
   `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
   `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is

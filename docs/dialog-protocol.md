@@ -389,6 +389,15 @@ public class A2AExample {
 }
 ```
 
+`new AgenorA2AAdapter(dispatcher, directory, localAgentId, timeout)` builds it: replies from
+external agents are addressed to `localAgentId`, and `timeout` bounds every send. A URL is the
+agent's base URL, because the SDK reads the card from `/.well-known/agent-card.json` at the root
+of the host, whatever path the URL has. The future completes on the agent's answer: `completed`
+is `INFORM`, `failed` is `FAILURE`, `rejected` is `REFUSE`, `input-required` is `QUERY`, and a
+reply sent as a message is `INFORM`. Without streaming the request is non-blocking and the client
+reads the task until it ends; `sendWithStreaming` streams when the card declares it and sends
+without otherwise. Nothing within the timeout fails the future with `A2AClientException`.
+
 ### Exposing Agenor Agent as A2A Server
 
 `AgenorAgentExecutor` implements the A2A SDK's `AgentExecutor`. The SDK calls it, not your code:
@@ -424,9 +433,10 @@ The task ends on the agent's **final** reply, as `request()` does (ADR-026):
 `tasks/cancel` sends `CANCEL` to the agent, from the requester's id, and ends the task `canceled`.
 
 A blocking `message/send` returns when the task ends or when the SDK stops waiting, whichever
-comes first. `DefaultRequestHandler.create(...)` stops after 5 seconds, so an agent that works
-longer answers a blocking client with `working`, and the client reads the outcome with
-`tasks/get`.
+comes first. `DefaultRequestHandler.create(...)` stops after 5 seconds and closes the task's
+event queue: what the agent sends later is dropped, and the task stays `working` for good. A
+client of an agent that may take longer has to send non-blocking (`"blocking": false`) and read
+the task with `tasks/get`, or stream. `AgenorA2AClient` does one or the other.
 
 ## Package Structure
 

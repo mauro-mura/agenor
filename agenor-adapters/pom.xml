@@ -97,6 +97,13 @@
             <artifactId>a2a-java-sdk-server-common</artifactId>
             <version>${a2a.sdk.version}</version>
         </dependency>
+        <!-- The server's JSON-RPC handler, so AgenorA2AClientIT can talk to a real A2A server -->
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-transport-jsonrpc</artifactId>
+            <version>${a2a.sdk.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.modelcontextprotocol.sdk</groupId>
