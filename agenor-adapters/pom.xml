@@ -54,6 +54,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- ScriptedLLMProviderContractTest holds ScriptedLLMProvider to the adapters' contract -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-llm</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!--
           langchain4j-core, not the langchain4j aggregate. The aggregate carries AI services,
           chains, chat memory, document loaders and the in-memory embedding store - none of

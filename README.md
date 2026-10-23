@@ -240,7 +240,7 @@ Basic implementations for getting started quickly.
 
 ### agenor-runtime-llm
 LLM-aware runtime pieces (ADR-027): `LLMAgent`, LLM memory management, guardrails, reflection
-strategy. Depends on `agenor-runtime`.
+strategy, and `ScriptedLLMProvider` for tests and offline runs. Depends on `agenor-runtime`.
 
 ```xml
 <dependency>

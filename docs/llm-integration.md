@@ -589,57 +589,42 @@ No API key required. Streaming is supported.
 
 ## Testing
 
-Use a mock `LLMProvider` to test agent logic without real API calls:
+`ScriptedLLMProvider`, in `agenor-runtime-llm`, answers from a script instead of a model. It is
+held to the same contract test as the three shipped providers: it answers with the model the
+request names, streams, and estimates token usage. Replies come from a queue in order, then from
+a function of the request once the queue is empty, and every request is recorded:
 
 ```java
-public class MockLLMProvider implements LLMProvider {
+ScriptedLLMProvider llm = ScriptedLLMProvider.create()
+        .replyCalls(FunctionCall.of("get_weather", "{\"location\": \"London\"}"))
+        .reply("It is 17°C in London.");
 
-    private final String fixedResponse;
+// ... the agent under test asks, runs get_weather, and asks again with the result ...
 
-    public MockLLMProvider(String fixedResponse) {
-        this.fixedResponse = fixedResponse;
-    }
-
-    @Override
-    public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-        return CompletableFuture.completedFuture(
-            LLMResponse.builder("mock-id", "test-model")
-                .content(fixedResponse)
-                .role(LLMMessage.Role.ASSISTANT)
-                .build()
-        );
-    }
-
-    @Override
-    public CompletableFuture<Void> chatStream(LLMRequest req, Consumer<StreamingChunk> h) {
-        h.accept(StreamingChunk.of("s", "test-model", fixedResponse, 0));
-        h.accept(StreamingChunk.of("s", "test-model", "", "stop", 1));
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(List.of("test-model"));
-    }
-    @Override public String getProviderName() { return "Mock"; }
-    @Override public boolean supportsFunctionCalling() { return false; }
-    @Override public boolean supportsStreaming() { return true; }
-}
+assertThat(llm.requests()).hasSize(2);
+assertThat(llm.requests().get(1).messages()).anyMatch(LLMMessage::isFunction);
 ```
+
+A reply can depend on what the agent sent, and a failure can be one-off or last:
 
 ```java
-@Test
-void agentRespondsToUserMessage() {
-    LLMProvider mock = new MockLLMProvider("Paris is the capital of France.");
+llm.orElse(req -> req.messages().get(0).content().startsWith("Classify") ? "technical" : "draft");
 
-    LLMRequest request = LLMRequest.builder()
-        .userMessage("What is the capital of France?")
-        .build();
-
-    LLMResponse response = mock.chat(request).join();
-
-    assertEquals("Paris is the capital of France.", response.content());
-}
+llm.fail(LLMException.rateLimit("OpenAI", "slow down"));                           // the next call only
+llm.orElse(req -> { throw LLMException.networkError("Ollama", "down", null); });   // every call from now on
 ```
+
+With nothing queued and no `orElse`, a call fails and names the request that had no reply. When
+one provider is shared by the agents of a running system, `reset()` clears the queue, the
+recorded requests and the `orElse` between tests.
+
+`chatStream()` takes from the same queue and delivers the text word by word. A queued function
+call fails the stream instead, because a `StreamingChunk` carries text only.
+
+**Mockito or this.** For a unit test of one class that calls `chat()` once, a Mockito mock is
+fine. `ScriptedLLMProvider` is for the case Mockito writes badly: a real agent, on a real
+transport, whose next request depends on what the last reply made it do. The tool loop above
+is that case.
 
 ---
 
