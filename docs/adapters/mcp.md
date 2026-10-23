@@ -99,7 +99,13 @@ rule every supported provider accepts (OpenAI's is the strictest; Anthropic allo
 characters, Ollama documents none). Hyphenated names such as `get-sum` pass. MCP allows names
 that no provider does, with dots, spaces, or more than 64 characters. `buildFunctionDefinitions()`
 leaves those tools out, and one WARN per list names each and why. The other tools still reach
-the model.
+the model. The same happens to a tool whose input schema is not a JSON object.
+
+When the model calls a tool with arguments that are not one JSON object (an unclosed `{`,
+`count=1`, `[1]`), `execute(call)` does not call the tool. It returns a `FUNCTION` message saying
+the arguments were malformed and repeating them, so the model can retry, and logs a WARN. Missing,
+blank or `{}` arguments mean no arguments. The message reads like any other result: `LLMMessage`
+has no error flag yet, the same limit that applies to a tool result the server marks `isError`.
 
 ---
  

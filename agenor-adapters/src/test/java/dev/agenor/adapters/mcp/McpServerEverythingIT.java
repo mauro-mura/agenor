@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -71,5 +73,29 @@ class McpServerEverythingIT {
                 .get(30, TimeUnit.SECONDS);
 
         assertThat(result.content()).contains("5");
+    }
+
+    /** The control: well-formed arguments reach the tool, which honours them. */
+    @Test
+    void wellFormedArgumentsReachTheTool() throws Exception {
+        LLMMessage result = adapter.execute(FunctionCall.of("get-resource-links", "{\"count\": 1}"))
+                .get(30, TimeUnit.SECONDS);
+
+        assertThat(result.content()).startsWith("Here are 1 resource links");
+    }
+
+    /**
+     * Malformed arguments used to become {}, and the tool ran with its default count of 3 (D3.4).
+     * Now the tool is not called, and the model reads why.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"count\": 1", "count=1", "[1]"})
+    void malformedArgumentsDoNotReachTheTool(String arguments) throws Exception {
+        LLMMessage result = adapter.execute(FunctionCall.of("get-resource-links", arguments))
+                .get(30, TimeUnit.SECONDS);
+
+        assertThat(result.content())
+                .doesNotContain("resource links")
+                .contains("not a JSON object", arguments);
     }
 }

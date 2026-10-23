@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
 import dev.agenor.core.llm.LLMMessage;
@@ -13,6 +14,8 @@ import dev.agenor.core.mcp.McpTool;
 import dev.agenor.core.mcp.McpToolResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
@@ -171,6 +174,69 @@ class McpFunctionAdapterTest {
     @Test
     void constructor_shouldRejectNullRegistry() {
         assertThrows(IllegalArgumentException.class, () -> new McpFunctionAdapter(null));
+    }
+
+    // -------------------------------------------------------------------------
+    // Malformed arguments and schemas
+    // -------------------------------------------------------------------------
+
+    /**
+     * Arguments that are not one JSON object used to become {}, and the tool ran with its
+     * defaults (D3.4: 3 links instead of the 1 asked for). Now the tool is not called, and the
+     * model is told why.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"count\": 1", "count=1", "[1]", "null", "{\"count\": 1} trailing"})
+    void execute_argumentsThatAreNotAJsonObject_shouldNotCallTheTool(String arguments) throws Exception {
+        List<ILoggingEvent> warnings = warningsDuring(() -> {
+            LLMMessage result = adapter.execute(FunctionCall.of("read_file", arguments)).join();
+
+            assertEquals(LLMMessage.Role.FUNCTION, result.role());
+            assertTrue(result.content().contains("not a JSON object"), result.content());
+            assertTrue(result.content().contains(arguments), result.content());
+        });
+
+        assertNull(capturedToolName.get(), "the tool must not be called");
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).getFormattedMessage().contains("'read_file'"));
+    }
+
+    @Test
+    void execute_longMalformedArguments_shouldBeShortenedInTheMessage() throws Exception {
+        String arguments = "x".repeat(1000);
+
+        LLMMessage result = adapter.execute(FunctionCall.of("read_file", arguments)).get();
+
+        assertTrue(result.content().length() < 400, "length " + result.content().length());
+        assertNull(capturedToolName.get());
+    }
+
+    /** A schema that is not an object used to make a tool with no parameters; now it is left out. */
+    @Test
+    void buildFunctionDefinitions_schemaThatIsNotAnObject_shouldBeLeftOutWithAWarn() throws Exception {
+        var broken = new McpTool("broken", "Declares a schema that is a string", TextNode.valueOf("object"));
+        var defs = new AtomicReference<List<FunctionDefinition>>();
+
+        List<ILoggingEvent> warnings = warningsDuring(() ->
+                defs.set(adapterFor(readFileTool, broken).buildFunctionDefinitions().join()));
+
+        assertEquals(List.of("read_file"), defs.get().stream().map(FunctionDefinition::name).toList());
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).getFormattedMessage().contains("'broken'"),
+                warnings.get(0).getFormattedMessage());
+    }
+
+    private static List<ILoggingEvent> warningsDuring(Runnable action) {
+        var logger = (Logger) LoggerFactory.getLogger(McpFunctionAdapter.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            logger.detachAppender(appender);
+        }
+        return appender.list.stream().filter(e -> e.getLevel() == Level.WARN).toList();
     }
 
     // -------------------------------------------------------------------------

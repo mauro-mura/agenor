@@ -53,6 +53,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a digit. A tool whose name breaks it is left out with a WARN that names it, and the rest
   still reach the model. Found by agenor-research.
 
+- **An MCP tool is not run with arguments the model did not give it.** `McpFunctionAdapter`
+  turned arguments that are not one JSON object (`{"count": 1`, `count=1`, `[1]`) into `{}`, and
+  the tool ran on its defaults with no error: three links where the model asked for one. The tool
+  is no longer called; `execute` returns a `FUNCTION` message naming the malformed arguments, so
+  the model can retry, and logs a WARN. A tool whose input schema is not a JSON object is left
+  out of the list with a WARN, instead of being offered with no parameters. Found by
+  agenor-research.
+
+  Migration: a caller relying on the fallback to `{}` now gets the error message, not the tool's
+  result.
+
 - **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
   `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
   `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is
