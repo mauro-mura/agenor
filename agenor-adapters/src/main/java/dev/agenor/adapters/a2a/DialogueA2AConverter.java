@@ -133,7 +133,16 @@ public class DialogueA2AConverter {
 
     /**
      * Maps Agenor Performative to A2A TaskState.
+     *
+     * @deprecated since 0.39.0, for removal in 1.0.0. Nothing calls it, and its mapping disagrees
+     *             with the one an exposed agent actually gets: {@link AgenorAgentExecutor} ends a
+     *             task on {@code REFUSE} as {@code rejected}, not {@code failed}, and fails it on a
+     *             performative that does not end a request, where this returns {@code working}.
+     *             A state alone cannot end a task either: a custom {@code AgentExecutor} ends it
+     *             with {@code TaskUpdater.complete()}, {@code fail(Message)} or
+     *             {@code reject(Message)}, as {@link AgenorAgentExecutor} does.
      */
+    @Deprecated(since = "0.39.0", forRemoval = true)
     public TaskState mapPerformativeToTaskState(Performative performative) {
         return switch (performative) {
             case INFORM -> TaskState.COMPLETED;

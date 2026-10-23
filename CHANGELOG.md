@@ -44,6 +44,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `agent-development.md`, `message-filtering.md` and `behaviors/OneShotBehavior.md`; each was
   compiled against 0.39.0-SNAPSHOT. Found by agenor-research.
 
+### Deprecated
+
+- **`DialogueA2AConverter.mapPerformativeToTaskState(Performative)` is deprecated, for removal in
+  `1.0.0`.** Nothing calls it, inside Agenor or in the applications built on it, and its mapping
+  contradicts the one an exposed agent gets: `AgenorAgentExecutor` ends a task on `REFUSE` as
+  `rejected`, where this says `failed`, and fails it on a performative that does not end a
+  request, where this says `working`. A custom `AgentExecutor` ends a task with the SDK's
+  `TaskUpdater` (`complete()`, `fail(Message)`, `reject(Message)`), as `AgenorAgentExecutor` does.
+
 ## [0.38.0] - 2026-10-21
 
 ### Fixed
