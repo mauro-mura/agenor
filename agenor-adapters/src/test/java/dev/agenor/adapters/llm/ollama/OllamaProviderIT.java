@@ -144,6 +144,48 @@ class OllamaProviderIT {
         assertNotNull(lastChunk.finishReason());
     }
 
+    /**
+     * A function round trip against a real model: the model asks for the function, gets its
+     * result back paired to the call, and answers from it. Until 0.39.0 the provider never passed
+     * the functions on, so no local model could use a tool (found by agenor-research, D2).
+     */
+    @Test
+    void shouldCallAFunctionWithRealOllama() throws Exception {
+        String ollamaUrl = "http://localhost:" + ollama.getMappedPort(11434);
+        pullModel(ollamaUrl, "qwen2.5:0.5b");
+
+        OllamaProvider provider = OllamaProvider.builder()
+                .baseUrl(ollamaUrl)
+                .modelName("qwen2.5:0.5b")
+                .timeout(Duration.ofMinutes(3))
+                .build();
+        FunctionDefinition weather = FunctionDefinition.builder("get_weather")
+                .description("Current weather for a city")
+                .stringParameter("city", "The city name", true)
+                .build();
+        LLMMessage question = LLMMessage.user("What is the weather in Paris? Use the tool.");
+
+        LLMResponse asked = provider.chat(LLMRequest.builder()
+                .addMessage(question).addFunction(weather).temperature(0.0).build())
+                .get(120, TimeUnit.SECONDS);
+
+        assertEquals(1, asked.functionCalls().size(), "expected one call, got " + asked);
+        FunctionCall call = asked.functionCalls().get(0);
+        assertEquals("get_weather", call.name());
+        assertTrue(call.arguments().contains("Paris"), call.arguments());
+
+        LLMResponse answered = provider.chat(LLMRequest.builder()
+                .addMessage(question)
+                .addMessage(LLMMessage.assistant(asked.content(), asked.functionCalls()))
+                .addMessage(LLMMessage.function(call, "{\"temperature_c\": 17}"))
+                .addFunction(weather)
+                .temperature(0.0)
+                .build())
+                .get(120, TimeUnit.SECONDS);
+
+        assertTrue(answered.content().contains("17"), answered.content());
+    }
+
     @Test
     void shouldGetAvailableModelsFromRealOllama() throws Exception {
         String ollamaUrl = "http://localhost:" + ollama.getMappedPort(11434);

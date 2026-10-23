@@ -21,11 +21,9 @@ import java.time.Duration;
  *   <li>{@code LLM_BACKEND=anthropic} — Anthropic (paid); requires {@code ANTHROPIC_API_KEY}.</li>
  * </ul>
  *
- * <p>Note: Agenor's Ollama adapter does not wire up function calling, so examples
- * that use {@code FunctionDefinition}/tools should check
- * {@link LLMProvider#supportsFunctionCalling()} and point users at
- * {@code LLM_BACKEND=groq} or {@code LLM_BACKEND=openai} for the full demo. A tool result sent
- * anyway fails with a classified {@code LLMException} rather than a generic one.
+ * <p>Note: every backend here passes functions to the model. With Ollama it depends on the
+ * model: the default, {@code llama3.2}, calls tools, and an {@code OLLAMA_MODEL} without tool
+ * support fails with {@code LLMException} {@code INVALID_REQUEST}.
  */
 public final class ExampleLLMProvider {
 

@@ -27,11 +27,9 @@ import java.util.Map;
  *
  * <p>The LLM round-trip runs against a free local Ollama instance by default
  * (no key needed). Set LLM_BACKEND=groq (+ GROQ_API_KEY) for a free cloud
- * alternative with real tool-calling support, or LLM_BACKEND=openai/anthropic
+ * alternative, or LLM_BACKEND=openai/anthropic
  * (+ the matching *_API_KEY) if you have paid credits — see {@link ExampleLLMProvider}.
- * Agenor's Ollama adapter doesn't wire up function calling, so the round-trip
- * won't actually invoke MCP tools unless a provider with tool-calling support
- * is configured.
+ * The default Ollama model, llama3.2, calls the MCP tools.
  *
  * <p>The example mounts {@code /tmp} into the container. Override with:
  * <pre>

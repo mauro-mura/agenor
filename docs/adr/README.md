@@ -195,7 +195,8 @@ graph TD
   round trip, not a one-way message. `LLMMessage` gained the id of the call a result answers,
   which OpenAI and Anthropic now use to pair a tool result to its call instead of degrading it to
   an ordinary message; Ollama rejects a function-calling message with a classified exception
-  instead of a generic one. No tool loop — the amendment does not decide that
+  instead of a generic one. No tool loop — the amendment does not decide that. Since 0.39.0
+  Ollama takes part in the round trip too
 - **ADR-018** (Optional Adapter Deps) governs ADR-019 and future adapter ADRs
 - **ADR-019** (OTel Instrumentation) builds on ADR-002, ADR-003, ADR-018
 - **ADR-020** (Core API Refactor) builds on ADR-002, ADR-004; prerequisite for ADR-021, ADR-022, ADR-023

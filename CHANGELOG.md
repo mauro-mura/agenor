@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A local model can call functions: `OllamaProvider` passes them on.** It reported
+  `supportsFunctionCalling()` as `false` and dropped a request's functions in silence, so no
+  local model could use a tool, MCP ones included; agenor-research wrote 139 lines of its own
+  provider to get there. It now does the round trip as OpenAI and Anthropic do, and gives each
+  call an id, since Ollama sends none. Whether the model uses the functions depends on the model:
+  one without tool support fails with `INVALID_REQUEST`. A streamed request leaves them off with
+  a WARN, because a chunk cannot carry a call.
+
 ### Fixed
 
 - **BREAKING: An agent exposed over A2A is answered by its final reply, not its `AGREE`.**

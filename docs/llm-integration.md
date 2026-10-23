@@ -194,11 +194,17 @@ provider.chatStream(request, chunk -> {
 
 ## Function Calling
 
-OpenAI and Anthropic support function/tool calling. `OllamaProvider` does not: it reports
-`supportsFunctionCalling()` as `false` and never passes tool definitions to the model, so
-functions on a request sent through it are silently ignored — but a `FUNCTION`-role result sent
-to it anyway now fails with a classified `LLMException` (`UNSUPPORTED_OPERATION`) rather than a
-generic one. Check the flag before building a tool loop against a provider chosen at runtime.
+OpenAI, Anthropic and Ollama support function/tool calling, through `chat()`.
+
+With Ollama, whether the model uses the functions depends on the model: those tagged *tools* in
+Ollama's library do (`llama3.2`, `qwen2.5`, ...). A request with functions to a model without
+tool support fails with `LLMException` `INVALID_REQUEST`, and the message says the model "does
+not support tools". Small models call tools less reliably than large ones. Ollama sends no id
+with a call, so `OllamaProvider` gives each call one, and the result you send back with
+`LLMMessage.function(call, result)` is paired to it.
+
+`chatStream()` carries text only, so a streamed response cannot return a function call. Ollama
+leaves the functions off a streamed request and logs a WARN; use `chat()` for a tool loop.
 
 ### Define a function
 

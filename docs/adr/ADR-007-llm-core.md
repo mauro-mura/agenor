@@ -53,3 +53,10 @@ Ollama's message conversion now rejects a `FUNCTION`-role message with
 `LLMException.unsupportedOperation` instead of a generic `IllegalArgumentException`;
 `supportsFunctionCalling()` already reported `false` there, so this is a clearer failure at an
 existing boundary, not a new one.
+
+**Superseded for Ollama on 2026-10-23 (0.39.0).** `OllamaProvider` takes part in the round trip
+like the other two: it passes the functions, returns the calls, and pairs a result to its call
+by id, giving a call one when Ollama sends none. `supportsFunctionCalling()` is `true`; whether
+the model uses the functions depends on the model, and one without tool support fails with
+`INVALID_REQUEST`. The `UNSUPPORTED_OPERATION` above no longer happens. Found by
+agenor-research, which wrote 139 lines of its own provider to give a local model its MCP tools.

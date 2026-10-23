@@ -1,6 +1,7 @@
 package dev.agenor.adapters.llm.ollama;
 
 import dev.agenor.adapters.llm.LLMSupport;
+import dev.agenor.adapters.llm.ToolConversionUtils;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -11,6 +12,8 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.TokenUsage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
@@ -19,6 +22,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class OllamaProvider implements LLMProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(OllamaProvider.class);
 
     private final OllamaChatModel chatModel;
     private final OllamaStreamingChatModel streamingModel;
@@ -146,6 +151,10 @@ public class OllamaProvider implements LLMProvider {
                         .modelName(resolvedModel)
                         .messages(messages);
 
+                if (request.hasFunctions()) {
+                    requestBuilder.toolSpecifications(
+                            ToolConversionUtils.convertFunctionsToToolSpecs(request.functions()));
+                }
                 if (request.temperature() != null) {
                     requestBuilder.temperature(request.temperature());
                 }
@@ -161,6 +170,7 @@ public class OllamaProvider implements LLMProvider {
                                 resolvedModel
                         )
                         .content(response.aiMessage().text())
+                        .functionCalls(functionCallsOf(response.aiMessage()))
                         .role(LLMMessage.Role.ASSISTANT)
                         .finishReason(mapFinishReason(response.metadata() != null ? response.metadata().finishReason() : null))
                         .usage(mapUsage(response.metadata() != null ? response.metadata().tokenUsage() : null))
@@ -181,6 +191,14 @@ public class OllamaProvider implements LLMProvider {
             final String resolvedModel = LLMSupport.resolveModel(request, modelName);
             final String streamId = UUID.randomUUID().toString();
             final int[] chunkIndex = {0};
+
+            if (request.hasFunctions()) {
+                // A StreamingChunk carries text only, so a call the model made could not reach
+                // the caller: the functions are left off rather than offered and then lost.
+                log.warn("Ollama: {} functions not offered to {} on a streamed request; "
+                        + "a streamed response carries no function calls, use chat()",
+                        request.functions().size(), resolvedModel);
+            }
 
             ChatRequest.Builder requestBuilder = ChatRequest.builder()
                     .modelName(resolvedModel)
@@ -258,7 +276,9 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public boolean supportsFunctionCalling() {
-        return false; // Ollama doesn't support function calling in most models
+        // The provider offers the functions; whether the model uses them depends on the model,
+        // and Ollama rejects a request with functions to a model without tool support.
+        return true;
     }
 
     @Override
@@ -280,12 +300,28 @@ public class OllamaProvider implements LLMProvider {
         return switch (message.role()) {
             case SYSTEM -> SystemMessage.from(message.content());
             case USER -> UserMessage.from(message.content());
-            case ASSISTANT -> AiMessage.from(message.content());
-            // supportsFunctionCalling() is false: no tool spec is ever attached to a request,
-            // so no FUNCTION-role result should exist to convert. A clear, classified failure
-            // beats a generic IllegalArgumentException a caller has nothing to branch on.
-            case FUNCTION -> throw LLMException.unsupportedOperation(getProviderName(), "function calling");
+            case ASSISTANT -> message.hasFunctionCalls()
+                    ? AiMessage.from(message.content(),
+                            ToolConversionUtils.convertFunctionCallsToToolExecutionRequests(message.functionCalls()))
+                    : AiMessage.from(message.content());
+            case FUNCTION -> ToolConversionUtils
+                    .convertFunctionResultToToolExecutionResultMessage(getProviderName(), message);
         };
+    }
+
+    /**
+     * The calls the model asked for. Ollama does not always give a call an id, and the result
+     * sent back is paired to its call by id, so a call without one gets one here.
+     */
+    private static List<FunctionCall> functionCallsOf(AiMessage aiMessage) {
+        if (aiMessage == null || !aiMessage.hasToolExecutionRequests()) {
+            return List.of();
+        }
+        return aiMessage.toolExecutionRequests().stream()
+                .map(r -> r.id() == null || r.id().isBlank()
+                        ? FunctionCall.of(r.name(), r.arguments())
+                        : new FunctionCall(r.id(), r.name(), r.arguments()))
+                .toList();
     }
 
     private String mapFinishReason(FinishReason finishReason) {
