@@ -1,17 +1,13 @@
 package dev.agenor.runtime.memory.llm;
 
 import dev.agenor.core.llm.LLMMessage;
-import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
-import dev.agenor.core.llm.LLMResponse;
-import dev.agenor.core.llm.StreamingChunk;
+import dev.agenor.runtime.llm.ScriptedLLMProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -37,8 +33,7 @@ class SummarizationStrategyTest {
      */
     @Test
     void generateSummary_shouldPassItsModelToTheProvider() {
-        List<LLMRequest> seen = new ArrayList<>();
-        LLMProvider recording = new RecordingProvider(seen, "a summary");
+        ScriptedLLMProvider recording = ScriptedLLMProvider.create().reply("a summary");
 
         List<LLMMessage> many = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
@@ -48,45 +43,8 @@ class SummarizationStrategyTest {
         new SummarizationStrategy(recording, "gpt-4.1-mini")
                 .selectMessages(many, 4000, estimator);
 
-        assertThat(seen).hasSize(1);
-        assertThat(seen.get(0).model()).isEqualTo("gpt-4.1-mini");
-    }
-
-    /** Minimal recording stub - the module under test does not depend on any real provider. */
-    private static final class RecordingProvider implements LLMProvider {
-        private final List<LLMRequest> seen;
-        private final String reply;
-
-        RecordingProvider(List<LLMRequest> seen, String reply) {
-            this.seen = seen;
-            this.reply = reply;
-        }
-
-        @Override
-        public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-            seen.add(request);
-            return CompletableFuture.completedFuture(
-                    LLMResponse.builder("resp-1", request.model())
-                            .role(LLMMessage.Role.ASSISTANT)
-                            .content(reply)
-                            .build());
-        }
-
-        @Override
-        public CompletableFuture<Void> chatStream(LLMRequest request,
-                                                  Consumer<StreamingChunk> chunkHandler) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        @Override
-        public CompletableFuture<List<String>> getAvailableModels() {
-            return CompletableFuture.completedFuture(List.of());
-        }
-
-        @Override
-        public String getProviderName() {
-            return "recording";
-        }
+        assertThat(recording.requests()).singleElement()
+                .extracting(LLMRequest::model).isEqualTo("gpt-4.1-mini");
     }
 
     // ========== METADATA ==========

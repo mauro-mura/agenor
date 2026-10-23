@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   call an id, since Ollama sends none. Whether the model uses the functions depends on the model:
   one without tool support fails with `INVALID_REQUEST`. A streamed request leaves them off with
   a WARN, because a chunk cannot carry a call.
+- **`ScriptedLLMProvider` in `agenor-runtime-llm`: an `LLMProvider` for tests and offline
+  examples.** `llm-integration.md` § Testing showed a provider to copy that gave one fixed answer,
+  and the two projects that tested real agents wrote their own instead: agenor-support (61 lines)
+  and agenor-research (45). Agenor's own tests had three more. It answers from a queue of replies,
+  function calls and failures, then from a function of the request, and records every request.
+  It passes `LLMProviderContractTest` like the shipped providers. It lives beside `LLMAgent`, not
+  in a test module, for the reason `InMemoryMessageDispatcher` lives in `agenor-runtime`:
+  `ObservabilityExample` uses it in place of its own mock.
 
 ### Fixed
 

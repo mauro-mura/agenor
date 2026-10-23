@@ -4,20 +4,18 @@ import dev.agenor.adapters.telemetry.OtelTelemetryFactory;
 import dev.agenor.core.guardrail.GuardrailContext;
 import dev.agenor.core.guardrail.GuardrailResult;
 import dev.agenor.core.guardrail.GuardrailViolationException;
-import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.llm.LLMAgent;
+import dev.agenor.runtime.llm.ScriptedLLMProvider;
 import dev.agenor.runtime.guardrail.GuardrailChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Observability Example — demonstrates OpenTelemetry integration (ADR-019).
@@ -82,9 +80,11 @@ public class ObservabilityExample {
         log.info("Telemetry configured: exporter={}, endpoint={}", exporterType, endpoint);
 
         // ------------------------------------------------------------------
-        // 2. Build a mock LLM provider (no real API key required)
+        // 2. A scripted LLM provider: no network, no API key. It still
+        //    reports estimated token counts, so the llm.chat spans carry them.
         // ------------------------------------------------------------------
-        LLMProvider mockProvider = new MockLLMProvider();
+        LLMProvider provider = ScriptedLLMProvider.create()
+                .orElse(request -> "Scripted response for: " + request.messages().get(0).content());
 
         // ------------------------------------------------------------------
         // 3. Build the runtime with telemetry
@@ -100,7 +100,7 @@ public class ObservabilityExample {
         // ------------------------------------------------------------------
         // 4. Create and register an LLM agent with a guardrail chain
         // ------------------------------------------------------------------
-        ObservableAgent agent = new ObservableAgent(mockProvider);
+        ObservableAgent agent = new ObservableAgent(provider);
         runtime.registerAgent(agent);
 
         // ------------------------------------------------------------------
@@ -173,7 +173,7 @@ public class ObservabilityExample {
             String safeInput = applyInputGuardrails(userInput, ctx);
 
             LLMRequest request = LLMRequest.builder()
-                    .model("mock-model")
+                    .model(ScriptedLLMProvider.MODEL)
                     .userMessage(safeInput)
                     .build();
 
@@ -181,58 +181,6 @@ public class ObservabilityExample {
             String safeOutput = applyOutputGuardrails(response.content(), ctx);
 
             log.info("Response: {}", safeOutput);
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Mock LLM provider (no network calls)
-    // -------------------------------------------------------------------------
-
-    static class MockLLMProvider implements LLMProvider {
-
-        private final AtomicInteger callCount = new AtomicInteger();
-
-        @Override
-        public CompletableFuture<LLMResponse> chat(LLMRequest request) {
-            int call = callCount.incrementAndGet();
-            String content = "Mock response #" + call + " for: " + extractUserMessage(request);
-            LLMResponse response = LLMResponse.builder("mock-" + call, "mock-model")
-                    .content(content)
-                    .usage(10 * call, 20 * call, 30 * call)
-                    .finishReason("stop")
-                    .build();
-            return CompletableFuture.completedFuture(response);
-        }
-
-        @Override
-        public CompletableFuture<Void> chatStream(LLMRequest request,
-                java.util.function.Consumer<dev.agenor.core.llm.StreamingChunk> handler) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        @Override
-        public String getProviderName() { return "mock"; }
-
-        @Override
-        public String getDefaultModel() { return "mock-model"; }
-
-        @Override
-        public boolean supportsFunctionCalling() { return false; }
-
-        @Override
-        public boolean supportsStreaming() { return false; }
-
-        @Override
-        public CompletableFuture<List<String>> getAvailableModels() {
-            return CompletableFuture.completedFuture(List.of("mock-model"));
-        }
-
-        private static String extractUserMessage(LLMRequest req) {
-            return req.messages().stream()
-                    .filter(m -> m.role() == LLMMessage.Role.USER)
-                    .map(LLMMessage::content)
-                    .findFirst()
-                    .orElse("(empty)");
         }
     }
 }
