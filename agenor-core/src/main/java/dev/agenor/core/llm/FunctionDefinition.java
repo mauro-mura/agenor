@@ -42,11 +42,11 @@ public record FunctionDefinition(
             throw new IllegalArgumentException("Function name cannot be blank");
         }
 
-        // Name should follow typical programming language identifier rules
-        if (!name.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
-            throw new IllegalArgumentException(
-                "Function name must start with letter or underscore and contain only letters, numbers, and underscores"
-            );
+        // The rule every supported provider accepts: OpenAI's, the strictest. Anthropic allows up
+        // to 128 characters and Ollama documents none. MCP tool names often use hyphens.
+        if (!name.matches("[a-zA-Z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException("Function name '" + name
+                + "' must be 1 to 64 letters, digits, underscores or hyphens");
         }
 
         if (parameters != null) {

@@ -92,6 +92,27 @@ var mcpClient = McpClientFactory.fromStdio(
  
 ---
  
+## Which tools reach the LLM
+
+A tool reaches the model when its name is 1 to 64 letters, digits, underscores or hyphens: the
+rule every supported provider accepts (OpenAI's is the strictest; Anthropic allows 128
+characters, Ollama documents none). Hyphenated names such as `get-sum` pass. MCP allows names
+that no provider does, with dots, spaces, or more than 64 characters. `buildFunctionDefinitions()`
+leaves those tools out, and one WARN per list names each and why. The other tools still reach
+the model.
+
+---
+ 
+## MCP Java SDK version
+
+Agenor is compiled against the MCP Java SDK 1.0.0 (`io.modelcontextprotocol.sdk:mcp`). An
+application that brings in 2.x for its own reasons builds and starts, but the first tool listing
+fails at runtime with `NoSuchMethodError: McpSchema$Tool.inputSchema()`, since 2.x changed that
+method's return type. A `callTool` still works, so the failure can look partial. Keep the SDK at
+the 1.x line Agenor names until Agenor moves.
+
+---
+ 
 ## Custom executor and TTL
  
 ```java

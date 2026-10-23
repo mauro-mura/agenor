@@ -1,5 +1,9 @@
 package dev.agenor.adapters.mcp;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
@@ -9,6 +13,7 @@ import dev.agenor.core.mcp.McpTool;
 import dev.agenor.core.mcp.McpToolResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -166,6 +171,58 @@ class McpFunctionAdapterTest {
     @Test
     void constructor_shouldRejectNullRegistry() {
         assertThrows(IllegalArgumentException.class, () -> new McpFunctionAdapter(null));
+    }
+
+    // -------------------------------------------------------------------------
+    // Tool names
+    // -------------------------------------------------------------------------
+
+    /** A hyphen is what most MCP servers use, and every provider accepts it. */
+    @Test
+    void buildFunctionDefinitions_hyphenatedName_shouldReachTheLlm() throws Exception {
+        var defs = adapterFor(new McpTool("get-sum", "Adds two numbers", null)).buildFunctionDefinitions().get();
+
+        assertEquals(List.of("get-sum"), defs.stream().map(FunctionDefinition::name).toList());
+    }
+
+    /** One name no provider accepts used to fail the whole list, leaving the LLM with no tool at all. */
+    @Test
+    void buildFunctionDefinitions_nameNoProviderAccepts_shouldBeLeftOutWithAWarn() throws Exception {
+        var logger = (Logger) LoggerFactory.getLogger(McpFunctionAdapter.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        List<FunctionDefinition> defs;
+        try {
+            defs = adapterFor(new McpTool("get-sum", "Adds two numbers", null),
+                    new McpTool("files.read", "Reads a file", null)).buildFunctionDefinitions().get();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertEquals(List.of("get-sum"), defs.stream().map(FunctionDefinition::name).toList());
+        List<ILoggingEvent> warnings = appender.list.stream().filter(e -> e.getLevel() == Level.WARN).toList();
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).getFormattedMessage().contains("'files.read'"),
+                warnings.get(0).getFormattedMessage());
+    }
+
+    private static McpFunctionAdapter adapterFor(McpTool... tools) {
+        McpClient client = new McpClient() {
+            @Override
+            public CompletableFuture<List<McpTool>> listTools() {
+                return CompletableFuture.completedFuture(List.of(tools));
+            }
+
+            @Override
+            public CompletableFuture<McpToolResult> callTool(String name, Map<String, Object> args) {
+                return CompletableFuture.completedFuture(McpToolResult.success(""));
+            }
+
+            @Override
+            public void close() {}
+        };
+        return new McpFunctionAdapter(new McpToolRegistry(client));
     }
 
     // -------------------------------------------------------------------------
