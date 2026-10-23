@@ -107,12 +107,12 @@ uses one.
 If the backend does not answer, the example says so and falls back to TF-IDF
 rather than failing — so it runs with nothing installed.
 
-> **Function-calling caveat:** Agenor's Ollama adapter doesn't wire up tool
-> calling, so examples that demonstrate `FunctionDefinition`/tool use
-> (`AIAssistantExample`, the capability/fault-tolerance research-team
-> examples, `McpExample`'s LLM round-trip) will run under the local Ollama
-> default but won't actually invoke tools. Set `LLM_BACKEND=groq` (free) or
-> `LLM_BACKEND=openai`/`anthropic` to see the full function-calling demo.
+> **Function calling with Ollama:** the default model, `llama3.2`, calls tools,
+> so the examples that use `FunctionDefinition` (`AIAssistantExample`, the
+> capability/fault-tolerance research-team examples, `McpExample`'s LLM round
+> trip) invoke them locally. An `OLLAMA_MODEL` without tool support fails with
+> "does not support tools". A small local model calls tools less reliably than
+> `LLM_BACKEND=groq` (free) or `openai`/`anthropic`.
 
 | Example | Main class | Pattern |
 |---------|-----------|---------|
