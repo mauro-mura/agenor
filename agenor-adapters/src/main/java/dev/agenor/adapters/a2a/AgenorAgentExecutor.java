@@ -143,7 +143,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
             }
 
             // Extract text from message parts
-            String userMessage = extractTextFromMessage(a2aMessage);
+            String userMessage = DialogueA2AConverter.textOf(a2aMessage.getParts(), "request for task " + taskId);
 
             // Convert to Agenor DialogueMessage
             String externalSenderId = requesterId(taskId);
@@ -341,20 +341,5 @@ public class AgenorAgentExecutor implements AgentExecutor {
     private static io.a2a.spec.Message agentText(TaskUpdater updater, String text) {
         List<Part<?>> parts = List.of(new TextPart(text, null));
         return updater.newAgentMessage(parts, null);
-    }
-
-    /**
-     * Extracts text content from A2A Message parts.
-     */
-    private String extractTextFromMessage(io.a2a.spec.Message message) {
-        StringBuilder textBuilder = new StringBuilder();
-        if (message.getParts() != null) {
-            for (Part<?> part : message.getParts()) {
-                if (part instanceof TextPart textPart) {
-                    textBuilder.append(textPart.getText());
-                }
-            }
-        }
-        return textBuilder.toString();
     }
 }
