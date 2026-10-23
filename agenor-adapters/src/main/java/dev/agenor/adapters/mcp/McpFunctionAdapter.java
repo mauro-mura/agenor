@@ -6,7 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.agenor.core.llm.FunctionCall;
 import dev.agenor.core.llm.FunctionDefinition;
 import dev.agenor.core.llm.LLMMessage;
+import dev.agenor.core.mcp.McpTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +45,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class McpFunctionAdapter {
 
+    private static final Logger log = LoggerFactory.getLogger(McpFunctionAdapter.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
@@ -62,14 +67,29 @@ public class McpFunctionAdapter {
      * the {@code Map<String, Object>} that {@link FunctionDefinition} expects as its
      * {@code parameters} field — no per-property iteration needed.
      *
+     * <p>A tool whose name no LLM provider accepts (see {@link FunctionDefinition}) is left out,
+     * and one WARN per list names each such tool and why. MCP allows names the providers do not,
+     * and one of them must not cost the model every other tool.
+     *
      * @return future completing with the function definitions (never {@code null})
      */
     public CompletableFuture<List<FunctionDefinition>> buildFunctionDefinitions() {
-        return registry.getTools().thenApply(tools ->
-                tools.stream()
-                        .map(this::toFunctionDefinition)
-                        .toList()
-        );
+        return registry.getTools().thenApply(tools -> {
+            List<FunctionDefinition> definitions = new ArrayList<>(tools.size());
+            List<String> skipped = new ArrayList<>();
+            for (McpTool tool : tools) {
+                try {
+                    definitions.add(toFunctionDefinition(tool));
+                } catch (IllegalArgumentException e) {
+                    skipped.add(e.getMessage());
+                }
+            }
+            if (!skipped.isEmpty()) {
+                log.warn("{} of {} MCP tools left out of the LLM's tool list: {}",
+                        skipped.size(), tools.size(), skipped);
+            }
+            return List.copyOf(definitions);
+        });
     }
 
     /**
@@ -89,7 +109,7 @@ public class McpFunctionAdapter {
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private FunctionDefinition toFunctionDefinition(dev.agenor.core.mcp.McpTool tool) {
+    private FunctionDefinition toFunctionDefinition(McpTool tool) {
         Map<String, Object> parameters = toParameterMap(tool.inputSchema());
         return new FunctionDefinition(tool.name(), tool.description(), parameters);
     }

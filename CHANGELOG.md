@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   anything beside it, but they are no longer dropped in silence: a WARN counts them, on the
   client and on an exposed agent's incoming request. Found by agenor-research.
 
+- **An MCP server whose tool names use hyphens gives the LLM its tools.** `FunctionDefinition`
+  accepted only Java-style identifiers, and `McpFunctionAdapter` converted the tool list in one
+  go, so a single hyphen failed the whole list: against `server-everything`, which names 15 of
+  its 16 tools that way, the model received no tool at all. A name is now 1 to 64 letters,
+  digits, underscores or hyphens, the rule every supported provider accepts, so it may also begin
+  with a digit. A tool whose name breaks it is left out with a WARN that names it, and the rest
+  still reach the model. Found by agenor-research.
+
 - **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
   `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
   `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is

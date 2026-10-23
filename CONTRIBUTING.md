@@ -421,9 +421,9 @@ cannot check against something is a formality.
 - [ ] **Unit tests** — `mvn clean install` reports `BUILD SUCCESS`. Keep the `clean`: an
       incremental build compiles against stale classes and will pass straight over a type you
       deleted.
-- [ ] **Integration tests** — `mvn verify -Dintegration.tests.enabled=true` (needs Docker), and
-      every `*IT` class reports `Skipped: 0`. They are opt-in, so `mvn clean install` alone runs
-      none of them and still says `BUILD SUCCESS`.
+- [ ] **Integration tests** — `mvn verify -Dintegration.tests.enabled=true` (needs Docker, and
+      Node.js for the MCP one), and every `*IT` class reports `Skipped: 0`. They are opt-in, so
+      `mvn clean install` alone runs none of them and still says `BUILD SUCCESS`.
 - [ ] **Javadoc** — `mvn javadoc:javadoc` is clean, run **before** the tag rather than after it.
 - [ ] **Removal schedule** — `bash tools/api-census.sh --check` exits 0: no deprecation is past
       its declared release, and none lacks one.

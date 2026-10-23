@@ -37,14 +37,26 @@ class FunctionDefinitionTest {
 
     @Test
     void shouldThrowExceptionForInvalidFunctionName() {
-        // When/Then
+        // Characters no provider accepts
         assertThrows(IllegalArgumentException.class, () ->
-            FunctionDefinition.builder("123-invalid").build()
+            FunctionDefinition.builder("a.b").build()
+        );
+        assertThrows(IllegalArgumentException.class, () ->
+            FunctionDefinition.builder("get sum").build()
         );
 
+        // Longer than OpenAI's 64
         assertThrows(IllegalArgumentException.class, () ->
-            FunctionDefinition.builder("invalid-name").build()
+            FunctionDefinition.builder("a".repeat(65)).build()
         );
+    }
+
+    /** MCP servers name tools with hyphens (server-everything: 15 of 16), and the providers accept them. */
+    @Test
+    void shouldAcceptEveryNameTheProvidersAccept() {
+        assertEquals("get-sum", FunctionDefinition.builder("get-sum").build().name());
+        assertEquals("2fa_check", FunctionDefinition.builder("2fa_check").build().name());
+        assertEquals(64, FunctionDefinition.builder("a".repeat(64)).build().name().length());
     }
 
     @Test
@@ -332,14 +344,6 @@ class FunctionDefinitionTest {
         // When/Then
         assertDoesNotThrow(() ->
             FunctionDefinition.builder("function123").build()
-        );
-    }
-
-    @Test
-    void shouldRejectNameStartingWithNumber() {
-        // When/Then
-        assertThrows(IllegalArgumentException.class, () ->
-            FunctionDefinition.builder("123function").build()
         );
     }
 }
