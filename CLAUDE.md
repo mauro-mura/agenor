@@ -18,10 +18,11 @@ each checkable with a `grep`:
    fourth (`f2a3527`) lost on Redis what the in-memory dispatcher dead-lettered.
 3. **Concept budget, measured by what leaves.** The number is
    `grep -r "forRemoval = true" --include="*.java" */src/main | wc -l`: the public surface
-   actually scheduled for removal, and it is **4** on `main`: the `Models` enums of the three LLM
+   actually scheduled for removal, and it is **5** on `main`: the `Models` enums of the three LLM
    providers and `LLMMessage.function(String, String)`, scheduled in 0.36.0 for removal in
-   1.0.0. This is not a freeze, and a release may add types; but one that ships without moving
-   this number means the census produced a document instead of a decision.
+   1.0.0, and `DialogueA2AConverter.mapPerformativeToTaskState`, scheduled in 0.39.0 for the
+   same release. This is not a freeze, and a release may add types; but one that ships without
+   moving this number means the census produced a document instead of a decision.
 
 ### Reading that number
 

@@ -135,6 +135,7 @@ class DialogueA2AConverterTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the deprecated mapping itself
     void shouldMapPerformativeToTaskState() {
         assertThat(converter.mapPerformativeToTaskState(Performative.INFORM))
             .isEqualTo(TaskState.COMPLETED);
@@ -251,6 +252,7 @@ class DialogueA2AConverterTest {
     // -----------------------------------------------------------------------
 
     @Test
+    @SuppressWarnings("removal") // the deprecated mapping itself
     void shouldMapRequestPerformativeToWorkingState() {
         // REQUEST is not explicitly mapped → hits the default branch
         var state = converter.mapPerformativeToTaskState(Performative.REQUEST);
@@ -258,12 +260,14 @@ class DialogueA2AConverterTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the deprecated mapping itself
     void shouldMapProposePerformativeToWorkingState() {
         var state = converter.mapPerformativeToTaskState(Performative.PROPOSE);
         assertThat(state).isEqualTo(TaskState.WORKING);
     }
 
     @Test
+    @SuppressWarnings("removal") // the deprecated mapping itself
     void shouldMapCfpPerformativeToWorkingState() {
         var state = converter.mapPerformativeToTaskState(Performative.CFP);
         assertThat(state).isEqualTo(TaskState.WORKING);
