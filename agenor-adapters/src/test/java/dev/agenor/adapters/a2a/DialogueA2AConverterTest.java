@@ -1,8 +1,13 @@
 package dev.agenor.adapters.a2a;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import io.a2a.spec.Artifact;
+import io.a2a.spec.DataPart;
 import io.a2a.spec.Message;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskState;
@@ -10,6 +15,9 @@ import io.a2a.spec.TaskStatus;
 import io.a2a.spec.TextPart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -405,6 +413,94 @@ class DialogueA2AConverterTest {
         assertThat(converter.mapTaskStateToPerformative(TaskState.WORKING)).isEqualTo(Performative.AGREE);
         assertThat(converter.mapTaskStateToPerformative(TaskState.SUBMITTED)).isEqualTo(Performative.AGREE);
         assertThat(converter.mapTaskStateToPerformative(TaskState.INPUT_REQUIRED)).isEqualTo(Performative.QUERY);
+        assertThat(converter.mapTaskStateToPerformative(TaskState.REJECTED)).isEqualTo(Performative.REFUSE);
+        assertThat(converter.mapTaskStateToPerformative(TaskState.AUTH_REQUIRED)).isEqualTo(Performative.FAILURE);
+        assertThat(converter.mapTaskStateToPerformative(TaskState.UNKNOWN)).isEqualTo(Performative.FAILURE);
+    }
+
+    /** Only a completed task is a success; the mapping used to give INFORM to any state it did not name. */
+    @ParameterizedTest
+    @EnumSource(value = TaskState.class, names = "COMPLETED", mode = EnumSource.Mode.EXCLUDE)
+    void noStateButCompletedIsAnInform(TaskState state) {
+        assertThat(converter.mapTaskStateToPerformative(state)).isNotEqualTo(Performative.INFORM);
+    }
+
+    /** Agenor cannot act on auth-required or unknown: a FAILURE that names the state, and keeps the agent's text. */
+    @ParameterizedTest
+    @EnumSource(value = TaskState.class, names = {"AUTH_REQUIRED", "UNKNOWN"})
+    void aStateAgenorCannotActOnIsAFailureNamingIt(TaskState state) {
+        Message statusMessage = new Message.Builder()
+            .messageId("status-msg")
+            .role(Message.Role.AGENT)
+            .parts(List.of(new TextPart("sign in first", null)))
+            .build();
+        Task task = new Task.Builder()
+            .id("task-stuck")
+            .status(new TaskStatus(state, statusMessage, null))
+            .contextId("ctx-1")
+            .build();
+
+        DialogueMessage msg = converter.fromTask(task, "local-agent");
+
+        assertThat(msg.performative()).isEqualTo(Performative.FAILURE);
+        assertThat(msg.content())
+            .isEqualTo("A2A task task-stuck is " + state.asString() + ": sign in first");
+    }
+
+    // -----------------------------------------------------------------------
+    // Non-text parts are dropped, not silently
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aDataPartBesideTheTextIsDroppedWithAWarn() {
+        Artifact artifact = new Artifact.Builder()
+            .artifactId("sintesi")
+            .parts(List.of(new TextPart("Sintesi di 1 note", null),
+                new DataPart(Map.of("note", 1, "caratteri", 34))))
+            .build();
+        Task task = new Task.Builder()
+            .id("task-data")
+            .status(new TaskStatus(TaskState.COMPLETED))
+            .contextId("ctx-1")
+            .artifacts(List.of(artifact))
+            .build();
+
+        List<ILoggingEvent> warnings = warningsDuring(() -> {
+            DialogueMessage msg = converter.fromTask(task, "local-agent");
+            assertThat(msg.content()).isEqualTo("Sintesi di 1 note");
+        });
+
+        assertThat(warnings).singleElement().satisfies(event -> assertThat(event.getFormattedMessage())
+            .contains("artifact sintesi of task task-data")
+            .contains("{data=1}"));
+    }
+
+    @Test
+    void textAloneLogsNothing() {
+        Task task = new Task.Builder()
+            .id("task-text")
+            .status(new TaskStatus(TaskState.COMPLETED))
+            .contextId("ctx-1")
+            .artifacts(List.of(new Artifact.Builder()
+                .artifactId("a")
+                .parts(List.of(new TextPart("only text", null)))
+                .build()))
+            .build();
+
+        assertThat(warningsDuring(() -> converter.fromTask(task, "local-agent"))).isEmpty();
+    }
+
+    private static List<ILoggingEvent> warningsDuring(Runnable action) {
+        var logger = (Logger) LoggerFactory.getLogger(DialogueA2AConverter.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            logger.detachAppender(appender);
+        }
+        return appender.list.stream().filter(e -> e.getLevel() == Level.WARN).toList();
     }
 
     // -----------------------------------------------------------------------

@@ -37,6 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after 5 s of a blocking call. `sendWithStreaming` falls back when the card does not stream.
   Found by agenor-research.
 
+- **An external A2A agent's refusal or unusual state is no longer a success.** `AgenorA2AClient`
+  read any task state the converter did not name as `INFORM`: `auth-required` and `unknown`
+  arrived as answers. Both are now a `FAILURE` naming the state, and every state is mapped, with
+  no default. `rejected` became `REFUSE` with the executor fix above. A reply's `data` and `file`
+  parts are still not read, since a `DialogueMessage` has one content and no transport carries
+  anything beside it, but they are no longer dropped in silence: a WARN counts them, on the
+  client and on an exposed agent's incoming request. Found by agenor-research.
+
 - **Seven documented snippets compile.** They named `MessageService` (removed in 0.22.0),
   `AgenorBehaviorType`, `LLMRequest.builder(String)`, a `hasMemory()` guard that never existed,
   `Message.getContent()` without a type, and passed `void` methods where a `MessageHandler` is

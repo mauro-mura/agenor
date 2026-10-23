@@ -8,17 +8,26 @@ import io.a2a.spec.Part;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /**
  * Converts between Agenor DialogueMessage and A2A SDK types.
  *
+ * <p>Only text parts are read. A {@code data} or {@code file} part is dropped with a WARN that
+ * counts it, since a {@code DialogueMessage} carries one content and no transport would keep
+ * anything put beside it.
+ *
  * @since 0.5.0
  */
 public class DialogueA2AConverter {
+
+    private static final Logger log = LoggerFactory.getLogger(DialogueA2AConverter.class);
 
     private static final String META_PERFORMATIVE = "agenor.performative";
     private static final String META_CONVERSATION_ID = "agenor.conversationId";
@@ -30,10 +39,16 @@ public class DialogueA2AConverter {
      */
     public DialogueMessage fromTask(Task task, String localAgentId) {
         // Determine performative from task state
-        Performative performative = mapTaskStateToPerformative(task.getStatus().state());
+        TaskState state = task.getStatus().state();
+        Performative performative = mapTaskStateToPerformative(state);
 
         // Extract content from artifacts or status message
-        Object content = extractContent(task);
+        String content = extractContent(task);
+        if (state == TaskState.AUTH_REQUIRED || state == TaskState.UNKNOWN) {
+            // Agenor cannot act on either, so the caller gets a FAILURE that says which it was
+            content = "A2A task " + task.getId() + " is " + state.asString()
+                + (content.isEmpty() ? "" : ": " + content);
+        }
 
         // Extract metadata
         Map<String, Object> metadata = task.getMetadata();
@@ -66,7 +81,7 @@ public class DialogueA2AConverter {
             .senderId("external-agent")
             .receiverId(localAgentId)
             .performative(Performative.INFORM)
-            .content(extractTextFromParts(reply.getParts()))
+            .content(textOf(reply.getParts(), "reply " + reply.getMessageId()))
             .build();
     }
 
@@ -75,7 +90,7 @@ public class DialogueA2AConverter {
      */
     public DialogueMessage fromA2AMessage(Message a2aMessage, String taskId, String senderId, String receiverId) {
         // Extract text content from parts
-        String textContent = extractTextFromParts(a2aMessage.getParts());
+        String textContent = textOf(a2aMessage.getParts(), "message for task " + taskId);
 
         // Default to REQUEST for incoming messages
         Performative performative = Performative.REQUEST;
@@ -118,16 +133,18 @@ public class DialogueA2AConverter {
 
     /**
      * Maps A2A TaskState to Agenor Performative.
+     *
+     * <p>Every state is named, and none becomes {@code INFORM} by default: a state Agenor cannot
+     * act on ({@code auth-required}, {@code unknown}) is a {@code FAILURE}, not a success.
      */
     public Performative mapTaskStateToPerformative(TaskState state) {
         return switch (state) {
             case COMPLETED -> Performative.INFORM;
-            case FAILED -> Performative.FAILURE;
+            case FAILED, AUTH_REQUIRED, UNKNOWN -> Performative.FAILURE;
             case REJECTED -> Performative.REFUSE;
             case CANCELED -> Performative.CANCEL;
             case WORKING, SUBMITTED -> Performative.AGREE;
             case INPUT_REQUIRED -> Performative.QUERY;
-            default -> Performative.INFORM;
         };
     }
 
@@ -167,13 +184,14 @@ public class DialogueA2AConverter {
         return content.toString();
     }
 
-    private Object extractContent(Task task) {
+    private String extractContent(Task task) {
         // First try artifacts
         List<Artifact> artifacts = task.getArtifacts();
         if (artifacts != null && !artifacts.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (Artifact artifact : artifacts) {
-                String text = extractTextFromParts(artifact.parts());
+                String text = textOf(artifact.parts(),
+                    "artifact " + artifact.artifactId() + " of task " + task.getId());
                 if (!text.isEmpty()) {
                     sb.append(text);
                 }
@@ -186,20 +204,30 @@ public class DialogueA2AConverter {
         // Fall back to status message
         if (task.getStatus() != null && task.getStatus().message() != null) {
             Message msg = task.getStatus().message();
-            return extractTextFromParts(msg.getParts());
+            return textOf(msg.getParts(), "status of task " + task.getId());
         }
 
         return "";
     }
 
-    private String extractTextFromParts(List<Part<?>> parts) {
+    /**
+     * The text of {@code parts}. Any other part is dropped, and a WARN says how many of each
+     * kind, and where from.
+     */
+    static String textOf(List<Part<?>> parts, String where) {
         if (parts == null) return "";
 
         StringBuilder sb = new StringBuilder();
+        Map<String, Integer> dropped = new TreeMap<>();
         for (Part<?> part : parts) {
             if (part instanceof TextPart textPart) {
                 sb.append(textPart.getText());
+            } else {
+                dropped.merge(String.valueOf(part.getKind()).toLowerCase(), 1, Integer::sum);
             }
+        }
+        if (!dropped.isEmpty()) {
+            log.warn("A2A {}: dropped non-text parts {}; only text parts are read", where, dropped);
         }
         return sb.toString();
     }

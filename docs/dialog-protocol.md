@@ -394,7 +394,9 @@ external agents are addressed to `localAgentId`, and `timeout` bounds every send
 agent's base URL, because the SDK reads the card from `/.well-known/agent-card.json` at the root
 of the host, whatever path the URL has. The future completes on the agent's answer: `completed`
 is `INFORM`, `failed` is `FAILURE`, `rejected` is `REFUSE`, `input-required` is `QUERY`, and a
-reply sent as a message is `INFORM`. Without streaming the request is non-blocking and the client
+reply sent as a message is `INFORM`. `auth-required` and `unknown`, which Agenor cannot act on,
+are a `FAILURE` whose content names the state. Only text parts become the content: a `data` or
+`file` part is dropped, with a WARN that counts it. Without streaming the request is non-blocking and the client
 reads the task until it ends; `sendWithStreaming` streams when the card declares it and sends
 without otherwise. Nothing within the timeout fails the future with `A2AClientException`.
 

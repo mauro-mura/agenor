@@ -1,5 +1,9 @@
 package dev.agenor.adapters.a2a;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import dev.agenor.adapters.messaging.redis.RedisMessagingFactory;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.dialogue.DialogueMessage;
@@ -10,6 +14,10 @@ import io.a2a.A2A;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
+import io.a2a.server.tasks.TaskUpdater;
+import io.a2a.spec.DataPart;
+import io.a2a.spec.Part;
+import io.a2a.spec.TextPart;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
@@ -69,6 +78,7 @@ class AgenorA2AClientIT {
     private static A2ATestServer streaming;
     private static A2ATestServer blocking;
     private static A2ATestServer message;
+    private static A2ATestServer parts;
 
     private final AgenorA2AClient client = new AgenorA2AClient(TIMEOUT);
 
@@ -89,11 +99,12 @@ class AgenorA2AClientIT {
         streaming = new A2ATestServer(true, executor);
         blocking = new A2ATestServer(false, executor);
         message = new A2ATestServer(false, new MessageReply());
+        parts = new A2ATestServer(false, new PartsReply());
     }
 
     @AfterAll
     static void stop() {
-        for (A2ATestServer server : new A2ATestServer[] {streaming, blocking, message}) {
+        for (A2ATestServer server : new A2ATestServer[] {streaming, blocking, message, parts}) {
             if (server != null) {
                 server.close();
             }
@@ -183,6 +194,39 @@ class AgenorA2AClientIT {
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(ON_TIME);
     }
 
+    /** auth-required is a state Agenor cannot act on: a FAILURE naming it, not the INFORM it used to be. */
+    @Test
+    void authRequiredIsAFailureNamingIt() throws Exception {
+        DialogueMessage reply = client.send(parts.url(), request("auth"), "local")
+                .get(TIMEOUT.plusSeconds(5).toMillis(), TimeUnit.MILLISECONDS);
+
+        assertThat(reply.performative()).isEqualTo(Performative.FAILURE);
+        assertThat(String.valueOf(reply.content())).contains("auth-required").endsWith(": sign in first");
+    }
+
+    /** A data part beside the text is still dropped, but the WARN says so. */
+    @Test
+    void aDataPartIsDroppedWithAWarn() throws Exception {
+        var logger = (Logger) LoggerFactory.getLogger(DialogueA2AConverter.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        DialogueMessage reply;
+        try {
+            reply = client.send(parts.url(), request("data"), "local")
+                    .get(TIMEOUT.plusSeconds(5).toMillis(), TimeUnit.MILLISECONDS);
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(reply.performative()).isEqualTo(Performative.INFORM);
+        assertThat(reply.content()).isEqualTo("Sintesi di 1 note");
+        assertThat(appender.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(event -> assertThat(event.getFormattedMessage()).contains("{data=1}"));
+    }
+
     private static String url(String card) {
         return "streaming".equals(card) ? streaming.url() : blocking.url();
     }
@@ -232,6 +276,34 @@ class AgenorA2AClientIT {
         @Override
         public void execute(RequestContext context, EventQueue queue) {
             queue.enqueueEvent(A2A.toAgentMessage("echo: " + context.getUserInput(" ")));
+        }
+
+        @Override
+        public void cancel(RequestContext context, EventQueue queue) {
+        }
+    }
+
+    /**
+     * An agent written with the SDK alone, sending what an Agenor agent cannot: {@code auth}
+     * asks for authentication, {@code data} completes with a data part beside the text, as the
+     * agenor-research peer does for {@code #dati}.
+     */
+    private static final class PartsReply implements AgentExecutor {
+        @Override
+        public void execute(RequestContext context, EventQueue queue) {
+            var updater = new TaskUpdater(context, queue);
+            if (context.getTask() == null) {
+                updater.submit();
+            }
+            updater.startWork();
+            if ("auth".equals(context.getUserInput(" "))) {
+                updater.requiresAuth(updater.newAgentMessage(List.of(new TextPart("sign in first", null)), null));
+                return;
+            }
+            List<Part<?>> answer = List.of(new TextPart("Sintesi di 1 note", null),
+                    new DataPart(Map.of("note", 1, "caratteri", 34)));
+            updater.addArtifact(answer, null, "sintesi", null);
+            updater.complete();
         }
 
         @Override
