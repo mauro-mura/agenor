@@ -51,7 +51,8 @@ import java.util.concurrent.TimeoutException;
  * message saying why. {@code tasks/cancel} sends {@code CANCEL} to the agent from the requester's
  * id and ends the wait.
  *
- * <p>Usage with CDI/Quarkus:
+ * <p>To serve it from any HTTP server, pass it to {@link AgenorA2AServer#of}. Usage with
+ * CDI/Quarkus, where the SDK's reference server assembles the handlers itself:
  * <pre>{@code
  * @ApplicationScoped
  * public class MyAgentExecutorProducer {

@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   It passes `LLMProviderContractTest` like the shipped providers. It lives beside `LLMAgent`, not
   in a test module, for the reason `InMemoryMessageDispatcher` lives in `agenor-runtime`:
   `ObservabilityExample` uses it in place of its own mock.
+- **`AgenorA2AServer`: an Agenor agent served over A2A from any HTTP server.**
+  `AgenorAgentExecutor` was the only piece Agenor gave; the request handler, task store, JSON-RPC
+  handler, call context and a `TransportMetadata` service file were the application's to find in
+  the SDK, with a trap: `new DefaultRequestHandler(...)` leaves the blocking timeouts at 0.
+  agenor-research wrote 60 lines for it, and Agenor's tests 170. It serves the card, answers
+  JSON-RPC, and streams `message/stream` as events; the application mounts two endpoints. Its
+  signature names no SDK type. `a2a-java-sdk-transport-jsonrpc` is now a compile dependency of
+  `agenor-adapters`. `SupportChatbotExample --a2a` uses it, in place of a hand-written JSON-RPC
+  that bypassed the SDK and an executor pointed at an agent that never answered a `REQUEST`.
 
 ### Fixed
 
