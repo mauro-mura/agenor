@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link McpFunctionAdapter} against the reference MCP server,
- * {@code @modelcontextprotocol/server-everything} 2.0.0 on STDIO, started with {@code npx}.
+ * {@code @modelcontextprotocol/server-everything} 2.0.0 on STDIO, started with {@code npx} inside
+ * a {@code node} container.
  *
  * <p>Its tools are named with hyphens ({@code get-sum}, {@code get-tiny-image}, ...), which
  * {@code FunctionDefinition} used to reject: one such name failed the whole list, and the LLM
@@ -30,20 +31,31 @@ import static org.assertj.core.api.Assertions.assertThat;
  * only stdio and Streamable HTTP, and the HTTP+SSE transport, deprecated since 2025-03-26, is gone
  * from it. The defect does not depend on the transport anyway: it is in the conversion of the list.
  *
- * <p>Needs {@code npx} on the PATH and the npm registry reachable; {@code integration.yml} sets up
- * Node for it. Enable via:
+ * <p>Needs Docker, like the other ITs, and the npm registry reachable from a container; not Node on
+ * the host. {@code docker run -i} keeps the transport STDIO: the client talks to the container's
+ * stdin and stdout exactly as it would to a local {@code npx}. Enable via:
  * {@code mvn verify -Dintegration.tests.enabled=true -pl agenor-adapters}
  */
 @EnabledIfSystemProperty(named = "integration.tests.enabled", matches = "true")
 @DisplayName("McpFunctionAdapter — against server-everything 2.0.0 on STDIO")
 class McpServerEverythingIT {
 
+    private static final String NODE_IMAGE = "node:24.22.1-alpine";
+
     private static McpClient client;
     private static McpFunctionAdapter adapter;
 
     @BeforeAll
-    static void start() {
-        client = McpClientFactory.fromStdio("npx", "-y", "@modelcontextprotocol/server-everything@2.0.0", "stdio");
+    static void start() throws Exception {
+        // Pulled first because the client gives `initialize` 20 seconds, and a first pull of the
+        // image can take longer than that on its own.
+        var pull = new ProcessBuilder("docker", "pull", "-q", NODE_IMAGE).inheritIO().start();
+        assertThat(pull.waitFor(5, TimeUnit.MINUTES) && pull.exitValue() == 0)
+                .as("docker pull %s", NODE_IMAGE).isTrue();
+
+        // --init so the container stops when the client closes its stdin
+        client = McpClientFactory.fromStdio("docker", "run", "-i", "--rm", "--init", NODE_IMAGE,
+                "npx", "-y", "@modelcontextprotocol/server-everything@2.0.0", "stdio");
         adapter = new McpFunctionAdapter(new McpToolRegistry(client));
     }
 
