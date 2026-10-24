@@ -3,6 +3,7 @@ package dev.agenor.examples.support;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -15,6 +16,8 @@ import dev.agenor.core.Message;
 import dev.agenor.core.MessageHandler;
 import dev.agenor.core.knowledge.KnowledgeStore;
 import dev.agenor.examples.support.a2a.A2AHttpServer;
+import dev.agenor.examples.support.a2a.SupportA2AGatewayAgent;
+import dev.agenor.examples.support.a2a.SupportA2AServer;
 import dev.agenor.examples.support.agents.CollaborativeRouterAgent;
 import dev.agenor.examples.support.context.ConversationContextManager;
 import dev.agenor.examples.llm.ExampleEmbeddingProvider;
@@ -187,12 +190,14 @@ public class SupportChatbotExample {
 
         A2AHttpServer a2aServer = null;
         if (a2aMode) {
-            // Start A2A HTTP server
-            a2aServer = A2AHttpServer.builder()
-                .port(a2aPort)
-                .messageService(runtime.getMessageDispatcher())
-                .build();
-            a2aServer.start().join();
+            // Each A2A task becomes a REQUEST to the gateway, which runs it through support.query
+            Duration a2aTimeout = Duration.ofMinutes(2);
+            SupportA2AGatewayAgent gateway = new SupportA2AGatewayAgent(a2aTimeout);
+            runtime.registerAgent(gateway);
+            gateway.start().join();
+            a2aServer = new A2AHttpServer(a2aPort, SupportA2AServer.create("http://localhost:" + a2aPort,
+                runtime.getMessageDispatcher(), runtime.getAgentDirectory(), a2aTimeout));
+            a2aServer.start();
         }
 
         // Interactive mode
@@ -214,7 +219,7 @@ public class SupportChatbotExample {
 
         // Stop A2A server if running
         if (a2aServer != null) {
-            a2aServer.stop().join();
+            a2aServer.close();
         }
 
         // Print analytics report

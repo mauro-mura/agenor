@@ -307,21 +307,17 @@ AgentExecutor executor = new AgenorAgentExecutor(
 );
 ```
 
-With CDI / Quarkus:
+To serve it, `AgenorA2AServer` assembles the SDK's handlers around the executor and leaves you
+two endpoints for your HTTP server:
 
 ```java
-@ApplicationScoped
-public class MyExecutorProducer {
-
-    @Inject
-    MessageDispatcher messageDispatcher;
-
-    @Produces
-    public AgentExecutor createExecutor() {
-        return new AgenorAgentExecutor("my-agent", messageDispatcher, Duration.ofMinutes(5));
-    }
-}
+var server = AgenorA2AServer.of(config, executor);   // config: an A2AAdapterConfig, below
+server.agentCardJson();          // GET  /.well-known/agent-card.json
+server.handle(body);             // POST /  (JSON-RPC)
+server.handleStream(body);       // POST /  when server.isStreamingRequest(body): SSE events
 ```
+
+Mounting it in Jetty or Spring MVC: [docs/dialog-protocol.md](../docs/dialog-protocol.md#serving-it-agenora2aserver).
 
 The task ends on the agent's final reply (ADR-026): an `AGREE` leaves it `WORKING`, then `INFORM` → `COMPLETED`, `FAILURE` → `FAILED`, `REFUSE` → `REJECTED`, any other performative or a timeout → `FAILED` with a message saying why. Cancellation is forwarded to the agent as `Performative.CANCEL`, from the requester's id. The full table is in [docs/dialog-protocol.md](../docs/dialog-protocol.md#exposing-agenor-agent-as-a2a-server).
 

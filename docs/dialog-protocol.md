@@ -403,7 +403,8 @@ without otherwise. Nothing within the timeout fails the future with `A2AClientEx
 ### Exposing Agenor Agent as A2A Server
 
 `AgenorAgentExecutor` implements the A2A SDK's `AgentExecutor`. The SDK calls it, not your code:
-hand it to the SDK's request handler, and each A2A task becomes a `REQUEST` to one Agenor agent.
+each A2A task becomes a `REQUEST` to one Agenor agent. `AgenorA2AServer`, below, puts it behind
+the SDK's handlers.
 
 ```java
 AgentExecutor executor = new AgenorAgentExecutor(
@@ -419,7 +420,70 @@ executor's node, and logs a WARN at construction when the dispatcher is distribu
 `AgenorA2AAdapter` does the same for the sender of a message it sends to an internal agent, when
 the directory does not already know that sender.
 
-`SupportA2AServer` in `agenor-examples` (`dev.agenor.examples.support.a2a`) wires it end to end.
+#### Serving it: `AgenorA2AServer`
+
+The executor is the innermost piece. The SDK also needs a request handler, a task store, a queue
+manager, a JSON-RPC handler and a call context per request; `AgenorA2AServer` assembles them and
+leaves you two endpoints to mount in whatever HTTP server you already run. Its signature names no
+SDK type, so a later SDK version changes it inside Agenor rather than in your code.
+
+```java
+var server = AgenorA2AServer.of(
+    A2AAdapterConfig.create()
+        .agentName("support")
+        .agentDescription("Answers support questions")
+        .baseUrl("http://localhost:8081")
+        .streamingEnabled(true),
+    new AgenorAgentExecutor("support-agent", runtime.getMessageDispatcher(),
+        runtime.getAgentDirectory(), Duration.ofMinutes(2)));
+```
+
+| Endpoint | Call |
+|---|---|
+| `GET /.well-known/agent-card.json` | `server.agentCardJson()`, as `application/json` |
+| `POST /`, when `server.isStreamingRequest(body)` | each item of `server.handleStream(body)` as an SSE `data:` line |
+| `POST /`, otherwise | `server.handle(body)`, as `application/json` |
+
+In Spring MVC the two endpoints are a controller:
+
+```java
+@RestController
+class A2AController {
+    private final AgenorA2AServer server;
+
+    A2AController(AgenorA2AServer server) { this.server = server; }
+
+    @GetMapping(value = "/.well-known/agent-card.json", produces = "application/json")
+    String card() { return server.agentCardJson(); }
+
+    @PostMapping(value = "/", produces = {"application/json", "text/event-stream"})
+    Object call(@RequestBody String body) {
+        if (!server.isStreamingRequest(body)) {
+            return server.handle(body);
+        }
+        var emitter = new SseEmitter(0L);
+        server.handleStream(body).subscribe(new Flow.Subscriber<>() {
+            public void onSubscribe(Flow.Subscription s) { s.request(Long.MAX_VALUE); }
+            public void onNext(String event) {
+                try { emitter.send(event); } catch (IOException e) { emitter.completeWithError(e); }
+            }
+            public void onError(Throwable e) { emitter.completeWithError(e); }
+            public void onComplete() { emitter.complete(); }
+        });
+        return emitter;
+    }
+}
+```
+
+It answers `message/send`, `message/stream`, `tasks/get` and `tasks/cancel`; any other method
+gets JSON-RPC `-32601`, a body that is not JSON `-32700`, one without a method `-32600`. Serve one
+agent per host and port: the SDK reads the card at the root of the host, whatever path the URL
+has. Tasks are held in memory, so a `tasks/get` after a restart, or on another instance, does not
+find the task. Close the server when the HTTP server stops; it owns the handler threads.
+
+`SupportChatbotExample --a2a` in `agenor-examples` (`dev.agenor.examples.support.a2a`) runs it
+end to end behind Jetty. Its agents work on topics rather than answering a `REQUEST`, so a small
+gateway agent turns each task into a query; agents that answer a `REQUEST` need none.
 
 The task ends on the agent's **final** reply, as `request()` does (ADR-026):
 

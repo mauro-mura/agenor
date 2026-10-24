@@ -30,8 +30,9 @@ support/
 │   ├── BudgetAgent.java              # Consultable
 │   └── EscalationAgent.java
 ├── a2a/
-│   ├── A2AHttpServer.java
-│   ├── SupportA2AServer.java
+│   ├── A2AHttpServer.java            # Jetty in front of AgenorA2AServer
+│   ├── SupportA2AGatewayAgent.java   # answers an A2A task through support.query
+│   ├── SupportA2AServer.java         # card + executor -> AgenorA2AServer
 │   └── SupportAgentCardConfig.java
 ├── context/
 │   ├── ConversationContext.java
@@ -188,22 +189,34 @@ The chatbot exposes an `AgentCard` with 6 skills:
 | `budget-management` | Budget tracking and alerts |
 | `escalate` | Human agent connection |
 
+### How a task reaches the agents
+
+`AgenorAgentExecutor` sends each A2A task to one agent as a `REQUEST` and waits for its final
+reply. The support agents work on topics instead, so `SupportA2AGatewayAgent` stands in between:
+it publishes the request on `support.query` and answers it with an `INFORM` when the matching
+`support.response` arrives. An application whose agents answer a `REQUEST` themselves points the
+executor at them and needs no gateway.
+
+`SupportA2AServer.create(...)` builds the `AgenorA2AServer` from the card and the executor, and
+`A2AHttpServer` puts it behind Jetty. Nothing A2A-specific is in the Jetty class: it moves bodies
+between HTTP and `AgenorA2AServer`, which is what any other HTTP server would do.
+
 ### Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/.well-known/agent.json` | GET | Agent discovery (AgentCard) |
-| `/a2a` | POST | JSON-RPC message handling |
+| `/.well-known/agent-card.json` | GET | Agent discovery (AgentCard) |
+| `/` | POST | JSON-RPC: `message/send`, `message/stream` (SSE), `tasks/get`, `tasks/cancel` |
 | `/health` | GET | Health check |
 
 ### Test with curl
 
 ```bash
 # Get AgentCard
-curl http://localhost:8081/.well-known/agent.json
+curl http://localhost:8081/.well-known/agent-card.json
 
 # Send A2A message
-curl -X POST http://localhost:8081/a2a \
+curl -X POST http://localhost:8081/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -211,22 +224,30 @@ curl -X POST http://localhost:8081/a2a \
     "method": "message/send",
     "params": {
       "message": {
-        "parts": [{"type": "text", "text": "How do I reset my password?"}]
+        "kind": "message",
+        "messageId": "m1",
+        "role": "user",
+        "parts": [{"kind": "text", "text": "How do I reset my password?"}]
       }
     }
   }'
 ```
 
-### A2AHttpServer API
+Use `"method": "message/stream"` and `curl -N` to receive the task's events as they happen.
+
+### Wiring
 
 ```java
-A2AHttpServer server = A2AHttpServer.builder()
-    .port(8081)
-    .messageService(runtime.getMessageService())
-    .timeout(Duration.ofMinutes(2))
-    .build();
+Duration timeout = Duration.ofMinutes(2);
+var gateway = new SupportA2AGatewayAgent(timeout);
+runtime.registerAgent(gateway);
+gateway.start().join();
 
-server.start().join();
+var server = new A2AHttpServer(8081, SupportA2AServer.create("http://localhost:8081",
+    runtime.getMessageDispatcher(), runtime.getAgentDirectory(), timeout));
+server.start();
+// ...
+server.close();
 ```
 
 ## Production Features
@@ -283,12 +304,12 @@ if (!result.isAllowed()) {
 
 ## File Count
 
-**38 Java files** total:
+**34 Java files** total:
 - 9 agents (+ CollaborativeRouterAgent, ConsultableAgent)
-- 3 a2a
+- 4 a2a
 - 3 context
 - 3 llm
-- 10 knowledge
+- 5 knowledge
 - 5 production
 - 3 model
 - 1 service
