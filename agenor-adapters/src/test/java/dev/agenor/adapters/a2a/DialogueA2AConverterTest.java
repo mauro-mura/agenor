@@ -538,4 +538,46 @@ class DialogueA2AConverterTest {
         TextPart part = (TextPart) artifact.parts().get(0);
         assertThat(part.getText()).isEqualTo("42");
     }
+    record Draft(String ticket, java.time.Instant at) {}
+
+    @Test
+    void contentTextKeepsAStringAsItIs() {
+        assertThat(DialogueA2AConverter.contentText("plain {not json}")).isEqualTo("plain {not json}");
+        assertThat(DialogueA2AConverter.contentText(null)).isEmpty();
+    }
+
+    @Test
+    void contentTextWritesAnythingElseAsJson() {
+        assertThat(DialogueA2AConverter.contentText(Map.of("k", 1))).isEqualTo("{\"k\":1}");
+        assertThat(DialogueA2AConverter.contentText(List.of(1, 2))).isEqualTo("[1,2]");
+        assertThat(DialogueA2AConverter.contentText(new Draft("T-1", java.time.Instant.parse("2026-10-24T10:00:00Z"))))
+                .as("a record, with its date as ISO text")
+                .isEqualTo("{\"ticket\":\"T-1\",\"at\":\"2026-10-24T10:00:00Z\"}");
+    }
+
+    @Test
+    void contentTextFallsBackToToStringWithAWarn() {
+        Object opaque = new Object() {
+            private final Object self = this;   // a cycle Jackson cannot write
+
+            public Object getSelf() {
+                return self;
+            }
+
+            @Override
+            public String toString() {
+                return "opaque";
+            }
+        };
+        Logger logger = (Logger) LoggerFactory.getLogger(DialogueA2AConverter.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertThat(DialogueA2AConverter.contentText(opaque)).isEqualTo("opaque");
+        } finally {
+            logger.detachAppender(appender);
+        }
+        assertThat(appender.list).anySatisfy(e -> assertThat(e.getLevel()).isEqualTo(Level.WARN));
+    }
 }

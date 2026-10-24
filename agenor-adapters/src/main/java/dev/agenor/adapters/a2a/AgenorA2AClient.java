@@ -156,7 +156,7 @@ public class AgenorA2AClient {
                     .build();
                 result.whenComplete((reply, error) -> client.close());
 
-                Message a2aMessage = A2A.toUserMessage(serializeContent(message.content()));
+                Message a2aMessage = A2A.toUserMessage(DialogueA2AConverter.contentText(message.content()));
                 client.sendMessage(a2aMessage);
 
                 // Without streaming the call is non-blocking: the SDK server stops holding a
@@ -217,11 +217,6 @@ public class AgenorA2AClient {
         return state.isFinal() || state == TaskState.INPUT_REQUIRED || state == TaskState.AUTH_REQUIRED;
     }
 
-    private String serializeContent(Object content) {
-        if (content == null) return "";
-        if (content instanceof String s) return s;
-        return content.toString();
-    }
 
     private String extractStatusMessage(Task task) {
         if (task.getStatus() != null && task.getStatus().message() != null) {

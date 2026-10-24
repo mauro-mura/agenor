@@ -396,7 +396,10 @@ of the host, whatever path the URL has. The future completes on the agent's answ
 is `INFORM`, `failed` is `FAILURE`, `rejected` is `REFUSE`, `input-required` is `QUERY`, and a
 reply sent as a message is `INFORM`. `auth-required` and `unknown`, which Agenor cannot act on,
 are a `FAILURE` whose content names the state. Only text parts become the content: a `data` or
-`file` part is dropped, with a WARN that counts it. Without streaming the request is non-blocking and the client
+`file` part is dropped, with a WARN that counts it. Going out, a `String` content is sent as it
+is and any other content as JSON, so a map or a record reaches the peer as `{"key":"value"}`.
+A2A carries it as text: an Agenor on the other side receives that JSON as a `String`, and
+parses it itself. Without streaming the request is non-blocking and the client
 reads the task until it ends; `sendWithStreaming` streams when the card declares it and sends
 without otherwise. Nothing within the timeout fails the future with `A2AClientException`.
 
@@ -490,7 +493,7 @@ The task ends on the agent's **final** reply, as `request()` does (ADR-026):
 | Agent replies | A2A task |
 |---|---|
 | `AGREE` | stays `working`; the AGREE's text becomes a status message |
-| `INFORM` | `completed`, its content as the artifact |
+| `INFORM` | `completed`, its content as the artifact: a `String` as it is, anything else as JSON |
 | `FAILURE` | `failed`, its content as the status message |
 | `REFUSE` | `rejected`, its content as the status message |
 | any other performative | `failed`, with a status message naming it |

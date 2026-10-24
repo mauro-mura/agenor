@@ -98,6 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `agent-development.md`, `message-filtering.md` and `behaviors/OneShotBehavior.md`; each was
   compiled against 0.39.0-SNAPSHOT. Found by agenor-research.
 
+- **Structured content reaches an A2A peer as JSON, not as Java's `toString()`.** An agent
+  exposed through `AgenorAgentExecutor` that answered with a map or a record sent the client
+  `{risposta=..., note=[...]}`, which no A2A client can parse; `AgenorA2AClient` did the same with
+  a message's content going out. A `String` is still sent as it is; anything else is now JSON,
+  with dates as ISO text. Found by agenor-research, whose coordinator answers with a map.
+
+  Migration: a peer that parsed the `toString()` form receives JSON.
+
 - **An approval decided after a restart says it will not be acted on.** `JdbcApprovalGate`
   stored the decision and, finding no waiting future, said so at DEBUG: the operator saw
   "approved" and the action never happened, with nothing in the log. Without Postgres NOTIFY,

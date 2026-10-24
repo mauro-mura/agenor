@@ -1,5 +1,8 @@
 package dev.agenor.adapters.a2a;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import dev.agenor.core.dialogue.DialogueMessage;
 import dev.agenor.core.dialogue.Performative;
 import io.a2a.spec.Artifact;
@@ -109,7 +112,7 @@ public class DialogueA2AConverter {
      * Creates A2A Message for response.
      */
     public Message toA2AMessage(DialogueMessage dialogueMessage) {
-        TextPart textPart = new TextPart(serializeContent(dialogueMessage.content()), null);
+        TextPart textPart = new TextPart(contentText(dialogueMessage.content()), null);
 
         return new Message.Builder()
             .messageId(dialogueMessage.id())
@@ -122,7 +125,7 @@ public class DialogueA2AConverter {
      * Creates A2A Artifact from DialogueMessage content.
      */
     public Artifact toArtifact(DialogueMessage dialogueMessage) {
-        TextPart textPart = new TextPart(serializeContent(dialogueMessage.content()), null);
+        TextPart textPart = new TextPart(contentText(dialogueMessage.content()), null);
 
         return new Artifact.Builder()
             .artifactId(dialogueMessage.id())
@@ -174,15 +177,6 @@ public class DialogueA2AConverter {
 
     // === Private helpers ===
 
-    private String serializeContent(Object content) {
-        if (content == null) {
-            return "";
-        }
-        if (content instanceof String s) {
-            return s;
-        }
-        return content.toString();
-    }
 
     private String extractContent(Task task) {
         // First try artifacts
@@ -208,6 +202,30 @@ public class DialogueA2AConverter {
         }
 
         return "";
+    }
+
+    /** Dates as ISO strings, not numbers, as {@code MessageCodec} writes them. */
+    private static final ObjectMapper CONTENT_JSON = new ObjectMapper()
+            .findAndRegisterModules()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    /**
+     * The text an A2A peer receives for a message's content: a string as it is, anything else as
+     * JSON. A peer cannot read Java's {@code toString()} of a map or a record, and is not written
+     * in Java at all, more often than not.
+     *
+     * <p>Content Jackson cannot serialize falls back to {@code toString()}, with a WARN.
+     */
+    static String contentText(Object content) {
+        if (content == null) return "";
+        if (content instanceof String s) return s;
+        try {
+            return CONTENT_JSON.writeValueAsString(content);
+        } catch (JsonProcessingException e) {
+            log.warn("A2A content of type {} cannot be written as JSON, sent as toString(): {}",
+                    content.getClass().getName(), e.getOriginalMessage());
+            return content.toString();
+        }
     }
 
     /**

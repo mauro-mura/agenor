@@ -415,6 +415,21 @@ class AgenorAgentExecutorTest {
     }
 
     @Test
+    void aStructuredInformReachesTheClientAsJson() {
+        // A Map used to arrive as Java's toString(), {risposta=..., note=[...]}, which no A2A
+        // client can parse. Found by agenor-research, whose coordinator answers with a Map.
+        givenRequest("task-structured");
+        var content = new java.util.LinkedHashMap<String, Object>();
+        content.put("risposta", "FARO-7731");
+        content.put("note", List.of("a", "b"));
+        stubDispatcherToReply(reply("task-structured", Performative.INFORM, content));
+
+        executor.execute(requestContext, eventQueue);
+
+        assertThat(publishedArtifactTexts()).containsExactly("{\"risposta\":\"FARO-7731\",\"note\":[\"a\",\"b\"]}");
+    }
+
+    @Test
     void failureAfterAgreeFailsTheTaskWithItsText() {
         givenRequest("task-agree-failure");
         stubDispatcherToReply(
