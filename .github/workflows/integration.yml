@@ -31,12 +31,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # McpServerEverythingIT starts the reference MCP server on STDIO with npx. The
-      # runner image ships Node today; declaring it keeps that from being an accident.
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-
       # The two Ollama ITs carry @Tag("ollama") and run in the nightly job below.
       # Excluding them by tag rather than by a negated `-Dit.test='!Ollama*IT'`:
       # that pattern *replaces* failsafe's `*IT` includes, so failsafe picks up
