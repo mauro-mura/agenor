@@ -89,6 +89,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `agent-development.md`, `message-filtering.md` and `behaviors/OneShotBehavior.md`; each was
   compiled against 0.39.0-SNAPSHOT. Found by agenor-research.
 
+- **An approval decided after a restart says it will not be acted on.** `JdbcApprovalGate`
+  stored the decision and, finding no waiting future, said so at DEBUG: the operator saw
+  "approved" and the action never happened, with nothing in the log. Without Postgres NOTIFY,
+  `submit` now logs a WARN naming the request and its action. With NOTIFY it stays at DEBUG,
+  because the future may be on another node. `hitl-persistence.md` describes what such a
+  decision leaves in the table, and no longer claims that non-Postgres databases propagate
+  decisions by polling: nothing polls. Delivering the decision after a restart is still out of
+  scope (ADR-024). Found by agenor-support.
+
 ### Deprecated
 
 - **`DialogueA2AConverter.mapPerformativeToTaskState(Performative)` is deprecated, for removal in

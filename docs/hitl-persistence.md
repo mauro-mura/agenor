@@ -124,10 +124,13 @@ JDBC, `rs.getTimestamp(column, Calendar.getInstance(TimeZone.getTimeZone("UTC"))
 | Status     | Meaning                                            |
 |------------|----------------------------------------------------|
 | `PENDING`  | Awaiting a human decision                          |
-| `APPROVED` | Approved; agent proceeded with original payload    |
-| `REJECTED` | Rejected; agent did not execute the action         |
+| `APPROVED` | Approved, with the original payload                |
+| `REJECTED` | Rejected                                           |
 | `MODIFIED` | Approved with modified payload                     |
 | `EXPIRED`  | Timed out before a decision was submitted          |
+
+A status records the decision, not what the agent did with it: after a restart the decision can
+be stored and never reach the agent (see [Local-future constraint](#local-future-constraint)).
 
 ---
 
@@ -175,9 +178,11 @@ This provides **push-based cross-node propagation** without polling.
 
 ### Non-Postgres databases
 
-For H2, MySQL, and other databases, cross-node propagation is polling-based. A node that
-does not hold the local future will not receive push notifications, but the decision is
-always stored in the DB and is visible via `getPendingRequests()`.
+For H2, MySQL, and other databases there is no cross-node propagation: a decision reaches the
+waiting agent only when it is submitted on the JVM that requested it. Submitted anywhere else,
+it is stored and goes no further, and nothing polls for it — once decided, the request no longer
+appears in `getPendingRequests()`. Run the operator UI on the node whose agents ask, or use
+Postgres.
 
 ---
 
@@ -192,6 +197,27 @@ it. If that JVM crashes before the decision arrives:
 - The DB row remains with `PENDING` status until it expires.
 - Any operator can still submit a decision from another node (the row is visible via
   `getPendingRequests()`), but the originating agent will not see it after restart.
+
+What an operator meets is the decision side of this. A request made before the restart is still
+`PENDING`, still listed by `getPendingRequests()`, and can still be decided; the row then says
+`APPROVED`, `REJECTED` or `MODIFIED`, with `decision_type`, `decision_data` and `decided_at`
+filled in as described under [Schema](#schema), and nothing else happens. The action the agent
+was waiting to take is not taken.
+
+Without Postgres NOTIFY, `submit` knows this is the case and says so at WARN:
+
+```
+Decision on requestId=… (action=send-reply) is stored but will not be delivered: no caller in
+this JVM is waiting for it, typically because the node that requested it restarted
+```
+
+With NOTIFY it cannot tell: the future may live on another node, which the notification
+reaches. It logs at DEBUG, and a decision whose requester restarted goes unreported.
+
+To find such decisions, query `agenor_hitl_requests` for `APPROVED`, `REJECTED` and `MODIFIED`
+rows. The table does not record whether a decision was delivered, so telling the ones the agent
+acted on from the ones it never saw takes a mark your application keeps itself, and acting on
+them is up to the application too.
 
 This is a documented trade-off. Full event-sourced replay (agent re-registers a future for
 an existing `requestId` after restart) is out of scope.

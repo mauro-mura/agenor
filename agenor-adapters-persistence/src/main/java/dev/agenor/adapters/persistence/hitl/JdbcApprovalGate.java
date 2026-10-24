@@ -39,7 +39,8 @@ import java.util.concurrent.TimeUnit;
  *
  * <p><b>Single-JVM future constraint</b>: the {@link CompletableFuture} lives only in the
  * JVM that called {@link #requestApproval(ApprovalRequest)}. If that JVM crashes, the future is lost.
- * The DB row remains for audit. See ADR-024 for details.
+ * The DB row remains for audit. A decision submitted after that is stored and never delivered;
+ * without Postgres NOTIFY, {@link #submit} logs it at WARN. See ADR-024 for details.
  *
  * <p>Implements {@link AutoCloseable} — call {@link #close()} to shut down the timeout
  * scheduler and any active Postgres notification listener.
@@ -175,8 +176,18 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
         if (future != null) {
             future.complete(decision);
             log.debug("Approval decision completed local future: requestId={}", requestId);
+        } else if (postgresNotify) {
+            // Another node may hold the future and will get the decision from the NOTIFY below,
+            // so a missing local future proves nothing here.
+            log.debug("No local future for requestId={}; the NOTIFY reaches the node that holds it, "
+                    + "if any", requestId);
         } else {
-            log.debug("No local future for requestId={} (cross-node or already completed)", requestId);
+            // Without NOTIFY the local future is the only way a decision travels. The row was
+            // PENDING until the UPDATE above, so the future did not time out; it was never in
+            // this JVM, which is what a restart does to a request.
+            log.warn("Decision on requestId={} (action={}) is stored but will not be delivered: "
+                    + "no caller in this JVM is waiting for it, typically because the node that "
+                    + "requested it restarted", requestId, row.action());
         }
 
         if (postgresNotify) {
@@ -278,14 +289,15 @@ public class JdbcApprovalGate implements ApprovalGate, AutoCloseable {
         return updated.get() > 0;
     }
 
-    private record RowSummary(String requestId, String status) {}
+    private record RowSummary(String requestId, String status, String action) {}
 
     private RowSummary loadRow(String requestId) {
         return jdbc.query(conn ->
                 jdbc.queryOne(conn,
-                        "SELECT request_id, status FROM agenor_hitl_requests WHERE request_id = ?",
+                        "SELECT request_id, status, action FROM agenor_hitl_requests WHERE request_id = ?",
                         List.of(requestId),
-                        rs -> new RowSummary(rs.getString("request_id"), rs.getString("status")))
+                        rs -> new RowSummary(rs.getString("request_id"), rs.getString("status"),
+                                rs.getString("action")))
         ).join();
     }
 

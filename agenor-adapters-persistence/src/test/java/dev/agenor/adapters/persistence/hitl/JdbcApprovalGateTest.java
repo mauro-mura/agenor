@@ -388,6 +388,83 @@ class JdbcApprovalGateTest {
     }
 
     // -------------------------------------------------------------------------
+    // Decisions nobody is waiting for
+    // -------------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Orphan decisions")
+    class OrphanDecisionTests {
+
+        @Test
+        @DisplayName("a decision taken after a restart is stored, and says at WARN that no one will receive it")
+        void decisionAfterRestartWarns() {
+            // Given a request made by a gate whose JVM then went away
+            var request = req(Duration.ofMinutes(5));
+            gate.requestApproval(request);
+            var restarted = new JdbcApprovalGate(
+                    new JdbcHelper(dataSource), new ObjectMapper(), scheduler, false, null);
+
+            // When the operator decides on the node that came back
+            var warnings = warningsDuring(() ->
+                    restarted.submit(request.requestId(), new ApprovalDecision.Approved()));
+
+            // Then the row says approved, and the log says that is all that will happen
+            assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_APPROVED);
+            assertThat(warnings)
+                    .singleElement(org.assertj.core.api.InstanceOfAssertFactories.STRING)
+                    .contains(request.requestId(), request.action());
+        }
+
+        @Test
+        @DisplayName("a decision that reaches its waiting future logs no warning")
+        void decisionWithLocalFutureDoesNotWarn() throws Exception {
+            var request = req(Duration.ofMinutes(5));
+            var future = gate.requestApproval(request);
+
+            var warnings = warningsDuring(() ->
+                    gate.submit(request.requestId(), new ApprovalDecision.Approved()));
+
+            assertThat(future.get(2, TimeUnit.SECONDS)).isInstanceOf(ApprovalDecision.Approved.class);
+            assertThat(warnings).isEmpty();
+        }
+
+        @Test
+        @DisplayName("with Postgres NOTIFY, a missing local future is not a warning: another node may hold it")
+        void decisionWithNotifyDoesNotWarnAboutTheFuture() {
+            var request = req(Duration.ofMinutes(5));
+            gate.requestApproval(request);
+            // postgresNotify on with a null DataSource, so no listener starts; H2 rejects the
+            // NOTIFY and the gate logs that failure at WARN, which is not the message under test
+            var notifying = new JdbcApprovalGate(
+                    new JdbcHelper(dataSource), new ObjectMapper(), scheduler, true, null);
+
+            var warnings = warningsDuring(() ->
+                    notifying.submit(request.requestId(), new ApprovalDecision.Approved()));
+
+            assertDbStatus(request.requestId(), JdbcApprovalGate.STATUS_APPROVED);
+            assertThat(warnings).noneMatch(line -> line.contains("will not be delivered"));
+        }
+
+        private List<String> warningsDuring(Runnable action) {
+            var logger = (ch.qos.logback.classic.Logger)
+                    org.slf4j.LoggerFactory.getLogger(JdbcApprovalGate.class);
+            var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+            appender.start();
+            logger.addAppender(appender);
+            try {
+                action.run();
+            } finally {
+                logger.detachAppender(appender);
+                appender.stop();
+            }
+            return appender.list.stream()
+                    .filter(event -> event.getLevel() == ch.qos.logback.classic.Level.WARN)
+                    .map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+                    .toList();
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // getPendingRequests
     // -------------------------------------------------------------------------
 

@@ -23,8 +23,8 @@ import java.util.concurrent.CompletableFuture;
  * compile-time dependency on the Postgres driver (which is in {@code runtime} scope).
  *
  * <p>This class is optional and activated only when the JDBC URL contains
- * {@code postgresql}. Non-Postgres deployments fall back to polling via
- * {@link JdbcApprovalGate#getPendingRequests()}.
+ * {@code postgresql}. Without it a decision reaches only a future in the JVM that submits it;
+ * nothing polls for decisions taken elsewhere.
  *
  * @since 0.23.0
  */
