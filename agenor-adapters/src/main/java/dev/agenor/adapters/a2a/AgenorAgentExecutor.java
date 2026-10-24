@@ -336,7 +336,7 @@ public class AgenorAgentExecutor implements AgentExecutor {
     }
 
     private static String contentText(DialogueMessage message) {
-        return message.content() != null ? message.content().toString() : "";
+        return DialogueA2AConverter.contentText(message.content());
     }
 
     private static io.a2a.spec.Message agentText(TaskUpdater updater, String text) {
