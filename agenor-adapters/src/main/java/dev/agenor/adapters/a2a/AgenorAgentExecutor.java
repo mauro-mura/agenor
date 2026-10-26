@@ -123,6 +123,11 @@ public class AgenorAgentExecutor implements AgentExecutor {
         this.timeout = timeout;
     }
 
+    /** How long {@link #execute} waits for the final reply before failing the task. */
+    Duration timeout() {
+        return timeout;
+    }
+
     @Override
     public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
         String taskId = context.getTaskId();

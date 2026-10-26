@@ -11,6 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -114,6 +115,60 @@ class AgenorA2AServerTest {
                 .satisfies(e -> assertThat(e.path("error").path("code").asInt()).isEqualTo(-32600));
     }
 
+    @Test
+    @DisplayName("a blocking message/send waits for an agent slower than the SDK's 5 s, and gets it completed")
+    void blockingSendOnSlowAgent() throws Exception {
+        try (var slow = slowServer()) {
+            JsonNode task = json(slow.handle(send("message/send", 10, "hello"))).path("result");
+
+            assertThat(task.path("status").path("state").asText()).isEqualTo("completed");
+            assertThat(task.path("artifacts").get(0).path("parts").get(0).path("text").asText())
+                    .isEqualTo("slow: hello");
+        }
+    }
+
+    @Test
+    @DisplayName("a non-blocking message/send returns at once, and tasks/get later finds the task completed")
+    void nonBlockingSendOnSlowAgent() throws Exception {
+        try (var slow = slowServer()) {
+            JsonNode task = json(slow.handle(send("message/send", 11, "hello")
+                    .replace("\"params\":{", "\"params\":{\"configuration\":{\"blocking\":false},"))).path("result");
+            assertThat(task.path("status").path("state").asText()).isNotEqualTo("completed");
+
+            String get = """
+                    {"jsonrpc":"2.0","id":"g","method":"tasks/get","params":{"id":"%s"}}"""
+                    .formatted(task.path("id").asText());
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(Slow.DELAY_SECONDS + 5);
+            String state;
+            do {
+                Thread.sleep(200);
+                state = json(slow.handle(get)).path("result").path("status").path("state").asText();
+            } while (!"completed".equals(state) && System.nanoTime() < deadline);
+            assertThat(state).isEqualTo("completed");
+        }
+    }
+
+    @Test
+    @DisplayName("message/stream on an agent slower than 5 s ends with the completed task")
+    void streamOnSlowAgent() throws Exception {
+        try (var slow = slowServer()) {
+            List<JsonNode> events = collect(slow.handleStream(send("message/stream", 12, "hello")),
+                    Slow.DELAY_SECONDS + 5);
+
+            assertThat(events.getLast().path("result").path("status").path("state").asText())
+                    .isEqualTo("completed");
+        }
+    }
+
+    private static AgenorA2AServer slowServer() {
+        return AgenorA2AServer.withExecutor(A2AAdapterConfig.create()
+                .agentName("slow")
+                .agentDescription("answers after the SDK has stopped waiting")
+                .baseUrl("http://localhost:9998")
+                .streamingEnabled(true)
+                .timeout(Duration.ofSeconds(30)), new Slow());
+    }
+
     private static String send(String method, int id, String text) {
         return """
                 {"jsonrpc":"2.0","id":%d,"method":"%s","params":{"message":{"kind":"message",
@@ -126,6 +181,10 @@ class AgenorA2AServerTest {
     }
 
     private static List<JsonNode> collect(Flow.Publisher<String> events) throws Exception {
+        return collect(events, 5);
+    }
+
+    private static List<JsonNode> collect(Flow.Publisher<String> events, long seconds) throws Exception {
         List<String> received = new CopyOnWriteArrayList<>();
         var ended = new CountDownLatch(1);
         events.subscribe(new Flow.Subscriber<>() {
@@ -149,7 +208,7 @@ class AgenorA2AServerTest {
                 ended.countDown();
             }
         });
-        assertThat(ended.await(5, TimeUnit.SECONDS)).as("the stream ended").isTrue();
+        assertThat(ended.await(seconds, TimeUnit.SECONDS)).as("the stream ended").isTrue();
         var nodes = new java.util.ArrayList<JsonNode>();
         for (String event : received) {
             nodes.add(json(event));
@@ -167,6 +226,32 @@ class AgenorA2AServerTest {
             }
             updater.startWork();
             updater.addArtifact(List.of(new TextPart("echo: " + context.getUserInput(" "), null)), null, null, null);
+            updater.complete();
+        }
+
+        @Override
+        public void cancel(RequestContext context, EventQueue queue) {
+        }
+    }
+
+    /** Like {@link Echo}, but answers after the 5 s the SDK holds a blocking call for. */
+    private static final class Slow implements AgentExecutor {
+        static final int DELAY_SECONDS = 6;
+
+        @Override
+        public void execute(RequestContext context, EventQueue queue) {
+            var updater = new TaskUpdater(context, queue);
+            if (context.getTask() == null) {
+                updater.submit();
+            }
+            updater.startWork();
+            try {
+                Thread.sleep(Duration.ofSeconds(DELAY_SECONDS));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            updater.addArtifact(List.of(new TextPart("slow: " + context.getUserInput(" "), null)), null, null, null);
             updater.complete();
         }
 

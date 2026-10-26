@@ -1,6 +1,7 @@
 package dev.agenor.adapters.a2a;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.a2a.server.ServerCallContext;
 import io.a2a.server.TransportMetadata;
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -10,6 +11,7 @@ import io.a2a.server.requesthandlers.DefaultRequestHandler;
 import io.a2a.server.tasks.BasePushNotificationSender;
 import io.a2a.server.tasks.InMemoryPushNotificationConfigStore;
 import io.a2a.server.tasks.InMemoryTaskStore;
+import io.a2a.server.tasks.TaskStore;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.CancelTaskRequest;
 import io.a2a.spec.GetTaskRequest;
@@ -19,20 +21,29 @@ import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.JSONRPCErrorResponse;
 import io.a2a.spec.MethodNotFoundError;
 import io.a2a.spec.SendMessageRequest;
+import io.a2a.spec.SendMessageResponse;
 import io.a2a.spec.SendStreamingMessageRequest;
 import io.a2a.spec.SendStreamingMessageResponse;
+import io.a2a.spec.Task;
+import io.a2a.spec.TaskState;
 import io.a2a.spec.TransportProtocol;
 import io.a2a.transport.jsonrpc.context.JSONRPCContextKeys;
 import io.a2a.transport.jsonrpc.handler.JSONRPCHandler;
 import io.a2a.util.Utils;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Exposes one Agenor agent as an A2A 0.3 server over JSON-RPC, without choosing the HTTP server.
@@ -62,6 +73,9 @@ import java.util.concurrent.Flow;
  * {@code tasks/cancel}. Any other method is answered with JSON-RPC {@code -32601}, a body that is
  * not JSON with {@code -32700}, and one that is JSON but not a request with {@code -32600}.
  *
+ * <p>A blocking {@code message/send}, the default, is answered when the task ends or needs input,
+ * however long the agent takes, up to the executor's timeout.
+ *
  * <p>Tasks are held in memory: a {@code tasks/get} after a restart, or on another node, does not
  * find a task this instance created.
  *
@@ -77,17 +91,21 @@ public final class AgenorA2AServer implements AutoCloseable {
     private final AgentCard card;
     private final String cardJson;
     private final JSONRPCHandler jsonrpc;
+    private final EndingTaskStore tasks;
+    private final Duration blockingBound;
     private final ExecutorService threads = Executors.newVirtualThreadPerTaskExecutor();
 
-    private AgenorA2AServer(A2AAdapterConfig config, AgentExecutor executor) {
+    private AgenorA2AServer(A2AAdapterConfig config, AgentExecutor executor, Duration blockingBound) {
         Objects.requireNonNull(config, "config must not be null");
         Objects.requireNonNull(executor, "executor must not be null");
         this.card = config.toAgentCard();
         this.cardJson = toJson(card);
-        var tasks = new InMemoryTaskStore();
+        this.blockingBound = blockingBound;
+        var stored = new InMemoryTaskStore();
+        this.tasks = new EndingTaskStore(stored);
         var push = new InMemoryPushNotificationConfigStore();
         // create, not new: new leaves the blocking-mode timeouts at 0, because CDI injects them
-        var requests = DefaultRequestHandler.create(executor, tasks, new InMemoryQueueManager(tasks),
+        var requests = DefaultRequestHandler.create(executor, tasks, new InMemoryQueueManager(stored),
                 push, new BasePushNotificationSender(push), threads);
         this.jsonrpc = new JSONRPCHandler(card, requests, threads);
     }
@@ -100,12 +118,14 @@ public final class AgenorA2AServer implements AutoCloseable {
      * @return a server; close it to stop its threads
      */
     public static AgenorA2AServer of(A2AAdapterConfig config, AgenorAgentExecutor executor) {
-        return new AgenorA2AServer(config, executor);
+        Objects.requireNonNull(executor, "executor must not be null");
+        // The executor fails the task at its own timeout; the margin only covers a lost update
+        return new AgenorA2AServer(config, executor, executor.timeout().plusSeconds(5));
     }
 
     /** Any SDK executor, for tests that stand in for an agent. */
     static AgenorA2AServer withExecutor(A2AAdapterConfig config, AgentExecutor executor) {
-        return new AgenorA2AServer(config, executor);
+        return new AgenorA2AServer(config, executor, config.getTimeout());
     }
 
     /** The agent card, as served at {@code GET /.well-known/agent-card.json}. */
@@ -143,8 +163,7 @@ public final class AgenorA2AServer implements AutoCloseable {
         }
         try {
             return switch (method) {
-                case MESSAGE_SEND -> toJson(jsonrpc.onMessageSend(
-                        Utils.OBJECT_MAPPER.treeToValue(request, SendMessageRequest.class), context(method)));
+                case MESSAGE_SEND -> toJson(send(request, id));
                 case TASKS_GET -> toJson(jsonrpc.onGetTask(
                         Utils.OBJECT_MAPPER.treeToValue(request, GetTaskRequest.class), context(method)));
                 case TASKS_CANCEL -> toJson(jsonrpc.onCancelTask(
@@ -216,6 +235,37 @@ public final class AgenorA2AServer implements AutoCloseable {
     // Internal
     // -------------------------------------------------------------------------
 
+    /**
+     * Sends non-blocking whatever the caller asked, and waits here if it asked to block. In
+     * blocking mode the SDK waits 5 s for the executor, then closes the task's event queue and
+     * answers {@code working}; what the agent sends later is dropped, and the task never ends.
+     */
+    private SendMessageResponse send(JsonNode request, Object id) throws Exception {
+        JsonNode blockingNode = request.path("params").path("configuration").path("blocking");
+        boolean blocking = !(blockingNode.isBoolean() && !blockingNode.asBoolean());
+        JsonNode nonBlocking = request;
+        if (request.get("params") instanceof ObjectNode) {
+            nonBlocking = request.deepCopy();
+            var params = (ObjectNode) nonBlocking.get("params");
+            var configuration = params.get("configuration") instanceof ObjectNode existing
+                    ? existing : params.putObject("configuration");
+            configuration.put("blocking", false);
+        }
+        SendMessageResponse response = jsonrpc.onMessageSend(
+                Utils.OBJECT_MAPPER.treeToValue(nonBlocking, SendMessageRequest.class), context(MESSAGE_SEND));
+        if (!blocking || !(response.getResult() instanceof Task task) || ends(task)) {
+            return response;
+        }
+        Task ended = tasks.awaitEnd(task.getId(), blockingBound);
+        return ended == null ? response : new SendMessageResponse(id, ended);
+    }
+
+    /** Whether a blocking call is answered with {@code task}: it has ended, or waits for input. */
+    private static boolean ends(Task task) {
+        TaskState state = task.getStatus().state();
+        return state.isFinal() || state == TaskState.INPUT_REQUIRED || state == TaskState.AUTH_REQUIRED;
+    }
+
     private static JsonNode parse(String body) {
         if (body == null) {
             return null;
@@ -280,6 +330,65 @@ public final class AgenorA2AServer implements AutoCloseable {
                 done = true;
             }
         });
+    }
+
+    /** The task store, telling a blocking {@code message/send} when its task is saved as ended. */
+    private static final class EndingTaskStore implements TaskStore {
+        private final TaskStore tasks;
+        private final Map<String, Set<CompletableFuture<Task>>> waiters = new ConcurrentHashMap<>();
+
+        EndingTaskStore(TaskStore tasks) {
+            this.tasks = tasks;
+        }
+
+        @Override
+        public void save(Task task) {
+            tasks.save(task);
+            if (ends(task)) {
+                var waiting = waiters.get(task.getId());
+                if (waiting != null) {
+                    waiting.forEach(waiter -> waiter.complete(task));
+                }
+            }
+        }
+
+        @Override
+        public Task get(String taskId) {
+            return tasks.get(taskId);
+        }
+
+        @Override
+        public void delete(String taskId) {
+            tasks.delete(taskId);
+        }
+
+        /** The task once it ends, or as it stands after {@code bound}; null if it is not stored. */
+        Task awaitEnd(String taskId, Duration bound) {
+            var waiter = new CompletableFuture<Task>();
+            waiters.compute(taskId, (key, waiting) -> {
+                var set = waiting != null ? waiting : ConcurrentHashMap.<CompletableFuture<Task>>newKeySet();
+                set.add(waiter);
+                return set;
+            });
+            try {
+                // Registered before reading, so a task that ended in between is seen here
+                Task current = tasks.get(taskId);
+                if (current != null && ends(current)) {
+                    return current;
+                }
+                return waiter.get(bound.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return tasks.get(taskId);
+            } catch (TimeoutException | ExecutionException e) {
+                return tasks.get(taskId);
+            } finally {
+                waiters.computeIfPresent(taskId, (key, waiting) -> {
+                    waiting.remove(waiter);
+                    return waiting.isEmpty() ? null : waiting;
+                });
+            }
+        }
     }
 
     /**

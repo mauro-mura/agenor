@@ -482,7 +482,10 @@ It answers `message/send`, `message/stream`, `tasks/get` and `tasks/cancel`; any
 gets JSON-RPC `-32601`, a body that is not JSON `-32700`, one without a method `-32600`. Serve one
 agent per host and port: the SDK reads the card at the root of the host, whatever path the URL
 has. Tasks are held in memory, so a `tasks/get` after a restart, or on another instance, does not
-find the task. Close the server when the HTTP server stops; it owns the handler threads.
+find the task. Close the server when the HTTP server stops; it owns the handler threads. A
+blocking `message/send`, the default, is answered when the task ends or needs input, up to the
+executor's timeout: the SDK on its own stops waiting after 5 s and loses what the agent sends
+later.
 
 `SupportChatbotExample --a2a` in `agenor-examples` (`dev.agenor.examples.support.a2a`) runs it
 end to end behind Jetty. Its agents work on topics rather than answering a `REQUEST`, so a small
