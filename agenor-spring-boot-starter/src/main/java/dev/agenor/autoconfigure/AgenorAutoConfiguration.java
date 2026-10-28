@@ -10,6 +10,7 @@ import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.messaging.MessageDispatcher;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.runtime.AgenorRuntime;
+import dev.agenor.runtime.telemetry.InstrumentedLLMProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -289,6 +290,13 @@ public class AgenorAutoConfiguration {
      * Each bean is additionally guarded by {@code @ConditionalOnProperty} matching
      * the specific provider name and by {@code @ConditionalOnMissingBean} so that
      * a user-provided {@link LLMProvider} always wins.
+     *
+     * <p>With telemetry on, each provider is returned wrapped in {@link InstrumentedLLMProvider},
+     * so every call emits an {@code llm.chat} span whoever makes it: an {@code LLMAgent}, a
+     * {@code BaseAgent}, or application code. Wrapping at registration reached only a provider
+     * handed to {@code LLMAgent.setLLMProvider}, which agents that keep their own do not call
+     * (issue #5). A provider the application declares is not wrapped: that would change the
+     * bean's type under anyone injecting it by class, so whoever declares it wraps it.
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "dev.agenor.adapters.llm.LLMProviderFactory")
@@ -310,7 +318,8 @@ public class AgenorAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
         @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "openai")
-        public LLMProvider openAiLlmProvider(AgenorProperties props) {
+        public LLMProvider openAiLlmProvider(AgenorProperties props,
+                ObjectProvider<AgenorTelemetry> telemetry) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "openai");
             String model = effectiveModel(llm, DEFAULT_OPENAI_MODEL);
@@ -319,35 +328,37 @@ public class AgenorAutoConfiguration {
                     .apiKey(llm.apiKey())
                     .modelName(model);
             applyBaseUrl(builder, llm);
-            return builder.build();
+            return traced(builder.build(), telemetry);
         }
 
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
         @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "anthropic")
-        public LLMProvider anthropicLlmProvider(AgenorProperties props) {
+        public LLMProvider anthropicLlmProvider(AgenorProperties props,
+                ObjectProvider<AgenorTelemetry> telemetry) {
             AgenorProperties.Llm llm = props.llm();
             requireApiKey(llm, "anthropic");
             String model = effectiveModel(llm, DEFAULT_ANTHROPIC_MODEL);
             log.info("Creating Anthropic LLMProvider (model={})", model);
-            return dev.agenor.adapters.llm.LLMProviderFactory.anthropic()
+            return traced(dev.agenor.adapters.llm.LLMProviderFactory.anthropic()
                     .apiKey(llm.apiKey())
                     .modelName(model)
-                    .build();
+                    .build(), telemetry);
         }
 
         @Bean
         @ConditionalOnMissingBean(LLMProvider.class)
         @ConditionalOnProperty(prefix = "agenor.llm", name = "provider", havingValue = "ollama")
-        public LLMProvider ollamaLlmProvider(AgenorProperties props) {
+        public LLMProvider ollamaLlmProvider(AgenorProperties props,
+                ObjectProvider<AgenorTelemetry> telemetry) {
             AgenorProperties.Llm llm = props.llm();
             String baseUrl = llm.baseUrl() != null ? llm.baseUrl() : DEFAULT_OLLAMA_BASE_URL;
             String model = effectiveModel(llm, DEFAULT_OLLAMA_MODEL);
             log.info("Creating Ollama LLMProvider (baseUrl={}, model={})", baseUrl, model);
-            return dev.agenor.adapters.llm.LLMProviderFactory.ollama()
+            return traced(dev.agenor.adapters.llm.LLMProviderFactory.ollama()
                     .baseUrl(baseUrl)
                     .modelName(model)
-                    .build();
+                    .build(), telemetry);
         }
 
         /**
@@ -362,6 +373,18 @@ public class AgenorAutoConfiguration {
             if (llm.baseUrl() != null && !llm.baseUrl().isBlank()) {
                 builder.baseUrl(llm.baseUrl());
             }
+        }
+
+        /**
+         * Wraps {@code provider} in {@link InstrumentedLLMProvider} unless telemetry is off, in
+         * which case the bean stays the provider itself, as it was before telemetry reached it.
+         */
+        private static LLMProvider traced(LLMProvider provider,
+                ObjectProvider<AgenorTelemetry> telemetry) {
+            AgenorTelemetry t = telemetry.getIfAvailable(AgenorTelemetry::noop);
+            return t == AgenorTelemetry.noop()
+                    ? provider
+                    : new InstrumentedLLMProvider(provider, t);
         }
 
         private static String effectiveModel(AgenorProperties.Llm llm, String defaultModel) {

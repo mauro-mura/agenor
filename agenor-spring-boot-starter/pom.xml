@@ -134,6 +134,24 @@
             <artifactId>spring-boot-jdbc</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- LLMAgent and real OTel spans in test scope: AgenorLlmTelemetryTest registers an
+             LLMAgent and a BaseAgent against the starter's provider and counts llm.chat spans.
+             OTel at the version Spring Boot manages, the one a starter user gets. -->
+        <dependency>
+            <groupId>dev.agenor</groupId>
+            <artifactId>agenor-runtime-llm</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Testcontainers in test scope: StarterTwoNodeRedisJdbcIT runs two starter contexts
              against a real Valkey. A mocked dispatcher cannot show that a message crosses
              nodes. Same version as agenor-examples. -->

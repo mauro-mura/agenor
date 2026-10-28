@@ -12,6 +12,7 @@ import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.llm.LLMAgent;
 import dev.agenor.runtime.llm.ScriptedLLMProvider;
 import dev.agenor.runtime.guardrail.GuardrailChain;
+import dev.agenor.runtime.telemetry.InstrumentedLLMProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Observability Example — demonstrates OpenTelemetry integration (ADR-019).
  *
- * <p>Shows how to enable distributed tracing by adding a single
- * {@link AgenorTelemetry} instance to the runtime:
+ * <p>Shows how to enable distributed tracing on a runtime built by hand: one
+ * {@link AgenorTelemetry} instance, given to the runtime and to the LLM provider:
  *
  * <pre>{@code
  * AgenorTelemetry telemetry = OtelTelemetryFactory.builder()
@@ -33,13 +34,16 @@ import java.util.concurrent.CompletableFuture;
  * AgenorRuntime runtime = AgenorRuntime.builder()
  *     .telemetry(telemetry)
  *     .build();
+ *
+ * LLMProvider traced = new InstrumentedLLMProvider(provider, telemetry);
  * }</pre>
  *
  * <p>What this example traces: {@code guardrail.evaluate}, one span per input or output guardrail
- * evaluation, four in all. It does not trace its LLM calls: the agent calls the provider it was
- * given, and the runtime instruments only a copy that a subclass of {@link LLMAgent} cannot reach,
- * so no {@code llm.chat} span is emitted. {@code docs/observability.md} describes the gap and the
- * workaround. The agent has no behavior, so there is no {@code behavior.execute} either.
+ * evaluation, four in all; and {@code llm.chat}, one per LLM call, three in all, because the
+ * input that a guardrail blocks never reaches the LLM. The {@code llm.chat} spans come from the
+ * wrapped provider, whoever calls it: with the Spring Boot starter, the provider it creates is
+ * wrapped for you ({@code docs/observability.md}, "Which LLM calls produce llm.chat"). The agent
+ * has no behavior, so there is no {@code behavior.execute}.
  *
  * <p>Prerequisites for viewing traces:
  * <pre>
@@ -81,16 +85,17 @@ public class ObservabilityExample {
 
         // ------------------------------------------------------------------
         // 2. A scripted LLM provider: no network, no API key. It reports
-        //    estimated token counts, which an llm.chat span would carry.
+        //    estimated token counts, which each llm.chat span carries.
+        //    The span comes from the provider, not from the agent, so the
+        //    provider is wrapped where it is built. This runtime is built by
+        //    hand; with Spring Boot, the starter wraps the provider it creates.
         // ------------------------------------------------------------------
-        LLMProvider provider = ScriptedLLMProvider.create()
-                .orElse(request -> "Scripted response for: " + request.messages().get(0).content());
+        LLMProvider provider = new InstrumentedLLMProvider(ScriptedLLMProvider.create()
+                .orElse(request -> "Scripted response for: " + request.messages().get(0).content()),
+                telemetry);
 
         // ------------------------------------------------------------------
         // 3. Build the runtime with telemetry
-        //    LLMAgent.installTelemetry() wraps the agent's provider in
-        //    InstrumentedLLMProvider at registration, but handleQuery() below
-        //    calls the unwrapped one, so its calls are not traced.
         // ------------------------------------------------------------------
         AgenorRuntime runtime = AgenorRuntime.builder()
                 .telemetry(telemetry)
