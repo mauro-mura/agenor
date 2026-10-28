@@ -49,7 +49,7 @@ census itself, it runs on its own — in `build.yml` and in `bash tools/prefligh
 ### What the census cannot decide
 
 Run `bash tools/api-census.sh` (it writes to stdout — redirect it) for the per-type verdicts.
-**documented, unnamed** sits at 95 of 265 types across all nine modules that contain code — read
+**documented, unnamed** sits at 95 of 267 types across all nine modules that contain code — read
 it as a diagnostic, not an agenda. **dead surface** is at **0**.
 
 Applied to the types that differentiate Agenor from an LLM wrapper, both verdicts the census can
@@ -136,9 +136,9 @@ bash tools/preflight.sh
 
 **LLM Memory**: Three context window strategies: `FixedWindow`, `SlidingWindow` (default), `Summarization`. `DefaultLLMMemoryManager` bridges conversation history with token budgets.
 
-**A2A Protocol**: `AgenorA2AAdapter` is a smart router for internal/external agent-to-agent messages; `AgenorA2AClient` handles HTTP/JSON-RPC calls to external agents; `AgenorAgentExecutor` exposes a Agenor agent as an A2A server.
+**A2A Protocol**: `AgenorA2AAdapter` is a smart router for internal/external agent-to-agent messages; `AgenorA2AClient` handles HTTP/JSON-RPC calls to external agents; `AgenorAgentExecutor` turns an incoming A2A task into a request to an Agenor agent; `AgenorA2AServer` (0.39.0) wraps it with the rest of the SDK so an application serves the agent by mounting two endpoints in any HTTP server.
 
-**LLM Provider Factory**: Use `LLMProviderFactory` (builder pattern) in `agenor-adapters` to instantiate OpenAI, Anthropic, or Ollama providers. Provider-specific model variants are defined as enums, not static maps.
+**LLM Provider Factory**: Use `LLMProviderFactory` (builder pattern) in `agenor-adapters` to instantiate OpenAI, Anthropic, or Ollama providers. A model is named by its string id; the per-provider `Models` enums are deprecated for removal (see the concept budget above), and a context window the fallback does not cover is registered with `ModelTokenLimits.register`.
 
 ## Key Conventions
 
@@ -146,7 +146,7 @@ Java style, naming, null-safety, JavaDoc and the architecture principles: CONTRI
 Standards, which is binding rather than advisory. What it does not say:
 
 - `bash tools/coverage-report.sh` prints the per-module line coverage the 80% target is about,
-  worst first. Nothing enforces the threshold, by decision — four modules are under it today,
+  worst first. Nothing enforces the threshold, by decision — two modules are under it today,
   and a `check` rule would fail the build before anyone decided which of them is worth raising.
 
 ## Testing
