@@ -106,6 +106,15 @@ The `message.correlation_id` attribute on `message.receive` spans carries the sa
 set by the publisher, enabling correlation between `message.publish` and
 `message.receive` spans in your APM tool even without native OTel span links.
 
+### `llm.chat` is not emitted for calls an `LLMAgent` makes
+
+At registration the runtime wraps an `LLMAgent`'s provider in `InstrumentedLLMProvider`, but it
+keeps the wrapped one in a private field that a subclass cannot reach. A subclass calls the
+provider it was given, which is not instrumented, so its calls produce no `llm.chat` or
+`llm.chat.stream` span. Only the reflection strategy built by `LLMAgent` itself goes through the
+wrapper. Until this is fixed, wrap the provider yourself before handing it to the agent:
+`new InstrumentedLLMProvider(provider, telemetry)`.
+
 ### An idle service is not a quiet one
 
 `behavior.execute` is emitted on every tick of a cyclic behavior, whether or not the tick found
@@ -229,18 +238,9 @@ The same data is available in code, and the reach of each implementation is in
 
 ## Metrics reference
 
-Metrics are emitted via the OTel Meter API when OTel is active. All metric names are
-prefixed with `agenor.`.
-
-| Metric | Type | Labels | Description |
-|--------|------|--------|-------------|
-| `agenor.llm.tokens` | Counter | `provider`, `model`, `direction` (`input`\|`output`) | Total tokens consumed |
-| `agenor.llm.requests` | Counter | `provider`, `model`, `outcome` (`success`\|`error`) | LLM call count |
-| `agenor.llm.latency` | Histogram | `provider`, `model` | End-to-end LLM call duration (ms) |
-| `agenor.guardrail.violations` | Counter | `guardrail_name` | Blocked guardrail evaluations |
-| `agenor.hitl.pending` | UpDownCounter | — | Inflight human approval requests |
-| `agenor.behavior.executions` | Counter | `behavior_type`, `outcome` (`success`\|`error`) | Behavior execution count |
-| `agenor.directory.resolve.latency` | Histogram | — | Endpoint resolution time (ms) |
+Agenor emits no metrics. ADR-019 deferred OTel metrics and covered tracing only, and that is
+still the case: a table of `agenor.*` counters and histograms stood here, and nothing in the tree
+ever emitted one. Derive rates and latencies from the spans above, in the collector.
 
 ---
 
@@ -256,10 +256,9 @@ cd agenor-examples/src/main/resources/observability
 docker compose up -d
 ```
 
-This starts:
-- **Jaeger** — traces UI at `http://localhost:16686`
-- **Prometheus** — metrics at `http://localhost:9090`
-- **OpenTelemetry Collector** — OTLP/HTTP receiver on port `4318`, OTLP/gRPC on `4317`
+This starts one container, Jaeger all-in-one: the traces UI at `http://localhost:16686`, and
+OTLP receivers on port `4318` (HTTP) and `4317` (gRPC). The `compose.yml` at the repository root
+is a different stack, Postgres and Valkey, and starts no Jaeger.
 
 Point your application at `http://localhost:4318` (OTLP/HTTP) or `http://localhost:4317`
 (OTLP/gRPC).
@@ -277,8 +276,9 @@ mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.observability.ObservabilityExample"
 ```
 
-Open `http://localhost:16686` and search for service `agenor-observability-example` to
-see the complete trace.
+Open `http://localhost:16686` and search for service `agenor-example` (or the value of
+`OTEL_SERVICE_NAME`). You will see `guardrail.evaluate` spans and no `llm.chat`, for the
+reason given in [the span taxonomy](#llmchat-is-not-emitted-for-calls-an-llmagent-makes).
 
 ---
 

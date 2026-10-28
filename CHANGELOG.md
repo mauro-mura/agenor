@@ -98,6 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `agent-development.md`, `message-filtering.md` and `behaviors/OneShotBehavior.md`; each was
   compiled against 0.39.0-SNAPSHOT. Found by agenor-research.
 
+- **`observability.md` no longer documents telemetry Agenor does not emit.** Its metrics table
+  listed seven `agenor.*` metrics, and nothing ever emitted one: ADR-019 deferred metrics. The
+  `llm.chat` span is not emitted for calls an `LLMAgent` subclass makes, because the runtime
+  instruments a copy of the provider the subclass cannot reach; the page now says so and gives the
+  workaround, wrapping the provider in `InstrumentedLLMProvider` by hand. The runtime itself still does not trace those calls.
+  The page also said the example's compose file starts Prometheus and a collector, which it does
+  not, and named the wrong service. Found by running `ObservabilityExample` against Jaeger.
+
 - **Structured content reaches an A2A peer as JSON, not as Java's `toString()`.** An agent
   exposed through `AgenorAgentExecutor` that answered with a map or a record sent the client
   `{risposta=..., note=[...]}`, which no A2A client can parse; `AgenorA2AClient` did the same with
