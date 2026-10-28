@@ -234,6 +234,12 @@ public MyLlmAgent()                     { this.provider = null; }   // fallback
 `AgentFactory` prefers the most-parameter constructor. If `LLMProvider` is not available,
 it falls back to the no-arg constructor.
 
+With telemetry on (`agenor.telemetry.exporter` other than `none`), the bean is the provider
+wrapped in `InstrumentedLLMProvider`, so every call through it emits an `llm.chat` span, from an
+`LLMAgent`, a `BaseAgent` or any other bean. The bean's type is then `InstrumentedLLMProvider`:
+inject it as `LLMProvider`, not as `OllamaProvider` or another concrete class. With telemetry off
+it is the provider itself.
+
 ### Giving an agent anything else
 
 A discovered agent's constructor can receive the `LLMProvider` and the runtime's own services
@@ -318,6 +324,11 @@ stops whichever `AgenorRuntime` is in the context, yours included. A second `Sma
 calls `start()` only starts the runtime twice: the second call returns at once, but the runtime
 is no longer started from one place. Override `AgenorRuntimeLifecycle` by that bean name only to
 change how the runtime starts, not to make it start.
+
+An `LLMProvider` bean you declare replaces the starter's, and the starter does not wrap it for
+telemetry: wrapping would change its type under anything that injects it by its own class. To
+trace its calls, declare it wrapped — `new InstrumentedLLMProvider(provider, telemetry)`, with the
+`AgenorTelemetry` bean ([observability](observability.md#which-llm-calls-produce-llmchat)).
 
 ## Relationship with `agenor.yml`
 

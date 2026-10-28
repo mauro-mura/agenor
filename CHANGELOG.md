@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **With telemetry on, every call through the starter's `LLMProvider` emits an `llm.chat` span,
+  whoever makes it.** Telemetry was attached at registration, to the provider an `LLMAgent` got
+  through `setLLMProvider`; an agent that calls a provider it holds never went through it, and a
+  `BaseAgent` is not an `LLMAgent`, so neither produced a span (#5). When the exporter is not
+  `none`, the starter now returns the provider it creates from `agenor.llm.*` wrapped in
+  `InstrumentedLLMProvider`: inject the bean as `LLMProvider`, not by its concrete class. A
+  provider you declare, or build for a runtime made by hand, is yours to wrap, as
+  `observability.md` § Which LLM calls produce `llm.chat` describes.
+
+- **`llm.model` on `llm.chat` and `llm.chat.stream` names the model that answered.** For a request
+  naming no model, `InstrumentedLLMProvider` reported `getDefaultModel()`, which is each provider
+  class's own default and not the model it was built with: with the starter's defaults, OpenAI
+  spans said `gpt-4o` for calls to `gpt-4o-mini`, Anthropic spans `claude-sonnet-4-6` for
+  `claude-haiku-4-5-20251001`. The attribute now comes from the response, or from the last chunk
+  that names a model; a failed call keeps the label it had.
+
 ## [0.39.0] - 2026-10-28
 
 ### Added

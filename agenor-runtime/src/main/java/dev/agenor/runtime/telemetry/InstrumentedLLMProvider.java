@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
@@ -24,6 +25,11 @@ import java.util.function.Consumer;
  *       {@code llm.tokens.input}, {@code llm.tokens.output}, {@code llm.latency_ms}</li>
  *   <li>{@code llm.chat.stream} — same attributes plus {@code llm.stream.chunks}</li>
  * </ul>
+ *
+ * <p>{@code llm.model} is the model that answered: the response's, or the last chunk's that
+ * names one. It is set at the start from the request or {@link LLMProvider#getDefaultModel()}
+ * only so that a failed call carries a label; that default is the provider class's own, not the
+ * model the provider was built with, which is the one a request naming no model reaches.
  *
  * <p>When telemetry is {@link AgenorTelemetry#noop()}, this decorator adds no overhead
  * beyond a single interface dispatch.
@@ -61,6 +67,9 @@ public final class InstrumentedLLMProvider implements LLMProvider {
                         span.recordException(ex instanceof Exception e ? e : new Exception(ex))
                             .setStatus(SpanStatus.ERROR);
                     } else if (response != null) {
+                        if (response.model() != null) {
+                            span.setAttribute("llm.model", response.model());
+                        }
                         span.setAttribute("llm.latency_ms", System.currentTimeMillis() - startMs);
                         if (response.usage() != null) {
                             span.setAttribute("llm.tokens.input",  response.usage().promptTokens())
@@ -81,9 +90,13 @@ public final class InstrumentedLLMProvider implements LLMProvider {
 
         long startMs = System.currentTimeMillis();
         var chunkCount = new AtomicInteger(0);
+        var answeredBy = new AtomicReference<String>();
 
         Consumer<StreamingChunk> instrumentedHandler = chunk -> {
             chunkCount.incrementAndGet();
+            if (chunk.model() != null) {
+                answeredBy.set(chunk.model());
+            }
             chunkHandler.accept(chunk);
         };
 
@@ -91,6 +104,9 @@ public final class InstrumentedLLMProvider implements LLMProvider {
                 .whenComplete((v, ex) -> {
                     span.setAttribute("llm.stream.chunks", (long) chunkCount.get())
                         .setAttribute("llm.latency_ms", System.currentTimeMillis() - startMs);
+                    if (answeredBy.get() != null) {
+                        span.setAttribute("llm.model", answeredBy.get());
+                    }
                     if (ex != null) {
                         span.recordException(ex instanceof Exception e ? e : new Exception(ex))
                             .setStatus(SpanStatus.ERROR);

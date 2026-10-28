@@ -54,6 +54,10 @@ agenor:
     endpoint: http://localhost:4318
 ```
 
+With an exporter other than `none`, the `LLMProvider` the starter creates from `agenor.llm.*` is
+traced too; one you declare yourself is not
+([Which LLM calls produce `llm.chat`](#which-llm-calls-produce-llmchat)).
+
 ### 2b — Manual wiring (no Spring)
 
 ```java
@@ -106,14 +110,22 @@ The `message.correlation_id` attribute on `message.receive` spans carries the sa
 set by the publisher, enabling correlation between `message.publish` and
 `message.receive` spans in your APM tool even without native OTel span links.
 
-### `llm.chat` is not emitted for calls an `LLMAgent` makes
+### Which LLM calls produce `llm.chat`
 
-At registration the runtime wraps an `LLMAgent`'s provider in `InstrumentedLLMProvider`, but it
-keeps the wrapped one in a private field that a subclass cannot reach. A subclass calls the
-provider it was given, which is not instrumented, so its calls produce no `llm.chat` or
-`llm.chat.stream` span. Only the reflection strategy built by `LLMAgent` itself goes through the
-wrapper. Until this is fixed, wrap the provider yourself before handing it to the agent:
-`new InstrumentedLLMProvider(provider, telemetry)`.
+`llm.chat` and `llm.chat.stream` come from the provider, not from the agent: a call is traced when
+the `LLMProvider` it goes through is an `InstrumentedLLMProvider`, whoever makes it — an
+`LLMAgent`, a `BaseAgent` or application code. Who wraps the provider depends on who builds it:
+
+| The provider comes from | Traced | How |
+|---|---|---|
+| The Spring Boot starter (`agenor.llm.provider`) | Yes, when `agenor.telemetry.exporter` is not `none` | The starter wraps the `LLMProvider` bean it creates |
+| An `LLMProvider` bean you declare | Only if you wrap it | The starter leaves it alone, so that injecting it by its own class keeps working |
+| Your code, on a runtime built by hand | Only if you wrap it | `new InstrumentedLLMProvider(provider, telemetry)`, with the telemetry you give the runtime |
+
+At registration the runtime also wraps a provider handed to `LLMAgent.setLLMProvider`, and skips
+one that is already wrapped, so nothing is traced twice. That wrapper serves only `LLMAgent`'s
+default reflection strategy: a subclass that calls a provider it holds gets its spans from that
+provider, so that is the one to wrap.
 
 ### An idle service is not a quiet one
 
@@ -277,8 +289,9 @@ mvn exec:java -pl agenor-examples \
 ```
 
 Open `http://localhost:16686` and search for service `agenor-example` (or the value of
-`OTEL_SERVICE_NAME`). You will see `guardrail.evaluate` spans and no `llm.chat`, for the
-reason given in [the span taxonomy](#llmchat-is-not-emitted-for-calls-an-llmagent-makes).
+`OTEL_SERVICE_NAME`). You will see `guardrail.evaluate` and `llm.chat` spans. The example
+builds its runtime by hand, so it wraps its provider itself, as
+[the span taxonomy](#which-llm-calls-produce-llmchat) describes.
 
 ---
 
