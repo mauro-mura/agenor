@@ -161,9 +161,13 @@ There is no resolution by name string: each provider is named at the call site.
 
 Implements the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A):
 
-- **AgenorA2AAdapter**: exposes a Agenor agent as an A2A server, built from `A2AAdapterConfig`.
+- **AgenorA2AAdapter**: routes a `DialogueMessage` to an internal agent through the
+  `MessageDispatcher`, or to an external one over A2A when the receiver is a URL.
 - **AgenorA2AClient**: sends A2A messages to remote agents.
 - **AgenorAgentExecutor**: handles incoming A2A tasks and routes them to a local agent.
+- **AgenorA2AServer** (since 0.39.0): exposes an Agenor agent as an A2A server, built from
+  `A2AAdapterConfig` and an `AgenorAgentExecutor`; the application mounts its two endpoints in
+  whatever HTTP server it already runs.
 
 For the full A2A guide see [`docs/dialog-protocol.md`](dialog-protocol.md).
 
