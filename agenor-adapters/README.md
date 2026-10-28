@@ -45,7 +45,7 @@ dev.agenor.adapters
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>0.38.0</version>
+    <version>0.39.0</version>
 </dependency>
 ```
 
@@ -81,7 +81,7 @@ Add the OTel SDK alongside `agenor-adapters` in your POM:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>0.38.0</version>
+    <version>0.39.0</version>
 </dependency>
 <dependency>
     <groupId>io.opentelemetry</groupId>
@@ -101,7 +101,7 @@ needed beyond `agenor.telemetry.enabled: true`.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters</artifactId>
-    <version>0.38.0</version>
+    <version>0.39.0</version>
 </dependency>
 <dependency>
     <groupId>io.lettuce</groupId>
