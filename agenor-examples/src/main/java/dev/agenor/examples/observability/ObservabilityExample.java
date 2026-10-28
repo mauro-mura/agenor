@@ -35,17 +35,17 @@ import java.util.concurrent.CompletableFuture;
  *     .build();
  * }</pre>
  *
- * <p>What this example traces:
- * <ul>
- *   <li>{@code llm.chat} — every LLM call with provider, model, token counts and latency</li>
- *   <li>{@code guardrail.evaluate} — every input/output guardrail evaluation</li>
- *   <li>{@code behavior.execute} — every behavior execution tick</li>
- * </ul>
+ * <p>What this example traces: {@code guardrail.evaluate}, one span per input or output guardrail
+ * evaluation, four in all. It does not trace its LLM calls: the agent calls the provider it was
+ * given, and the runtime instruments only a copy that a subclass of {@link LLMAgent} cannot reach,
+ * so no {@code llm.chat} span is emitted. {@code docs/observability.md} describes the gap and the
+ * workaround. The agent has no behavior, so there is no {@code behavior.execute} either.
  *
  * <p>Prerequisites for viewing traces:
  * <pre>
- *   docker compose up            # starts Jaeger all-in-one
- *   # then open http://localhost:16686
+ *   cd agenor-examples/src/main/resources/observability
+ *   docker compose up -d         # starts Jaeger all-in-one; the root compose.yml does not
+ *   # then open http://localhost:16686, service "agenor-example"
  * </pre>
  *
  * <p>When no OTel collector is running, set exporter to {@code "none"} (or omit it):
@@ -80,16 +80,17 @@ public class ObservabilityExample {
         log.info("Telemetry configured: exporter={}, endpoint={}", exporterType, endpoint);
 
         // ------------------------------------------------------------------
-        // 2. A scripted LLM provider: no network, no API key. It still
-        //    reports estimated token counts, so the llm.chat spans carry them.
+        // 2. A scripted LLM provider: no network, no API key. It reports
+        //    estimated token counts, which an llm.chat span would carry.
         // ------------------------------------------------------------------
         LLMProvider provider = ScriptedLLMProvider.create()
                 .orElse(request -> "Scripted response for: " + request.messages().get(0).content());
 
         // ------------------------------------------------------------------
         // 3. Build the runtime with telemetry
-        //    InstrumentedLLMProvider is applied automatically when an LLMAgent
-        //    is registered (via LLMAgent.installTelemetry()).
+        //    LLMAgent.installTelemetry() wraps the agent's provider in
+        //    InstrumentedLLMProvider at registration, but handleQuery() below
+        //    calls the unwrapped one, so its calls are not traced.
         // ------------------------------------------------------------------
         AgenorRuntime runtime = AgenorRuntime.builder()
                 .telemetry(telemetry)
