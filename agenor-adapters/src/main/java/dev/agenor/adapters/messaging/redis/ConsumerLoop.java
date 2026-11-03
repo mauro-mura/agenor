@@ -5,6 +5,7 @@ import dev.agenor.core.deadletter.DeadLetter;
 import dev.agenor.core.telemetry.AgenorTelemetry;
 import dev.agenor.core.telemetry.SpanStatus;
 import io.lettuce.core.Consumer;
+import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XAutoClaimArgs;
 import io.lettuce.core.XReadArgs;
@@ -47,6 +48,7 @@ final class ConsumerLoop {
     private final String consumerGroup;
     private final Consumer<String> consumer;
     private final MessageHandler handler;
+    private final Runnable recreateGroup;
     private final RedisStreamClient client;
     private final RedisMessagingConfig config;
     private final AgenorTelemetry telemetry;
@@ -65,24 +67,34 @@ final class ConsumerLoop {
     private final Map<String, String> lastFailure = new ConcurrentHashMap<>();
 
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
-                 MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config) {
-        this(streamKey, consumerGroup, consumerName, handler, client, config, AgenorTelemetry.noop());
+                 MessageHandler handler, Runnable recreateGroup,
+                 RedisStreamClient client, RedisMessagingConfig config) {
+        this(streamKey, consumerGroup, consumerName, handler, recreateGroup, client, config,
+                AgenorTelemetry.noop());
     }
 
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
-                 MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config,
+                 MessageHandler handler, Runnable recreateGroup,
+                 RedisStreamClient client, RedisMessagingConfig config,
                  AgenorTelemetry telemetry) {
-        this(streamKey, consumerGroup, consumerName, handler, client, config, telemetry,
+        this(streamKey, consumerGroup, consumerName, handler, recreateGroup, client, config, telemetry,
                 new RedisDeadLetterQueue(client, config));
     }
 
+    /**
+     * @param recreateGroup creates this loop's consumer group again when the broker has lost it.
+     *     It comes from the caller for the reason {@link #start()} gives: the offset is the
+     *     caller's to choose. It must be idempotent, since another loop may get there first.
+     */
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
-                 MessageHandler handler, RedisStreamClient client, RedisMessagingConfig config,
+                 MessageHandler handler, Runnable recreateGroup,
+                 RedisStreamClient client, RedisMessagingConfig config,
                  AgenorTelemetry telemetry, RedisDeadLetterQueue deadLetters) {
         this.streamKey     = streamKey;
         this.consumerGroup = consumerGroup;
         this.consumer      = Consumer.from(consumerGroup, consumerName);
         this.handler       = handler;
+        this.recreateGroup = recreateGroup;
         this.client        = client;
         this.config        = config;
         this.telemetry     = telemetry != null ? telemetry : AgenorTelemetry.noop();
@@ -170,6 +182,7 @@ final class ConsumerLoop {
                 }
             } catch (Exception e) {
                 if (!running.get() || Thread.currentThread().isInterrupted()) break;
+                if (isGroupLost(e) && restoreGroup()) continue;
                 log.warn("Transient error in consumer loop for '{}': {}", streamKey, e.getMessage());
                 try {
                     Thread.sleep(1_000);
@@ -180,6 +193,37 @@ final class ConsumerLoop {
             }
         }
         log.debug("Consumer loop stopped for stream '{}'", streamKey);
+    }
+
+    private static boolean isGroupLost(Exception e) {
+        return e instanceof RedisCommandExecutionException
+                && e.getMessage() != null
+                && e.getMessage().startsWith("NOGROUP");
+    }
+
+    /**
+     * Recreates a group the broker no longer has. Retrying the read cannot cure this: the groups
+     * are made once, at subscribe time, and sending goes on succeeding because {@code XADD}
+     * recreates the stream, so without this the loop fails for as long as the process lives.
+     *
+     * <p>A broker that lost the group has lost what the group had pending too, and how much cannot
+     * be known from here, hence ERROR for a state the loop itself repairs.
+     *
+     * @return whether the group is back; if not, the caller carries on as for any transient
+     *     error, and the next read comes back here
+     */
+    private boolean restoreGroup() {
+        try {
+            recreateGroup.run();
+            log.error("Consumer group '{}' on '{}' was gone, so the broker lost its data: group "
+                    + "recreated, and entries it had not yet delivered or had pending are lost",
+                    consumerGroup, streamKey);
+            return true;
+        } catch (RuntimeException e) {
+            log.warn("Could not recreate consumer group '{}' on '{}': {}",
+                    consumerGroup, streamKey, e.getMessage());
+            return false;
+        }
     }
 
     /**

@@ -53,7 +53,7 @@ class ConsumerLoopTelemetryTest {
     private ConsumerLoop loop(dev.agenor.core.MessageHandler handler) {
         return new ConsumerLoop(
                 "agenor:topic:payments", "cg-test", "consumer-1",
-                handler, streamClient, config, telemetry);
+                handler, () -> { }, streamClient, config, telemetry);
     }
 
     private StreamMessage<String, String> streamMsg(String id, String msgId,

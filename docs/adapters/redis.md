@@ -313,6 +313,24 @@ Consumer loops use `XREADGROUP BLOCK <readBlockTimeoutMs>`. On reconnect (Lettuc
 auto-reconnect), the loop resumes reading from the last acknowledged ID. No messages are
 lost; pending entries are claimed on the next iteration.
 
+### A broker that comes back without its data
+
+Durability needs AOF or RDB. A broker restarted without them comes back empty, consumer groups
+included, and each consumer loop then gets `NOGROUP`. The loop recreates its group, logs one
+ERROR, and reads again, with no restart of the process. What differs is where it starts:
+
+- **A node's stream restarts at `0`.** A message sent to the node before the group came back is
+  delivered, because `XADD` recreated the stream.
+- **A topic subscription restarts at `$`.** What was published before the group came back is not
+  delivered, as with any new subscription.
+
+Whatever the broker held when it lost its data is gone: unread entries, pending entries and dead
+letters. The agents never knew about it, and neither does the sender of a message that was in
+one of those streams. A request with a timeout surfaces as that timeout.
+
+This covers a broker that was reached and has lost its groups. While a broker cannot be reached,
+nothing in the node's health says so.
+
 ---
 
 ## RESP compatibility matrix

@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that does not exist still yields none, and a scan that finds nothing now logs a WARN naming the
   packages rather than an INFO.
 
+- **A Redis consumer loop recreates a consumer group the broker has lost.** A broker restarted
+  without persistence left every loop failing with `NOGROUP` once a second, for good, at WARN,
+  with the agents `RUNNING`, health `UP`, and sends still succeeding. The loop now recreates its
+  group, logs one ERROR and reads again: a node's stream from `0`, a topic from `$`.
+  `adapters/redis.md` § A broker that comes back without its data has what is lost.
+
 ### Deprecated
 
 - **`AgentFactory.scanForAgents`, for removal in 1.0.0.** Nothing called it, and it was a copy of
