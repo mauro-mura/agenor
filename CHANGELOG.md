@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `claude-haiku-4-5-20251001`. The attribute now comes from the response, or from the last chunk
   that names a model; a failed call keeps the label it had.
 
+- **A Redis consumer loop recreates a consumer group the broker has lost.** A broker restarted
+  without persistence left every loop failing with `NOGROUP` once a second, for good, at WARN,
+  with the agents `RUNNING`, health `UP`, and sends still succeeding. The loop now recreates its
+  group, logs one ERROR and reads again: a node's stream from `0`, a topic from `$`.
+  `adapters/redis.md` § A broker that comes back without its data has what is lost.
+
 ## [0.39.0] - 2026-10-28
 
 ### Added

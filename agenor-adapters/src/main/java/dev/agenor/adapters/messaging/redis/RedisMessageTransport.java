@@ -117,7 +117,7 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
         ensureNodeConsumerGroup(nodeId);
 
         var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName,
-        		handler, streamClient, config, telemetry);
+                handler, () -> ensureNodeConsumerGroup(nodeId), streamClient, config, telemetry);
         loop.start();
         activeLoops.put(subscriptionId, loop);
 
@@ -147,8 +147,9 @@ public final class RedisMessageTransport implements MessageTransport, AutoClosea
      * <p>Called from the constructor rather than from {@link #subscribe} because a
      * direct send is addressed to an agent, not to a subscription: an entry written
      * while the node was up but nothing had subscribed yet used to be skipped forever.
-     * Idempotent, so calling it again on every subscribe costs one BUSYGROUP reply and
-     * repairs the group if it was dropped out from under us.
+     * Idempotent, so calling it again on every subscribe costs one BUSYGROUP reply. Each
+     * running loop also calls it when the broker has lost the group, and offset {@code 0}
+     * then delivers what was sent to this node before the group came back.
      */
     private void ensureNodeConsumerGroup(String nodeId) {
         streamClient.ensureConsumerGroupFromStart(

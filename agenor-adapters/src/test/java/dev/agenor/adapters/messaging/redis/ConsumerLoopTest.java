@@ -1,5 +1,6 @@
 package dev.agenor.adapters.messaging.redis;
 
+import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.jupiter.api.AfterEach;
@@ -47,8 +48,82 @@ class ConsumerLoopTest {
 
     private ConsumerLoop newLoop() {
         loop = new ConsumerLoop("agenor:topic:t", "cg", "consumer-1",
-                msg -> CompletableFuture.completedFuture(null), streamClient, config);
+                msg -> CompletableFuture.completedFuture(null), () -> { }, streamClient, config);
         return loop;
+    }
+
+    /** Runs a loop whose first read throws {@code error} and whose later reads return nothing. */
+    @SuppressWarnings("unchecked")
+    private void runThroughOneFailedRead(RuntimeException error, Runnable recreateGroup,
+                                         int readsToWaitFor) throws Exception {
+        var reads = new java.util.concurrent.CountDownLatch(readsToWaitFor);
+        var first = new java.util.concurrent.atomic.AtomicBoolean(true);
+        when(streamClient.newConsumerConnection()).thenReturn(mockConn);
+        when(mockConn.sync()).thenReturn(mockCmds);
+        when(mockCmds.xreadgroup(any(), any(), any())).thenAnswer(inv -> {
+            reads.countDown();
+            if (first.compareAndSet(true, false)) throw error;
+            Thread.sleep(5);
+            return List.of();
+        });
+
+        loop = new ConsumerLoop("agenor:node:n", "cg", "consumer-1",
+                msg -> CompletableFuture.completedFuture(null), recreateGroup, streamClient, config);
+        loop.start();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                reads.await(5, java.util.concurrent.TimeUnit.SECONDS), "loop did not read again");
+        loop.stop();
+    }
+
+    @Test
+    @DisplayName("NOGROUP recreates the group, once, and the loop reads again without waiting")
+    void noGroup_recreatesTheGroup() throws Exception {
+        Runnable recreateGroup = org.mockito.Mockito.mock(Runnable.class);
+
+        runThroughOneFailedRead(new RedisCommandExecutionException(
+                "NOGROUP No such key 'k' or consumer group 'cg' in XREADGROUP with GROUP option"),
+                recreateGroup, 3);
+
+        verify(recreateGroup).run();
+    }
+
+    @Test
+    @DisplayName("an error that is not NOGROUP leaves the group alone")
+    void otherError_doesNotRecreateTheGroup() throws Exception {
+        Runnable recreateGroup = org.mockito.Mockito.mock(Runnable.class);
+
+        runThroughOneFailedRead(new RedisCommandExecutionException("LOADING server is loading"),
+                recreateGroup, 2);
+
+        verify(recreateGroup, org.mockito.Mockito.never()).run();
+    }
+
+    @Test
+    @DisplayName("a group that cannot be recreated yet is tried again on the next failed read")
+    @SuppressWarnings("unchecked")
+    void noGroup_recreationFailure_isRetried() throws Exception {
+        var recreated = new java.util.concurrent.CountDownLatch(1);
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+        var groupBack = new java.util.concurrent.atomic.AtomicBoolean(false);
+        when(streamClient.newConsumerConnection()).thenReturn(mockConn);
+        when(mockConn.sync()).thenReturn(mockCmds);
+        when(mockCmds.xreadgroup(any(), any(), any())).thenAnswer(inv -> {
+            if (!groupBack.get()) throw new RedisCommandExecutionException("NOGROUP gone");
+            Thread.sleep(5);
+            return List.of();
+        });
+
+        loop = new ConsumerLoop("agenor:node:n", "cg", "consumer-1",
+                msg -> CompletableFuture.completedFuture(null), () -> {
+                    if (attempts.incrementAndGet() == 1) throw new IllegalStateException("still reconnecting");
+                    groupBack.set(true);
+                    recreated.countDown();
+                }, streamClient, config);
+        loop.start();
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                recreated.await(5, java.util.concurrent.TimeUnit.SECONDS), "group never recreated");
+        org.assertj.core.api.Assertions.assertThat(attempts.get()).isEqualTo(2);
     }
 
     @Test

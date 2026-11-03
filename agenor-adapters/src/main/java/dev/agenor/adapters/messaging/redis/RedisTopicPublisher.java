@@ -98,8 +98,11 @@ public final class RedisTopicPublisher implements TopicPublisher, TopicSubscribe
 
         streamClient.ensureConsumerGroup(streamKey, consumerGroup);
 
+        // Recreated at $ like the original: NOGROUP does not prove the stream was lost with the
+        // group, and reading an intact topic from 0 would replay it all to this subscriber.
         var loop = new ConsumerLoop(streamKey, consumerGroup, consumerName,
-        		handler, streamClient, config, telemetry);
+                handler, () -> streamClient.ensureConsumerGroup(streamKey, consumerGroup),
+                streamClient, config, telemetry);
         loop.start();
         activeLoops.put(subscriptionId, loop);
 
