@@ -11,6 +11,8 @@ import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.resource.ClientResources;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ final class RedisStreamClient implements AutoCloseable {
     private static final long REACHABILITY_TIMEOUT_MS = 1_000;
 
     private final RedisMessagingConfig config;
+    private ClientResources clientResources;
     private RedisClient redisClient;
     private StatefulRedisConnection<String, String> writeConn;
 
@@ -44,8 +47,17 @@ final class RedisStreamClient implements AutoCloseable {
         this.config = Objects.requireNonNull(config, "config");
     }
 
+    /**
+     * Connects with the JDK's resolver in place of Lettuce's default, Netty's DNS resolver, whose
+     * cache kept a reconnect on the old address of a broker recreated under the same name. The
+     * JDK's cache is bounded by {@code networkaddress.cache.ttl}. Its lookup blocks the event loop
+     * it runs on, and that is paid only on connecting, when these connections are waiting anyway.
+     */
     void start() {
-        redisClient = RedisClient.create(config.uri());
+        clientResources = ClientResources.builder()
+                .addressResolverGroup(DefaultAddressResolverGroup.INSTANCE)
+                .build();
+        redisClient = RedisClient.create(clientResources, config.uri());
         writeConn   = redisClient.connect();
         log.info("Redis messaging client connected to {}", config.uri());
     }
@@ -54,6 +66,8 @@ final class RedisStreamClient implements AutoCloseable {
     public void close() {
         if (writeConn != null)  { try { writeConn.close();   } catch (Exception e) { log.warn("Error closing write connection", e); } }
         if (redisClient != null){ try { redisClient.shutdown(); } catch (Exception e) { log.warn("Error shutting down Redis client", e); } }
+        // Resources passed to a client are not the client's to shut down.
+        if (clientResources != null) { try { clientResources.shutdown().await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } catch (Exception e) { log.warn("Error shutting down Redis client resources", e); } }
         log.info("Redis messaging client closed");
     }
 
