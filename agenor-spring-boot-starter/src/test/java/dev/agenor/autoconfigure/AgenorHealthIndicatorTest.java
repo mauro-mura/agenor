@@ -112,6 +112,28 @@ class AgenorHealthIndicatorTest {
             });
     }
 
+    @Test
+    void anotherHealthIndicatorOfTheApplicationDoesNotRemoveThisOne() {
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(AgenorAutoConfiguration.class))
+            .withUserConfiguration(UnrelatedHealthConfig.class)
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(AgenorHealthIndicator.class);
+                assertThat(ctx).hasBean("orderServiceHealthIndicator");
+            });
+    }
+
+    @Test
+    void anAgenorHealthIndicatorUnderAnotherNameIsNotJoinedByASecondOne() {
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(AgenorAutoConfiguration.class))
+            .withUserConfiguration(RenamedAgenorHealthConfig.class)
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(AgenorHealthIndicator.class);
+                assertThat(ctx).hasBean("renamed");
+            });
+    }
+
     // --- helpers ---
 
     private static AgenorRuntime runningRuntimeMock(int total, int running) {
@@ -140,6 +162,22 @@ class AgenorHealthIndicatorTest {
         when(config.runtime()).thenReturn(rc);
         when(runtime.getConfiguration()).thenReturn(config);
         return runtime;
+    }
+
+    @org.springframework.context.annotation.Configuration
+    static class UnrelatedHealthConfig {
+        @org.springframework.context.annotation.Bean
+        org.springframework.boot.health.contributor.HealthIndicator orderServiceHealthIndicator() {
+            return () -> Health.up().build();
+        }
+    }
+
+    @org.springframework.context.annotation.Configuration
+    static class RenamedAgenorHealthConfig {
+        @org.springframework.context.annotation.Bean
+        AgenorHealthIndicator renamed(AgenorRuntime runtime) {
+            return new AgenorHealthIndicator(runtime);
+        }
     }
 
     @org.springframework.context.annotation.Configuration

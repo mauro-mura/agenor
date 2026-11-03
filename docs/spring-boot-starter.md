@@ -346,10 +346,8 @@ HealthIndicator AgenorHealthIndicator(AgenorRuntime runtime) {
 
 `management.health.agenor.enabled=false` has no effect on this component.
 
-!!! warning "Any `HealthIndicator` bean of your own replaces this one"
-    The auto-configured indicator backs off for any bean of type `HealthIndicator`, whatever its
-    name. An application that declares one has no `Agenor` component, so nothing reports the runtime,
-    its agents or the broker, and a group that includes `Agenor` fails the start.
+Only a bean named `AgenorHealthIndicator`, or of that class, replaces the component. Any other
+`HealthIndicator` of yours is a component next to it.
 
 ## User Bean Override
 
