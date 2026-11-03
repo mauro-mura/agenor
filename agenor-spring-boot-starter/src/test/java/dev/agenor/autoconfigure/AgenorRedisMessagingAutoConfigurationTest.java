@@ -55,6 +55,31 @@ class AgenorRedisMessagingAutoConfigurationTest {
                         RedisMessagingFactory.class));
     }
 
+    @Test
+    void noBrokerProbeWithoutRedis() {
+        runner.run(ctx -> {
+            assertThat(ctx).doesNotHaveBean(BrokerProbe.class);
+            assertThat(ctx).hasSingleBean(AgenorHealthIndicator.class);
+        });
+    }
+
+    @Test
+    void healthAsksTheFactoryWhenProviderIsRedis() {
+        var factory = mock(RedisMessagingFactory.class);
+        when(factory.messageDispatcher(any())).thenReturn(mock(RedisMessageDispatcher.class));
+        when(factory.isBrokerReachable()).thenReturn(false);
+
+        runner
+            .withBean(RedisMessagingFactory.class, () -> factory)
+            .withPropertyValues("agenor.messaging.provider=redis")
+            .run(ctx -> {
+                assertThat(ctx).hasSingleBean(BrokerProbe.class);
+                assertThat(ctx).hasSingleBean(AgenorHealthIndicator.class);
+                assertThat(ctx.getBean(AgenorHealthIndicator.class).health().getDetails())
+                        .containsEntry("transport.reachable", false);
+            });
+    }
+
     // -------------------------------------------------------------------------
     // provider=redis without Lettuce fails startup instead of staying in memory
     // -------------------------------------------------------------------------

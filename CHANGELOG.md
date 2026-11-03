@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   group, logs one ERROR and reads again: a node's stream from `0`, a topic from `$`.
   `adapters/redis.md` § A broker that comes back without its data has what is lost.
 
+- **Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at the agents,
+  which stay `RUNNING`, so a node delivering nothing read `UP` for as long as the outage lasted. An
+  orchestrator reading `/actuator/health` as liveness now restarts the process during an outage:
+  `spring-boot-starter.md` § Actuator Health has the settings. The check is
+  `RedisMessagingFactory.isBrokerReachable()`.
+
 ### Deprecated
 
 - **`AgentFactory.scanForAgents`, for removal in 1.0.0.** Nothing called it, and it was a copy of

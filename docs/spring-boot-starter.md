@@ -293,7 +293,7 @@ curl http://localhost:8080/actuator/health
 {
   "status": "UP",
   "components": {
-    "agenor": {
+    "Agenor": {
       "status": "UP",
       "details": {
         "runtime.name": "my-system",
@@ -304,6 +304,25 @@ curl http://localhost:8080/actuator/health
   }
 }
 ```
+
+With `agenor.messaging.provider=redis` the component also asks the broker, waiting at most one
+second, and adds `transport.type` and `transport.reachable` to the details. A broker that does not
+answer makes it `DOWN` and the endpoint answers 503, with `agents.running` unchanged: the agents do
+not notice. It is `UP` again once the client has reconnected. One unanswered check is enough, so any
+tolerance belongs to whatever reads the endpoint. A `MessageDispatcher` you declare yourself,
+without that property, is not asked about.
+
+Spring Boot's `liveness` and `readiness` groups include no component by default, so a Kubernetes
+probe on them does not see this. To have an unreachable broker restart the process, include the
+component, with a failure threshold longer than an outage you are willing to wait out:
+
+```properties
+management.endpoint.health.group.liveness.include=livenessState,Agenor
+```
+
+A restarted process needs the broker to start, so it stays down until the broker is back. What
+restarting cures, and what the check does not see, are in
+[the Redis page](adapters/redis.md#a-broker-that-cannot-be-reached).
 
 ## User Bean Override
 
