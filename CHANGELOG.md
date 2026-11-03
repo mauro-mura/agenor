@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at the agents,
+  which stay `RUNNING`, so a node delivering nothing read `UP` for as long as the outage lasted. The
+  check is `RedisMessagingFactory.isBrokerReachable()`. Migration: whatever reads
+  `/actuator/health` now sees a broker outage as a 503. A liveness probe restarts the process, and a
+  load balancer takes the whole application out of traffic, HTTP routes included.
+  `spring-boot-starter.md` § Actuator Health has how to keep either of them out of it.
+
 ### Fixed
 
 - **With telemetry on, every call through the starter's `LLMProvider` emits an `llm.chat` span,
@@ -39,12 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the agents `RUNNING`, health `UP`, and sends still succeeding. The loop now recreates its
   group, logs one ERROR and reads again: a node's stream from `0`, a topic from `$`.
   `adapters/redis.md` § A broker that comes back without its data has what is lost.
-
-- **Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at the agents,
-  which stay `RUNNING`, so a node delivering nothing read `UP` for as long as the outage lasted. An
-  orchestrator reading `/actuator/health` as liveness now restarts the process during an outage:
-  `spring-boot-starter.md` § Actuator Health has the settings. The check is
-  `RedisMessagingFactory.isBrokerReachable()`.
 
 - **A Redis client follows a broker recreated at a new address.** Lettuce's default resolver cached
   the address, so a reconnect went on trying the old one, past eight minutes on podman, after the
