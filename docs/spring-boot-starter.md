@@ -323,6 +323,34 @@ management.endpoint.health.group.liveness.include=livenessState,Agenor
 A restarted process needs the broker to start, so it stays down until the broker is back. What the
 check does not see is in [the Redis page](adapters/redis.md#a-broker-that-cannot-be-reached).
 
+### Keeping a broker outage away from what reads the endpoint
+
+Since 0.40.0 a broker outage reaches whatever reads `/actuator/health`. A load balancer on that
+path takes the whole application out of traffic, HTTP routes included. Point it at a group that
+leaves the component out, and `/actuator/health` keeps reporting the outage:
+
+```properties
+management.endpoint.health.group.traffic.include=*
+management.endpoint.health.group.traffic.exclude=Agenor
+```
+
+The load balancer then reads `/actuator/health/traffic`. To stop asking the broker altogether, declare
+the indicator without it, under the same bean name so that the component keeps its name:
+
+```java
+@Bean
+HealthIndicator AgenorHealthIndicator(AgenorRuntime runtime) {
+    return new AgenorHealthIndicator(runtime);
+}
+```
+
+`management.health.agenor.enabled=false` has no effect on this component.
+
+!!! warning "Any `HealthIndicator` bean of your own replaces this one"
+    The auto-configured indicator backs off for any bean of type `HealthIndicator`, whatever its
+    name. An application that declares one has no `Agenor` component, so nothing reports the runtime,
+    its agents or the broker, and a group that includes `Agenor` fails the start.
+
 ## User Bean Override
 
 Every auto-configured bean is guarded by `@ConditionalOnMissingBean`. Declare your own bean
