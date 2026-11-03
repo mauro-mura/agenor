@@ -25,6 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `claude-haiku-4-5-20251001`. The attribute now comes from the response, or from the last chunk
   that names a model; a failed call keeps the label it had.
 
+- **Package scanning finds agents in a Spring Boot executable jar.** Under `java -jar`,
+  `AgentScanner` tried to open a `jar:nested:` URL as a file, logged one ERROR, and the runtime
+  started with no agent while health answered `UP`. It now reads the jar through the URL's own
+  connection and loads classes with the loader that found them.
+
+- **A package that cannot be scanned now fails `start()` instead of finding no agent.** A package
+  that does not exist still yields none, and a scan that finds nothing now logs a WARN naming the
+  packages rather than an INFO.
+
+### Deprecated
+
+- **`AgentFactory.scanForAgents`, for removal in 1.0.0.** Nothing called it, and it was a copy of
+  `AgentScanner` carrying the same defect. It now delegates. Use `AgentScanner.scanForAgents`.
+
 ## [0.39.0] - 2026-10-28
 
 ### Added
