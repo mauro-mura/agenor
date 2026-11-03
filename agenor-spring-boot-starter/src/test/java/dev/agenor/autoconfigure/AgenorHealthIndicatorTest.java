@@ -48,6 +48,40 @@ class AgenorHealthIndicatorTest {
         assertThat(health.getDetails()).containsEntry("agents.running", 1);
     }
 
+    @Test
+    void healthIsUpWhenTheBrokerAnswers() {
+        AgenorRuntime runtime = runningRuntimeMock(2, 2);
+
+        Health health = new AgenorHealthIndicator(runtime, new BrokerProbe("redis", () -> true)).health();
+
+        assertThat(health.getStatus()).isEqualTo(Status.UP);
+        assertThat(health.getDetails())
+                .containsEntry("transport.type", "redis")
+                .containsEntry("transport.reachable", true);
+    }
+
+    @Test
+    void healthIsDownWhenTheBrokerDoesNotAnswerWithAgentsRunning() {
+        AgenorRuntime runtime = runningRuntimeMock(2, 2);
+
+        Health health = new AgenorHealthIndicator(runtime, new BrokerProbe("redis", () -> false)).health();
+
+        assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+        assertThat(health.getDetails())
+                .containsEntry("agents.running", 2)
+                .containsEntry("transport.reachable", false);
+    }
+
+    @Test
+    void healthCarriesNoTransportDetailsWithoutABroker() {
+        AgenorRuntime runtime = runningRuntimeMock(2, 2);
+
+        Health health = new AgenorHealthIndicator(runtime).health();
+
+        assertThat(health.getStatus()).isEqualTo(Status.UP);
+        assertThat(health.getDetails()).doesNotContainKeys("transport.type", "transport.reachable");
+    }
+
     // --- integration: absent when actuator not on classpath ---
     // This is verified implicitly: the test classpath includes actuator (test scope),
     // so the bean IS present. The @ConditionalOnClass guard is tested by Spring Boot's

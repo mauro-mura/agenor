@@ -118,6 +118,19 @@ public final class RedisMessagingFactory implements AutoCloseable {
     public RedisDeadLetterQueue deadLetterQueue() { return deadLetters; }
 
     /**
+     * Whether the broker answers now, waiting at most one second. Suited to a health check: it
+     * never throws, and a disconnected client answers at once.
+     *
+     * <p>This asks about the broker, not about the consumer loops. A loop that fails against a
+     * broker that answers, for instance on an ACL that forbids {@code XREADGROUP}, does not
+     * change the result.
+     *
+     * @return {@code true} if the broker answered
+     * @since 0.40.0
+     */
+    public boolean isBrokerReachable() { return streamClient.isBrokerReachable(); }
+
+    /**
      * Stops all active consumer loops and closes the Lettuce connection.
      * Call this on application shutdown.
      */

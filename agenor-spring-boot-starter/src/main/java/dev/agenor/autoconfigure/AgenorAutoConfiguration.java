@@ -422,8 +422,9 @@ public class AgenorAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         org.springframework.boot.health.contributor.HealthIndicator AgenorHealthIndicator(
-                AgenorRuntime agenorRuntime) {
-            return new AgenorHealthIndicator(agenorRuntime);
+                AgenorRuntime agenorRuntime,
+                ObjectProvider<BrokerProbe> brokerProbe) {
+            return new AgenorHealthIndicator(agenorRuntime, brokerProbe.getIfAvailable());
         }
     }
 
@@ -467,6 +468,16 @@ public class AgenorAutoConfiguration {
                     .maxDeliveryAttempts(redis != null ? redis.maxDeliveryAttempts() : 3)
                     .telemetry(telemetry.getIfAvailable(AgenorTelemetry::noop))
                     .build();
+        }
+
+        /**
+         * Lets {@link AgenorHealthIndicator} report a broker it cannot reach. A probe rather than
+         * a second {@code HealthIndicator}: the {@code @ConditionalOnMissingBean} on the first
+         * goes by type, so a second one could remove it, depending on registration order.
+         */
+        @Bean
+        BrokerProbe redisBrokerProbe(dev.agenor.adapters.messaging.redis.RedisMessagingFactory factory) {
+            return new BrokerProbe("redis", factory::isBrokerReachable);
         }
 
         /**

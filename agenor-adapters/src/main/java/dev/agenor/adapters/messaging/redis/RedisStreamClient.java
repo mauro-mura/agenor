@@ -4,6 +4,7 @@ import io.lettuce.core.Limit;
 import io.lettuce.core.Range;
 import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisFuture;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XAddArgs;
 import io.lettuce.core.XGroupCreateArgs;
@@ -18,6 +19,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Manages a Lettuce {@link RedisClient} and provides high-level stream operations
@@ -29,6 +33,8 @@ import java.util.Objects;
 final class RedisStreamClient implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(RedisStreamClient.class);
+
+    private static final long REACHABILITY_TIMEOUT_MS = 1_000;
 
     private final RedisMessagingConfig config;
     private RedisClient redisClient;
@@ -54,6 +60,39 @@ final class RedisStreamClient implements AutoCloseable {
     /** Creates a dedicated connection for a blocking consumer loop. Caller is responsible for closing it. */
     StatefulRedisConnection<String, String> newConsumerConnection() {
         return redisClient.connect();
+    }
+
+    /**
+     * Whether the broker answers on the shared write connection, waiting at most
+     * {@value #REACHABILITY_TIMEOUT_MS} ms.
+     *
+     * <p>A disconnected connection answers {@code false} without sending anything: Lettuce would
+     * queue the command until it reconnects or its one-minute command timeout passes, which is no
+     * use to a caller that needs an answer now. A connection that looks open is asked with a
+     * {@code PING}, because a broker can stop answering without the connection closing. A ping
+     * that gets no answer in time is cancelled, so repeated checks do not pile up in the queue.
+     *
+     * @return {@code true} if the broker answered; never throws
+     */
+    boolean isBrokerReachable() {
+        if (writeConn == null || !writeConn.isOpen()) {
+            return false;
+        }
+        RedisFuture<String> ping = null;
+        try {
+            ping = writeConn.async().ping();
+            return "PONG".equals(ping.get(REACHABILITY_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            ping.cancel(true);
+            return false;
+        } catch (ExecutionException | TimeoutException | RuntimeException e) {
+            log.debug("Broker did not answer PING: {}", e.getMessage());
+            if (ping != null) {
+                ping.cancel(true);
+            }
+            return false;
+        }
     }
 
     /**

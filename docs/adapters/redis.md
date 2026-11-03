@@ -328,8 +328,23 @@ Whatever the broker held when it lost its data is gone: unread entries, pending 
 letters. The agents never knew about it, and neither does the sender of a message that was in
 one of those streams. A request with a timeout surfaces as that timeout.
 
-This covers a broker that was reached and has lost its groups. While a broker cannot be reached,
-nothing in the node's health says so.
+This covers a broker that was reached and has lost its groups.
+
+### A broker that cannot be reached
+
+`RedisMessagingFactory.isBrokerReachable()` answers whether the broker responds, waiting at most
+one second, and under the starter it decides the node's health:
+[Actuator Health](../spring-boot-starter.md#actuator-health). The agents stay `RUNNING` throughout,
+so they cannot be the signal.
+
+It asks about the broker and not about the consumer loops. A loop that fails against a broker that
+answers, on an ACL that forbids `XREADGROUP` for instance, does not change the result.
+
+**A broker that comes back at a new address may not be reached again.** Lettuce's default resolver
+caches the address, and a reconnect goes on trying the old one after the name resolves to the new
+one. On podman, whose containers get a new address on every start, this outlasted eight minutes of
+observation. Restarting the process cures it, and the health check is what tells an orchestrator
+to do so.
 
 ---
 
