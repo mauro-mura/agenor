@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name resolved to the new one. The client now uses the JDK's resolver, and sees the new address
   once `networkaddress.cache.ttl` (30 s by default) has passed.
 
+- **A `HealthIndicator` of your own no longer removes Agenor's.** The starter's backed off for any
+  bean of that type, so an application with one had no `Agenor` component and nothing reporting the
+  runtime, its agents or the broker. It now backs off only for a bean named `AgenorHealthIndicator`
+  or of that class. An indicator meant to replace it under another name now sits beside it: rename it.
+
 ### Deprecated
 
 - **`AgentFactory.scanForAgents`, for removal in 1.0.0.** Nothing called it, and it was a copy of

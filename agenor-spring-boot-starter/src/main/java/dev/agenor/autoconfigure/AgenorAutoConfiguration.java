@@ -419,8 +419,13 @@ public class AgenorAutoConfiguration {
     @ConditionalOnClass(name = "org.springframework.boot.health.contributor.HealthIndicator")
     static class ActuatorConfiguration {
 
+        /**
+         * Backs off for a bean of this name or this class, and not for any
+         * {@code HealthIndicator}: going by the return type, an application's indicator for its
+         * own concerns removed this one, and with it every report on the runtime and the broker.
+         */
         @Bean
-        @ConditionalOnMissingBean
+        @ConditionalOnMissingBean(value = AgenorHealthIndicator.class, name = "AgenorHealthIndicator")
         org.springframework.boot.health.contributor.HealthIndicator AgenorHealthIndicator(
                 AgenorRuntime agenorRuntime,
                 ObjectProvider<BrokerProbe> brokerProbe) {
@@ -471,9 +476,8 @@ public class AgenorAutoConfiguration {
         }
 
         /**
-         * Lets {@link AgenorHealthIndicator} report a broker it cannot reach. A probe rather than
-         * a second {@code HealthIndicator}: the {@code @ConditionalOnMissingBean} on the first
-         * goes by type, so a second one could remove it, depending on registration order.
+         * Lets {@link AgenorHealthIndicator} report a broker it cannot reach, in the one component
+         * that already reports the node.
          */
         @Bean
         BrokerProbe redisBrokerProbe(dev.agenor.adapters.messaging.redis.RedisMessagingFactory factory) {
