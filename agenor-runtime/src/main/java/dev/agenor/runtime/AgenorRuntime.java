@@ -647,7 +647,7 @@ public class AgenorRuntime {
         Set<Class<? extends dev.agenor.core.Agent>> agentClasses = engine.scanForAgents(packageArray);
 
         if (agentClasses.isEmpty()) {
-            log.info("No agent classes found in scanned packages");
+            log.warn("No agent classes found in scanned packages {}", packages);
             return;
         }
 

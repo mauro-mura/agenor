@@ -5,9 +5,25 @@ import dev.agenor.runtime.agent.BaseAgent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.*;
 
+import javax.tools.ToolProvider;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 
 /**
  * Unit tests for AgentScanner
@@ -328,6 +344,135 @@ class AgentScannerTest {
             Set<Class<? extends dev.agenor.core.Agent>> agents = scanner.scanForAgents("invalid.package.name");
             assertThat(agents).isEmpty();
         }).doesNotThrowAnyException();
+    }
+
+    // =========================================================================
+    // SCANNING THROUGH A JAR, AND A SCAN THAT CANNOT BE DONE
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should find an agent that only the context class loader can load, in a jar")
+    void shouldFindAgentInJarVisibleOnlyToContextClassLoader(@TempDir Path dir) throws Exception {
+        Path jar = jarWithAgent(dir, "fixture.plain", "PlainAgent");
+
+        try (URLClassLoader loader = new URLClassLoader(new URL[] {jar.toUri().toURL()},
+                getClass().getClassLoader())) {
+            var agents = scanWithContextLoader(loader, "fixture.plain");
+
+            assertThat(agents).extracting(Class::getName).containsExactly("fixture.plain.PlainAgent");
+        }
+    }
+
+    @Test
+    @DisplayName("Should not take a sibling package whose name starts the same way, from a jar")
+    void shouldNotScanSiblingPackageInJar(@TempDir Path dir) throws Exception {
+        Path jar = jarWithAgent(dir, "fixture.scan", "InPackageAgent");
+        Path sibling = jarWithAgent(dir, "fixture.scanned", "SiblingAgent");
+        Path both = mergeJars(dir, jar, sibling);
+
+        try (URLClassLoader loader = new URLClassLoader(new URL[] {both.toUri().toURL()},
+                getClass().getClassLoader())) {
+            var agents = scanWithContextLoader(loader, "fixture.scan");
+
+            assertThat(agents).extracting(Class::getName).containsExactly("fixture.scan.InPackageAgent");
+        }
+    }
+
+    @Test
+    @DisplayName("A jar that cannot be read fails the scan instead of finding no agent")
+    void shouldFailWhenJarCannotBeRead(@TempDir Path dir) throws Exception {
+        URL missing = new URL("jar:" + dir.resolve("missing.jar").toUri() + "!/fixture/absent");
+
+        assertThatThrownBy(() -> scanWithContextLoader(loaderAnswering(missing), "fixture.absent"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fixture.absent");
+    }
+
+    @Test
+    @DisplayName("A resource protocol the scanner cannot read fails the scan instead of finding no agent")
+    void shouldFailOnUnsupportedProtocol() throws Exception {
+        URL unsupported = new URL(null, "weird:/fixture/absent", new URLStreamHandler() {
+            @Override
+            protected URLConnection openConnection(URL u) {
+                throw new UnsupportedOperationException();
+            }
+        });
+
+        assertThatThrownBy(() -> scanWithContextLoader(loaderAnswering(unsupported), "fixture.absent"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fixture.absent")
+                .hasMessageContaining("weird");
+    }
+
+    private Set<Class<? extends dev.agenor.core.Agent>> scanWithContextLoader(ClassLoader loader, String pkg) {
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(loader);
+        try {
+            return scanner.scanForAgents(pkg);
+        } finally {
+            Thread.currentThread().setContextClassLoader(previous);
+        }
+    }
+
+    private ClassLoader loaderAnswering(URL resource) {
+        return new ClassLoader(getClass().getClassLoader()) {
+            @Override
+            public Enumeration<URL> getResources(String name) {
+                return Collections.enumeration(List.of(resource));
+            }
+        };
+    }
+
+    /** Compiles an {@code @Agent} class that is on no class path of this test, and jars it. */
+    private static Path jarWithAgent(Path dir, String pkg, String simpleName) throws IOException {
+        Path sources = Files.createDirectories(dir.resolve("src-" + simpleName));
+        Path classes = Files.createDirectories(dir.resolve("classes-" + simpleName));
+        Path source = sources.resolve(simpleName + ".java");
+        Files.writeString(source, """
+                package %s;
+                @dev.agenor.core.annotations.Agent("%s")
+                public class %s extends dev.agenor.runtime.agent.BaseAgent {
+                }
+                """.formatted(pkg, simpleName, simpleName));
+        int exit = ToolProvider.getSystemJavaCompiler().run(null, null, null,
+                "-cp", System.getProperty("java.class.path"), "-d", classes.toString(), source.toString());
+        assertThat(exit).as("javac exit code").isZero();
+
+        Path jar = dir.resolve(simpleName + ".jar");
+        String entry = pkg.replace('.', '/') + "/" + simpleName + ".class";
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
+            // Directory entries, as Maven writes them: without one, getResources(package) finds nothing.
+            String directory = "";
+            for (String part : pkg.split("\\.")) {
+                directory += part + "/";
+                out.putNextEntry(new JarEntry(directory));
+                out.closeEntry();
+            }
+            out.putNextEntry(new JarEntry(entry));
+            out.write(Files.readAllBytes(classes.resolve(entry)));
+            out.closeEntry();
+        }
+        return jar;
+    }
+
+    private static Path mergeJars(Path dir, Path... jars) throws IOException {
+        Path merged = dir.resolve("merged.jar");
+        Set<String> written = new HashSet<>();
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(merged))) {
+            for (Path jar : jars) {
+                try (JarFile in = new JarFile(jar.toFile())) {
+                    for (JarEntry entry : Collections.list(in.entries())) {
+                        if (!written.add(entry.getName())) {
+                            continue;
+                        }
+                        out.putNextEntry(new JarEntry(entry.getName()));
+                        out.write(in.getInputStream(entry).readAllBytes());
+                        out.closeEntry();
+                    }
+                }
+            }
+        }
+        return merged;
     }
 }
 

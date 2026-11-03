@@ -74,6 +74,11 @@ All keys are under the `agenor` prefix. Every key is optional and falls back to 
 `base-package` and `scan-packages` are merged — both are scanned. This is the one part of
 the starter that is not optional at the dependency level — see the exclusion note above.
 
+Scanning works from a jar built by `spring-boot-maven-plugin` as well as from an extracted
+layout. A package that exists and cannot be read fails startup. One that holds no agent, or
+does not exist, is not an error: the runtime starts and logs a WARN naming the packages, so a
+misspelled `base-package` shows up there.
+
 ### `agenor.scheduler`
 
 | Key | Default | Description |

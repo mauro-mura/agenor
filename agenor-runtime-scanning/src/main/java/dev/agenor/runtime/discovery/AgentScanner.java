@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -27,7 +28,9 @@ public class AgentScanner {
      * Scan for agent classes in the specified packages
      *
      * @param packageNames packages to scan
-     * @return set of classes annotated with @Agent
+     * @return set of classes annotated with @Agent; empty for a package that does not exist
+     * @throws IllegalStateException if a package exists and could not be read. Reporting no agents
+     *     then would start a node without the agents it declares, with nothing to show for it
      */
     public Set<Class<? extends dev.agenor.core.Agent>> scanForAgents(String... packageNames) {
         Set<Class<? extends dev.agenor.core.Agent>> agentClasses = new HashSet<>();
@@ -51,8 +54,8 @@ public class AgentScanner {
                     }
                 }
 
-            } catch (Exception e) {
-                log.error("Error scanning package: {}", packageName, e);
+            } catch (IOException | ClassNotFoundException e) {
+                throw new IllegalStateException("Could not scan package " + packageName + " for agents", e);
             }
         }
 
@@ -100,12 +103,13 @@ public class AgentScanner {
 
                 if ("file".equals(protocol)) {
                     // File system scanning
-                    classes.addAll(scanFileSystem(resource, packageName));
+                    classes.addAll(scanFileSystem(resource, packageName, classLoader));
                 } else if ("jar".equals(protocol)) {
                     // JAR file scanning
-                    classes.addAll(scanJarFile(resource, packagePath));
+                    classes.addAll(scanJarFile(resource, packagePath, classLoader));
                 } else {
-                    log.warn("Unsupported resource protocol for package scanning: {}", protocol);
+                    throw new IllegalStateException("Could not scan package " + packageName
+                            + " for agents: unsupported resource protocol '" + protocol + "' in " + resource);
                 }
             }
 
@@ -118,7 +122,8 @@ public class AgentScanner {
     /**
      * Scan classes from file system
      */
-    private Set<Class<?>> scanFileSystem(URL resource, String packageName) throws ClassNotFoundException {
+    private Set<Class<?>> scanFileSystem(URL resource, String packageName, ClassLoader classLoader)
+            throws ClassNotFoundException {
         Set<Class<?>> classes = new HashSet<>();
 
         try {
@@ -126,7 +131,7 @@ public class AgentScanner {
             File directory = new File(path);
 
             if (directory.exists() && directory.isDirectory()) {
-                classes.addAll(findClassesInDirectory(directory, packageName));
+                classes.addAll(findClassesInDirectory(directory, packageName, classLoader));
             }
         } catch (Exception e) {
             log.error("Error scanning file system for package: {}", packageName, e);
@@ -138,7 +143,8 @@ public class AgentScanner {
     /**
      * Recursively find classes in directory
      */
-    private Set<Class<?>> findClassesInDirectory(File directory, String packageName) throws ClassNotFoundException {
+    private Set<Class<?>> findClassesInDirectory(File directory, String packageName, ClassLoader classLoader)
+            throws ClassNotFoundException {
         Set<Class<?>> classes = new HashSet<>();
 
         File[] files = directory.listFiles();
@@ -152,13 +158,13 @@ public class AgentScanner {
             if (file.isDirectory()) {
                 // Recursive scan of subdirectories
                 String subPackageName = packageName + "." + fileName;
-                classes.addAll(findClassesInDirectory(file, subPackageName));
+                classes.addAll(findClassesInDirectory(file, subPackageName, classLoader));
             } else if (fileName.endsWith(".class") && !fileName.contains("$")) {
                 // Load class (skip inner classes for now)
                 String className = packageName + "." + fileName.substring(0, fileName.length() - 6);
 
                 try {
-                    Class<?> clazz = Class.forName(className);
+                    Class<?> clazz = Class.forName(className, true, classLoader);
                     classes.add(clazz);
                     log.trace("Found class: {}", className);
                 } catch (ClassNotFoundException e) {
@@ -173,39 +179,36 @@ public class AgentScanner {
     }
 
     /**
-     * Scan classes from JAR file
+     * Scan classes from a JAR file.
+     *
+     * <p>The jar is opened through the URL's own connection and never by a path taken out of the
+     * URL: inside a Spring Boot executable jar the URL is {@code jar:nested:...}, which names no
+     * file, and its handler, registered by Boot's launcher, is what knows how to read it. The
+     * entries it lists are relative to the nested location, so they start at the package.
      */
-    private Set<Class<?>> scanJarFile(URL resource, String packagePath) throws IOException, ClassNotFoundException {
+    private Set<Class<?>> scanJarFile(URL resource, String packagePath, ClassLoader classLoader)
+            throws IOException, ClassNotFoundException {
         Set<Class<?>> classes = new HashSet<>();
 
-        // Extract JAR file path from URL
-        String jarPath = resource.getPath();
-        if (jarPath.startsWith("file:")) {
-            jarPath = jarPath.substring(5);
-        }
+        JarURLConnection connection = (JarURLConnection) resource.openConnection();
+        // A cached JarFile is shared with the class loader, and closing it here would close it there.
+        connection.setUseCaches(false);
 
-        int separatorIndex = jarPath.indexOf("!");
-        if (separatorIndex > 0) {
-            jarPath = jarPath.substring(0, separatorIndex);
-        }
-
-        jarPath = URLDecoder.decode(jarPath, StandardCharsets.UTF_8);
-
-        try (JarFile jarFile = new JarFile(jarPath)) {
+        try (JarFile jarFile = connection.getJarFile()) {
             Enumeration<JarEntry> entries = jarFile.entries();
 
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String entryName = entry.getName();
 
-                if (entryName.startsWith(packagePath) &&
+                if (entryName.startsWith(packagePath + "/") &&
                     entryName.endsWith(".class") &&
                     !entryName.contains("$")) {
 
                     String className = entryName.replace('/', '.').substring(0, entryName.length() - 6);
 
                     try {
-                        Class<?> clazz = Class.forName(className);
+                        Class<?> clazz = Class.forName(className, true, classLoader);
                         classes.add(clazz);
                         log.trace("Found class in JAR: {}", className);
                     } catch (ClassNotFoundException e) {

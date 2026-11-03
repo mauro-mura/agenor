@@ -107,6 +107,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Boot's loader in test scope: AgentScannerExecutableJarTest scans through the class
+             loader and nested: URLs an executable jar really runs on -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-loader</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Lettuce in test scope: lets us verify Redis auto-wiring without the
              optional transitive dep being on the main classpath. Version must
              match agenor-adapters to avoid a classpath split. -->
