@@ -340,11 +340,10 @@ so they cannot be the signal.
 It asks about the broker and not about the consumer loops. A loop that fails against a broker that
 answers, on an ACL that forbids `XREADGROUP` for instance, does not change the result.
 
-**A broker that comes back at a new address may not be reached again.** Lettuce's default resolver
-caches the address, and a reconnect goes on trying the old one after the name resolves to the new
-one. On podman, whose containers get a new address on every start, this outlasted eight minutes of
-observation. Restarting the process cures it, and the health check is what tells an orchestrator
-to do so.
+**A broker that comes back at a new address is reached there**, under the same name. Each reconnect
+resolves the name with the JDK's resolver, so the new address is seen once the JVM's own cache
+lets go of the old one: 30 seconds by default, `networkaddress.cache.ttl` to change it. Lettuce's
+default resolver is replaced for this, and a `ClientResources` of your own cannot be passed in.
 
 ---
 

@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `spring-boot-starter.md` § Actuator Health has the settings. The check is
   `RedisMessagingFactory.isBrokerReachable()`.
 
+- **A Redis client follows a broker recreated at a new address.** Lettuce's default resolver cached
+  the address, so a reconnect went on trying the old one, past eight minutes on podman, after the
+  name resolved to the new one. The client now uses the JDK's resolver, and sees the new address
+  once `networkaddress.cache.ttl` (30 s by default) has passed.
+
 ### Deprecated
 
 - **`AgentFactory.scanForAgents`, for removal in 1.0.0.** Nothing called it, and it was a copy of

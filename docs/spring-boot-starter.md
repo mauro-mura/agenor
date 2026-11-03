@@ -320,9 +320,8 @@ component, with a failure threshold longer than an outage you are willing to wai
 management.endpoint.health.group.liveness.include=livenessState,Agenor
 ```
 
-A restarted process needs the broker to start, so it stays down until the broker is back. What
-restarting cures, and what the check does not see, are in
-[the Redis page](adapters/redis.md#a-broker-that-cannot-be-reached).
+A restarted process needs the broker to start, so it stays down until the broker is back. What the
+check does not see is in [the Redis page](adapters/redis.md#a-broker-that-cannot-be-reached).
 
 ## User Bean Override
 
