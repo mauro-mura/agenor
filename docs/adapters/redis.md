@@ -177,12 +177,72 @@ starting up, or that has not started yet, waits in the stream and is delivered w
 comes up. Topic groups are different by design: they are created at `$`, so a subscriber gets
 what is published from the moment it subscribes and nothing earlier.
 
-Two consequences worth planning for:
+Consequences worth planning for:
 
 - **Reuse a `nodeId` and you inherit its mail.** Whatever its stream still holds, within
   `maxStreamLength`, is delivered to the new node. Give an unrelated deployment its own ID.
 - **A node that never comes back keeps a stream.** Nothing expires it; trimming bounds its
   size, not its existence. `DEL agenor:node:<nodeId>` when you retire an ID for good.
+- **A node that restarts under a new `nodeId` does not get its old mail.** The default is a new
+  UUID at every start. Until the directory row points at the new node, what is sent to the agent
+  goes to the old stream, which nobody reads. The sender has already had its success: there is no
+  error and no dead letter. If a node's mail should survive a restart, fix its `nodeId`.
+- **Waiting mail does not expire.** A message has no deadline, and a timeout exists only on the
+  caller's side. A `request` that has already failed with a `TimeoutException` still runs when
+  its node comes back, with whatever that costs. A handler for which that matters can compare
+  the message's `timestamp()` with its own clock before starting.
+
+---
+
+## One loop per node
+
+**One consumer loop reads a node's whole stream, one message at a time, and waits for the handler
+before reading the next.** That is what makes at-least-once reach the handler (ADR-033), and it
+has two costs that no in-memory test and no single-node test will show you.
+
+**A handler cannot wait for a reply from another node.** The reply arrives on this node's stream,
+and the loop that would read it is the one waiting for this handler. Nothing can break the tie, so
+the wait always ends in the `TimeoutException`, 30 seconds by default, however fast the other agent
+answered.
+
+| A handler on this node asks an agent on another node | Result |
+|---|---|
+| `dialogue.request(...).join()` in a `@DialogueHandler` | **Times out** |
+| `@AgenorMessageHandler` returning the chain that awaits the reply | **Times out**: the loop waits for the returned future too |
+| `@DialogueHandler` that chains on the future and returns | Gets the reply |
+| Either form, in a handler for a **topic** message | Gets the reply: each topic has its own loop, and replies come in on the node's |
+| Either form, when both agents are on **this** node | Gets the reply: the local fast path does not use the loop |
+
+So when a handler for a direct message has to ask another node, chain and return, and answer from
+the chain:
+
+```java
+@DialogueHandler(performatives = Performative.REQUEST)
+public void onRequest(DialogueMessage message) {
+    dialogue.request("worker", part(message)).whenComplete((reply, failure) -> {
+        if (failure == null) {
+            dialogue.inform(message, combine(reply));
+        } else {
+            dialogue.failure(message, "the worker did not answer");
+        }
+    });
+}
+```
+
+The price is the one [`messaging.md`](../messaging.md) describes for any handler that returns
+before its work is done: the message is acknowledged at once, so a crash in between loses it, and a
+failure in the chain is not redelivered. Your answer to the caller is what is left to report it.
+A handler that lets the timeout escape instead is redelivered like any other failure, and
+times out again.
+
+**A slow handler delays every agent on its node.** While it runs, messages for its neighbours wait
+in the stream, whatever their own handlers would have cost. An LLM call inside a direct-message
+handler is enough to notice. Bound what a handler can wait for, and give an agent that is slow by
+nature a node of its own. Each topic's loop is separate, so this does not cross between topics and
+the node stream.
+
+`SerialNodeConsumerIT` holds each of these. Whether the loop should stay this way is an open
+question in [ADR-033](../adr/ADR-033-mailbox-delivery-semantics.md).
 
 ---
 

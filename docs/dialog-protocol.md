@@ -175,6 +175,12 @@ is logged as a [protocol violation](#protocol-violations-are-reported-not-enforc
 approval, do not raise the timeout. Close the request early and keep the wait somewhere else:
 see [Restart and failover semantics](#restart-and-failover-semantics).
 
+**Do not block on these futures in a handler if the target may be on another node.** On Redis,
+`dialogue.request(...).join()` in a `@DialogueHandler` always times out when the other agent is on
+another node, because the handler holds the loop that would read the reply. It passes in memory and
+on one node. Chain on the future and return: see
+[One loop per node](adapters/redis.md#one-loop-per-node).
+
 ### 3. Contract-Net (Multi-Party Negotiation)
 
 ```java

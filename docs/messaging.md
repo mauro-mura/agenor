@@ -181,7 +181,9 @@ rather than retried, catch it in the handler, where the decision is visible.
 handler *returns*, so a handler that starts an LLM call or a database write and returns `void`
 is finished as far as the framework is concerned: the message is acknowledged immediately, a
 later failure in the chain is invisible, and the work does not count against the 64. Declare the
-handler as returning `CompletableFuture<Void>` and return the chain instead.
+handler as returning `CompletableFuture<Void>` and return the chain instead. The one chain not to
+return is one waiting for a reply from an agent on another Redis node, which
+[can only time out](adapters/redis.md#one-loop-per-node).
 
 ```java
 // Inside the guarantees.
