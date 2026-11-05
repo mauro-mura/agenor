@@ -9,18 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at the agents,
-  which stay `RUNNING`, so a node delivering nothing read `UP` for as long as the outage lasted. The
-  check is `RedisMessagingFactory.isBrokerReachable()`. Migration: whatever reads
-  `/actuator/health` now sees a broker outage as a 503. A liveness probe restarts the process, and a
-  load balancer takes the whole application out of traffic, HTTP routes included.
+- **BREAKING: Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at
+  the agents, which stay `RUNNING`, so a node delivering nothing read `UP` for as long as the outage
+  lasted. The check is `RedisMessagingFactory.isBrokerReachable()`.
+  Migration: whatever reads `/actuator/health` now sees a broker outage as a 503. A load balancer
+  takes the whole application out of traffic, HTTP routes included, and a liveness probe on it
+  restarts the process; the `liveness` and `readiness` groups leave it out unless told otherwise.
   `spring-boot-starter.md` § Actuator Health has how to keep either of them out of it.
 
 - **`LLMAgent` no longer deletes messages unless asked to.** Past 5000 tokens it replaced the oldest
   messages with a sentence counting them, with no LLM call and none of their content.
   `autoSummarizeThreshold` now defaults to `0`. Migration: a long conversation now keeps every
-  message, and a window still bounds what reaches the model. `configureAutoSummarization(5000, 10)`
-  restores the old behaviour, ADR-010's amendment has why.
+  message, so the history grows with it, while a window still bounds what reaches the model.
+  `configureAutoSummarization(5000, 10)` restores the old behaviour, ADR-010's amendment has why.
+  Not marked BREAKING: deleting content nobody asked to delete was the defect.
 
 ### Fixed
 
@@ -62,12 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **With telemetry on, every call through the starter's `LLMProvider` emits an `llm.chat` span,
   whoever makes it.** Telemetry was attached at registration, to the provider an `LLMAgent` got
-  through `setLLMProvider`; an agent that calls a provider it holds never went through it, and a
-  `BaseAgent` is not an `LLMAgent`, so neither produced a span (#5). When the exporter is not
-  `none`, the starter now returns the provider it creates from `agenor.llm.*` wrapped in
-  `InstrumentedLLMProvider`: inject the bean as `LLMProvider`, not by its concrete class. A
-  provider you declare, or build for a runtime made by hand, is yours to wrap, as
-  `observability.md` § Which LLM calls produce `llm.chat` describes.
+  through `setLLMProvider`, so an agent calling a provider it holds, or a `BaseAgent`, produced no
+  span (#5). When the exporter is not `none`, the starter wraps the provider it creates from
+  `agenor.llm.*` in `InstrumentedLLMProvider`. A provider you declare is yours to wrap, as
+  `observability.md` § Which LLM calls produce `llm.chat` describes. Not marked BREAKING: the bean
+  was always declared as `LLMProvider`, and `spring-boot-starter.md` says to inject it so; one
+  injected as `OllamaProvider` or another concrete class now fails at startup.
 
 - **`llm.model` on `llm.chat` and `llm.chat.stream` names the model that answered.** For a request
   naming no model, `InstrumentedLLMProvider` reported `getDefaultModel()`, which is each provider
@@ -83,7 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A package that cannot be scanned now fails `start()` instead of finding no agent.** A package
   that does not exist still yields none, and a scan that finds nothing now logs a WARN naming the
-  packages rather than an INFO.
+  packages rather than an INFO. Not marked BREAKING: what fails now used to start without the
+  agents it declared, with health `UP`. A resource protocol the scanner cannot read, as in a
+  native image, fails the same way.
 
 - **A Redis consumer loop recreates a consumer group the broker has lost.** A broker restarted
   without persistence left every loop failing with `NOGROUP` once a second, for good, at WARN,
