@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A CFP participant that never answers no longer leaves a conversation open forever.**
+  `callForProposals` dropped the pending reply at the deadline but left the conversation in
+  `AWAITING_RESPONSE`, which the retention sweep never collects, so a manager grew by one per silent
+  participant per call. It now ends in `TIMEOUT`, as `request` does. Migration: a proposal arriving
+  after the deadline logs a protocol-violation WARN, and that conversation leaves
+  `getActiveConversations()`; its handler still receives the proposal.
+
 - **With telemetry on, every call through the starter's `LLMProvider` emits an `llm.chat` span,
   whoever makes it.** Telemetry was attached at registration, to the provider an `LLMAgent` got
   through `setLLMProvider`; an agent that calls a provider it holds never went through it, and a

@@ -434,6 +434,91 @@ class DefaultConversationManagerTest {
         assertThat(manager.pendingResponseCount()).isZero();
     }
 
+    @Test
+    void shouldEndConversationsOfParticipantsThatNeverAnswerACfp() throws Exception {
+        // Given a CFP nobody answers
+        var future = manager.callForProposals(
+            List.of("worker-1", "worker-2"), "spec", Duration.ofMillis(50));
+
+        // When the deadline expires
+        future.get(2, TimeUnit.SECONDS);
+
+        // Then both conversations are over, and the retention sweep can collect them
+        assertThat(manager.getConversationsWith("worker-1").get(0).getState())
+            .isEqualTo(ProtocolState.TIMEOUT);
+        assertThat(manager.getActiveConversations()).isEmpty();
+        assertThat(manager.cleanup(Duration.ZERO)).isEqualTo(2);
+    }
+
+    @Test
+    void shouldKeepAProposerConversationOpenAtTheDeadlineSoItCanBeAnswered() throws Exception {
+        // Given a CFP where one participant proposes and the other never answers
+        var future = manager.callForProposals(
+            List.of("bidder", "silent"), "spec", Duration.ofMillis(100));
+        var propose = proposalFrom("bidder");
+        manager.handleIncoming(propose);
+
+        // When the deadline expires
+        assertThat(future.get(2, TimeUnit.SECONDS)).containsExactly(propose);
+
+        // Then only the silent participant's conversation is over
+        var bidder = manager.getConversationsWith("bidder").get(0);
+        assertThat(bidder.getState()).isEqualTo(ProtocolState.AWAITING_RESPONSE);
+        assertThat(manager.getConversationsWith("silent").get(0).getState())
+            .isEqualTo(ProtocolState.TIMEOUT);
+
+        // And the initiator can still settle the proposal
+        manager.reply(propose, Performative.REFUSE, "another proposal was selected");
+        assertThat(bidder.getState()).isEqualTo(ProtocolState.REFUSED);
+    }
+
+    @Test
+    void shouldNotReopenACfpConversationWhenAProposalArrivesAfterTheDeadline() throws Exception {
+        var future = manager.callForProposals(List.of("slow"), "spec", Duration.ofMillis(50));
+        var propose = proposalFrom("slow");
+        future.get(2, TimeUnit.SECONDS);
+
+        manager.handleIncoming(propose);
+
+        var conversation = manager.getConversationsWith("slow").get(0);
+        assertThat(conversation.getState()).isEqualTo(ProtocolState.TIMEOUT);
+        assertThat(conversation.getHistory()).contains(propose);
+        assertThat(future.get()).isEmpty();
+    }
+
+    @Test
+    void shouldNotTurnAFailedCfpSendIntoATimeoutAtTheDeadline() throws Exception {
+        // Given a CFP that could not be sent to the first participant
+        when(messageDispatcher.sendTo(any(Message.class)))
+            .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("unreachable")))
+            .thenReturn(CompletableFuture.completedFuture(null));
+        var future = manager.callForProposals(
+            List.of("unreachable", "silent"), "spec", Duration.ofMillis(50));
+
+        // When the deadline expires
+        future.get(2, TimeUnit.SECONDS);
+
+        // Then each conversation records what actually happened to it
+        assertThat(manager.getConversationsWith("unreachable").get(0).getState())
+            .isEqualTo(ProtocolState.FAILED);
+        assertThat(manager.getConversationsWith("silent").get(0).getState())
+            .isEqualTo(ProtocolState.TIMEOUT);
+    }
+
+    /** A {@code PROPOSE} answering the CFP this manager sent to {@code participant}. */
+    private DialogueMessage proposalFrom(String participant) {
+        var cfp = manager.getConversationsWith(participant).get(0).getHistory().get(0);
+        return DialogueMessage.builder()
+            .conversationId(cfp.conversationId())
+            .senderId(participant)
+            .receiverId("local-agent")
+            .performative(Performative.PROPOSE)
+            .content("my bid")
+            .inReplyTo(cfp.id())
+            .protocol("contract-net")
+            .build();
+    }
+
     /**
      * The dispatcher delivers every message on its own virtual thread with no per-recipient
      * serialisation, so two messages opening the same unknown conversation arrive concurrently.

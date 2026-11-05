@@ -207,6 +207,10 @@ your heartbeat allows. A participant the CFP cannot be sent to — unknown, or a
 endpoint the transport cannot reach — is different: it is left out of the result with a WARN
 and costs nothing. If no participant can be sent to, the future fails with the cause.
 
+At the deadline, the conversation of a participant that has not answered ends in `TIMEOUT`, and the
+retention sweep collects it. The conversation of a participant that proposed stays open: reply to
+every proposal, with `AGREE` or `REFUSE`, or neither side ever closes it.
+
 ## Protocols
 
 ### Request Protocol

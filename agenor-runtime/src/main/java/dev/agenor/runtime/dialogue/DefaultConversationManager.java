@@ -117,7 +117,7 @@ public class DefaultConversationManager implements ConversationManager {
         var protocol = protocolRegistry.get("contract-net").orElse(null);
         var responses = new ConcurrentHashMap<String, DialogueMessage>();
         var responseFutures = new java.util.ArrayList<CompletableFuture<DialogueMessage>>();
-        var cfpMessageIds = new java.util.ArrayList<String>();
+        var conversationsByCfpId = new java.util.HashMap<String, DefaultConversation>();
         var sendFailures = new CopyOnWriteArrayList<Throwable>();
 
         for (String participant : participants) {
@@ -144,7 +144,7 @@ public class DefaultConversationManager implements ConversationManager {
             // Store ROOT future in pendingResponses - handleIncoming will complete it
             var responseFuture = new CompletableFuture<DialogueMessage>();
             pendingResponses.put(message.id(), responseFuture);
-            cfpMessageIds.add(message.id());
+            conversationsByCfpId.put(message.id(), conversation);
 
             // Chain to collect responses; null stands for a participant that will never answer
             responseFutures.add(responseFuture.thenApply(response -> {
@@ -173,9 +173,16 @@ public class DefaultConversationManager implements ConversationManager {
         return CompletableFuture.allOf(responseFutures.toArray(new CompletableFuture[0]))
             .orTimeout(deadline.toMillis(), TimeUnit.MILLISECONDS)
             .handle((v, ex) -> {
-                // Participants that never answered leave their future pending forever;
-                // drop their entries so the map stays bounded by in-flight CFPs only.
-                cfpMessageIds.forEach(pendingResponses::remove);
+                // An entry still here belongs to a participant that never answered: both a reply
+                // and a failed send remove their own. Removing it decides that race, so a reply
+                // cannot be collected for a conversation ended here. Without TIMEOUT the
+                // conversation stays active, and the retention sweep never collects it. One that
+                // did answer stays open: the initiator still has to reply to it.
+                conversationsByCfpId.forEach((cfpId, conversation) -> {
+                    if (pendingResponses.remove(cfpId) != null) {
+                        conversation.setState(ProtocolState.TIMEOUT);
+                    }
+                });
                 if (!participants.isEmpty() && sendFailures.size() == participants.size()) {
                     // Nobody received the CFP: an empty list would read as nobody proposing.
                     var first = sendFailures.getFirst();

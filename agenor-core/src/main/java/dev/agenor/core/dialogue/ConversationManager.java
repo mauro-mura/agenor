@@ -47,6 +47,10 @@ public interface ConversationManager {
     /**
      * Initiates a call for proposals to multiple agents.
      *
+     * <p>At the deadline, the conversation of a participant that has not answered ends in
+     * {@code TIMEOUT}. The conversation of one that proposed stays open until the initiator
+     * replies to the proposal.
+     *
      * @param participants list of agent IDs to send CFP to
      * @param taskSpec the task specification
      * @param deadline time limit for proposals

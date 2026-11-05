@@ -6,11 +6,16 @@ import dev.agenor.adapters.persistence.directory.JdbcDirectoryConfig;
 import dev.agenor.core.AgentEndpoint;
 import dev.agenor.core.dialogue.Commitment;
 import dev.agenor.core.dialogue.CommitmentState;
+import dev.agenor.core.dialogue.DialogueHandler;
+import dev.agenor.core.dialogue.DialogueMessage;
+import dev.agenor.core.dialogue.Performative;
 import dev.agenor.core.dialogue.protocol.ProtocolState;
 import dev.agenor.examples.dialogue.ContractNetExample.Manager;
 import dev.agenor.examples.dialogue.ContractNetExample.Task;
 import dev.agenor.examples.dialogue.ContractNetExample.Worker;
 import dev.agenor.runtime.AgenorRuntime;
+import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.dialogue.DialogueCapability;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +29,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -130,6 +136,7 @@ class ContractNetCrossRuntimeIT {
         workerRuntime.registerAgent(worker1);
         workerRuntime.registerAgent(new Worker("worker-2", 0.9));
         workerRuntime.registerAgent(worker3);
+        workerRuntime.registerAgent(new SilentParticipant());
 
         managerRuntime.start().join();
         workerRuntime.start().join();
@@ -199,6 +206,42 @@ class ContractNetCrossRuntimeIT {
         assertEventually(() -> manager.conversationStatesWith("worker-3"), ProtocolState.REFUSED);
         assertEventually(() -> worker1.conversationStatesWith("manager"), ProtocolState.REFUSED);
         assertEventually(() -> worker3.conversationStatesWith("manager"), ProtocolState.REFUSED);
+    }
+
+    @Test
+    @DisplayName("a participant that never answers ends TIMEOUT, and the others are still settled")
+    void silentParticipantsConversationEndsAtTheDeadline() throws Exception {
+        awaitAllWorkers();
+        awaitEndpoint(SilentParticipant.ID);
+        var participants = new ArrayList<>(WORKER_IDS);
+        participants.add(SilentParticipant.ID);
+
+        // A send to a registered agent on another node succeeds, so nothing but the deadline can
+        // tell the manager this one is not answering: the call costs the example's whole 10 s.
+        String winner = manager.allocateTask(new Task("data-processing", 100), participants)
+                .get(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+
+        assertThat(winner).isEqualTo("worker-2");
+        assertThat(manager.conversationStatesWith(SilentParticipant.ID))
+                .containsExactly(ProtocolState.TIMEOUT);
+        assertEventually(() -> manager.conversationStatesWith("worker-1"), ProtocolState.REFUSED);
+        assertEventually(() -> manager.conversationStatesWith("worker-3"), ProtocolState.REFUSED);
+    }
+
+    /** Receives every CFP and answers none, as a stuck agent on a live node does. */
+    static class SilentParticipant extends BaseAgent {
+
+        static final String ID = "silent-participant";
+
+        private final DialogueCapability dialogue = new DialogueCapability(this);
+
+        @Override public String getAgentId() { return ID; }
+        @Override public String getAgentName() { return ID; }
+
+        @DialogueHandler(performatives = Performative.CFP)
+        public void ignore(DialogueMessage cfp) {
+            // Deliberately no reply
+        }
     }
 
     private void assertEventually(java.util.function.Supplier<List<ProtocolState>> states,
