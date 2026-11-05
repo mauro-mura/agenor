@@ -47,6 +47,132 @@ class SummarizationStrategyTest {
                 .extracting(LLMRequest::model).isEqualTo("gpt-4.1-mini");
     }
 
+    // ========== SYSTEM MESSAGES ==========
+
+    private static List<LLMMessage> promptAndTurns(String prompt, int turns) {
+        List<LLMMessage> messages = new ArrayList<>();
+        messages.add(LLMMessage.system(prompt));
+        for (int i = 0; i < turns; i++) {
+            messages.add(LLMMessage.user("message " + i));
+        }
+        return messages;
+    }
+
+    @Test
+    void selectMessages_shouldKeepTheSystemPromptVerbatimAboveTheSummary() {
+        LLMMessage prompt = LLMMessage.system("You answer in French.");
+        List<LLMMessage> messages = promptAndTurns(prompt.content(), 20);
+
+        List<LLMMessage> result = new SummarizationStrategy(
+                ScriptedLLMProvider.create().reply("a summary"), "m")
+                .selectMessages(messages, 4000, estimator);
+
+        assertThat(result.get(0)).isEqualTo(prompt);
+        assertThat(result.get(1).content()).isEqualTo("Summary of earlier conversation: a summary");
+    }
+
+    @Test
+    void selectMessages_shouldKeepTheSystemPromptInPlaceholderModeToo() {
+        LLMMessage prompt = LLMMessage.system("You answer in French.");
+
+        List<LLMMessage> result = strategy.selectMessages(
+                promptAndTurns(prompt.content(), 20), 4000, estimator);
+
+        assertThat(result).startsWith(prompt);
+    }
+
+    /** The prompt goes to the model whole, so it has nothing to add to what gets summarized. */
+    @Test
+    void generateSummary_shouldNotSendTheSystemPromptToBeSummarized() {
+        ScriptedLLMProvider recording = ScriptedLLMProvider.create().reply("a summary");
+
+        new SummarizationStrategy(recording, "m")
+                .selectMessages(promptAndTurns("You answer in French.", 20), 4000, estimator);
+
+        assertThat(recording.requests().getFirst().messages())
+                .extracting(LLMMessage::content)
+                .doesNotContain("You answer in French.");
+    }
+
+    /** A prompt and ten turns: the only old message is the prompt, so there is nothing to summarize. */
+    @Test
+    void selectMessages_shouldNotCallTheModelWhenOnlySystemMessagesAreOld() {
+        ScriptedLLMProvider recording = ScriptedLLMProvider.create();
+        List<LLMMessage> messages = promptAndTurns("You answer in French.", 10);
+
+        List<LLMMessage> result = new SummarizationStrategy(recording, "m")
+                .selectMessages(messages, 4000, estimator);
+
+        assertThat(recording.requests()).isEmpty();
+        assertThat(result).isEqualTo(messages);
+    }
+
+    /** Nothing is cached, and the Javadoc says so: each window past ten messages is one more call. */
+    @Test
+    void selectMessages_shouldCallTheProviderForEachWindow() {
+        ScriptedLLMProvider recording = ScriptedLLMProvider.create().orElse(request -> "a summary");
+        SummarizationStrategy summarizing = new SummarizationStrategy(recording, "m");
+        List<LLMMessage> messages = promptAndTurns("You answer in French.", 20);
+
+        summarizing.selectMessages(messages, 4000, estimator);
+        summarizing.selectMessages(messages, 4000, estimator);
+
+        assertThat(recording.requests()).hasSize(2);
+    }
+
+    // ========== A TIGHT BUDGET ==========
+
+    /**
+     * The window filled from its oldest message and stopped at the first that did not fit, so a
+     * tight budget dropped the newest ones: what the user had just asked did not reach the model.
+     */
+    @Test
+    void selectMessages_shouldDropTheOldestOfTheWindowWhenTheBudgetIsTight() {
+        List<LLMMessage> messages = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            messages.add(LLMMessage.user("message " + i));
+        }
+        LLMMessage newest = messages.getLast();
+        int tokensOfSummaryAndThreeMessages = estimator.estimateTokens(strategy
+                .selectMessages(messages, 4000, estimator).getFirst())
+                + 3 * estimator.estimateTokens(newest);
+
+        List<LLMMessage> result = strategy.selectMessages(
+                messages, tokensOfSummaryAndThreeMessages, estimator);
+
+        assertThat(result).hasSize(4).endsWith(newest);
+    }
+
+    @Test
+    void selectMessages_shouldFallBackToTheWindowWhenThePromptLeavesNoRoomForTheSummary() {
+        String prompt = "You answer in French.";
+        List<LLMMessage> messages = promptAndTurns(prompt, 20);
+        int promptAndTwoMessages = estimator.estimateTokens(messages.getFirst())
+                + 2 * estimator.estimateTokens(messages.getLast());
+
+        List<LLMMessage> result = strategy.selectMessages(messages, promptAndTwoMessages, estimator);
+
+        assertThat(result).containsExactly(
+                messages.getFirst(), messages.get(19), messages.get(20));
+    }
+
+    // ========== WHEN THE SUMMARY FAILS ==========
+
+    /** The text of a provider's exception is not for the model, which pays to read it. */
+    @Test
+    void selectMessages_shouldNotPutAProviderErrorInThePrompt() {
+        ScriptedLLMProvider failing = ScriptedLLMProvider.create()
+                .fail(new IllegalStateException("401 for key sk-secret"));
+        List<LLMMessage> messages = promptAndTurns("You answer in French.", 20);
+
+        List<LLMMessage> result = new SummarizationStrategy(failing, "m")
+                .selectMessages(messages, 4000, estimator);
+
+        assertThat(result).extracting(LLMMessage::content)
+                .noneMatch(content -> content.contains("sk-secret"))
+                .contains("Summary of earlier conversation: [Summary of 10 earlier messages]");
+    }
+
     // ========== METADATA ==========
 
     @Test
@@ -55,8 +181,9 @@ class SummarizationStrategyTest {
     }
 
     @Test
-    void requiresLLM_shouldReturnTrue() {
-        assertThat(strategy.requiresLLM()).isTrue();
+    void requiresLLM_shouldAnswerWhetherAProviderIsCalled() {
+        assertThat(strategy.requiresLLM()).isFalse();
+        assertThat(new SummarizationStrategy(ScriptedLLMProvider.create(), "m").requiresLLM()).isTrue();
     }
 
     @Test

@@ -9,7 +9,8 @@ import dev.agenor.core.memory.llm.ContextWindowStrategy;
  * <ul>
  *   <li>{@link #FIXED} - System messages + last N messages that fit in budget</li>
  *   <li>{@link #SLIDING} - Recent + important messages</li>
- *   <li>{@link #SUMMARIZED} - Recent + summary of old messages</li>
+ *   <li>{@link #SUMMARIZED} - System messages + a count of older messages + recent; to summarize
+ *       them, use {@link SummarizationStrategy#SummarizationStrategy(dev.agenor.core.llm.LLMProvider, String)}</li>
  * </ul>
  *
  * <p><b>Usage Example:</b>
@@ -52,9 +53,9 @@ import dev.agenor.core.memory.llm.ContextWindowStrategy;
  *   </tr>
  *   <tr>
  *     <td>SUMMARIZED</td>
- *     <td>Recent + summary</td>
- *     <td>Very long conversations</td>
- *     <td>Yes</td>
+ *     <td>System + count of older + recent</td>
+ *     <td>Very long conversations, with a provider</td>
+ *     <td>No; a {@code SummarizationStrategy} built with a provider calls it</td>
  *   </tr>
  * </table>
  *
@@ -125,27 +126,27 @@ public final class ContextWindowStrategies {
     public static final ContextWindowStrategy SLIDING = new SlidingWindowStrategy();
 
     /**
-     * Summarized strategy - includes recent messages plus summary of old conversation.
+     * Summarization strategy without a provider - no model is called, and the summary is a count.
      *
      * <p><b>Algorithm:</b>
      * <ol>
-     *   <li>Include most recent messages (last 10)</li>
-     *   <li>If older messages exist, create summary</li>
-     *   <li>Insert summary as system message</li>
-     *   <li>Adjust token budget accordingly</li>
+     *   <li>Up to 10 messages, select as {@link #FIXED} does</li>
+     *   <li>Past 10, keep older system messages verbatim and replace the other older messages with
+     *       a system message counting them</li>
+     *   <li>Add the most recent messages (last 10) that fit, newest first</li>
      * </ol>
      *
-     * <p><b>Note:</b> Current implementation is a placeholder. Full summarization
-     * will be available when integrated with {@code DefaultLLMMemoryManager}.
+     * <p>The model cannot see what was said in the messages counted. To summarize them, build a
+     * {@link SummarizationStrategy#SummarizationStrategy(dev.agenor.core.llm.LLMProvider, String)},
+     * which calls the provider each time a window is selected.
      *
      * <p><b>Characteristics:</b>
      * <ul>
-     *   <li><b>Pros:</b> Preserves overall context, continuous narrative</li>
-     *   <li><b>Cons:</b> Requires LLM call, slower (~1-2s)</li>
-     *   <li><b>Best For:</b> Very long conversations</li>
-     *   <li><b>Performance:</b> O(n) time + LLM call</li>
-     *   <li><b>Requires LLM:</b> Yes</li>
-     *   <li><b>Overhead:</b> ~200 tokens for summary</li>
+     *   <li><b>Pros:</b> Says messages are missing, for the few tokens of a count</li>
+     *   <li><b>Cons:</b> Holds none of their content</li>
+     *   <li><b>Performance:</b> O(n) time</li>
+     *   <li><b>Requires LLM:</b> No</li>
+     *   <li><b>Overhead:</b> The few tokens of the count</li>
      * </ul>
      *
      * @see SummarizationStrategy

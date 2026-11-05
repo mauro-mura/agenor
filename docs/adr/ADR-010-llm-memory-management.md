@@ -482,3 +482,16 @@ it had said. Nothing outside the example `ChatAgent` turned this on deliberately
 
 Calling an LLM by default would have added a provider dependency and a paid call that nobody asked
 for. So the path stays, opt-in and described as what it is, and system messages now survive it.
+
+## Amendment (2026-11-05) — what `SUMMARIZED` is
+
+Section 4c says the summarized window requires an LLM. The constant
+`ContextWindowStrategies.SUMMARIZED` has never had one: past ten messages it puts a count where the
+older ones were, so its `requiresLLM()` now answers `false`. `new SummarizationStrategy(provider, model)`
+is what summarizes, and answers `true`.
+
+Neither summarizes system messages any more. They hold instructions, and replacing them with a
+summary, or with a count, took them away from the model, so they now stay verbatim above the summary,
+as Section 4b asks of the fixed window. The strategy calls its provider for each window selected, and
+this is documented rather than cached: a cache would give a stateless strategy state to invalidate,
+and nothing being built has asked for it.

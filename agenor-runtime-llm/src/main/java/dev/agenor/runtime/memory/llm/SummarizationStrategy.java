@@ -6,29 +6,40 @@ import dev.agenor.core.llm.LLMRequest;
 import dev.agenor.core.llm.LLMResponse;
 import dev.agenor.core.memory.llm.ContextWindowStrategy;
 import dev.agenor.core.memory.llm.TokenEstimator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Summarization strategy - includes recent messages plus LLM-generated summary of old conversation.
+ * Summarization strategy - includes system messages, a summary of the older ones, and recent messages.
  *
  * <p><b>Algorithm:</b>
  * <ol>
- *   <li>Include most recent messages (last 10)</li>
- *   <li>If older messages exist, create summary via LLM call</li>
- *   <li>Insert summary as system message prepended to the result</li>
- *   <li>Adjust token budget accordingly</li>
+ *   <li>Up to 10 messages, select as {@link FixedWindowStrategy} does</li>
+ *   <li>Past 10, older system messages stay verbatim and the other older messages are summarized</li>
+ *   <li>The window is the system messages, then the summary as a system message, then the last 10</li>
+ *   <li>Select from it as {@link FixedWindowStrategy} does: a tight budget drops the oldest of the
+ *       last 10 first. If the summary does not fit, select from the whole history without it</li>
  * </ol>
+ *
+ * <p><b>Only {@link #SummarizationStrategy(LLMProvider, String)} summarizes.</b> Without a provider,
+ * which is what {@link ContextWindowStrategies#SUMMARIZED} is, the summary is a count of the messages
+ * and holds none of their content, so the model cannot see what was said in them.
+ *
+ * <p><b>The provider is called every time a window is selected past 10 messages,</b> and is sent every
+ * older message: nothing is cached. With {@code LLMAgent} that is one more model call for each prompt,
+ * blocking until it answers. If it fails, the summary is the same count, and a WARN says why.
  *
  * <p><b>Characteristics:</b>
  * <ul>
  *   <li><b>Pros:</b> Preserves overall context, continuous narrative</li>
- *   <li><b>Cons:</b> Requires LLM call for summarization, slower (~1-2s)</li>
+ *   <li><b>Cons:</b> One more LLM call for each window, slower (~1-2s)</li>
  *   <li><b>Best For:</b> Very long conversations where context is critical</li>
  *   <li><b>Performance:</b> O(n) time + LLM call, O(n) space</li>
- *   <li><b>Requires LLM:</b> Yes (falls back to placeholder when no provider is set)</li>
+ *   <li><b>Requires LLM:</b> To summarize, yes. Without a provider the summary is only a count</li>
  *   <li><b>Overhead:</b> ~200 tokens for summary</li>
  * </ul>
  *
@@ -63,6 +74,8 @@ import java.util.Objects;
  * @see ContextWindowStrategies
  */
 public class SummarizationStrategy implements ContextWindowStrategy {
+
+    private static final Logger log = LoggerFactory.getLogger(SummarizationStrategy.class);
 
     /**
      * Number of recent messages to keep unsummarized.
@@ -108,8 +121,8 @@ public class SummarizationStrategy implements ContextWindowStrategy {
     /**
      * Create a summarization strategy in placeholder mode (no LLM call).
      *
-     * <p>Used by {@link ContextWindowStrategies#SUMMARIZED}. Summary text will be a
-     * descriptive placeholder string instead of a real LLM-generated summary.
+     * <p>Used by {@link ContextWindowStrategies#SUMMARIZED}. The summary is a count of the
+     * older messages, holding none of their content.
      */
     public SummarizationStrategy() {
         this.llmProvider = null;
@@ -117,15 +130,15 @@ public class SummarizationStrategy implements ContextWindowStrategy {
     }
 
     /**
-     * Select messages to fit within the token budget, prepending an LLM-generated summary
-     * of older messages when the conversation exceeds {@value #RECENT_MESSAGE_COUNT} messages.
+     * Select messages to fit within the token budget, with a summary of older messages when the
+     * conversation exceeds {@value #RECENT_MESSAGE_COUNT} messages.
      *
-     * <p>The returned list always starts with a {@code SYSTEM} message containing the summary
-     * (real or placeholder), followed by the most recent messages that fit in the remaining
-     * token budget.
+     * <p>Older system messages are never summarized: they come first and verbatim, followed by the
+     * summary (real or a count) and the most recent messages that fit in the remaining budget. If
+     * only system messages are older, there is nothing to summarize and no provider call.
      *
-     * <p>If the summary message alone exceeds {@code maxTokens}, falls back to
-     * {@link FixedWindowStrategy} to ensure a non-empty result is always returned.
+     * <p>If the summary does not fit beside the system messages, selects from the whole history
+     * with {@link FixedWindowStrategy}, without it.
      *
      * @param allMessages complete conversation history; must not be {@code null}
      * @param maxTokens   maximum token budget; must be positive
@@ -160,39 +173,32 @@ public class SummarizationStrategy implements ContextWindowStrategy {
             return new FixedWindowStrategy().selectMessages(allMessages, maxTokens, estimator);
         }
 
-        int recentStart = allMessages.size() - RECENT_MESSAGE_COUNT;
-        List<LLMMessage> oldMessages = allMessages.subList(0, recentStart);
+        FixedWindowStrategy fixed = new FixedWindowStrategy();
 
-        String summaryText = generateSummary(oldMessages);
+        int recentStart = allMessages.size() - RECENT_MESSAGE_COUNT;
+        List<LLMMessage> systemMessages = new ArrayList<>();
+        List<LLMMessage> oldMessages = new ArrayList<>();
+        for (LLMMessage msg : allMessages.subList(0, recentStart)) {
+            (msg.isSystem() ? systemMessages : oldMessages).add(msg);
+        }
+
+        // Only instructions are old, and those go to the model whole
+        if (oldMessages.isEmpty()) {
+            return fixed.selectMessages(allMessages, maxTokens, estimator);
+        }
+
         LLMMessage summaryMessage = LLMMessage.system(
-                "Summary of earlier conversation: " + summaryText
+                "Summary of earlier conversation: " + generateSummary(oldMessages)
         );
 
-        int summaryTokens = estimator.estimateTokens(summaryMessage);
+        List<LLMMessage> window = new ArrayList<>(systemMessages);
+        window.add(summaryMessage);
+        window.addAll(allMessages.subList(recentStart, allMessages.size()));
 
-        // Guard: if summary alone exceeds budget, fall back to fixed strategy
-        if (summaryTokens > maxTokens) {
-            return new FixedWindowStrategy().selectMessages(allMessages, maxTokens, estimator);
-        }
-
-        List<LLMMessage> selected = new ArrayList<>();
-        selected.add(summaryMessage);
-        int currentTokens = summaryTokens;
-
-        // Add recent messages that fit in remaining budget
-        for (int i = recentStart; i < allMessages.size(); i++) {
-            LLMMessage msg = allMessages.get(i);
-            int msgTokens = estimator.estimateTokens(msg);
-            if (currentTokens + msgTokens <= maxTokens) {
-                selected.add(msg);
-                currentTokens += msgTokens;
-            } else {
-                // Budget exhausted, stop adding messages
-                break;
-            }
-        }
-
-        return selected;
+        List<LLMMessage> selected = fixed.selectMessages(window, maxTokens, estimator);
+        return selected.contains(summaryMessage)
+                ? selected
+                : fixed.selectMessages(allMessages, maxTokens, estimator);
     }
 
     @Override
@@ -202,7 +208,7 @@ public class SummarizationStrategy implements ContextWindowStrategy {
 
     @Override
     public boolean requiresLLM() {
-        return true;
+        return llmProvider != null;
     }
 
     @Override
@@ -221,9 +227,9 @@ public class SummarizationStrategy implements ContextWindowStrategy {
      *   <li>The {@code oldMessages} to summarize</li>
      * </ol>
      *
-     * <p>On LLM failure, or when running in placeholder mode (no provider configured),
-     * returns a descriptive fallback string so that {@link #selectMessages} can always
-     * produce a result.
+     * <p>On LLM failure, or when no provider is configured, returns a count of the messages so
+     * that {@link #selectMessages} can always produce a result. A failure's text goes to the log,
+     * not into a prompt.
      *
      * <p><b>Note:</b> {@link LLMProvider#chat} returns a {@link java.util.concurrent.CompletableFuture};
      * this method calls {@code .join()} because {@link #selectMessages} is synchronous.
@@ -232,8 +238,9 @@ public class SummarizationStrategy implements ContextWindowStrategy {
      * @return summary text, never {@code null}
      */
     private String generateSummary(List<LLMMessage> oldMessages) {
+        String count = String.format("[Summary of %d earlier messages]", oldMessages.size());
         if (llmProvider == null) {
-            return String.format("[Summary of %d earlier messages]", oldMessages.size());
+            return count;
         }
 
         List<LLMMessage> requestMessages = new ArrayList<>();
@@ -249,15 +256,11 @@ public class SummarizationStrategy implements ContextWindowStrategy {
         try {
             LLMResponse response = llmProvider.chat(summaryRequest).join();
             String content = response.content();
-            return (content != null && !content.isBlank())
-                    ? content
-                    : String.format("[Summary of %d earlier messages]", oldMessages.size());
+            return (content != null && !content.isBlank()) ? content : count;
         } catch (Exception e) {
-            return String.format(
-                    "[Summary of %d earlier messages - generation failed: %s]",
-                    oldMessages.size(),
-                    e.getMessage()
-            );
+            log.warn("Could not summarize {} messages with model {}: the prompt holds a count of them instead",
+                    oldMessages.size(), model, e);
+            return count;
         }
     }
 }

@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SummarizationStrategy` keeps system messages and the newest messages.** Past ten messages it
+  summarized a system prompt with the rest, or in `SUMMARIZED` replaced it with a count, so the model
+  lost it. It also filled the window from its oldest message, so a tight budget dropped what had just
+  been asked. And the text of a provider failure went into the prompt. System messages now stay
+  verbatim above the summary, a tight budget drops the oldest first, and a failure goes to a WARN.
+  `SUMMARIZED.requiresLLM()` now answers `false`, as it has never called a model. Migration: a window
+  with a system prompt holds fewer recent messages, and code branching on `requiresLLM()` sees the
+  constant differently.
+
 - **`FixedWindowStrategy` keeps system messages, as ADR-010 says it does.** It took the newest
   messages until the budget ran out, so a system prompt was the first thing a long conversation
   lost. System messages now go in first, oldest first, each in its place. Migration: a window with

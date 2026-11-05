@@ -431,9 +431,17 @@ turn and then fails records it again on the next attempt, as
 |----------|-----------|--------------|---------|
 | `ContextWindowStrategies.FIXED` | System messages + last N messages that fit in budget | No | Short conversations |
 | `ContextWindowStrategies.SLIDING` | Recent + important older messages (scored) | No | Long conversations |
-| `ContextWindowStrategies.SUMMARIZED` | Recent + LLM-generated summary of older messages | Yes | Very long conversations |
+| `ContextWindowStrategies.SUMMARIZED` | System messages + a count of older messages + recent. Calls no model | No | When a count is enough |
+| `new SummarizationStrategy(provider, model)` | System messages + LLM-generated summary of older messages + recent | Yes | Very long conversations |
 
 **SLIDING scoring** prioritises: system messages, messages with function calls, longer messages, user messages over assistant messages.
+
+**Only a strategy built with a provider summarizes.** `SUMMARIZED` has none, so past ten messages the
+model reads a count where the older ones were, and none of their content. Built with a provider, the
+strategy calls it each time a window is selected, sending every older message, because nothing is
+cached: with `LLMAgent` that is one more blocking, paid call for each prompt past ten messages. If the
+call fails, the prompt holds the count and a WARN says why. Either way system messages stay verbatim,
+and a tight budget drops the oldest of the last ten first.
 
 Lookup by name at runtime:
 
