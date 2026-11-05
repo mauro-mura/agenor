@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`FixedWindowStrategy` keeps system messages, as ADR-010 says it does.** It took the newest
+  messages until the budget ran out, so a system prompt was the first thing a long conversation
+  lost. System messages now go in first, oldest first, each in its place. Migration: a window with
+  a system prompt holds fewer recent messages. `SlidingWindowStrategy` takes this path for up to five
+  messages, and `SummarizationStrategy` where it falls back.
+
 - **`SlidingWindowStrategy` stays within its token budget.** It always took the five most recent
   messages, so when those alone exceeded the budget it returned them anyway, with no room for a
   system prompt. It now takes the newest that fit, then adds older ones that fit beside them.

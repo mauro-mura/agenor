@@ -7,7 +7,7 @@ import dev.agenor.core.memory.llm.ContextWindowStrategy;
  *
  * <p>Provides singleton instances of the standard strategies:
  * <ul>
- *   <li>{@link #FIXED} - Last N messages that fit in budget</li>
+ *   <li>{@link #FIXED} - System messages + last N messages that fit in budget</li>
  *   <li>{@link #SLIDING} - Recent + important messages</li>
  *   <li>{@link #SUMMARIZED} - Recent + summary of old messages</li>
  * </ul>
@@ -40,7 +40,7 @@ import dev.agenor.core.memory.llm.ContextWindowStrategy;
  *   </tr>
  *   <tr>
  *     <td>FIXED</td>
- *     <td>Last N messages</td>
+ *     <td>System + last N messages</td>
  *     <td>Short conversations</td>
  *     <td>No</td>
  *   </tr>
@@ -69,12 +69,12 @@ import dev.agenor.core.memory.llm.ContextWindowStrategy;
 public final class ContextWindowStrategies {
 
     /**
-     * Fixed window strategy - includes last N messages that fit in budget.
+     * Fixed window strategy - includes system messages plus the last N messages that fit in budget.
      *
      * <p><b>Algorithm:</b>
      * <ol>
-     *   <li>Start from most recent message</li>
-     *   <li>Add messages while under token budget</li>
+     *   <li>Include system messages, oldest first, skipping any that does not fit</li>
+     *   <li>Add the others from the most recent, while under token budget</li>
      *   <li>Stop when budget would be exceeded</li>
      * </ol>
      *

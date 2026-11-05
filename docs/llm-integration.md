@@ -409,10 +409,11 @@ message like the others:
 
 | Strategy | When the history no longer fits the budget |
 |---|---|
-| `FIXED` | The prompt is the oldest message, so it is the first to go |
+| `FIXED` | System messages go in first, then the newest others while they fit. The room for the prompt comes out of the recent messages |
 | `SLIDING` | Up to the five most recent messages go in first, newest backwards, while they fit. The prompt goes in only if there is room after them |
 
-If the prompt must always reach the model, keep it out of the history and put it first in the
+Under either, a prompt larger than the budget stays out. If the prompt must always reach the model,
+use `FIXED` with a budget that holds it, or keep it out of the history and put it first in the
 messages of each request.
 
 **The history lives in this process.** A restart loses it. `remember` and `storeFact` go to the
@@ -428,7 +429,7 @@ turn and then fails records it again on the next attempt, as
 
 | Constant | Algorithm | Requires LLM | Best For |
 |----------|-----------|--------------|---------|
-| `ContextWindowStrategies.FIXED` | Last N messages that fit in budget | No | Short conversations |
+| `ContextWindowStrategies.FIXED` | System messages + last N messages that fit in budget | No | Short conversations |
 | `ContextWindowStrategies.SLIDING` | Recent + important older messages (scored) | No | Long conversations |
 | `ContextWindowStrategies.SUMMARIZED` | Recent + LLM-generated summary of older messages | Yes | Very long conversations |
 

@@ -142,6 +142,87 @@ class FixedWindowStrategyTest {
         assertThat(result).allMatch(msg -> msg.content().equals("B") || msg.content().equals("C"));
     }
 
+    // ========== SYSTEM MESSAGES (ADR-010) ==========
+
+    private List<LLMMessage> longMessages(int count) {
+        List<LLMMessage> messages = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            messages.add(LLMMessage.user(i + " " + "word ".repeat(100)));
+        }
+        return messages;
+    }
+
+    private int tokens(List<LLMMessage> messages) {
+        return messages.stream().mapToInt(estimator::estimateTokens).sum();
+    }
+
+    @Test
+    void selectMessages_shouldKeepTheSystemPromptWhenTheHistoryOutgrowsTheBudget() {
+        LLMMessage prompt = LLMMessage.system("You are a support agent.");
+        List<LLMMessage> messages = new ArrayList<>();
+        messages.add(prompt);
+        messages.addAll(longMessages(30));
+
+        List<LLMMessage> result = strategy.selectMessages(messages, 2000, estimator);
+
+        assertThat(result.get(0)).isEqualTo(prompt);
+        assertThat(tokens(result)).isLessThanOrEqualTo(2000);
+        // The rest is the newest messages, without a gap
+        List<LLMMessage> recent = result.subList(1, result.size());
+        assertThat(recent).isNotEmpty();
+        assertThat(recent).containsExactlyElementsOf(
+            messages.subList(messages.size() - recent.size(), messages.size()));
+    }
+
+    @Test
+    void selectMessages_shouldTakeTheRoomOfASystemMessageFromTheRecentOnes() {
+        // Given - a prompt as large as the messages, in a budget for exactly three of them
+        LLMMessage prompt = LLMMessage.system("0 " + "word ".repeat(100));
+        List<LLMMessage> history = longMessages(30);
+        List<LLMMessage> messages = new ArrayList<>();
+        messages.add(prompt);
+        messages.addAll(history);
+        int budget = tokens(history.subList(27, 30));
+
+        List<LLMMessage> result = strategy.selectMessages(messages, budget, estimator);
+
+        assertThat(result).containsExactly(prompt, history.get(28), history.get(29));
+    }
+
+    @Test
+    void selectMessages_shouldKeepASystemMessageAddedMidConversationInItsPlace() {
+        LLMMessage instruction = LLMMessage.system("From now on, answer in Italian.");
+        List<LLMMessage> history = longMessages(30);
+        List<LLMMessage> messages = new ArrayList<>(history.subList(0, 10));
+        messages.add(instruction);
+        messages.addAll(history.subList(10, 30));
+
+        List<LLMMessage> result = strategy.selectMessages(messages, 500, estimator);
+
+        assertThat(result.get(0)).isEqualTo(instruction);
+        assertThat(result.get(result.size() - 1)).isEqualTo(history.get(29));
+        assertThat(tokens(result)).isLessThanOrEqualTo(500);
+    }
+
+    @Test
+    void selectMessages_shouldPreferTheOldestSystemMessageWhenNotAllFit() {
+        LLMMessage first = LLMMessage.system("First " + "word ".repeat(100));
+        LLMMessage second = LLMMessage.system("Second " + "word ".repeat(100));
+        int budget = estimator.estimateTokens(first);
+
+        assertThat(strategy.selectMessages(List.of(first, second), budget, estimator))
+            .containsExactly(first);
+    }
+
+    @Test
+    void selectMessages_shouldNotExceedTheBudgetForASystemMessageLargerThanIt() {
+        LLMMessage prompt = LLMMessage.system("word ".repeat(1000));
+        LLMMessage last = LLMMessage.user("Last");
+
+        assertThat(strategy.selectMessages(List.of(prompt, last), 100, estimator))
+            .containsExactly(last);
+    }
+
     @Test
     void selectMessages_shouldReturnSingleMessageWhenBudgetIsVeryTight() {
         List<LLMMessage> messages = List.of(

@@ -8,12 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fixed window strategy - includes last N messages that fit in budget.
+ * Fixed window strategy - includes system messages plus the last N messages that fit in budget.
  *
  * <p><b>Algorithm:</b>
  * <ol>
- *   <li>Start from most recent message</li>
- *   <li>Add messages while under token budget</li>
+ *   <li>Include system messages, oldest first, skipping any that does not fit</li>
+ *   <li>Add the others from the most recent, while under token budget</li>
  *   <li>Stop when budget would be exceeded</li>
  * </ol>
  *
@@ -77,22 +77,42 @@ public class FixedWindowStrategy implements ContextWindowStrategy {
             return List.of();
         }
 
-        // Select from end (most recent) until budget exhausted
-        List<LLMMessage> selected = new ArrayList<>();
+        boolean[] keep = new boolean[allMessages.size()];
         int currentTokens = 0;
 
-        for (int i = allMessages.size() - 1; i >= 0; i--) {
+        // System messages first, oldest first: they hold the instructions (ADR-010)
+        for (int i = 0; i < allMessages.size(); i++) {
             LLMMessage msg = allMessages.get(i);
-            int msgTokens = estimator.estimateTokens(msg);
-
-            if (currentTokens + msgTokens <= maxTokens) {
-                selected.add(0, msg);  // Add at start to maintain chronological order
-                currentTokens += msgTokens;
-            } else {
-                break;  // Budget exhausted
+            if (msg.role() == LLMMessage.Role.SYSTEM) {
+                int msgTokens = estimator.estimateTokens(msg);
+                if (currentTokens + msgTokens <= maxTokens) {
+                    keep[i] = true;
+                    currentTokens += msgTokens;
+                }
             }
         }
 
+        // Then the rest from the end (most recent) until budget exhausted
+        for (int i = allMessages.size() - 1; i >= 0; i--) {
+            LLMMessage msg = allMessages.get(i);
+            if (msg.role() == LLMMessage.Role.SYSTEM) {
+                continue;
+            }
+            int msgTokens = estimator.estimateTokens(msg);
+            if (currentTokens + msgTokens > maxTokens) {
+                break;  // Budget exhausted
+            }
+            keep[i] = true;
+            currentTokens += msgTokens;
+        }
+
+        // Each stays where it was, so the order is the conversation's
+        List<LLMMessage> selected = new ArrayList<>();
+        for (int i = 0; i < allMessages.size(); i++) {
+            if (keep[i]) {
+                selected.add(allMessages.get(i));
+            }
+        }
         return selected;
     }
 

@@ -181,6 +181,19 @@ class SlidingWindowStrategyTest {
     }
 
     @Test
+    void selectMessages_shouldKeepTheSystemPromptOfAShortHistoryUnderATightBudget() {
+        // Up to five messages take the fixed strategy's path
+        LLMMessage prompt = LLMMessage.system("You are a support agent.");
+        List<LLMMessage> messages = new ArrayList<>();
+        messages.add(prompt);
+        messages.addAll(longMessages(4));
+
+        List<LLMMessage> result = strategy.selectMessages(messages, 200, estimator);
+
+        assertThat(result).containsExactly(prompt, messages.get(4));
+    }
+
+    @Test
     void selectMessages_shouldMaintainChronologicalOrder() {
         List<LLMMessage> messages = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
