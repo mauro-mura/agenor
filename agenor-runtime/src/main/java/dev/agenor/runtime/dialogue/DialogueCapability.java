@@ -418,6 +418,11 @@ public class DialogueCapability {
      * AGREE as well, register a listener on the conversation id via
      * {@link ConversationManager#onMessage(String, java.util.function.Consumer)}. See ADR-026.
      *
+     * <p>Do not block on this future in a handler for a direct message or a dialogue message if
+     * the target may be on another node. On Redis that handler holds the loop that would read
+     * the reply, so the future can only time out; it works in memory and on one node. Chain on
+     * it and return. See {@code docs/adapters/redis.md}, "One loop per node".
+     *
      * @param targetAgentId the agent to send the REQUEST to
      * @param content       the request payload; any type the transport's codec can serialise
      * @return a future completing with the final reply, or failing with a

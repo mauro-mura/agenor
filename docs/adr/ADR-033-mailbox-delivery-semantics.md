@@ -280,3 +280,26 @@ remedy is the same: make handlers idempotent, and catch in the handler a failure
 contained — answering `failure(...)` is usually what the peer needs anyway.
 
 This is an amendment because it is D-5, applied to the half of the mailbox D-5 did not look at.
+
+---
+
+## Amendment (2026-11-05) — the cost includes a wait that cannot end
+
+**Costs** above names a slow handler slowing its neighbours. It did not name the case where the
+handler is waiting for something only its own loop can deliver. A handler for a direct or dialogue
+message that waits for a reply from another node holds the loop that would read that reply, so
+the wait always ends in its timeout, however fast the other agent answered. Returning the chain,
+the form D-5 made possible and `docs/messaging.md` recommends, is held the same way.
+
+It went unseen for the reason the transport rule exists. `agenor-research` recorded this very
+pattern as safe, correctly, in memory, and `CoordinatoreRedisIT` runs on one node, where the fast
+path skips the loop. Only two nodes show it.
+
+**What is decided:** the limit is documented, in `docs/adapters/redis.md` § One loop per node, and
+`SerialNodeConsumerIT` pins it, the wait above and the neighbour delay alike. The only form that
+works from such a handler today returns before the work is done, which is outside the guarantees
+this ADR makes.
+
+**What is not decided:** whether the loop should stop waiting. Reading on while a handler runs would
+end this, and would have to answer for per-stream order and for the backpressure this ADR chose.
+That needs its own decision, and something being built that needs it.
