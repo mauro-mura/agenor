@@ -53,16 +53,14 @@ import java.util.stream.Collectors;
  * 	public void handleUserMessage(Message msg) {
  * 		String userInput = msg.getContent(String.class);
  *
- * 		// Add user message to conversation
- * 		addConversationMessage(LLMMessage.user(userInput)).join();
- *
- * 		// Build prompt with conversation + context
+ * 		// Build prompt with conversation + context; it appends userInput itself
  * 		List<LLMMessage> prompt = buildLLMPrompt(userInput, 2000).join();
  *
  * 		// Call LLM with prompt
  * 		String response = callLLM(prompt);
  *
- * 		// Add response to conversation
+ * 		// Record both turns
+ * 		addConversationMessage(LLMMessage.user(userInput)).join();
  * 		addConversationMessage(LLMMessage.assistant(response)).join();
  *
  * 		// Send response back
@@ -655,6 +653,10 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	 * <li>Conversation history (within budget)</li>
 	 * <li>New user message</li>
 	 * </ul>
+	 *
+	 * <p>
+	 * The new user message is appended here, so it must not be in the history yet: record the
+	 * turn after this call, or the model reads it twice. The budget does not count it.
 	 *
 	 * @param userMessage the new user message
 	 * @param totalBudget total token budget for prompt

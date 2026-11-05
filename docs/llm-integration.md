@@ -319,10 +319,8 @@ public class SupportAgent extends LLMAgent {
     public void handleQuery(Message msg) {
         String question = msg.getContent(String.class);
 
-        // Add the user turn
-        addConversationMessage(LLMMessage.user(question)).join();
-
-        // Build a prompt that fits the configured token budget
+        // Build a prompt that fits the configured token budget. It appends the question
+        // itself, so record the turn afterwards or the model reads it twice.
         List<LLMMessage> prompt = buildLLMPrompt(question, 2000).join();
 
         // Call the LLM
@@ -330,7 +328,8 @@ public class SupportAgent extends LLMAgent {
             LLMRequest.builder().messages(prompt).build()
         ).join().content();
 
-        // Record the assistant turn
+        // Record both turns
+        addConversationMessage(LLMMessage.user(question)).join();
         addConversationMessage(LLMMessage.assistant(answer)).join();
 
         // Store a key fact from the conversation
@@ -350,7 +349,7 @@ public class SupportAgent extends LLMAgent {
 |--------|-------------|
 | `addConversationMessage(LLMMessage)` | Append a message to conversation history |
 | `addConversationMessages(List<LLMMessage>)` | Append multiple messages |
-| `buildLLMPrompt(query, maxTokens)` | Build prompt list applying context window strategy |
+| `buildLLMPrompt(query, maxTokens)` | Build prompt list applying context window strategy, ending with `query` itself. `maxTokens` does not count `query` |
 | `storeFact(key, content)` | Store a fact in long-term memory |
 | `retrieveFacts(query, maxTokens)` | Retrieve relevant long-term facts |
 | `clearConversationHistory()` | Clear short-term history (long-term facts preserved) |
@@ -390,6 +389,38 @@ memory.remember("user-name", "Alice", Map.of("category", "profile")).join();
 // Retrieve relevant context
 List<MemoryEntry> facts = memory.retrieveRelevantContext("user preferences", 500).join();
 ```
+
+### What this memory does not do
+
+**There is one history per agent, not one per conversation.** `LLMMessage` has no conversation id,
+and an agent runs up to 64 handlers at once, all appending to the same list. So an agent serving
+several conversations mixes them in one history, and a window selects across all of them: the model
+gets fragments of each, and turns from one conversation appear in the prompt for another. An agent
+like that should not use this memory. Build the messages for each request and call the provider
+directly, or keep a `DefaultLLMMemoryManager` per conversation in your own code.
+
+**The default budget is small.** `LLMAgent` starts with `SLIDING` and 2000 tokens for the
+conversation, about a dozen answers of a paragraph each, and 500 for retrieved facts. Everything
+older still sits in the history, and the model does not see it. Raise them with
+`setDefaultConversationBudget` and `setDefaultContextBudget`.
+
+**The system prompt is not guaranteed a place in the window, when it is in the history.** It is a
+message like the others:
+
+| Strategy | When the history no longer fits the budget |
+|---|---|
+| `FIXED` | The prompt is the oldest message, so it is the first to go |
+| `SLIDING` | The five most recent messages always go in, and the prompt only if there is room after them. If those five alone exceed the budget, you get them anyway: the prompt is gone and the budget is exceeded |
+
+If the prompt must always reach the model, keep it out of the history and put it first in the
+messages of each request.
+
+**The history lives in this process.** A restart loses it. `remember` and `storeFact` go to the
+`MemoryStore`, and that is the only part that can outlive the process, depending on the store.
+
+**A redelivered message appends again.** On a transport that redelivers, a handler that records a
+turn and then fails records it again on the next attempt, as
+[`messaging.md`](messaging.md) warns for handlers in general. Record turns last.
 
 ### Context Window Strategies
 

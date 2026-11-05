@@ -144,17 +144,16 @@ public class ChatBot extends LLMAgent {
     public void handleUserMessage(Message msg) {
         String userInput = msg.getContent(String.class);
 
-        // Record the user turn
-        addConversationMessage(LLMMessage.user(userInput)).join();
-
-        // Build a prompt that respects the context window budget
+        // Build a prompt that respects the context window budget. It appends userInput
+        // itself, so record the turn afterwards or the model reads it twice.
         List<LLMMessage> prompt = buildLLMPrompt(userInput, 2000).join();
 
         // Call your LLM provider
         String reply = myProvider.chat(LLMRequest.builder().messages(prompt).build())
                                  .join().content();
 
-        // Record the assistant turn
+        // Record both turns
+        addConversationMessage(LLMMessage.user(userInput)).join();
         addConversationMessage(LLMMessage.assistant(reply)).join();
 
         getMessageDispatcher().publish(Message.builder().topic("bot.response").content(reply).build());
@@ -167,7 +166,7 @@ public class ChatBot extends LLMAgent {
 | Method | Description |
 |--------|-------------|
 | `addConversationMessage(LLMMessage)` | Append a message to the conversation history |
-| `buildLLMPrompt(query, maxTokens)` | Build a prompt list applying the configured context window strategy |
+| `buildLLMPrompt(query, maxTokens)` | Build a prompt list applying the configured context window strategy, ending with `query` itself |
 | `storeFact(key, content)` | Store a fact in long-term LLM memory |
 | `retrieveFacts(query, maxTokens)` | Retrieve relevant facts by semantic similarity |
 | `hasLLMMemory()` | Guard: returns `true` only if `LLMMemoryManager` was injected |
@@ -191,6 +190,10 @@ protected void onStart() {
     setDefaultContextBudget(800);        // tokens reserved for retrieved facts
 }
 ```
+
+The history is one list per agent, not per conversation, and the system prompt can fall out of the
+window: read [What this memory does not do](llm-integration.md#what-this-memory-does-not-do) before
+relying on it.
 
 For the complete LLM guide see [`docs/llm-integration.md`](llm-integration.md).
 

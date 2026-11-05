@@ -212,6 +212,20 @@ class LLMAgentTest {
         assertThat(totalTokens).isLessThanOrEqualTo(120);  // Some margin
     }
 
+    @Test
+    void buildLLMPrompt_shouldSendAQuestionOnceWhenTheTurnIsRecordedAfterwards() {
+        // Given - the order docs/llm-integration.md shows
+        agent.addConversationMessage(LLMMessage.user("Earlier question")).join();
+        agent.addConversationMessage(LLMMessage.assistant("Earlier answer")).join();
+
+        // When
+        List<LLMMessage> prompt = agent.buildLLMPrompt("New question", 2000).join();
+
+        // Then
+        assertThat(prompt).extracting(LLMMessage::content)
+            .containsExactly("Earlier question", "Earlier answer", "New question");
+    }
+
     // ========== SUMMARIZATION TESTS ==========
 
     @Test
