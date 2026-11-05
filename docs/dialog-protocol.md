@@ -521,6 +521,16 @@ The task ends on the agent's **final** reply, as `request()` does (ADR-026):
 
 `tasks/cancel` sends `CANCEL` to the agent, from the requester's id, and ends the task `canceled`.
 
+**A task that failed on the timeout can still run.** The timeout ends the wait, not the
+`REQUEST`, which is already in the agent's mailbox. On Redis, if the agent's node is down with its
+directory entry in place and comes back under the same `nodeId`, the agent runs the task
+it finds there, after the client was told `failed`. A client that retries on `failed` then gets
+the work done twice. The agent cannot tell, because the message does not carry the executor's
+timeout. Until it does, make an agent with side effects safe to run twice for the same task, or
+give the executor a timeout longer than a node takes to come back.
+[Point-to-point mechanics](adapters/redis.md#point-to-point-mechanics) has the rest of what
+waiting mail does.
+
 A blocking `message/send` returns when the task ends or when the SDK stops waiting, whichever
 comes first. `DefaultRequestHandler.create(...)` stops after 5 seconds and closes the task's
 event queue: what the agent sends later is dropped, and the task stays `working` for good. A
