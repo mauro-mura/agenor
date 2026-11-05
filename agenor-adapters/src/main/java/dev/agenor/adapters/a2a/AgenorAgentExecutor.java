@@ -51,6 +51,12 @@ import java.util.concurrent.TimeoutException;
  * message saying why. {@code tasks/cancel} sends {@code CANCEL} to the agent from the requester's
  * id and ends the wait.
  *
+ * <p>The timeout ends the wait, not the {@code REQUEST}. On a transport with a durable mailbox,
+ * such as Redis, an agent whose node comes back under the same node id runs a task the client was
+ * already told had {@code failed}, and the message does not carry the timeout, so the agent cannot
+ * tell. An agent with side effects has to be safe to run twice for one task. See
+ * {@code docs/dialog-protocol.md}, "A task that failed on the timeout can still run".
+ *
  * <p>To serve it from any HTTP server, pass it to {@link AgenorA2AServer#of}. Usage with
  * CDI/Quarkus, where the SDK's reference server assembles the handlers itself:
  * <pre>{@code
