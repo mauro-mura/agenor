@@ -6,6 +6,7 @@ import static dev.agenor.runtime.memory.llm.ContextWindowStrategies.SUMMARIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -417,6 +418,136 @@ class DefaultLLMMemoryManagerTest {
         assertThatThrownBy(() -> manager.summarizeOldMessages(0))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Messages to summarize must be positive");
+    }
+
+    @Test
+    void summarizeOldMessages_shouldKeepTheSystemPromptAheadOfTheSummary() {
+        // Given - a seeded system prompt, the first message of the list
+        manager.addMessage(LLMMessage.system("You are a support agent.")).join();
+        for (int i = 0; i < 10; i++) {
+            manager.addMessage(LLMMessage.user("Message " + i)).join();
+        }
+
+        // When - it would be inside the batch if system messages counted
+        manager.summarizeOldMessages(5).join();
+
+        // Then - the prompt survives, in every window built from this history
+        List<LLMMessage> messages = manager.getAllMessages().join();
+        assertThat(messages.get(0).content()).isEqualTo("You are a support agent.");
+        assertThat(messages.get(1).content()).startsWith("Previous conversation summary");
+        assertThat(messages.get(2).content()).isEqualTo("Message 5");
+        assertThat(messages).hasSize(7);
+    }
+
+    @Test
+    void summarizeOldMessages_shouldKeepASystemMessageAddedMidConversation() {
+        manager.addMessage(LLMMessage.user("Message 0")).join();
+        manager.addMessage(LLMMessage.system("From now on, answer in Italian.")).join();
+        manager.addMessage(LLMMessage.user("Message 1")).join();
+        manager.addMessage(LLMMessage.user("Message 2")).join();
+
+        manager.summarizeOldMessages(2).join();
+
+        assertThat(manager.getAllMessages().join())
+            .extracting(LLMMessage::content)
+            .contains("From now on, answer in Italian.", "Message 2")
+            .doesNotContain("Message 0", "Message 1");
+    }
+
+    @Test
+    void summarizeOldMessages_shouldNotCountSystemMessagesAsSummarizable() {
+        // Given - six messages, only five of which can be summarized
+        manager.addMessage(LLMMessage.system("You are a support agent.")).join();
+        for (int i = 0; i < 5; i++) {
+            manager.addMessage(LLMMessage.user("Message " + i)).join();
+        }
+
+        // When/Then
+        assertThatThrownBy(() -> manager.summarizeOldMessages(6).join())
+            .hasCauseInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Have 5, requested 6");
+        assertThat(manager.getMessageCount()).isEqualTo(6);
+    }
+
+    @Test
+    void summarizeOldMessages_shouldReplaceThePreviousSummaryAndKeepCounting() {
+        // Given - user and assistant turns behind a system prompt
+        manager.addMessage(LLMMessage.system("You are a support agent.")).join();
+        for (int i = 0; i < 10; i++) {
+            manager.addMessage(LLMMessage.user("Question " + i)).join();
+            manager.addMessage(LLMMessage.assistant("Answer " + i)).join();
+        }
+
+        // When - two passes, each over ten messages
+        manager.summarizeOldMessages(10).join();
+        String second = manager.summarizeOldMessages(10).join();
+
+        // Then - one summary, counting both passes rather than the last one
+        assertThat(second).contains("10 user messages", "10 assistant responses");
+        assertThat(manager.getAllMessages().join())
+            .extracting(LLMMessage::content)
+            .filteredOn(content -> content.startsWith("Previous conversation summary"))
+            .hasSize(1);
+        assertThat(manager.getMessageCount()).isEqualTo(2);
+    }
+
+    @Test
+    void summarizeOldMessages_shouldNotTakeTheSummaryForAMessageToSummarize() {
+        for (int i = 0; i < 6; i++) {
+            manager.addMessage(LLMMessage.user("Message " + i)).join();
+        }
+        manager.summarizeOldMessages(5).join();
+
+        // One message is left, and the summary beside it is not a second one
+        assertThatThrownBy(() -> manager.summarizeOldMessages(2).join())
+            .hasCauseInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Have 1, requested 2");
+    }
+
+    @Test
+    void clearConversationHistory_shouldForgetWhatPreviousSummariesCounted() {
+        for (int i = 0; i < 5; i++) {
+            manager.addMessage(LLMMessage.user("Before " + i)).join();
+        }
+        manager.summarizeOldMessages(5).join();
+        manager.clearConversationHistory().join();
+
+        manager.addMessage(LLMMessage.user("After")).join();
+        String summary = manager.summarizeOldMessages(1).join();
+
+        assertThat(summary).contains("1 user messages");
+    }
+
+    @Test
+    void summarizeOldMessages_shouldNeitherFailNorLoseMessagesUnderConcurrentWriters() throws Exception {
+        // A subList over a CopyOnWriteArrayList throws ConcurrentModificationException as soon as
+        // anything writes to the list, and each handler of an agent can be writing to it.
+        int writers = 8;
+        int writesPerWriter = 200;
+
+        for (int run = 0; run < 50; run++) {
+            var history = new DefaultLLMMemoryManager(memoryStore, tokenEstimator, "test-agent");
+            for (int i = 0; i < 30; i++) {
+                history.addMessage(LLMMessage.user("Seed " + i)).join();
+            }
+
+            var threads = new ArrayList<Thread>();
+            for (int w = 0; w < writers; w++) {
+                threads.add(Thread.ofVirtual().start(() -> {
+                    for (int i = 0; i < writesPerWriter; i++) {
+                        history.addMessage(LLMMessage.user("Write")).join();
+                    }
+                }));
+            }
+
+            history.summarizeOldMessages(10).join();
+            for (Thread thread : threads) {
+                thread.join();
+            }
+
+            // Seeds and writes, less the ten summarized, plus the summary
+            assertThat(history.getMessageCount()).isEqualTo(30 + writers * writesPerWriter - 10 + 1);
+        }
     }
 
     // ========== CLEAR TESTS ==========

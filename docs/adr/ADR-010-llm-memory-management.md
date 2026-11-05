@@ -468,3 +468,17 @@ AgenorRuntime runtime = AgenorRuntime.builder()
 2. **New LLM Agents**: Extend LLMAgent instead of BaseAgent
 3. **Custom Memory**: Implement LLMMemoryManager interface
 4. **Custom Tokens**: Implement TokenEstimator interface
+
+---
+
+## Amendment (2026-11-05) — auto-summarization is off by default
+
+The sketch of `LLMAgent` above sets `autoSummarizeThreshold = 5000`. It is now `0`, off.
+
+`DefaultLLMMemoryManager` has never called an LLM here. Past the threshold it deleted the oldest
+messages, the system prompt first, and left a sentence counting them. So an agent that made no
+choice lost the start of any conversation past 5000 tokens, and the model was told nothing of what
+it had said. Nothing outside the example `ChatAgent` turned this on deliberately.
+
+Calling an LLM by default would have added a provider dependency and a paid call that nobody asked
+for. So the path stays, opt-in and described as what it is, and system messages now survive it.

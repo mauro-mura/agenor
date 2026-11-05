@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * <ul>
  *   <li>Conversation history management</li>
  *   <li>Token budget optimization</li>
- *   <li>Automatic summarization of old messages</li>
+ *   <li>Replacing old messages with a summary</li>
  *   <li>Relevant context retrieval</li>
  *   <li>Integration with MemoryStore for persistence</li>
  * </ul>
@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
  * <ul>
  *   <li><b>Token-Aware:</b> Respects model context window limits</li>
  *   <li><b>Smart Selection:</b> Uses strategies to select most relevant messages</li>
- *   <li><b>Auto-Summarization:</b> Compresses old conversations automatically</li>
  *   <li><b>Persistent:</b> Stores important context in MemoryStore</li>
  * </ul>
  *
@@ -205,8 +204,12 @@ public interface LLMMemoryManager {
     /**
      * Summarize old messages to save tokens.
      *
-     * <p>Takes the oldest N messages and creates a summary using the LLM.
-     * The original messages are replaced with a single summary message.
+     * <p>Takes the oldest N messages that are not system messages and replaces them, and any
+     * previous summary, with a single summary message. System messages stay, and do not count
+     * towards N. The originals are gone afterwards.
+     *
+     * <p>What the summary holds is up to the implementation: {@code DefaultLLMMemoryManager}
+     * calls no LLM and writes counts of what it removed, none of its content.
      *
      * <p><b>Example:</b>
      * <pre>{@code

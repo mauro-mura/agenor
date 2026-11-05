@@ -306,7 +306,6 @@ public class SupportAgent extends LLMAgent {
         setDefaultStrategy(ContextWindowStrategies.SLIDING);
         setDefaultConversationBudget(3000);
         setDefaultContextBudget(800);
-        configureAutoSummarization(6000, 15);
 
         // Seed with a system message
         if (hasLLMMemory()) {
@@ -361,7 +360,7 @@ public class SupportAgent extends LLMAgent {
 | `setDefaultStrategy(strategy)` | Override context window strategy |
 | `setDefaultConversationBudget(tokens)` | Token budget for conversation history |
 | `setDefaultContextBudget(tokens)` | Token budget for retrieved facts |
-| `configureAutoSummarization(threshold, batchSize)` | Auto-summarize when threshold exceeded |
+| `configureAutoSummarization(threshold, batchSize)` | Off by default. Past the threshold, deletes the oldest messages and leaves only a count of them: no LLM call, none of their content. System messages stay |
 
 ---
 

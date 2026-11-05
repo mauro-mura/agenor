@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
  *   <li>Conversation history management</li>
  *   <li>Long-term fact storage</li>
  *   <li>Context-aware responses</li>
- *   <li>Auto-summarization</li>
  * </ul>
  *
  * <p><b>Example Usage:</b>
@@ -82,9 +81,6 @@ public class ChatAgent extends LLMAgent {
         setDefaultStrategy(ContextWindowStrategies.SLIDING);
         setDefaultConversationBudget(2000);
         setDefaultContextBudget(500);
-
-        // Configure auto-summarization (5000 tokens threshold, summarize oldest 10)
-        configureAutoSummarization(5000, 10);
 
         // Add system message
         if (hasLLMMemory()) {

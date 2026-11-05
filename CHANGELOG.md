@@ -16,7 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   load balancer takes the whole application out of traffic, HTTP routes included.
   `spring-boot-starter.md` § Actuator Health has how to keep either of them out of it.
 
+- **`LLMAgent` no longer deletes messages unless asked to.** Past 5000 tokens it replaced the oldest
+  messages with a sentence counting them, with no LLM call and none of their content.
+  `autoSummarizeThreshold` now defaults to `0`. Migration: a long conversation now keeps every
+  message, and a window still bounds what reaches the model. `configureAutoSummarization(5000, 10)`
+  restores the old behaviour, ADR-010's amendment has why.
+
 ### Fixed
+
+- **`summarizeOldMessages` keeps system messages, and survives concurrent writers.** It deleted the
+  oldest messages whatever they were, so the first pass took a seeded system prompt with it, and no
+  window could bring it back. It also threw `ConcurrentModificationException` when a handler wrote to
+  the history meanwhile, despite the documented thread-safety. Migration: system messages no longer
+  count towards N, so a call can now fail with "Not enough messages" where it succeeded. One summary
+  now stands for all passes, counting them all.
 
 - **A CFP participant that never answers no longer leaves a conversation open forever.**
   `callForProposals` dropped the pending reply at the deadline but left the conversation in

@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * <li>Managing conversation history</li>
  * <li>Building LLM prompts with context</li>
  * <li>Storing and retrieving facts</li>
- * <li>Auto-summarization of long conversations</li>
+ * <li>Discarding the oldest messages of a long conversation, when turned on</li>
  * </ul>
  *
  * <p>
@@ -96,10 +96,10 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	protected int defaultContextBudget = 500;
 
 	/**
-	 * Auto-summarization threshold (tokens). When conversation exceeds this, oldest
-	 * messages are auto-summarized.
+	 * Auto-summarization threshold (tokens), {@code 0} for off, which is the default. See
+	 * {@link #configureAutoSummarization} for what turning it on discards.
 	 */
-	protected int autoSummarizeThreshold = 5000;
+	protected int autoSummarizeThreshold = 0;
 
 	/**
 	 * Messages to summarize when threshold is reached.
@@ -767,7 +767,14 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 	}
 
 	/**
-	 * Configure auto-summarization.
+	 * Turn on auto-summarization, off by default.
+	 *
+	 * <p>
+	 * Past the threshold, the oldest messages leave the history for good. With
+	 * {@code DefaultLLMMemoryManager} what replaces them holds counts and none of their
+	 * content, and no LLM is called, so the model can no longer see what was said in
+	 * them. System messages stay. To summarize when a prompt is built, without discarding
+	 * anything, set a {@code SummarizationStrategy} built with a provider instead.
 	 *
 	 * @param threshold           token threshold (0 to disable)
 	 * @param messagesToSummarize number of messages to summarize

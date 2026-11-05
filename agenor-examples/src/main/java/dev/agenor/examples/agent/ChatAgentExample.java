@@ -18,7 +18,6 @@ import java.util.concurrent.CountDownLatch;
  *   <li>Creating and configuring a ChatAgent</li>
  *   <li>Interactive conversation with memory</li>
  *   <li>Fact extraction and retrieval</li>
- *   <li>Auto-summarization</li>
  * </ul>
  *
  * <p><b>Key Feature:</b> LLMMemoryManager is automatically injected by

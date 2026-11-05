@@ -125,7 +125,6 @@ A handler returns `void` when its work is done by the time the method returns, o
 **When to prefer `LLMAgent` over `BaseAgent`:**
 - The agent must maintain a conversation history across turns.
 - The agent needs to inject relevant past facts into the LLM prompt.
-- You want auto-summarization of long conversations.
 
 ### Minimal Example
 
@@ -190,7 +189,6 @@ protected void onStart() {
     setDefaultStrategy(ContextWindowStrategies.SLIDING);
     setDefaultConversationBudget(3000);  // tokens reserved for conversation
     setDefaultContextBudget(800);        // tokens reserved for retrieved facts
-    configureAutoSummarization(6000, 15); // summarize after 6000 tokens, batch 15 msgs
 }
 ```
 

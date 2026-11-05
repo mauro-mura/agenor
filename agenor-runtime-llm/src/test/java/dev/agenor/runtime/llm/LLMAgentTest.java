@@ -246,6 +246,43 @@ class LLMAgentTest {
     }
 
     @Test
+    void autoSummarization_shouldBeOffUnlessAsked() {
+        // Given - far past the 5000 tokens that used to trigger it, in messages worth keeping
+        assertThat(agent.autoSummarizeThreshold).isZero();
+        String longMessage = "word ".repeat(500);
+
+        // When
+        for (int i = 0; i < 50; i++) {
+            agent.addConversationMessage(LLMMessage.user(i + " " + longMessage)).join();
+        }
+
+        // Then - nothing was discarded without a choice
+        assertThat(agent.getConversationTokens()).isGreaterThan(5000);
+        assertThat(agent.getConversationMessageCount()).isEqualTo(50);
+    }
+
+    @Test
+    void autoSummarization_shouldKeepTheSystemPromptWhenAskedFor() throws Exception {
+        // Given - the setup docs/llm-integration.md shows: a prompt seeded first
+        agent.configureAutoSummarization(50, 5);
+        agent.addConversationMessage(LLMMessage.system("You are a support agent.")).join();
+
+        // When - enough to trigger it several times
+        for (int i = 0; i < 40; i++) {
+            agent.addConversationMessage(LLMMessage.user("Long message number " + i)).join();
+        }
+
+        // Then - it did run (asynchronously), and the prompt is still first
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+        while (agent.getConversationMessageCount() >= 41 && System.nanoTime() < deadline) {
+            Thread.sleep(10);
+        }
+        assertThat(agent.getConversationMessageCount()).isLessThan(41);
+        assertThat(llmMemory.getAllMessages().join().get(0).content())
+            .isEqualTo("You are a support agent.");
+    }
+
+    @Test
     void disableAutoSummarization_shouldDisable() {
         // When
         agent.disableAutoSummarization();

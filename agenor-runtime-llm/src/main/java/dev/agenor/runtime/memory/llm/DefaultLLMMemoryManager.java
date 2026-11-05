@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Default implementation of LLMMemoryManager.
@@ -26,7 +25,18 @@ public class DefaultLLMMemoryManager implements LLMMemoryManager {
     private final MemoryStore memoryStore;
     private final TokenEstimator tokenEstimator;
     private final String agentId;
-    private final CopyOnWriteArrayList<LLMMessage> conversationHistory;
+
+    /** Serializes writers. A summary reads and rewrites the whole list, which must be one step. */
+    private final Object historyLock = new Object();
+
+    /** Never changed once published: a writer builds the next list and swaps it in under the lock. */
+    private volatile List<LLMMessage> conversationHistory = List.of();
+
+    /** The message the last summary wrote, compared by identity. Guarded by {@link #historyLock}. */
+    private LLMMessage currentSummary;
+    private int summarizedUserMessages;
+    private int summarizedAssistantMessages;
+    private int summarizedTokens;
 
     public DefaultLLMMemoryManager(
         MemoryStore memoryStore,
@@ -44,13 +54,21 @@ public class DefaultLLMMemoryManager implements LLMMemoryManager {
         this.memoryStore = memoryStore;
         this.tokenEstimator = tokenEstimator;
         this.agentId = agentId.trim();
-        this.conversationHistory = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public CompletableFuture<Void> addMessage(LLMMessage message) {
         Objects.requireNonNull(message, "Message cannot be null");
-        return CompletableFuture.runAsync(() -> conversationHistory.add(message));
+        return CompletableFuture.runAsync(() -> append(List.of(message)));
+    }
+
+    private void append(List<LLMMessage> messages) {
+        synchronized (historyLock) {
+            List<LLMMessage> next = new ArrayList<>(conversationHistory.size() + messages.size());
+            next.addAll(conversationHistory);
+            next.addAll(messages);
+            conversationHistory = next;
+        }
     }
 
     @Override
@@ -59,7 +77,7 @@ public class DefaultLLMMemoryManager implements LLMMemoryManager {
         if (messages.isEmpty()) {
             throw new IllegalArgumentException("Messages cannot be empty");
         }
-        return CompletableFuture.runAsync(() -> conversationHistory.addAll(messages));
+        return CompletableFuture.runAsync(() -> append(messages));
     }
 
     @Override
@@ -171,46 +189,81 @@ public class DefaultLLMMemoryManager implements LLMMemoryManager {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            if (conversationHistory.size() < messagesToSummarize) {
-                throw new IllegalStateException(
-                    "Not enough messages to summarize. Have " +
-                    conversationHistory.size() + ", requested " + messagesToSummarize
-                );
+            synchronized (historyLock) {
+                return replaceOldestWithSummary(messagesToSummarize);
             }
-
-            List<LLMMessage> oldMessages = conversationHistory.subList(0, messagesToSummarize);
-            String summary = generateSimpleSummary(oldMessages);
-
-            conversationHistory.subList(0, messagesToSummarize).clear();
-            conversationHistory.add(0, LLMMessage.system("Previous conversation summary: " + summary));
-
-            return summary;
         });
     }
 
-    private String generateSimpleSummary(List<LLMMessage> messages) {
-        int userMessageCount = 0;
-        int assistantMessageCount = 0;
-        int totalTokens = 0;
+    /**
+     * Replaces the oldest messages with one summary, which holds counts and none of their content.
+     *
+     * <p>System messages are left where they are and do not count towards {@code count}: the
+     * first of them is usually the prompt, and a window can only select what is still here. The
+     * previous summary is replaced rather than kept beside the new one, so that repeated passes
+     * do not grow the list, and what it had counted carries over. Caller holds {@link #historyLock}.
+     */
+    private String replaceOldestWithSummary(int count) {
+        List<LLMMessage> kept = new ArrayList<>(conversationHistory.size());
+        int taken = 0;
+        int users = 0;
+        int assistants = 0;
+        int tokens = 0;
 
-        for (LLMMessage msg : messages) {
-            if (msg.role() == LLMMessage.Role.USER) {
-                userMessageCount++;
-            } else if (msg.role() == LLMMessage.Role.ASSISTANT) {
-                assistantMessageCount++;
+        for (LLMMessage message : conversationHistory) {
+            if (message == currentSummary) {
+                continue;
             }
-            totalTokens += tokenEstimator.estimateTokens(msg);
+            if (message.role() == LLMMessage.Role.SYSTEM || taken == count) {
+                kept.add(message);
+                continue;
+            }
+            taken++;
+            if (message.role() == LLMMessage.Role.USER) {
+                users++;
+            } else if (message.role() == LLMMessage.Role.ASSISTANT) {
+                assistants++;
+            }
+            tokens += tokenEstimator.estimateTokens(message);
         }
 
-        return String.format(
+        if (taken < count) {
+            throw new IllegalStateException(
+                "Not enough messages to summarize. Have " + taken + ", requested " + count
+            );
+        }
+
+        summarizedUserMessages += users;
+        summarizedAssistantMessages += assistants;
+        summarizedTokens += tokens;
+        String summary = String.format(
             "Earlier conversation with %d user messages and %d assistant responses (~%d tokens)",
-            userMessageCount, assistantMessageCount, totalTokens
+            summarizedUserMessages, summarizedAssistantMessages, summarizedTokens
         );
+
+        int leadingSystemMessages = 0;
+        while (leadingSystemMessages < kept.size()
+                && kept.get(leadingSystemMessages).role() == LLMMessage.Role.SYSTEM) {
+            leadingSystemMessages++;
+        }
+        currentSummary = LLMMessage.system("Previous conversation summary: " + summary);
+        kept.add(leadingSystemMessages, currentSummary);
+        conversationHistory = kept;
+
+        return summary;
     }
 
     @Override
     public CompletableFuture<Void> clearConversationHistory() {
-        return CompletableFuture.runAsync(() -> conversationHistory.clear());
+        return CompletableFuture.runAsync(() -> {
+            synchronized (historyLock) {
+                conversationHistory = List.of();
+                currentSummary = null;
+                summarizedUserMessages = 0;
+                summarizedAssistantMessages = 0;
+                summarizedTokens = 0;
+            }
+        });
     }
 
     @Override
