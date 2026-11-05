@@ -193,8 +193,14 @@ public class NegotiationExample {
             .min(Comparator.comparing(p -> p.content().toString())) // Example comparator
             .orElseThrow();
 
-        // Accept winner
-        dialogue.reply(best, Performative.AGREE, "You're selected");
+        // Accept the winner. The content of the AGREE becomes the content of the commitment,
+        // so send the task rather than a congratulation.
+        dialogue.reply(best, Performative.AGREE, taskSpec);
+
+        // Each proposer has its own conversation, and the losers' stay open until refused
+        proposals.stream()
+            .filter(p -> p.performative() == Performative.PROPOSE && p != best)
+            .forEach(p -> dialogue.reply(p, Performative.REFUSE, "Another proposal was selected"));
     }
 }
 ```
@@ -258,8 +264,9 @@ Manager                      Workers (multiple)
     │◄──── PROPOSE/REFUSE ───────│ (multiple responses)
     │                            │
     │───── AGREE ───────────────►│ (to selected worker)
+    │───── REFUSE ──────────────►│ (to every other proposer)
     │                            │
-    │◄──── INFORM/FAILURE ───────│
+    │◄──── INFORM/FAILURE ───────│ (from selected worker)
     │                            │
 ```
 
