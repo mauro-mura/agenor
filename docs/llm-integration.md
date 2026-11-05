@@ -410,7 +410,7 @@ message like the others:
 | Strategy | When the history no longer fits the budget |
 |---|---|
 | `FIXED` | The prompt is the oldest message, so it is the first to go |
-| `SLIDING` | The five most recent messages always go in, and the prompt only if there is room after them. If those five alone exceed the budget, you get them anyway: the prompt is gone and the budget is exceeded |
+| `SLIDING` | Up to the five most recent messages go in first, newest backwards, while they fit. The prompt goes in only if there is room after them |
 
 If the prompt must always reach the model, keep it out of the history and put it first in the
 messages of each request.

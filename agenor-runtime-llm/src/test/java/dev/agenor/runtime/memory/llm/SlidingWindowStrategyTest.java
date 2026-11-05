@@ -129,6 +129,57 @@ class SlidingWindowStrategyTest {
         assertThat(totalTokens).isLessThanOrEqualTo(budget);
     }
 
+    private List<LLMMessage> longMessages(int count) {
+        List<LLMMessage> messages = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            messages.add(LLMMessage.user(i + " " + "word ".repeat(100)));
+        }
+        return messages;
+    }
+
+    private int tokens(List<LLMMessage> messages) {
+        return messages.stream().mapToInt(estimator::estimateTokens).sum();
+    }
+
+    @Test
+    void selectMessages_shouldStayInBudgetWhenTheRecentMessagesAloneExceedIt() {
+        // Given - each about 128 tokens, so the five most recent need about 640
+        List<LLMMessage> messages = longMessages(30);
+
+        // When
+        List<LLMMessage> result = strategy.selectMessages(messages, 500, estimator);
+
+        // Then - the newest that fit, without a gap and in order
+        assertThat(tokens(result)).isLessThanOrEqualTo(500);
+        assertThat(result).containsExactlyElementsOf(messages.subList(27, 30));
+    }
+
+    @Test
+    void selectMessages_shouldStillAddAnOlderMessageThatFitsBesideTruncatedRecentOnes() {
+        // Given
+        List<LLMMessage> messages = new ArrayList<>();
+        LLMMessage prompt = LLMMessage.system("You are a support agent.");
+        messages.add(prompt);
+        messages.addAll(longMessages(30));
+
+        // When
+        List<LLMMessage> result = strategy.selectMessages(messages, 500, estimator);
+
+        // Then
+        assertThat(tokens(result)).isLessThanOrEqualTo(500);
+        assertThat(result.get(0)).isEqualTo(prompt);
+        assertThat(result.get(result.size() - 1)).isEqualTo(messages.get(30));
+    }
+
+    @Test
+    void selectMessages_shouldReturnNothingOverBudgetWhenTheNewestMessageAloneExceedsIt() {
+        // Given - the same budget a FixedWindowStrategy would return nothing for
+        List<LLMMessage> messages = longMessages(30);
+
+        // When/Then
+        assertThat(strategy.selectMessages(messages, 50, estimator)).isEmpty();
+    }
+
     @Test
     void selectMessages_shouldMaintainChronologicalOrder() {
         List<LLMMessage> messages = new ArrayList<>();

@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SlidingWindowStrategy` stays within its token budget.** It always took the five most recent
+  messages, so when those alone exceeded the budget it returned them anyway, with no room for a
+  system prompt. It now takes the newest that fit, then adds older ones that fit beside them.
+  Migration: under a tight budget a prompt holds fewer recent messages, and a newest message larger
+  than the budget is left out, as `FixedWindowStrategy` does.
+
 - **`summarizeOldMessages` keeps system messages, and survives concurrent writers.** It deleted the
   oldest messages whatever they were, so the first pass took a seeded system prompt with it, and no
   window could bring it back. It also threw `ConcurrentModificationException` when a handler wrote to

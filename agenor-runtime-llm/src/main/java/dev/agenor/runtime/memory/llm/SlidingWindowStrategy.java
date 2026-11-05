@@ -12,7 +12,7 @@ import java.util.List;
  *
  * <p><b>Algorithm:</b>
  * <ol>
- *   <li>Always include most recent messages (last 5)</li>
+ *   <li>Include most recent messages (up to the last 5) for as long as they fit the budget</li>
  *   <li>Score older messages by importance</li>
  *   <li>Include highest scoring that fit in remaining budget</li>
  * </ol>
@@ -57,7 +57,7 @@ import java.util.List;
 public class SlidingWindowStrategy implements ContextWindowStrategy {
 
     /**
-     * Number of recent messages to always include.
+     * Number of recent messages to include ahead of any older one, budget permitting.
      */
     private static final int RECENT_MESSAGE_COUNT = 5;
 
@@ -98,20 +98,24 @@ public class SlidingWindowStrategy implements ContextWindowStrategy {
         List<LLMMessage> selected = new ArrayList<>();
         int currentTokens = 0;
 
-        // 1. Always include most recent messages
-        int recentStart = Math.max(0, allMessages.size() - RECENT_MESSAGE_COUNT);
-        for (int i = recentStart; i < allMessages.size(); i++) {
+        // 1. Most recent messages first, newest backwards, for as long as they fit
+        int recentStart = allMessages.size();
+        for (int i = allMessages.size() - 1; i >= allMessages.size() - RECENT_MESSAGE_COUNT; i--) {
             LLMMessage msg = allMessages.get(i);
             int msgTokens = estimator.estimateTokens(msg);
+            if (currentTokens + msgTokens > maxTokens) {
+                break;
+            }
             currentTokens += msgTokens;
-            selected.add(msg);
+            selected.add(0, msg);
+            recentStart = i;
         }
 
         // 2. If budget allows, add important older messages
         if (currentTokens < maxTokens && recentStart > 0) {
             List<ScoredMessage> scored = new ArrayList<>();
 
-            // Score all older messages
+            // Score everything older than what step 1 kept
             for (int i = 0; i < recentStart; i++) {
                 LLMMessage msg = allMessages.get(i);
                 double score = scoreMessageImportance(msg);

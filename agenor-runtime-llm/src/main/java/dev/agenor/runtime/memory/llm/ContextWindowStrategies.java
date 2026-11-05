@@ -97,7 +97,7 @@ public final class ContextWindowStrategies {
      *
      * <p><b>Algorithm:</b>
      * <ol>
-     *   <li>Always include most recent messages (last 5)</li>
+     *   <li>Include most recent messages (up to the last 5) for as long as they fit the budget</li>
      *   <li>Score older messages by importance</li>
      *   <li>Include highest scoring that fit in remaining budget</li>
      * </ol>
