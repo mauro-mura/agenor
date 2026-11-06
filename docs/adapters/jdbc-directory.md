@@ -48,7 +48,7 @@ explicitly:
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.39.0</version>
+    <version>0.40.0</version>
 </dependency>
 ```
 

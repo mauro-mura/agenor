@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-11-06
+
 ### Changed
 
 - **BREAKING: Health answers `DOWN` when a node cannot reach its Redis broker.** It looked only at
@@ -3421,7 +3423,8 @@ List<AgentDescriptor> all = page.content();
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/agenor/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/mauro-mura/agenor/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/mauro-mura/agenor/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/mauro-mura/agenor/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/mauro-mura/agenor/compare/v0.36.0...v0.37.0
