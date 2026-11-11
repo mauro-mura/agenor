@@ -81,6 +81,8 @@ public class MyAgent extends BaseAgent {
 
 `onStart()` is invoked after all services have been injected; `onStop()` is invoked before behavior teardown and directory unregistration.
 
+Neither runs while the agent is handling messages. On start, the agent queues what arrives and handles nothing until its start hooks have run, which is where a `DialogueCapability` attaches. On stop, the agent first stops taking messages and waits for the handlers already running, up to five seconds, and only then runs its stop hooks and `onStop()`: a handler finishing during a stop can still reply through its `DialogueCapability`, and a persistence hook saves the state that handler left. Neither `onStart()` nor `onStop()` can therefore wait for one of the agent's own messages to be handled.
+
 ### LifecycleListener and LoggingLifecycleListener
 
 The runtime uses a `LifecycleManager` that tracks status transitions (STARTING → RUNNING → STOPPING → STOPPED) and notifies registered `LifecycleListener` implementations:

@@ -210,6 +210,13 @@ what arrives, and routes it only after the start hooks have run, which is where 
 agent's own messages to be handled; on Redis a `sendTo` to an agent on the same node completes
 only when its handler does.
 
+Stopping is the mirror: the agent stops taking messages and waits for the handlers already
+running, up to five seconds, before its stop hooks run. Until 0.41.0 the hooks ran first, so a
+dialogue handler still running at an orderly stop found its `DialogueCapability` shut down, its
+reply was refused, and on Redis its entry was left pending on a node that was going away. What is still
+queued when the agent stops is handed back unacknowledged: on Redis it stays pending, for the
+node's next start under the same `nodeId`.
+
 Why the inbound path is shaped this way is
 [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md); what a failed handler costs is
 [ADR-033](adr/ADR-033-mailbox-delivery-semantics.md).

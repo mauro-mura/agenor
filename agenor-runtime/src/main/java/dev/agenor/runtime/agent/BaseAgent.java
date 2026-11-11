@@ -291,7 +291,15 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
 
             return CompletableFuture.runAsync(() -> {
                 try {
-                    // Execute registered stop hooks FIRST (e.g., for persistence)
+                    // Close the inbound path FIRST: take no new message, and wait for the
+                    // handlers already running. Only then do the stop hooks run, so a handler
+                    // still finds the DialogueCapability it replies through — which shuts down
+                    // from a stop hook — and a persistence hook saves state those handlers have
+                    // finished changing. The reverse order discarded the reply of every dialogue
+                    // handler in flight at an orderly stop, and on Redis left its entry pending.
+                    unsubscribeDirectMessages();
+
+                    // Execute registered stop hooks (e.g., dialogue, persistence)
                     executeStopHooks();
 
                     // Call lifecycle hook
@@ -299,9 +307,6 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
 
                     // Stop behaviors
                     stopBehaviors();
-
-                    // Unsubscribe from direct messages
-                    unsubscribeDirectMessages();
 
                     // Unregister from directory
                     unregisterFromDirectory();

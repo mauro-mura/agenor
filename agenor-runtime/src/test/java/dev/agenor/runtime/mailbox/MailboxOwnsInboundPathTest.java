@@ -281,6 +281,77 @@ class MailboxOwnsInboundPathTest {
         assertThat(agent.mailbox()).isEmpty();
     }
 
+    @Test
+    @Timeout(10)
+    @DisplayName("a dialogue handler in flight when the agent stops still sends its reply")
+    void aDialogueHandlerInFlightAtStopStillReplies() throws Exception {
+        // Given an agent whose dialogue handler is running when the agent is told to stop
+        var agent = new RepliesSlowly();
+        agent.setMessageDispatcher(dispatcher);
+        agent.setAgentDirectory(directory);
+        agent.setBehaviorScheduler(scheduler);
+        new AgentAnnotationProcessor(dispatcher, Optional.empty()).processAnnotations(agent);
+        agent.start().join();
+        var replies = new java.util.concurrent.CopyOnWriteArrayList<Message>();
+        var requester = dispatcher.subscribeRecipient("coordinator",
+                MessageHandler.sync(replies::add));
+
+        try {
+            dispatcher.sendTo(DialogueMessage.builder()
+                    .conversationId("conv-stop")
+                    .senderId("coordinator")
+                    .receiverId("slow-replier")
+                    .performative(Performative.REQUEST)
+                    .content("work")
+                    .build()
+                    .toMessage());
+            assertThat(agent.handling.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+            // When the agent stops, and the handler finishes only after the stop has begun
+            var stopped = agent.stop();
+            Thread.sleep(200);
+            agent.release.countDown();
+            stopped.join();
+
+            // Then the handler found its DialogueCapability still there, and the reply went out.
+            // Until 0.41.0 the capability shut down from a stop hook before the mailbox waited
+            // for running handlers, so inform() threw and the reply was lost.
+            awaitUntil(() -> !replies.isEmpty());
+            assertThat(agent.replyFailure.get()).isNull();
+            assertThat(replies).hasSize(1);
+            assertThat(DialogueMessage.fromMessage(replies.get(0)).performative())
+                    .isEqualTo(Performative.INFORM);
+        } finally {
+            agent.release.countDown();
+            requester.unsubscribe();
+        }
+    }
+
+    /** Replies to a REQUEST only once released, so a stop can begin while it is in flight. */
+    static class RepliesSlowly extends BaseAgent {
+
+        final DialogueCapability dialogue = new DialogueCapability(this);
+        final java.util.concurrent.CountDownLatch handling = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        final AtomicReference<Throwable> replyFailure = new AtomicReference<>();
+
+        RepliesSlowly() {
+            super("slow-replier", "slow-replier");
+        }
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage message) throws InterruptedException {
+            handling.countDown();
+            release.await();
+            try {
+                dialogue.inform(message, "done").join();
+            } catch (RuntimeException e) {
+                replyFailure.set(e);
+                throw e;
+            }
+        }
+    }
+
     /**
      * Sends itself a dialogue message from {@code onStart()} and waits until it is queued, so it
      * arrives inside the window between subscribing and the dialogue start hook.

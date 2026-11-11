@@ -23,8 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mailbox routed from the moment it subscribed, before `DialogueCapability` attached from a start
   hook, so such a message went to `onDirectMessage`, was ignored, and on Redis was acknowledged.
   An entry waiting on the node stream met this on every start with a JDBC directory. The mailbox
-  now queues until the start hooks have run, and an agent that fails to start releases its
-  subscription.
+  now queues until the start hooks have run, so `onStart()` must not wait for one of the agent's
+  own messages, and an agent that fails to start releases its subscription.
+
+- **A dialogue handler still running at an orderly stop sends its reply.** The stop hooks ran
+  before the mailbox waited for running handlers, so `DialogueCapability` had shut down and the
+  reply was refused; on Redis the entry stayed pending on a departing node. The agent now stops
+  taking messages and waits for its handlers first, and a persistence hook saves what they left.
 
 - **A conversation whose participant went silent after `AGREE` no longer stays open forever.** It
   stayed `AGREED`, which the retention sweep never collects: one per participant that died holding
