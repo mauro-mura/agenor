@@ -92,6 +92,7 @@ misspelled `base-package` shows up there.
 |-----|---------|-------------|
 | `provider` | `inmemory` | Implementation: `inmemory`, `redis` |
 | `redis.uri` | `redis://localhost:6379` | Redis URI (only when `provider=redis`) |
+| `redis.node-id` | new UUID per start | This instance's node id: names its stream and its consumer. Unique per running instance |
 | `redis.consumer-group-prefix` | `agenor` | Prefix for stream keys and consumer groups |
 | `redis.read-block-timeout-ms` | `2000` | XREADGROUP BLOCK timeout (ms) |
 | `redis.max-stream-length` | `100000` | Max entries per stream before trimming |
@@ -174,11 +175,30 @@ agenor:
 ```
 
 Every node uses the same Redis URI, the same JDBC URL and the same `consumer-group-prefix`.
-The starter generates a node id per JVM, and there is no property to set it. Each agent is
-advertised in `agenor_agents` under that id with `endpoint_transport_type = redis`. A row with a
+Each agent is advertised in `agenor_agents` under its node's id with
+`endpoint_transport_type = redis`. A row with a
 blank `node_id` or transport `local` means messages to that agent from another node are lost
 without an error. [Distributed quick start](distributed-quick-start.md) shows the same setup
 built by hand, with a fixed node id per node.
+
+**Set `redis.node-id` on a node whose mail must survive a restart.** Unset, every start takes a
+new UUID, and what the previous run left in its stream — requests it had accepted and not yet
+handled — stays there with nobody reading it, while the requesters wait out their timeouts. Under
+a fixed id the next start reads that stream again, beginning with what the last run read and did
+not acknowledge. Until 0.41.0 the starter had no such property.
+
+The id must be stable across restarts and unique among the instances running at once: two live
+instances sharing one read each other's mail, and each takes the other's in-flight entries back
+on its own restart. A hostname or a StatefulSet pod name fits; the pod name of a Deployment
+changes at every restart and gives back the UUID's behaviour. Retiring an id leaves its stream
+behind, see [Redis messaging](adapters/redis.md#point-to-point-mechanics).
+
+```yaml
+agenor:
+  messaging:
+    redis:
+      node-id: ${HOSTNAME}
+```
 
 ### `agenor.llm`
 

@@ -151,6 +151,24 @@ class AgenorPropertiesTest {
             });
     }
 
+    // --- redis node id ---
+
+    @Test
+    void redisNodeIdIsAbsentUnlessSet() {
+        runner
+            .withPropertyValues("agenor.messaging.redis.uri=redis://broker:6379")
+            .run(ctx -> assertThat(ctx.getBean(AgenorProperties.class)
+                    .messaging().redis().nodeId()).isNull());
+    }
+
+    @Test
+    void redisNodeIdBindsFromKebabCase() {
+        runner
+            .withPropertyValues("agenor.messaging.redis.node-id=orders-1")
+            .run(ctx -> assertThat(ctx.getBean(AgenorProperties.class)
+                    .messaging().redis().nodeId()).isEqualTo("orders-1"));
+    }
+
     // --- support config ---
 
     @EnableConfigurationProperties(AgenorProperties.class)

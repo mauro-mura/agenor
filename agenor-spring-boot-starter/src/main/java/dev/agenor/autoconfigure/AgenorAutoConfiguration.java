@@ -466,6 +466,7 @@ public class AgenorAutoConfiguration {
             var redis = props.messaging().redis();
             return dev.agenor.adapters.messaging.redis.RedisMessagingFactory.builder()
                     .uri(redis != null ? redis.uri() : "redis://localhost:6379")
+                    .nodeId(redis != null ? redis.nodeId() : null)
                     .consumerGroupPrefix(redis != null ? redis.consumerGroupPrefix() : "agenor")
                     .readBlockTimeoutMs(redis != null ? redis.readBlockTimeoutMs() : 2000L)
                     .maxStreamLength(redis != null ? redis.maxStreamLength() : 100_000)

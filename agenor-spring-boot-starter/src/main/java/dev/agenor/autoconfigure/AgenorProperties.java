@@ -122,6 +122,7 @@ public record AgenorProperties(
      *     provider: redis
      *     redis:
      *       uri: redis://localhost:6379
+     *       node-id: orders-1
      *       consumer-group-prefix: agenor
      *       read-block-timeout-ms: 2000
      *       max-stream-length: 100000
@@ -140,6 +141,10 @@ public record AgenorProperties(
          * Redis Streams configuration.
          *
          * @param uri                     Redis connection URI; default {@code redis://localhost:6379}
+         * @param nodeId                  this instance's node id, which names its node stream and
+         *                                its consumer; absent means a new UUID at every start.
+         *                                Set it for a node whose mail must survive a restart, and
+         *                                give every live instance its own (since 0.41.0)
          * @param consumerGroupPrefix     prefix for stream keys and consumer groups; default {@code agenor}
          * @param readBlockTimeoutMs      XREADGROUP BLOCK timeout in milliseconds; default {@code 2000}
          * @param maxStreamLength         max entries per stream before approximate trimming; default {@code 100000}
@@ -148,6 +153,7 @@ public record AgenorProperties(
          */
         public record Redis(
                 @DefaultValue("redis://localhost:6379") String uri,
+                String nodeId,
                 @DefaultValue("agenor") String consumerGroupPrefix,
                 @DefaultValue("2000") long readBlockTimeoutMs,
                 @DefaultValue("100000") int maxStreamLength,

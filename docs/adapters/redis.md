@@ -138,8 +138,9 @@ try (var factory = RedisMessagingFactory.builder()
 
 `<prefix>` defaults to `agenor`, configurable via `consumerGroupPrefix`.
 
-`nodeId` is a UUID generated once at `RedisMessagingFactory.build()`. In a multi-node
-deployment each JVM instance gets a different `nodeId` and therefore a different node stream.
+`nodeId` is what `Builder.nodeId(...)` sets, or `agenor.messaging.redis.node-id` in the
+starter; unset, it is a UUID generated once at `RedisMessagingFactory.build()`. In a multi-node
+deployment each JVM instance has a different `nodeId` and therefore a different node stream.
 
 ### Fan-out mechanics
 
@@ -186,7 +187,8 @@ Consequences worth planning for:
 - **A node that restarts under a new `nodeId` does not get its old mail.** The default is a new
   UUID at every start. Until the directory row points at the new node, what is sent to the agent
   goes to the old stream, which nobody reads. The sender has already had its success: there is no
-  error and no dead letter. If a node's mail should survive a restart, fix its `nodeId`.
+  error and no dead letter. If a node's mail should survive a restart, fix its `nodeId` — with the
+  starter, `agenor.messaging.redis.node-id`.
 - **Waiting mail does not expire.** A message has no deadline, and a timeout exists only on the
   caller's side. A `request` that has already failed with a `TimeoutException` still runs when
   its node comes back, with whatever that costs. A handler for which that matters can compare

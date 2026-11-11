@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`agenor.messaging.redis.node-id` fixes a starter-built node's id across restarts.** The
+  starter took a new UUID at every start, so what a node left in its stream was never read again
+  and its requesters timed out: the fix that returns pending entries on restart could not reach a
+  Spring Boot application. Unset, nothing changes. The id must be unique per running instance.
+
 ### Fixed
 
 - **On Redis, a handler that succeeded is not run again because its `XACK` was lost.** The ack

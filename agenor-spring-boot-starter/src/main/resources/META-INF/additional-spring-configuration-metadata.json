@@ -63,10 +63,15 @@
       "defaultValue": "redis://localhost:6379"
     },
     {
+      "name": "agenor.messaging.redis.node-id",
+      "type": "java.lang.String",
+      "description": "This instance's node id, naming its node stream and its consumer. Unset means a new UUID at every start, so mail waiting for the previous run is never read. Must be unique among the instances running at once."
+    },
+    {
       "name": "agenor.messaging.redis.consumer-group-prefix",
       "type": "java.lang.String",
       "description": "Prefix for Redis stream keys and consumer group names.",
-      "defaultValue": "Agenor"
+      "defaultValue": "agenor"
     },
     {
       "name": "agenor.messaging.redis.read-block-timeout-ms",
