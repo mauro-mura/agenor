@@ -688,21 +688,19 @@ direct-message path. A message whose `performative` header holds a value this ru
 know is treated the same way and logged at WARN, rather than being executed as an `INFORM` its
 sender never sent.
 
-The reverse is not filtered: a dialogue message **also** reaches `onDirectMessage()`, because an
-agent without a `DialogueCapability` must still be able to receive it. If you override
-`onDirectMessage()` on an agent that speaks dialogue, skip dialogue traffic yourself:
+The reverse is decided by the mailbox. On a `BaseAgent` with a `DialogueCapability`, a dialogue
+message goes to the `@DialogueHandler` methods and **not** to `onDirectMessage()`, so an override
+needs no guard. It reaches `onDirectMessage()` only while no capability is attached — on an agent
+that does not speak dialogue, or after `shutdown()` — so a peer's dialogue traffic is still
+received rather than dropped. While the agent starts, the mailbox queues and routes nothing until
+the start hooks have attached the capability, so a message arriving then is not misrouted either.
 
-```java
-@Override
-protected void onDirectMessage(Message message) {
-    if (DialogueMessage.isDialogueMessage(message)) {
-        return;   // handled by @DialogueHandler
-    }
-    ...
-}
-```
+An agent that implements `Agent` directly has no mailbox: dialogue takes a subscription of its
+own next to the agent's, both receive every message, and the agent's own handler has to skip
+dialogue traffic with `DialogueMessage.isDialogueMessage(message)`.
 
-See ADR-029 for the reasoning behind the asymmetry.
+ADR-029 D3 introduced the fallthrough; [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md)
+replaced it with routing on a `BaseAgent`.
 
 ## Swapping the conversation manager
 
