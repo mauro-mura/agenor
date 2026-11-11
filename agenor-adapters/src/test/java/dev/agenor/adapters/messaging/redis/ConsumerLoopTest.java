@@ -1,6 +1,7 @@
 package dev.agenor.adapters.messaging.redis;
 
 import io.lettuce.core.RedisCommandExecutionException;
+import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.jupiter.api.AfterEach;
@@ -61,6 +62,10 @@ class ConsumerLoopTest {
         when(streamClient.newConsumerConnection()).thenReturn(mockConn);
         when(mockConn.sync()).thenReturn(mockCmds);
         when(mockCmds.xreadgroup(any(), any(), any())).thenAnswer(inv -> {
+            // The read of this consumer's own pending entries at start is not the loop's read
+            // under test: it finds nothing, and a failure there is left to the reclaim.
+            XReadArgs.StreamOffset<String> offset = inv.getArgument(2);
+            if (!">".equals(offset.getOffset())) return List.of();
             reads.countDown();
             if (first.compareAndSet(true, false)) throw error;
             Thread.sleep(5);

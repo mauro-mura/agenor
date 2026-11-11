@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reclaimed, handled twice, and past `maxDeliveryAttempts` dead-lettered. Now the loop remembers
   it and acknowledges it on reclaim. A crash before the ack still redelivers.
 
+- **On Redis, a node restarted under the same `nodeId` gets its pending entries back at once.**
+  What it had read and not acknowledged before stopping came back only after
+  `pendingEntriesTimeoutMs`, 30 s by default, so an application had to guess how long to wait.
+  Each consumer loop now reads its own pending entries on start.
+
 - **A dialogue message that arrives while an agent starts reaches its `@DialogueHandler`.** The
   mailbox routed from the moment it subscribed, before `DialogueCapability` attached from a start
   hook, so such a message went to `onDirectMessage`, was ignored, and on Redis was acknowledged.

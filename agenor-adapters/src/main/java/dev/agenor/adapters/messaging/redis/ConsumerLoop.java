@@ -169,6 +169,7 @@ final class ConsumerLoop {
         var offset   = XReadArgs.StreamOffset.<String>lastConsumed(streamKey);
         var cmds     = conn.sync();
 
+        readOwnPending(cmds);
         long lastClaimAt = System.currentTimeMillis();
 
         while (running.get() && !Thread.currentThread().isInterrupted()) {
@@ -200,6 +201,51 @@ final class ConsumerLoop {
             }
         }
         log.debug("Consumer loop stopped for stream '{}'", streamKey);
+    }
+
+    /**
+     * Delivers, once at start, the entries this consumer had read and not acknowledged: what a
+     * node that stopped or died mid-handling left in the PEL under its own name.
+     *
+     * <p>{@code XREADGROUP ... >} never returns those again, and {@link #reclaimPending} reaches
+     * them only once they have been idle for {@code pendingEntriesTimeoutMs} — 30 s by default,
+     * on a first pass that runs that long after start. Reading from an explicit id returns this
+     * consumer's own pending entries after it, idle or not, so a node restarting under the same
+     * {@code nodeId} picks up its work at once. Entries pending under another consumer's name
+     * are not returned, and stay with the reclaim.
+     *
+     * <p>Only at start: later, an entry pending under this name is one whose handler failed in
+     * this process, and reading it at once would skip the wait the reclaim timeout gives it.
+     * A failure here is logged and left to the reclaim, which covers the same entries later.
+     */
+    @SuppressWarnings("unchecked")
+    private void readOwnPending(io.lettuce.core.api.sync.RedisCommands<String, String> cmds) {
+        var args   = XReadArgs.Builder.count(10);
+        var cursor = "0-0";
+        int count  = 0;
+        try {
+            while (running.get() && !Thread.currentThread().isInterrupted()) {
+                var entries = cmds.xreadgroup(consumer, args,
+                        XReadArgs.StreamOffset.from(streamKey, cursor));
+                if (entries == null || entries.isEmpty()) {
+                    break;
+                }
+                for (var m : entries) {
+                    processMessage(m);
+                    cursor = m.getId();
+                    count++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not read pending entries of '{}' on start: {}; the reclaim will "
+                    + "deliver them after {}ms", streamKey, e.getMessage(),
+                    config.pendingEntriesTimeoutMs());
+            return;
+        }
+        if (count > 0) {
+            log.info("Delivered {} entr(ies) left pending on '{}' by a previous run of this node",
+                    count, streamKey);
+        }
     }
 
     private static boolean isGroupLost(Exception e) {
@@ -239,8 +285,8 @@ final class ConsumerLoop {
      * is where the delivery-attempt count and the dead-letter hop live.
      *
      * <p>Reclaiming from {@code 0-0} each pass covers entries abandoned by a consumer that died
-     * as well as ones this consumer failed to handle, so a restarted node picks up its own
-     * pending work.
+     * as well as ones this consumer failed to handle. A restarted node's own pending work does
+     * not wait for this pass: {@link #readOwnPending} delivers it on start.
      */
     private void reclaimPending(io.lettuce.core.api.sync.RedisCommands<String, String> cmds) {
         try {

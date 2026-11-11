@@ -366,7 +366,16 @@ adapter deliberately does not make it for you.
 Each consumer loop runs a reclaim pass — `XAUTOCLAIM` from `0-0` with
 `minIdleTime = pendingEntriesTimeoutMs` — no more often than that same interval. Entries idle
 for longer, whether this consumer failed to handle them or another consumer died holding them,
-are claimed and reprocessed. A restarted JVM picks up its own pending entries automatically.
+are claimed and reprocessed.
+
+A node that restarts under the same `nodeId` does not wait for that pass. Its consumer name is
+the same, so on start each loop first reads the entries pending under that name — read and not
+acknowledged before the stop or the crash — and delivers them at once, before anything new.
+Before 0.41.0 they came back only after `pendingEntriesTimeoutMs`, on a first reclaim pass that
+ran that long after start. Entries pending under another node's name stay with the reclaim.
+They are delivered at once, not before `start()` returns: an application that must not act
+until they are handled still has to wait for them itself. The in-memory dispatcher has no
+pending entries, so there is nothing to recover there.
 
 Delivery attempts are counted per consumer-loop instance, in memory. A restart resets the
 count, so an entry that had already failed twice starts again from one.
