@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: An agent handles nothing addressed to it until `onStart()` and its start hooks have
+  returned.** The mailbox routed from the moment it subscribed, before `DialogueCapability` attached
+  from a start hook, so a dialogue message arriving meanwhile went to `onDirectMessage`, was
+  ignored, and on Redis acknowledged: with a JDBC directory, on every start. It now reaches its
+  `@DialogueHandler`, and an agent that fails to start releases its subscription.
+  Migration: a request arriving during a slow `onStart()` is answered after it, and may time out;
+  move long work into a `ONE_SHOT` behavior. Neither may wait for one of the agent's own messages:
+  on Redis, a `sendTo` to itself blocks the start.
+
 ### Added
 
 - **`agenor.messaging.redis.node-id` fixes a starter-built node's id across restarts.** The
@@ -26,17 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pendingEntriesTimeoutMs`, 30 s by default, so an application had to guess how long to wait.
   Each consumer loop now reads its own pending entries on start.
 
-- **A dialogue message that arrives while an agent starts reaches its `@DialogueHandler`.** The
-  mailbox routed from the moment it subscribed, before `DialogueCapability` attached from a start
-  hook, so such a message went to `onDirectMessage`, was ignored, and on Redis was acknowledged.
-  An entry waiting on the node stream met this on every start with a JDBC directory. The mailbox
-  now queues until the start hooks have run, so `onStart()` must not wait for one of the agent's
-  own messages, and an agent that fails to start releases its subscription.
-
 - **A dialogue handler still running at an orderly stop sends its reply.** The stop hooks ran
   before the mailbox waited for running handlers, so `DialogueCapability` had shut down and the
   reply was refused; on Redis the entry stayed pending on a departing node. The agent now stops
-  taking messages and waits for its handlers first, and a persistence hook saves what they left.
+  taking messages and waits for its handlers first, up to 5 s, and a persistence hook saves what
+  they left. Not marked BREAKING: a message arriving during a stop was never promised a handler.
 
 - **A conversation whose participant went silent after `AGREE` no longer stays open forever.** It
   stayed `AGREED`, which the retention sweep never collects: one per participant that died holding

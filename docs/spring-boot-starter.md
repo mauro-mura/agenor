@@ -187,6 +187,13 @@ handled — stays there with nobody reading it, while the requesters wait out th
 a fixed id the next start reads that stream again, beginning with what the last run read and did
 not acknowledge. Until 0.41.0 the starter had no such property.
 
+**That includes requests whose senders have given up.** A message carries no deadline, so a
+`request` that already failed with a `TimeoutException` still runs when the node comes back, and
+an A2A task the client was told `failed` runs too. A handler with side effects must be safe to
+run late, or twice when the sender retries: see
+[Redis messaging](adapters/redis.md#point-to-point-mechanics) and
+[A2A](dialog-protocol.md#serving-it-agenora2aserver).
+
 The id must be stable across restarts and unique among the instances running at once: two live
 instances sharing one read each other's mail, and each takes the other's in-flight entries back
 on its own restart. A hostname or a StatefulSet pod name fits; the pod name of a Deployment
