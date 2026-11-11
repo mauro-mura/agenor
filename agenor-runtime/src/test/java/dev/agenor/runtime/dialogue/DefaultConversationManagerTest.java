@@ -563,4 +563,139 @@ class DefaultConversationManagerTest {
                 .hasSize(2);
         }
     }
+
+    // ---------------------------------------------------------------- after AGREE, silence
+
+    /**
+     * A Contract Net participant that dies after the initiator's {@code AGREE} sends neither
+     * {@code INFORM} nor {@code FAILURE}. Its commitment goes {@code VIOLATED} at the deadline;
+     * the conversation stayed {@code AGREED}, which is not terminal, so the retention sweep never
+     * collected it — one leaked conversation per participant that died holding work.
+     */
+    @Test
+    void shouldEndAConversationWhoseCommitmentWasViolatedSoTheSweepCollectsIt() throws Exception {
+        var manager = managerWithCommitmentDeadline(Duration.ofMillis(1));
+        var agree = awardTo(manager, "worker");
+        var conversationId = agree.conversationId();
+        assertThat(manager.getConversation(conversationId).orElseThrow().getState())
+            .isEqualTo(ProtocolState.AGREED);
+
+        // When the participant says nothing past the deadline
+        Thread.sleep(20);
+        assertThat(manager.getCommitmentTracker().checkViolations()).hasSize(1);
+
+        // Then the next sweep ends the conversation instead of keeping it AGREED forever...
+        assertThat(manager.cleanup(Duration.ofMinutes(5))).isZero();
+        assertThat(manager.getConversation(conversationId).orElseThrow().getState())
+            .isEqualTo(ProtocolState.TIMEOUT);
+
+        // ...and, once past retention, removes it
+        assertThat(manager.cleanup(Duration.ZERO)).isEqualTo(1);
+        assertThat(manager.getConversation(conversationId)).isEmpty();
+    }
+
+    /**
+     * The commitment deadline is the framework's default, not the application's: a result that
+     * arrives after it can still be the one the application is waiting for. Ending the
+     * conversation must not stop it being recorded.
+     */
+    @Test
+    void shouldStillRecordALateResultOnAConversationEndedByAViolation() throws Exception {
+        var manager = managerWithCommitmentDeadline(Duration.ofMillis(1));
+        var agree = awardTo(manager, "worker");
+        Thread.sleep(20);
+        manager.getCommitmentTracker().checkViolations();
+        manager.cleanup(Duration.ofMinutes(5));
+
+        var late = DialogueMessage.builder()
+            .conversationId(agree.conversationId())
+            .senderId("worker")
+            .receiverId("local-agent")
+            .performative(Performative.INFORM)
+            .content("result")
+            .inReplyTo(agree.id())
+            .protocol("contract-net")
+            .build();
+        manager.handleIncoming(late);
+
+        var conversation = manager.getConversation(agree.conversationId()).orElseThrow();
+        assertThat(conversation.getHistory()).contains(late);
+        assertThat(conversation.getState()).isEqualTo(ProtocolState.TIMEOUT);
+    }
+
+    /**
+     * A {@code request()} still awaiting its answer has its own timeout, which ends the
+     * conversation when it fires. A commitment deadline shorter than that timeout must not end
+     * it first.
+     */
+    @Test
+    void shouldNotEndAViolatedConversationWhileARequestStillAwaitsItsAnswer() throws Exception {
+        var manager = managerWithCommitmentDeadline(Duration.ofMillis(1));
+        var future = manager.request("slow", "task", Duration.ofSeconds(30));
+        var request = manager.getConversationsWith("slow").get(0).getHistory().get(0);
+        manager.handleIncoming(DialogueMessage.builder()
+            .conversationId(request.conversationId())
+            .senderId("slow")
+            .receiverId("local-agent")
+            .performative(Performative.AGREE)
+            .inReplyTo(request.id())
+            .protocol("request")
+            .build());
+
+        Thread.sleep(20);
+        assertThat(manager.getCommitmentTracker().checkViolations()).hasSize(1);
+        manager.cleanup(Duration.ZERO);
+
+        assertThat(future).isNotDone();
+        assertThat(manager.getConversation(request.conversationId()).orElseThrow().getState())
+            .isEqualTo(ProtocolState.AGREED);
+    }
+
+    /**
+     * A reply to a conversation this agent no longer holds — swept, or lost with a restart —
+     * used to open a fresh conversation in the protocol's initial state, where no reply ever
+     * moves it: a leak that no sweep could collect. It now opens nothing.
+     */
+    @Test
+    void shouldNotOpenAConversationForAReplyToOneItNoLongerHolds() {
+        manager.handleIncoming(DialogueMessage.builder()
+            .conversationId("swept")
+            .senderId("worker")
+            .receiverId("local-agent")
+            .performative(Performative.INFORM)
+            .content("result")
+            .inReplyTo("agree-sent-before-the-restart")
+            .protocol("contract-net")
+            .build());
+
+        assertThat(manager.getConversation("swept")).isEmpty();
+        assertThat(manager.getActiveConversations()).isEmpty();
+    }
+
+    private DefaultConversationManager managerWithCommitmentDeadline(Duration deadline) {
+        var registry = new dev.agenor.runtime.dialogue.protocol.ProtocolRegistry();
+        return new DefaultConversationManager("local-agent", messageDispatcher, registry,
+            new DefaultCommitmentTracker(deadline, registry));
+    }
+
+    /** Runs a one-participant Contract Net up to the AGREE and returns the AGREE sent. */
+    private static DialogueMessage awardTo(DefaultConversationManager manager, String participant)
+            throws Exception {
+        var future = manager.callForProposals(List.of(participant), "spec", Duration.ofSeconds(5));
+        var cfp = manager.getConversationsWith(participant).get(0).getHistory().get(0);
+        var propose = DialogueMessage.builder()
+            .conversationId(cfp.conversationId())
+            .senderId(participant)
+            .receiverId("local-agent")
+            .performative(Performative.PROPOSE)
+            .content("bid")
+            .inReplyTo(cfp.id())
+            .protocol("contract-net")
+            .build();
+        manager.handleIncoming(propose);
+        future.get(2, TimeUnit.SECONDS);
+        manager.reply(propose, Performative.AGREE, "spec");
+        var history = manager.getConversation(cfp.conversationId()).orElseThrow().getHistory();
+        return history.get(history.size() - 1);
+    }
 }

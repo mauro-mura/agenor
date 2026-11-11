@@ -1,6 +1,7 @@
 package dev.agenor.runtime.dialogue;
 
 import dev.agenor.core.messaging.MessageDispatcher;
+import dev.agenor.core.dialogue.CommitmentState;
 import dev.agenor.core.dialogue.CommitmentTracker;
 import dev.agenor.core.dialogue.Conversation;
 import dev.agenor.core.dialogue.ConversationManager;
@@ -197,25 +198,22 @@ public class DefaultConversationManager implements ConversationManager {
     public void handleIncoming(DialogueMessage message) {
         var conversationId = message.conversationId();
 
-        // computeIfAbsent, not get-then-put: the dispatcher delivers each message on its own
-        // virtual thread, so two messages opening the same unknown conversation arrive
-        // concurrently. A check-then-act builds two conversations and keeps whichever put ran
-        // last — the message written to the discarded one is lost outright.
-        var conversation = conversations.computeIfAbsent(conversationId, id -> {
-            var protocol = message.getProtocol()
-                .flatMap(protocolRegistry::get)
-                .orElse(null);
+        var conversation = message.inReplyTo() == null
+            ? conversations.computeIfAbsent(conversationId, id -> open(id, message))
+            : conversations.get(conversationId);
 
-            return new DefaultConversation(
-                id,
-                protocol,
-                message.senderId(),
-                localAgentId,
-                false
-            );
-        });
-
-        conversation.addMessage(message);
+        // A reply opens nothing. If this agent does not hold the conversation it answers, the
+        // conversation was swept or lost with a restart, and a fresh one would start in the
+        // protocol's initial state, where no reply ever moves it: active forever, never swept.
+        // The rest still runs — a commitment or a pending future may outlive the conversation —
+        // and the caller dispatches the message to the agent's handlers regardless, because a
+        // late result may be exactly what the application is waiting for.
+        if (conversation != null) {
+            conversation.addMessage(message);
+        } else {
+            log.debug("Agent {} holds no conversation {}: {} from {} is delivered without one",
+                localAgentId, conversationId, message.performative(), message.senderId());
+        }
 
         // Update commitment if exists (only if this is a reply)
         if (message.inReplyTo() != null) {
@@ -237,6 +235,22 @@ public class DefaultConversationManager implements ConversationManager {
         if (handler != null) {
             handler.accept(message);
         }
+    }
+
+    /**
+     * The conversation a first message opens on the receiving side.
+     *
+     * <p>Called from {@code computeIfAbsent}, not get-then-put: the dispatcher delivers each
+     * message on its own virtual thread, so two messages opening the same unknown conversation
+     * arrive concurrently. A check-then-act builds two conversations and keeps whichever put ran
+     * last — the message written to the discarded one is lost outright.
+     */
+    private DefaultConversation open(String conversationId, DialogueMessage message) {
+        var protocol = message.getProtocol()
+            .flatMap(protocolRegistry::get)
+            .orElse(null);
+        return new DefaultConversation(conversationId, protocol, message.senderId(), localAgentId,
+            false);
     }
 
     @Override
@@ -311,7 +325,15 @@ public class DefaultConversationManager implements ConversationManager {
      * via {@link #onMessage(String, Consumer)}.
      *
      * <p>Active conversations are never removed, however old: a slow participant must not
-     * have its conversation swept out from under it.
+     * have its conversation swept out from under it. Slow stops at the deadline of a commitment
+     * made in the conversation: one whose commitment the tracker has marked
+     * {@link dev.agenor.core.dialogue.CommitmentState#VIOLATED} is first ended in
+     * {@link ProtocolState#TIMEOUT}, and removed once it is past {@code olderThan} like any other.
+     * Without that, a participant that died after {@code AGREE} — which sends neither
+     * {@code INFORM} nor {@code FAILURE} — left its conversation {@code AGREED} for the lifetime
+     * of the agent. A conversation still awaited by a {@code request()} is left to that
+     * request's own timeout. Ending it does not refuse a late reply: the reply is recorded and
+     * still reaches the agent's handlers.
      *
      * @param olderThan retention window measured from the conversation's last activity
      * @return the number of conversations removed
@@ -319,6 +341,7 @@ public class DefaultConversationManager implements ConversationManager {
      */
     @Override
     public int cleanup(Duration olderThan) {
+        endConversationsWithViolatedCommitments();
         var cutoff = Instant.now().minus(olderThan);
         var toRemove = conversations.entrySet().stream()
             .filter(e -> e.getValue().getState().isTerminal())
@@ -331,6 +354,38 @@ public class DefaultConversationManager implements ConversationManager {
             messageHandlers.remove(id);
         });
         return toRemove.size();
+    }
+
+    /**
+     * Ends each active conversation in which a commitment has been marked violated and no
+     * future still waits for an answer.
+     *
+     * <p>Commitments are found through the messages that created them, by
+     * {@link CommitmentTracker#getByMessageId}, so this works with any tracker. It runs at the
+     * start of the sweep, before the tracker drops terminated commitments, so a commitment marked
+     * violated by the previous sweep is still there to be read.
+     */
+    private void endConversationsWithViolatedCommitments() {
+        for (var conversation : conversations.values()) {
+            if (conversation.getState().isTerminal()) {
+                continue;
+            }
+            var history = conversation.getHistory();
+            if (history.stream().anyMatch(m -> pendingResponses.containsKey(m.id()))) {
+                continue;
+            }
+            history.stream()
+                .map(m -> commitmentTracker.getByMessageId(m.id()))
+                .flatMap(Optional::stream)
+                .map(commitmentTracker::get)
+                .flatMap(Optional::stream)
+                .filter(c -> c.getState() == CommitmentState.VIOLATED)
+                .findFirst()
+                .filter(c -> conversation.endIfActive(ProtocolState.TIMEOUT))
+                .ifPresent(c -> log.debug(
+                    "Agent {} ended conversation {}: commitment {} violated, {} never answered",
+                    localAgentId, conversation.getId(), c.getId(), c.getPerformer()));
+        }
     }
 
     /**
@@ -359,6 +414,11 @@ public class DefaultConversationManager implements ConversationManager {
     private boolean shouldResolvePendingResponse(DefaultConversation conversation, DialogueMessage message) {
         if (message.performative() != Performative.AGREE) {
             return true;
+        }
+        if (conversation == null) {
+            // No state to read the protocol's position from; an AGREE is intermediate in every
+            // protocol that has one, so the future keeps waiting for the outcome or its timeout.
+            return false;
         }
         return conversation.getProtocol()
             .map(protocol -> protocol.allowedPerformatives(conversation.getState(), false).stream()

@@ -15,7 +15,9 @@ import dev.agenor.examples.dialogue.ContractNetExample.Task;
 import dev.agenor.examples.dialogue.ContractNetExample.Worker;
 import dev.agenor.runtime.AgenorRuntime;
 import dev.agenor.runtime.agent.BaseAgent;
+import dev.agenor.runtime.dialogue.DefaultCommitmentTracker;
 import dev.agenor.runtime.dialogue.DialogueCapability;
+import dev.agenor.runtime.dialogue.protocol.ProtocolRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,6 +100,8 @@ class ContractNetCrossRuntimeIT {
     private Manager manager;
     private Worker worker1;
     private Worker worker3;
+    private ShortDeadlineInitiator initiator;
+    private DiesAfterAgree diesAfterAgree;
 
     @BeforeEach
     void setUp() {
@@ -137,6 +142,10 @@ class ContractNetCrossRuntimeIT {
         workerRuntime.registerAgent(new Worker("worker-2", 0.9));
         workerRuntime.registerAgent(worker3);
         workerRuntime.registerAgent(new SilentParticipant());
+        initiator = new ShortDeadlineInitiator();
+        managerRuntime.registerAgent(initiator);
+        diesAfterAgree = new DiesAfterAgree();
+        workerRuntime.registerAgent(diesAfterAgree);
 
         managerRuntime.start().join();
         workerRuntime.start().join();
@@ -226,6 +235,117 @@ class ContractNetCrossRuntimeIT {
                 .containsExactly(ProtocolState.TIMEOUT);
         assertEventually(() -> manager.conversationStatesWith("worker-1"), ProtocolState.REFUSED);
         assertEventually(() -> manager.conversationStatesWith("worker-3"), ProtocolState.REFUSED);
+    }
+
+    @Test
+    @DisplayName("a participant silent after AGREE: its conversation ends, is swept, and a late INFORM still arrives")
+    void conversationOfAParticipantSilentAfterAgreeIsSweptAndALateResultStillArrives()
+            throws Exception {
+        awaitEndpoint(DiesAfterAgree.ID);
+
+        var propose = initiator.award(DiesAfterAgree.ID);
+        var conversationId = propose.conversationId();
+        assertEventually(() -> stateOf(initiator, conversationId), ProtocolState.AGREED);
+
+        // Past the one-second commitment deadline the sweep marks it VIOLATED, and the next one
+        // ends the conversation; until 0.41.0 it stayed AGREED for the life of the agent.
+        assertEventually(() -> stateOf(initiator, conversationId), ProtocolState.TIMEOUT);
+        awaitGone(conversationId);
+
+        // The participant was slow, not dead: its result crosses the wire after the initiator
+        // has forgotten the conversation. It reaches the handler, and opens nothing.
+        diesAfterAgree.answerLate();
+        var deadline = Instant.now().plus(TIMEOUT);
+        while (initiator.results.isEmpty() && Instant.now().isBefore(deadline)) {
+            sleep();
+        }
+        assertThat(initiator.results).extracting(DialogueMessage::conversationId)
+                .containsExactly(conversationId);
+        assertThat(initiator.dialogue.getConversation(conversationId)).isEmpty();
+        assertThat(initiator.dialogue.getActiveConversations()).isEmpty();
+    }
+
+    /**
+     * An initiator whose commitments fall due after one second, swept every half second: the
+     * defaults (five minutes, one minute) with the clock turned up.
+     */
+    static class ShortDeadlineInitiator extends BaseAgent {
+
+        static final String ID = "short-deadline-initiator";
+
+        private final ProtocolRegistry registry = new ProtocolRegistry();
+        final DialogueCapability dialogue = DialogueCapability.builder(this)
+                .protocolRegistry(registry)
+                .commitmentTracker(new DefaultCommitmentTracker(Duration.ofSeconds(1), registry))
+                .sweepInterval(Duration.ofMillis(500))
+                .retention(Duration.ofSeconds(2))
+                .build();
+        final List<DialogueMessage> results = new CopyOnWriteArrayList<>();
+
+        @Override public String getAgentId() { return ID; }
+        @Override public String getAgentName() { return ID; }
+
+        @DialogueHandler(performatives = Performative.INFORM)
+        public void onInform(DialogueMessage msg) {
+            results.add(msg);
+        }
+
+        /** A one-participant Contract Net up to the AGREE; returns the proposal it accepted. */
+        DialogueMessage award(String participant) throws Exception {
+            var proposals = dialogue.callForProposals(List.of(participant), "job", TIMEOUT)
+                    .get(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+            var propose = proposals.getFirst();
+            dialogue.agree(propose, "job").get(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+            return propose;
+        }
+    }
+
+    /**
+     * Proposes, and after the AGREE says nothing — as a participant killed while holding the work
+     * does — until the test makes it answer late.
+     */
+    static class DiesAfterAgree extends BaseAgent {
+
+        static final String ID = "dies-after-agree";
+
+        private final DialogueCapability dialogue = new DialogueCapability(this);
+        private volatile DialogueMessage agree;
+
+        @Override public String getAgentId() { return ID; }
+        @Override public String getAgentName() { return ID; }
+
+        @DialogueHandler(performatives = Performative.CFP)
+        public void onCfp(DialogueMessage cfp) {
+            dialogue.propose(cfp, "bid");
+        }
+
+        @DialogueHandler(performatives = Performative.AGREE)
+        public void onAgree(DialogueMessage msg) {
+            agree = msg;
+        }
+
+        void answerLate() {
+            assertThat(agree).as("the AGREE never reached the participant").isNotNull();
+            dialogue.inform(agree, "late result").join();
+        }
+    }
+
+    private static List<ProtocolState> stateOf(ShortDeadlineInitiator agent, String conversationId) {
+        return agent.dialogue.getConversation(conversationId)
+                .map(c -> List.of(c.getState()))
+                .orElse(List.of());
+    }
+
+    private void awaitGone(String conversationId) {
+        var deadline = Instant.now().plus(TIMEOUT);
+        while (Instant.now().isBefore(deadline)) {
+            if (initiator.dialogue.getConversation(conversationId).isEmpty()) {
+                return;
+            }
+            sleep();
+        }
+        throw new AssertionError("Conversation " + conversationId + " was never swept — last seen: "
+                + stateOf(initiator, conversationId));
     }
 
     /** Receives every CFP and answers none, as a stuck agent on a live node does. */

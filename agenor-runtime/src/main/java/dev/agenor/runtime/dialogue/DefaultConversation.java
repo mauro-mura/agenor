@@ -179,4 +179,21 @@ public class DefaultConversation implements Conversation {
             this.lastActivity = Instant.now();
         }
     }
+
+    /**
+     * Moves the conversation to {@code terminal} unless it has already ended, as one step: a
+     * reply that ends it concurrently is not overwritten.
+     *
+     * @return whether this call ended the conversation
+     */
+    boolean endIfActive(ProtocolState terminal) {
+        synchronized (stateLock) {
+            if (state.isTerminal()) {
+                return false;
+            }
+            this.state = terminal;
+            this.lastActivity = Instant.now();
+            return true;
+        }
+    }
 }

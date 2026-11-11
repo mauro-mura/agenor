@@ -356,8 +356,20 @@ private final DialogueCapability dialogue = DialogueCapability.builder(this)
     .build();
 ```
 
-`VIOLATED` is an observation, not an action. Nothing is cancelled or blocked, and a reply that
-arrives after the deadline is still delivered.
+`VIOLATED` is an observation, not an action. Nothing is cancelled or blocked, no message is
+sent, and a reply that arrives after the deadline is still delivered to your handlers.
+
+The one consequence is for the conversation the commitment was made in. A participant that died
+after `AGREE` sends neither `INFORM` nor `FAILURE`, so the conversation would otherwise stay
+`AGREED` for the lifetime of the agent. The sweep after the one that marks the commitment
+`VIOLATED` ends the conversation in `TIMEOUT`, and the retention window then removes it like any
+other. A conversation that a `request()` is still waiting on is left to that request's own
+timeout. A result that arrives later is still recorded in the conversation's history, and still
+reaches the handler.
+
+The commitment deadline is the framework's (`DefaultCommitmentTracker`, default 5 minutes), not
+your application's. If your application waits longer than that for a result, it keeps its own
+deadline. The conversation ending does not stop that result from arriving.
 
 While the capability is initialized, its background sweep marks overdue commitments as
 `VIOLATED` on its own and logs each one at WARN. Detection is delayed by at most one sweep
@@ -633,6 +645,11 @@ restarts:
   `request()`, `query()` and `callForProposals()`;
 - a `CompletableFuture` the restarted agent was going to complete cannot be recovered by any
   means, since it was a live object in a process that no longer exists.
+- a reply that reaches the restarted agent for a conversation it no longer holds is delivered
+  to its `@DialogueHandler` methods as usual, but it opens no conversation. The same holds for a
+  reply to a conversation the retention sweep has already removed. Until 0.41.0 such a reply
+  opened a conversation in the protocol's initial state, where no further message moves it, and
+  the sweep never collected it.
 
 So **do not model anything durable on top of a `Conversation` or a `Commitment`**. If a
 business process must survive a restart, keep it in the agent's own persistent state

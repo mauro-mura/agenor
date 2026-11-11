@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A conversation whose participant went silent after `AGREE` no longer stays open forever.** It
+  stayed `AGREED`, which the retention sweep never collects: one per participant that died holding
+  work. Once its commitment is `VIOLATED`, the next sweep ends it in `TIMEOUT`, unless a
+  `request()` still awaits it. A late result is still recorded and delivered.
+
+- **A reply to a conversation the agent no longer holds opens none.** After a restart or a sweep,
+  it opened one in the protocol's initial state, which no reply leaves. It still reaches the
+  `@DialogueHandler`.
+
 ## [0.40.0] - 2026-11-06
 
 ### Changed
