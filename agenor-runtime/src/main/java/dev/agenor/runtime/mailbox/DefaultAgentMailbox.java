@@ -128,6 +128,10 @@ public final class DefaultAgentMailbox implements AgentMailbox {
             drain = null;
         }
         if (toStop == null) {
+            // Never started, or already stopped. A mailbox can be offered messages before it is
+            // started, and those still need failing: a transport that acknowledges on
+            // completion would otherwise wait on them for good.
+            drainRemaining();
             return;
         }
         toStop.interrupt();

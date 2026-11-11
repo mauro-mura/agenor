@@ -262,12 +262,18 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
                     // Execute registered start hooks (e.g., for persistence)
                     executeStartHooks();
 
+                    // Only now does the mailbox route what it has queued: see openMailbox()
+                    openMailbox();
+
                     currentStatus = AgentStatus.RUNNING;
                     log.info("Agent started successfully: {} ({})", agentName, agentId);
 
                 } catch (Exception e) {
                     currentStatus = AgentStatus.ERROR;
                     running.set(false);
+                    // A mailbox that was never opened would hold what it queued forever, and a
+                    // transport waiting on those outcomes with it: give them back unacknowledged.
+                    unsubscribeDirectMessages();
                     log.error("Failed to start agent: {}", agentId, e);
                     throw new RuntimeException("Failed to start agent: " + agentId, e);
                 }
@@ -565,6 +571,9 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
      * <p>Called during agent start, and deliberately <em>before</em> start hooks run, so
      * that a {@code DialogueCapability} registering from a start hook finds a mailbox to
      * join as a consumer instead of taking out a rival subscription of its own (ADR-032).
+     *
+     * <p>The mailbox subscribes here but is not started: it queues what arrives and routes
+     * nothing until {@link #openMailbox()}, after the start hooks. See there for why.
      */
     private void autoSubscribeDirectMessages() {
         if (messageDispatcher == null) {
@@ -574,7 +583,6 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
 
         try {
             var box = createMailbox(MessageHandler.sync(this::handleDirectMessage));
-            box.start();
             mailbox = box;
 
             // box::offer is handed over unwrapped on purpose: its future completes when the
@@ -590,6 +598,28 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
         } catch (Exception e) {
             log.error("Failed to auto-subscribe direct messages for agent '{}': {}",
                     agentId, e.getMessage());
+        }
+    }
+
+    /**
+     * Starts routing what the mailbox has queued, once the agent's consumers are in place.
+     *
+     * <p>Routing chooses a lane per message, and the dialogue lane exists only once a
+     * {@code DialogueCapability} has registered, which it does from a start hook. A mailbox
+     * routing from the moment it subscribes sent dialogue traffic that arrived in between to
+     * {@link #onDirectMessage}, whose default ignores it; the completed outcome then had the
+     * transport acknowledge it, so the message was lost. On Redis that window is reachable: an
+     * entry written while the node was down is delivered as soon as the node's consumer loop
+     * starts, and a directory registration over JDBC was enough to lose that race every time.
+     *
+     * <p>The cost is that nothing addressed to this agent is handled while it starts. A start
+     * hook or {@link #onStart()} must not wait for one of its own messages to be handled: on
+     * Redis, a {@code sendTo} to an agent on the same node completes only when the handler does.
+     */
+    private void openMailbox() {
+        var box = mailbox;
+        if (box != null) {
+            box.start();
         }
     }
 

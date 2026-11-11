@@ -96,6 +96,10 @@ public interface AgentMailbox {
     /**
      * Opens the mailbox so that offered messages are claimed and routed.
      *
+     * <p>A message offered before this is queued, and routed once the mailbox is open: an
+     * agent opens its mailbox only after its consumers have registered, so that nothing is
+     * routed to a lane that is about to exist.
+     *
      * <p>Idempotent: starting an already-started mailbox does nothing.
      */
     void start();
@@ -106,7 +110,8 @@ public interface AgentMailbox {
      * <p>Waits for handlers already in flight to finish before discarding what is left, so a
      * stopped agent leaves nothing running behind it and nothing half-processed. Anything
      * still queued is completed exceptionally, so a transport that acknowledges on completion
-     * does not acknowledge it (ADR-033 D-3). Idempotent: stopping an already-stopped mailbox
+     * does not acknowledge it (ADR-033 D-3). That includes a mailbox that was offered
+     * messages and never started. Idempotent: stopping an already-stopped mailbox
      * does nothing.
      */
     void stop();

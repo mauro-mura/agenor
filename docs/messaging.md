@@ -203,6 +203,13 @@ Before 0.30.0 the first form did not register at all — a handler returning any
 was rejected as an invalid signature — so the second was the only shape an asynchronous handler
 could have.
 
+Nothing addressed to an agent is handled while it starts. Its mailbox subscribes first and queues
+what arrives, and routes it only after the start hooks have run, which is where a
+`DialogueCapability` attaches: before 0.41.0 a dialogue message arriving in between went to
+`onDirectMessage()` and was lost. So `onStart()` and a start hook must not wait for one of the
+agent's own messages to be handled; on Redis a `sendTo` to an agent on the same node completes
+only when its handler does.
+
 Why the inbound path is shaped this way is
 [ADR-032](adr/ADR-032-agent-mailbox-single-inbound-path.md); what a failed handler costs is
 [ADR-033](adr/ADR-033-mailbox-delivery-semantics.md).

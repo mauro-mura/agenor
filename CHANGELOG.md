@@ -14,7 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reclaimed, handled twice, and past `maxDeliveryAttempts` dead-lettered. Now the loop remembers
   it and acknowledges it on reclaim. A crash before the ack still redelivers.
 
-### Fixed
+- **A dialogue message that arrives while an agent starts reaches its `@DialogueHandler`.** The
+  mailbox routed from the moment it subscribed, before `DialogueCapability` attached from a start
+  hook, so such a message went to `onDirectMessage`, was ignored, and on Redis was acknowledged.
+  An entry waiting on the node stream met this on every start with a JDBC directory. The mailbox
+  now queues until the start hooks have run, and an agent that fails to start releases its
+  subscription.
 
 - **A conversation whose participant went silent after `AGREE` no longer stays open forever.** It
   stayed `AGREED`, which the retention sweep never collects: one per participant that died holding

@@ -245,4 +245,45 @@ class DefaultAgentMailboxTest {
         awaitUntil(() -> received.size() == 1);
         assertThat(contentsOf(received)).containsExactly("only once");
     }
+
+    @Test
+    @Timeout(10)
+    @DisplayName("a message offered before start() is routed once it starts, by the consumers "
+            + "registered by then")
+    void aMessageOfferedBeforeStartWaitsForIt() {
+        // Given a mailbox offered a dialogue message before any dialogue consumer exists
+        var push = new CopyOnWriteArrayList<Message>();
+        var dialogue = new CopyOnWriteArrayList<Message>();
+        mailbox = new DefaultAgentMailbox("agent-a", MailboxConfig.defaults(),
+                MessageHandler.sync(push::add));
+        var outcome = mailbox.offer(dialogueMessage("arrived early"));
+
+        // When the dialogue consumer registers and only then the mailbox starts
+        mailbox.registerDialogueConsumer(MessageHandler.sync(dialogue::add));
+        mailbox.start();
+
+        // Then the message went down the lane that exists at start, not the one that existed
+        // when it arrived
+        outcome.join();
+        assertThat(contentsOf(dialogue)).containsExactly("arrived early");
+        assertThat(push).isEmpty();
+    }
+
+    @Test
+    @Timeout(10)
+    @DisplayName("stop() on a mailbox that never started fails what it queued")
+    void stopWithoutStartFailsWhatWasQueued() {
+        // Given a mailbox offered a message and never started — an agent whose start failed
+        mailbox = new DefaultAgentMailbox("agent-a", MailboxConfig.defaults(),
+                MessageHandler.sync(m -> { }));
+        var outcome = mailbox.offer(plain("never routed"));
+
+        // When
+        mailbox.stop();
+
+        // Then the outcome fails, so a transport waiting on it does not acknowledge it, and
+        // does not wait for good either
+        assertThat(outcome).isCompletedExceptionally();
+        assertThat(mailbox.size()).isZero();
+    }
 }

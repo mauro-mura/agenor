@@ -224,6 +224,110 @@ class MailboxOwnsInboundPathTest {
         }
     }
 
+    @Test
+    @Timeout(10)
+    @DisplayName("a dialogue message that arrives while the agent starts reaches the dialogue "
+            + "handler, not onDirectMessage")
+    void aDialogueMessageArrivingDuringStartReachesTheDialogueHandler() {
+        // Given an agent whose onStart() does not return until a dialogue message for it has
+        // reached its mailbox — before the start hook that attaches its DialogueCapability
+        var agent = new MessagedWhileStarting(dispatcher);
+        agent.setMessageDispatcher(dispatcher);
+        agent.setAgentDirectory(directory);
+        agent.setBehaviorScheduler(scheduler);
+        new AgentAnnotationProcessor(dispatcher, Optional.empty()).processAnnotations(agent);
+
+        try {
+            // When it starts
+            agent.start().join();
+
+            // Then the message waited for the dialogue lane. Until 0.41.0 the mailbox routed it
+            // on arrival, to onDirectMessage, whose default ignores it, and on Redis the
+            // completed outcome acknowledged it: the message was lost.
+            awaitUntil(() -> agent.dialogueMessages.get() == 1 || agent.fallbacks.get() > 0);
+            assertThat(agent.queuedDuringStart).as("message queued while starting").isTrue();
+            assertThat(agent.dialogueMessages.get()).isEqualTo(1);
+            assertThat(agent.fallbacks.get()).isZero();
+        } finally {
+            agent.stop().join();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    @DisplayName("an agent that fails to start releases its subscription")
+    void aFailedStartReleasesTheInboundPath() {
+        // Given an agent whose onStart() throws
+        var agent = new MixedAgent("failing-agent") {
+            @Override
+            protected void onStart() {
+                throw new IllegalStateException("start fails on purpose");
+            }
+        };
+        agent.setMessageDispatcher(dispatcher);
+        agent.setAgentDirectory(directory);
+        agent.setBehaviorScheduler(scheduler);
+
+        // When
+        try {
+            agent.start().join();
+        } catch (RuntimeException expected) {
+            // the failure is the point
+        }
+
+        // Then nothing is left holding its channel: a mailbox that never opened would keep
+        // whatever reached it, and a transport waiting on those outcomes with it
+        assertThat(dispatcher.receiverSubscriptionCount("failing-agent")).isZero();
+        assertThat(agent.mailbox()).isEmpty();
+    }
+
+    /**
+     * Sends itself a dialogue message from {@code onStart()} and waits until it is queued, so it
+     * arrives inside the window between subscribing and the dialogue start hook.
+     */
+    static class MessagedWhileStarting extends BaseAgent {
+
+        final DialogueCapability dialogue = new DialogueCapability(this);
+        final AtomicInteger dialogueMessages = new AtomicInteger();
+        final AtomicInteger fallbacks = new AtomicInteger();
+        private final InMemoryMessageDispatcher sender;
+        volatile boolean queuedDuringStart;
+
+        MessagedWhileStarting(InMemoryMessageDispatcher sender) {
+            super("starting-agent", "starting-agent");
+            this.sender = sender;
+        }
+
+        @Override
+        protected void onStart() {
+            sender.sendTo(DialogueMessage.builder()
+                    .conversationId("conv-start")
+                    .senderId("coordinator")
+                    .receiverId("starting-agent")
+                    .performative(Performative.REQUEST)
+                    .content("arrived while starting")
+                    .build()
+                    .toMessage());
+            long deadline = System.currentTimeMillis() + 2_000;
+            var box = mailbox().orElseThrow();
+            while (System.currentTimeMillis() < deadline
+                    && box.size() == 0 && dialogueMessages.get() == 0 && fallbacks.get() == 0) {
+                Thread.onSpinWait();
+            }
+            queuedDuringStart = box.size() == 1;
+        }
+
+        @DialogueHandler(performatives = Performative.REQUEST)
+        public void handleRequest(DialogueMessage message) {
+            dialogueMessages.incrementAndGet();
+        }
+
+        @Override
+        protected void onDirectMessage(Message message) {
+            fallbacks.incrementAndGet();
+        }
+    }
+
     /** An agent that receives on both inbound paths — the shape ADR-032 D-1 is about. */
     static class MixedAgent extends BaseAgent {
 
