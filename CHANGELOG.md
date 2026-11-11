@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **On Redis, a handler that succeeded is not run again because its `XACK` was lost.** The ack
+  shared the handler's `try`, so an unreachable broker read as a failed handler: the entry was
+  reclaimed, handled twice, and past `maxDeliveryAttempts` dead-lettered. Now the loop remembers
+  it and acknowledges it on reclaim. A crash before the ack still redelivers.
+
+### Fixed
+
 - **A conversation whose participant went silent after `AGREE` no longer stays open forever.** It
   stayed `AGREED`, which the retention sweep never collects: one per participant that died holding
   work. Once its commitment is `VIOLATED`, the next sweep ends it in `TIMEOUT`, unless a

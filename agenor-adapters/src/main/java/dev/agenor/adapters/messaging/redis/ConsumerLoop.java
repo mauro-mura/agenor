@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,6 +66,12 @@ final class ConsumerLoop {
     // Why the most recent attempt failed, per entry. Read once when the entry is exhausted:
     // without it a dead letter can only say that delivery failed, not what failed.
     private final Map<String, String> lastFailure = new ConcurrentHashMap<>();
+
+    // Entries whose handler succeeded but whose XACK did not reach the broker. Such an entry is
+    // still pending and comes back after pendingEntriesTimeoutMs; it is then acknowledged again
+    // instead of being handled again. Like deliveryAttempts it does not survive a restart, and
+    // like it, it holds an entry only until the broker has acknowledged it.
+    private final Set<String> handledNotAcked = ConcurrentHashMap.newKeySet();
 
     ConsumerLoop(String streamKey, String consumerGroup, String consumerName,
                  MessageHandler handler, Runnable recreateGroup,
@@ -284,6 +291,12 @@ final class ConsumerLoop {
     // package-private for testing
     void processMessage(StreamMessage<String, String> streamMsg) {
         var entryId  = streamMsg.getId();
+        if (handledNotAcked.contains(entryId)) {
+            // Handled already: what failed was the acknowledgement, so only that is retried. It
+            // is not another delivery attempt either, or a handled message could be dead-lettered.
+            acknowledge(entryId);
+            return;
+        }
         int attempts = deliveryAttempts
                 .computeIfAbsent(entryId, k -> new AtomicInteger(0))
                 .incrementAndGet();
@@ -316,7 +329,6 @@ final class ConsumerLoop {
                 span.end();
             }
 
-            client.xack(streamKey, consumerGroup, entryId);
             deliveryAttempts.remove(entryId);
             lastFailure.remove(entryId);
         } catch (Exception e) {
@@ -327,6 +339,28 @@ final class ConsumerLoop {
             log.warn("Handler failed for entry {} on '{}' (attempt {}/{}): {}",
                     entryId, streamKey, attempts, config.maxDeliveryAttempts(), e.getMessage());
             // No XACK — entry stays in PEL and will be redelivered after pendingEntriesTimeoutMs
+            return;
+        }
+        // Outside the handler's try, deliberately. An XACK the broker does not answer used to read
+        // as a failed handler: the entry was reclaimed, the handler ran again on a message it had
+        // already handled, and past maxDeliveryAttempts the message was dead-lettered.
+        handledNotAcked.add(entryId);
+        acknowledge(entryId);
+    }
+
+    /**
+     * Acknowledges an entry whose handler has succeeded. If the broker does not answer, the entry
+     * stays pending and is reclaimed later, when {@link #processMessage} sees it in
+     * {@code handledNotAcked} and comes back here instead of handling it again.
+     */
+    private void acknowledge(String entryId) {
+        try {
+            client.xack(streamKey, consumerGroup, entryId);
+            handledNotAcked.remove(entryId);
+        } catch (Exception e) {
+            log.warn("Entry {} on '{}' was handled but not acknowledged ({}); it will be "
+                    + "acknowledged when reclaimed, without being handled again",
+                    entryId, streamKey, e.getMessage());
         }
     }
 

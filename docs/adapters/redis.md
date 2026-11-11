@@ -255,7 +255,7 @@ question in [ADR-033](../adr/ADR-033-mailbox-delivery-semantics.md).
 | Order | Per-stream FIFO within a consumer group |
 | Send before the recipient's node is up | Held in the node stream and delivered when it starts — the node group is created at offset `0` |
 | Fan-out | Each subscription receives every message exactly once (within that subscription) |
-| Handler contract | Handlers **must be idempotent** — the same message may be delivered more than once after a crash or timeout |
+| Handler contract | Handlers **must be idempotent** — a message is delivered again after a handler that failed, or after a crash before its `XACK`. A handler that succeeded whose `XACK` is lost is not run again: the entry is acknowledged when it is reclaimed |
 
 ---
 
@@ -303,7 +303,11 @@ This chain runs all the way to your agent's code. An `@AgenorMessageHandler` or
 and eventually dead-lettered — the agent's mailbox reports the outcome of *processing*, not of
 queueing (ADR-033). Two consequences worth planning for:
 
-- **Handlers must be idempotent**, since a failing one will see the same message again.
+- **Handlers must be idempotent**, since a failing one will see the same message again, and so
+  will a handler whose node dies after it ran and before the `XACK`. A lost `XACK` alone does
+  not count: if the broker is unreachable when a handled entry is acknowledged, the loop
+  remembers the entry and acknowledges it when it is reclaimed, without handling it again. That
+  memory, like the delivery count, does not survive a restart.
 - **A message dropped by mailbox overflow is also unacknowledged**, so it is redelivered and
   ends up in the DLQ rather than disappearing. An agent whose producers outrun it shows up
   here. See [ADR-032](../adr/ADR-032-agent-mailbox-single-inbound-path.md) for the bounds
