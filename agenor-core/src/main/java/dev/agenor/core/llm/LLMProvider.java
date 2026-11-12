@@ -70,6 +70,12 @@ public interface LLMProvider {
      * });
      * }</pre>
      *
+     * <p>A {@link StreamingChunk} carries text only, so a function call cannot come back this way.
+     * A request's functions are still offered to the model, and a reply in text streams as usual;
+     * a reply that is a function call fails the returned future with an {@link LLMException} of
+     * type {@code INVALID_REQUEST}, after any text already streamed. Use {@link #chat(LLMRequest)}
+     * for a request whose functions the model may call.
+     *
      * @return CompletableFuture that completes when streaming is finished
      */
     CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> chunkHandler);

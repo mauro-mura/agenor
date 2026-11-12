@@ -12,8 +12,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.TokenUsage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
@@ -22,8 +20,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class OllamaProvider implements LLMProvider {
-
-    private static final Logger log = LoggerFactory.getLogger(OllamaProvider.class);
 
     private final OllamaChatModel chatModel;
     private final OllamaStreamingChatModel streamingModel;
@@ -192,18 +188,16 @@ public class OllamaProvider implements LLMProvider {
             final String streamId = UUID.randomUUID().toString();
             final int[] chunkIndex = {0};
 
-            if (request.hasFunctions()) {
-                // A StreamingChunk carries text only, so a call the model made could not reach
-                // the caller: the functions are left off rather than offered and then lost.
-                log.warn("Ollama: {} functions not offered to {} on a streamed request; "
-                        + "a streamed response carries no function calls, use chat()",
-                        request.functions().size(), resolvedModel);
-            }
-
             ChatRequest.Builder requestBuilder = ChatRequest.builder()
                     .modelName(resolvedModel)
                     .messages(messages);
 
+            // Offered so the model can see them; a reply that calls one fails the stream
+            // (onCompleteResponse). Leaving them off let the model answer without a tool it needed.
+            if (request.hasFunctions()) {
+                requestBuilder.toolSpecifications(
+                        ToolConversionUtils.convertFunctionsToToolSpecs(request.functions()));
+            }
             if (request.temperature() != null) {
                 requestBuilder.temperature(request.temperature());
             }
@@ -226,6 +220,12 @@ public class OllamaProvider implements LLMProvider {
 
                 @Override
                 public void onCompleteResponse(ChatResponse completeResponse) {
+                    LLMException call = LLMSupport.streamedFunctionCall(
+                            getProviderName(), resolvedModel, completeResponse);
+                    if (call != null) {
+                        result.completeExceptionally(call);
+                        return;
+                    }
                     String finishReason = null;
                     if (completeResponse != null && completeResponse.metadata() != null
                             && completeResponse.metadata().finishReason() != null) {

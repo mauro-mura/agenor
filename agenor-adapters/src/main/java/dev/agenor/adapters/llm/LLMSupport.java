@@ -15,8 +15,10 @@ import dev.langchain4j.exception.RetriableException;
 import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.exception.UnresolvedModelServerException;
 import dev.langchain4j.exception.UnsupportedFeatureException;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ToolChoice;
+import dev.langchain4j.model.chat.response.ChatResponse;
 
 import java.util.Locale;
 import java.util.UUID;
@@ -26,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Shared machinery behind the three {@link dev.agenor.core.llm.LLMProvider} adapters.
@@ -261,5 +264,35 @@ public final class LLMSupport {
      */
     public static String orGeneratedId(String id) {
         return id != null ? id : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Returns the failure a stream ends in when the model answers it with a function call, or
+     * {@code null} when the complete response carries no call.
+     *
+     * <p>A {@link dev.agenor.core.llm.StreamingChunk} carries text only, so a call cannot reach the
+     * caller of {@code chatStream}. The request's functions are still offered to the model — leaving
+     * them off would let it answer without a tool it needed, in text that reads as an answer — and a
+     * reply in text streams as usual. Only a reply that is a call fails, and it fails loudly: before
+     * this, OpenAI and Anthropic completed such a stream normally with one empty chunk, and the call
+     * was lost. Not retryable: the same request gets the same answer.
+     *
+     * @param provider the provider name, for the message and {@link LLMException#getProvider()}
+     * @param model    the model the request was resolved to
+     * @param complete the complete response the streaming model handed over, possibly {@code null}
+     * @return the exception to fail the stream with, or {@code null} if there is no call
+     */
+    public static LLMException streamedFunctionCall(String provider, String model, ChatResponse complete) {
+        if (complete == null || complete.aiMessage() == null || !complete.aiMessage().hasToolExecutionRequests()) {
+            return null;
+        }
+        String names = complete.aiMessage().toolExecutionRequests().stream()
+                .map(ToolExecutionRequest::name)
+                .collect(Collectors.joining(", "));
+        return new LLMException(
+                provider + ": " + model + " answered a streamed request with a function call ("
+                        + names + "), which a StreamingChunk cannot carry; use chat() for a request "
+                        + "whose functions the model may call",
+                null, ErrorType.INVALID_REQUEST, provider, model, null, false);
     }
 }

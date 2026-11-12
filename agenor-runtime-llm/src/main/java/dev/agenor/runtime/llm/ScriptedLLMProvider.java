@@ -1,6 +1,7 @@
 package dev.agenor.runtime.llm;
 
 import dev.agenor.core.llm.FunctionCall;
+import dev.agenor.core.llm.LLMException;
 import dev.agenor.core.llm.LLMMessage;
 import dev.agenor.core.llm.LLMProvider;
 import dev.agenor.core.llm.LLMRequest;
@@ -16,6 +17,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * An {@link LLMProvider} that answers from a script instead of a model: for tests, and for
@@ -49,10 +51,11 @@ import java.util.function.Function;
  * {@link IllegalStateException} that says which request had no reply, rather than inventing one.
  *
  * <p>{@link #chatStream} takes from the same queue and delivers the text word by word, then a
- * terminal chunk. A queued function call fails the stream instead: a {@link StreamingChunk}
- * carries text only. Usage is estimated with {@link SimpleTokenEstimator}, so token counts in
- * telemetry are plausible rather than zero. The model is the one the request names, else
- * {@value #MODEL}.
+ * terminal chunk. A queued function call fails the stream instead, with the
+ * {@link LLMException} of type {@code INVALID_REQUEST} the three adapters give for the same
+ * reply: a {@link StreamingChunk} carries text only. Usage is estimated with
+ * {@link SimpleTokenEstimator}, so token counts in telemetry are plausible rather than zero. The
+ * model is the one the request names, else {@value #MODEL}.
  *
  * <p>Thread-safe.
  *
@@ -166,9 +169,15 @@ public final class ScriptedLLMProvider implements LLMProvider {
             return CompletableFuture.failedFuture(entry.failure());
         }
         if (!entry.calls().isEmpty()) {
-            return CompletableFuture.failedFuture(new IllegalStateException(
-                    "Request #" + number + " was streamed, but its scripted reply is a function call, "
-                            + "which a StreamingChunk cannot carry; use chat()"));
+            // The failure the three adapters give for the same reply, so a test on this provider
+            // predicts what production does.
+            String names = entry.calls().stream().map(FunctionCall::name).collect(Collectors.joining(", "));
+            String model = modelFor(request);
+            return CompletableFuture.failedFuture(new LLMException(
+                    getProviderName() + ": request #" + number + " was streamed, but its scripted reply "
+                            + "is a function call (" + names + "), which a StreamingChunk cannot carry; "
+                            + "use chat() for a request whose functions the model may call",
+                    null, LLMException.ErrorType.INVALID_REQUEST, getProviderName(), model, null, false));
         }
         String id = "scripted-" + number;
         String model = modelFor(request);

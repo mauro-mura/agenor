@@ -128,8 +128,13 @@ class ScriptedLLMProviderTest {
         var llm = ScriptedLLMProvider.create().replyCalls(FunctionCall.of("read_file", "{}"));
         List<StreamingChunk> chunks = new ArrayList<>();
 
+        // The same failure the three adapters give, so a test on this provider predicts production.
         assertThat(failureOf(llm.chatStream(ask("go"), chunks::add)))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOfSatisfying(LLMException.class, e -> {
+                    assertThat(e.getErrorType()).isEqualTo(LLMException.ErrorType.INVALID_REQUEST);
+                    assertThat(e.isRetryable()).isFalse();
+                })
+                .hasMessageContaining("read_file")
                 .hasMessageContaining("use chat()");
         assertThat(chunks).isEmpty();
     }

@@ -203,8 +203,11 @@ not support tools". Small models call tools less reliably than large ones. Ollam
 with a call, so `OllamaProvider` gives each call one, and the result you send back with
 `LLMMessage.function(call, result)` is paired to it.
 
-`chatStream()` carries text only, so a streamed response cannot return a function call. Ollama
-leaves the functions off a streamed request and logs a WARN; use `chat()` for a tool loop.
+`chatStream()` carries text only, so a streamed response cannot return a function call: use
+`chat()` for a tool loop. Every provider still offers a streamed request's functions to the model,
+and a reply in text streams as usual. A reply that is a function call fails the stream with an
+`LLMException` of type `INVALID_REQUEST` that names the function, after any text already
+delivered; the stream gets no final chunk.
 
 ### Define a function
 
@@ -658,7 +661,7 @@ one provider is shared by the agents of a running system, `reset()` clears the q
 recorded requests and the `orElse` between tests.
 
 `chatStream()` takes from the same queue and delivers the text word by word. A queued function
-call fails the stream instead, because a `StreamingChunk` carries text only.
+call fails the stream instead, with the same `LLMException` the real providers give.
 
 **Mockito or this.** For a unit test of one class that calls `chat()` once, a Mockito mock is
 fine. `ScriptedLLMProvider` is for the case Mockito writes badly: a real agent, on a real

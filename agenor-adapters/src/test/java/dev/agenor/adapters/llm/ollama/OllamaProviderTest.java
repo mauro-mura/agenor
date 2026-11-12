@@ -1,9 +1,5 @@
 package dev.agenor.adapters.llm.ollama;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import dev.agenor.core.llm.*;
 import dev.agenor.core.memory.llm.ModelTokenLimits;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -23,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -244,39 +239,6 @@ class OllamaProviderTest {
             ArgumentCaptor<ChatRequest> captor = ArgumentCaptor.forClass(ChatRequest.class);
             verify(mockStreamingModel).chat(captor.capture(), any(StreamingChatResponseHandler.class));
             assertNotNull(captor.getValue());
-        }
-
-        /** A chunk carries text only, so a call the model made on a stream could not reach the caller. */
-        @Test
-        @DisplayName("should leave functions off a streamed request, and say so")
-        void chatStream_withFunctions_shouldLeaveThemOffWithWarn() throws Exception {
-            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
-            doAnswer(invocation -> {
-                StreamingChatResponseHandler handler = invocation.getArgument(1);
-                handler.onCompleteResponse(ChatResponse.builder().aiMessage(AiMessage.from("ok")).build());
-                return null;
-            }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
-            LLMRequest request = LLMRequest.builder()
-                    .addMessage(LLMMessage.user("What's the weather?"))
-                    .addFunction(FunctionDefinition.builder("get_weather").description("Weather").build())
-                    .build();
-
-            var logger = (Logger) LoggerFactory.getLogger(OllamaProvider.class);
-            var appender = new ListAppender<ILoggingEvent>();
-            appender.start();
-            logger.addAppender(appender);
-            try {
-                provider.chatStream(request, chunk -> {}).get(5, TimeUnit.SECONDS);
-            } finally {
-                logger.detachAppender(appender);
-            }
-
-            ArgumentCaptor<ChatRequest> captor = ArgumentCaptor.forClass(ChatRequest.class);
-            verify(mockStreamingModel).chat(captor.capture(), any(StreamingChatResponseHandler.class));
-            assertThat(captor.getValue().toolSpecifications()).isNullOrEmpty();
-            assertThat(appender.list).filteredOn(e -> e.getLevel() == Level.WARN)
-                    .singleElement()
-                    .satisfies(e -> assertThat(e.getFormattedMessage()).contains("1 functions not offered"));
         }
 
         @Test

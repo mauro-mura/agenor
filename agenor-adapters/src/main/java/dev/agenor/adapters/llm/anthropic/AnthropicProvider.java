@@ -176,7 +176,7 @@ public class AnthropicProvider implements LLMProvider {
                 .modelName(resolvedModel)
                 .messages(convertMessages(request));
 
-        // ✅ ADD FUNCTION CALLING SUPPORT FOR STREAMING
+        // Offered so the model can see them; a reply that calls one fails the stream (onCompleteResponse).
         if (request.hasFunctions()) {
             List<ToolSpecification> toolSpecs = ToolConversionUtils.convertFunctionsToToolSpecs(request.functions());
             chatRequestBuilder.toolSpecifications(toolSpecs);
@@ -198,6 +198,12 @@ public class AnthropicProvider implements LLMProvider {
 
                     @Override
                     public void onCompleteResponse(ChatResponse completeResponse) {
+                        LLMException call = LLMSupport.streamedFunctionCall(
+                                getProviderName(), resolvedModel, completeResponse);
+                        if (call != null) {
+                            future.completeExceptionally(call);
+                            return;
+                        }
                         String content = (completeResponse != null && completeResponse.aiMessage() != null)
                                 ? completeResponse.aiMessage().text()
                                 : "";

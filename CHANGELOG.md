@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   move long work into a `ONE_SHOT` behavior. Neither may wait for one of the agent's own messages:
   on Redis, a `sendTo` to itself blocks the start.
 
+- **BREAKING: `OllamaProvider.chatStream` offers a request's functions to the model.** It left them
+  off with a WARN, so the model could answer without a tool it needed, in text that read as an
+  answer. It now offers them as OpenAI and Anthropic do, and a reply that calls one fails the
+  stream (see Fixed).
+  Migration: a streamed request with functions to a model without tool support now fails with
+  `INVALID_REQUEST`, as `chat()` already did; drop the functions from a request you stream.
+
 ### Added
 
 - **`agenor.messaging.redis.node-id` fixes a starter-built node's id across restarts.** The
@@ -26,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Spring Boot application. Unset, nothing changes. The id must be unique per running instance.
 
 ### Fixed
+
+- **A function call in a streamed response fails the stream instead of vanishing.** A
+  `StreamingChunk` carries text only, yet `OpenAIProvider` and `AnthropicProvider` offered a
+  streamed request's functions to the model and, when it answered with a call, completed the
+  stream with one empty chunk: the call was lost without an error. Now the future fails with an
+  `LLMException` of type `INVALID_REQUEST`, not retryable, naming the function and saying to use
+  `chat()`; text streamed before the call stays delivered, and a reply in text is unchanged.
+  `ScriptedLLMProvider` already failed such a stream, with an `IllegalStateException`; it now
+  throws the same `LLMException`, so a test written against it predicts production.
 
 - **On Redis, a handler that succeeded is not run again because its `XACK` was lost.** The ack
   shared the handler's `try`, so an unreachable broker read as a failed handler: the entry was
