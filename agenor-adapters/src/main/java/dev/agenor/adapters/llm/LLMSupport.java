@@ -19,6 +19,7 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ToolChoice;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.output.FinishReason;
 
 import java.util.Locale;
 import java.util.UUID;
@@ -264,6 +265,45 @@ public final class LLMSupport {
      */
     public static String orGeneratedId(String id) {
         return id != null ? id : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Spells a finish reason the way every {@link dev.agenor.core.llm.LLMProvider} reports it:
+     * {@code stop}, {@code length}, {@code tool_calls}, {@code content_filter} or {@code other}.
+     *
+     * <p>OpenAI and Anthropic used to pass LangChain4j's enum name through ({@code STOP},
+     * {@code LENGTH}, ...) while Ollama mapped it to this spelling, so the core's
+     * {@code wasTruncated()} was always false on the two commercial providers.
+     *
+     * @param reason the reason LangChain4j reported, or {@code null}
+     * @return its spelling, or {@code null} if none was reported
+     */
+    public static String finishReason(FinishReason reason) {
+        if (reason == null) {
+            return null;
+        }
+        return switch (reason) {
+            case STOP -> "stop";
+            case LENGTH -> "length";
+            case TOOL_EXECUTION -> "tool_calls";
+            case CONTENT_FILTER -> "content_filter";
+            case OTHER -> "other";
+        };
+    }
+
+    /**
+     * The finish reason for a stream's final chunk, which must carry one: a chunk with none is not
+     * {@link dev.agenor.core.llm.StreamingChunk#isLast() last}, so a stream whose response named no
+     * reason would end without the caller seeing it end. That case reads as {@code stop}.
+     *
+     * @param complete the complete response the streaming model handed over, possibly {@code null}
+     * @return the spelling of its finish reason, or {@code stop} if it names none
+     */
+    public static String finalChunkReason(ChatResponse complete) {
+        String reason = complete != null && complete.metadata() != null
+                ? finishReason(complete.metadata().finishReason())
+                : null;
+        return reason != null ? reason : "stop";
     }
 
     /**

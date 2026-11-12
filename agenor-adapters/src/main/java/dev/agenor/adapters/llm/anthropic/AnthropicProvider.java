@@ -152,7 +152,7 @@ public class AnthropicProvider implements LLMProvider {
                 }
 
                 if (response.finishReason() != null) {
-                    builder.finishReason(response.finishReason().toString());
+                    builder.finishReason(LLMSupport.finishReason(response.finishReason()));
                 }
 
                 Map<String, Object> metadata = new HashMap<>();
@@ -207,9 +207,7 @@ public class AnthropicProvider implements LLMProvider {
                         String content = (completeResponse != null && completeResponse.aiMessage() != null)
                                 ? completeResponse.aiMessage().text()
                                 : "";
-                        String finish = (completeResponse != null && completeResponse.finishReason() != null)
-                                ? completeResponse.finishReason().toString()
-                                : "stop";
+                        String finish = LLMSupport.finalChunkReason(completeResponse);
                         // Only when nothing was streamed: a response that produced no incremental
                         // events must still reach the handler, and one that did must not arrive
                         // a second time in full.

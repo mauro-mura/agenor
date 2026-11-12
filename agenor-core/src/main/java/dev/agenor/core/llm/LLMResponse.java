@@ -25,7 +25,9 @@ import java.util.Objects;
  * @param content the generated textual content
  * @param role the role assigned to the response message (usually ASSISTANT)
  * @param functionCalls list of function calls requested by the model
- * @param finishReason the reason why generation finished (e.g., "stop", "length")
+ * @param finishReason why generation finished: {@code stop}, {@code length}, {@code tool_calls},
+ *     {@code content_filter} or {@code other}, spelled the same by every provider; {@code null}
+ *     if the provider reported none
  * @param usage token usage statistics for the request
  * @param created timestamp when the response was created
  * @param metadata additional provider-specific metadata
@@ -202,8 +204,14 @@ public record LLMResponse(
     /**
      * Check if the response completed normally.
      *
-     * @return true if finish reason indicates normal completion
+     * @return true if finish reason is {@code stop}
+     * @deprecated since 0.41.0, for removal in 1.0.0. Nothing calls it, and its name says more than
+     *     it checks: a response that asks for function calls ends normally with {@code tool_calls},
+     *     and this returns {@code false} for it. Compare {@link #finishReason()} with
+     *     {@code "stop"}, or use {@link #hasFunctionCalls()} and {@link #wasTruncated()} for the
+     *     question you are asking.
      */
+    @Deprecated(since = "0.41.0", forRemoval = true)
     public boolean isComplete() {
         return "stop".equals(finishReason);
     }

@@ -269,7 +269,8 @@ class OllamaProviderTest {
             });
 
             future.get(5, TimeUnit.SECONDS);
-            assertNull(finishReason.get());
+            // The final chunk must still read as last, or the stream ends without the caller seeing it.
+            assertEquals("stop", finishReason.get());
         }
 
         @Test
@@ -359,69 +360,6 @@ class OllamaProviderTest {
                     .build();
 
             assertTrue(request.messages().get(1).isAssistant());
-        }
-    }
-
-    @Nested
-    @DisplayName("FinishReason Mapping Tests")
-    class FinishReasonMappingTests {
-
-        @Test
-        @DisplayName("should map STOP finish reason")
-        void mapFinishReason_stop_shouldReturnStop() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, FinishReason.STOP);
-            assertEquals("stop", result);
-        }
-
-        @Test
-        @DisplayName("should map LENGTH finish reason")
-        void mapFinishReason_length_shouldReturnLength() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, FinishReason.LENGTH);
-            assertEquals("length", result);
-        }
-
-        @Test
-        @DisplayName("should map TOOL_EXECUTION finish reason")
-        void mapFinishReason_toolExecution_shouldReturnToolCalls() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, FinishReason.TOOL_EXECUTION);
-            assertEquals("tool_calls", result);
-        }
-
-        @Test
-        @DisplayName("should map CONTENT_FILTER finish reason")
-        void mapFinishReason_contentFilter_shouldReturnContentFilter() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, FinishReason.CONTENT_FILTER);
-            assertEquals("content_filter", result);
-        }
-
-        @Test
-        @DisplayName("should map OTHER finish reason")
-        void mapFinishReason_other_shouldReturnOther() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, FinishReason.OTHER);
-            assertEquals("other", result);
-        }
-
-        @Test
-        @DisplayName("should handle null finish reason")
-        void mapFinishReason_null_shouldReturnNull() {
-            OllamaProvider provider = OllamaProvider.builder().build();
-            String result = invokeMapFinishReason(provider, null);
-            assertNull(result);
-        }
-
-        private String invokeMapFinishReason(OllamaProvider provider, FinishReason reason) {
-            try {
-                var method = OllamaProvider.class.getDeclaredMethod("mapFinishReason", FinishReason.class);
-                method.setAccessible(true);
-                return (String) method.invoke(provider, reason);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 

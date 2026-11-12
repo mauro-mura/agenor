@@ -109,7 +109,7 @@ class StreamingDeliveryTest {
         StreamingChunk last = chunks.get(chunks.size() - 1);
         assertThat(chunks).hasSize(4);
         assertThat(last.hasContent()).isFalse();
-        assertThat(last.finishReason()).isEqualTo("STOP");
+        assertThat(last.finishReason()).isEqualTo("stop");
     }
 
     private static void assertFellBackToWholeText(List<StreamingChunk> chunks) {

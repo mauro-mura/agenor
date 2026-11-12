@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Migration: a streamed request with functions to a model without tool support now fails with
   `INVALID_REQUEST`, as `chat()` already did; drop the functions from a request you stream.
 
+- **BREAKING: OpenAI and Anthropic spell a finish reason as the other providers do.** They passed
+  LangChain4j's enum name through (`STOP`, `LENGTH`, `TOOL_EXECUTION`), so `wasTruncated()` and
+  `wasFiltered()` were always false on them, and code comparing the string worked on Ollama and
+  under `ScriptedLLMProvider` but not in production. Every provider now reports `stop`, `length`,
+  `tool_calls`, `content_filter` or `other`, and a stream's final chunk always carries one: on
+  Ollama a response naming none left it without, so `isLast()` never saw the stream end.
+  Migration: compare with the lower-case spelling.
+
 ### Added
 
 - **`agenor.messaging.redis.node-id` fixes a starter-built node's id across restarts.** The
@@ -67,6 +75,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A reply to a conversation the agent no longer holds opens none.** After a restart or a sweep,
   it opened one in the protocol's initial state, which no reply leaves. It still reaches the
   `@DialogueHandler`.
+
+### Deprecated
+
+- **`LLMResponse.isComplete()` and `StreamingChunk.isComplete()`, for removal in 1.0.0.** Nothing
+  called them, and the name says more than they check: a response asking for function calls ends
+  normally with `tool_calls`, and they return `false`; beside `isLast()`, the chunk's reads as "the
+  stream is over". Compare `finishReason()` with `"stop"`. `forRemoval` goes from 6 to 8.
 
 ## [0.40.0] - 2026-11-06
 

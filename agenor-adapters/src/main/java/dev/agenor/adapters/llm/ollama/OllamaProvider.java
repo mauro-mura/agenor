@@ -10,7 +10,6 @@ import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
-import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.TokenUsage;
 
 import java.time.Duration;
@@ -168,7 +167,7 @@ public class OllamaProvider implements LLMProvider {
                         .content(response.aiMessage().text())
                         .functionCalls(functionCallsOf(response.aiMessage()))
                         .role(LLMMessage.Role.ASSISTANT)
-                        .finishReason(mapFinishReason(response.metadata() != null ? response.metadata().finishReason() : null))
+                        .finishReason(LLMSupport.finishReason(response.metadata() != null ? response.metadata().finishReason() : null))
                         .usage(mapUsage(response.metadata() != null ? response.metadata().tokenUsage() : null))
                         .build();
 
@@ -226,11 +225,7 @@ public class OllamaProvider implements LLMProvider {
                         result.completeExceptionally(call);
                         return;
                     }
-                    String finishReason = null;
-                    if (completeResponse != null && completeResponse.metadata() != null
-                            && completeResponse.metadata().finishReason() != null) {
-                        finishReason = mapFinishReason(completeResponse.metadata().finishReason());
-                    }
+                    String finishReason = LLMSupport.finalChunkReason(completeResponse);
 
                     StreamingChunk finalChunk = StreamingChunk.of(
                             streamId,
@@ -322,17 +317,6 @@ public class OllamaProvider implements LLMProvider {
                         ? FunctionCall.of(r.name(), r.arguments())
                         : new FunctionCall(r.id(), r.name(), r.arguments()))
                 .toList();
-    }
-
-    private String mapFinishReason(FinishReason finishReason) {
-        if (finishReason == null) return null;
-        return switch (finishReason) {
-            case STOP -> "stop";
-            case LENGTH -> "length";
-            case TOOL_EXECUTION -> "tool_calls";
-            case CONTENT_FILTER -> "content_filter";
-            case OTHER -> "other";
-        };
     }
 
     private LLMResponse.Usage mapUsage(TokenUsage tokenUsage) {

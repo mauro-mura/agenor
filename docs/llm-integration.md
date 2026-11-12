@@ -177,6 +177,10 @@ provider.chat(request).thenAccept(response -> {
 });
 ```
 
+`finishReason()` is one of `stop`, `length` (cut off by `maxTokens`; `wasTruncated()` checks it),
+`tool_calls`, `content_filter` or `other`, spelled the same by every provider. A stream's final
+chunk carries it too, and always carries one, so `isLast()` sees the stream end.
+
 ### Streaming with StreamingChunk
 
 ```java

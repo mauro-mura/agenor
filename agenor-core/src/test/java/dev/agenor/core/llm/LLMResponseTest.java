@@ -178,6 +178,7 @@ class LLMResponseTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the deprecated helper itself
     void shouldCheckIsComplete() {
         // Given
         var complete = LLMResponse.builder("id", "model")

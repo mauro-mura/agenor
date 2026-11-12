@@ -134,6 +134,7 @@ class StreamingChunkTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the deprecated helper itself
     void shouldCheckIsComplete() {
         // Given
         var complete = StreamingChunk.of("id", "model", "Done", "stop", 10);
@@ -300,10 +301,10 @@ class StreamingChunkTest {
         var functionChunk = StreamingChunk.of("id", "model", "text", "function_call", 4);
 
         // Then
-        assertTrue(stopChunk.isComplete());
+        assertEquals("stop", stopChunk.finishReason());
         assertTrue(lengthChunk.wasTruncated());
         assertTrue(filterChunk.wasFiltered());
-        assertFalse(functionChunk.isComplete());
+        assertTrue(functionChunk.isLast());
         assertFalse(functionChunk.wasTruncated());
         assertFalse(functionChunk.wasFiltered());
     }
@@ -339,6 +340,6 @@ class StreamingChunkTest {
         assertFalse(chunk2.isLast());
         assertFalse(chunk3.isLast());
         assertTrue(chunk4.isLast());
-        assertTrue(chunk4.isComplete());
+        assertEquals("stop", chunk4.finishReason());
     }
 }

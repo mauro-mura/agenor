@@ -25,7 +25,9 @@ import java.util.Objects;
  * @param id unique identifier for the streaming session or chunk
  * @param model the model name generating the response
  * @param content the incremental textual content in this chunk
- * @param finishReason the reason why generation finished (null if not finished)
+ * @param finishReason why generation finished, on the final chunk only: {@code stop},
+ *     {@code length}, {@code tool_calls}, {@code content_filter} or {@code other}, spelled the
+ *     same by every provider; {@code null} on every other chunk
  * @param index the position of this chunk in the stream (0-indexed)
  * @param created timestamp when the chunk was created
  *
@@ -109,7 +111,11 @@ public record StreamingChunk(
      * Check if the stream was stopped normally.
      *
      * @return true if finish reason is "stop"
+     * @deprecated since 0.41.0, for removal in 1.0.0. Nothing calls it, and beside {@link #isLast()}
+     *     its name reads as "the stream is over", which is what {@code isLast()} answers; this one
+     *     only checks the reason. Compare {@link #finishReason()} with {@code "stop"}.
      */
+    @Deprecated(since = "0.41.0", forRemoval = true)
     public boolean isComplete() {
         return "stop".equals(finishReason);
     }

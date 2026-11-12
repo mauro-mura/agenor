@@ -172,7 +172,8 @@ class OllamaProviderEdgeCasesTest {
             });
 
             future.get(5, TimeUnit.SECONDS);
-            assertNull(finishReason.get());
+            // It used to stay null because no chunk read as last: the stream ended unseen.
+            assertEquals("stop", finishReason.get());
         }
 
         @Test

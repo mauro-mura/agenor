@@ -43,7 +43,7 @@ class ScriptedLLMProviderTest {
         assertThat(first.finishReason()).isEqualTo("tool_calls");
         assertThat(second.content()).isEqualTo("February.");
         assertThat(second.hasFunctionCalls()).isFalse();
-        assertThat(second.isComplete()).isTrue();
+        assertThat(second.finishReason()).isEqualTo("stop");
     }
 
     @Test
