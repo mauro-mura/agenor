@@ -27,7 +27,7 @@ classpath.
 <dependency>
     <groupId>dev.agenor</groupId>
     <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.40.0</version>
+    <version>0.41.0</version>
 </dependency>
 ```
 
