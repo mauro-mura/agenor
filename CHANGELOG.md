@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The README opens with three applications built on Agenor**, each in its own repository: a job
+  dispatcher that finishes every job after a worker is killed mid-job, a helpdesk where a person
+  approves what an LLM agent drafts, and a 24-hour fault-injection run whose findings are public.
+  The examples module still teaches one concept per example, and its section now points to them.
+
 ## [0.41.0] - 2026-11-13
 
 ### Changed
