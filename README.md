@@ -13,6 +13,23 @@
 
 Agenor draws on the concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on modern Java.
 
+## 🔍 Real Applications
+
+Each of these is its own repository, built against a released version of Agenor from Maven Central:
+
+- **[agenor-example-job-dispatcher](https://github.com/mauro-mura/agenor-example-job-dispatcher)** —
+  a manager hands jobs to workers by Contract Net and keeps every job in PostgreSQL; when a worker
+  dies, its job goes to another one. `demo/demo.sh` kills a worker with `kill -9` while it holds a
+  job, and exits 0 only if all twelve jobs still end done. No LLM.
+- **[agenor-example-helpdesk](https://github.com/mauro-mura/agenor-example-helpdesk)** — an LLM
+  agent sorts incoming tickets, a specialist drafts each reply from a knowledge base, and no draft
+  reaches the customer until a person approves it. Spring Boot, in one process or on two nodes over
+  Redis.
+- **[agenor-sentinel](https://github.com/mauro-mura/agenor-sentinel)** — a distributed uptime
+  monitor whose nodes come and go, run for 24 hours under injected faults.
+  [`FINDINGS.md`](https://github.com/mauro-mura/agenor-sentinel/blob/main/FINDINGS.md) records
+  what that run found in Agenor.
+
 ## ⚡ Quick Start
 
 ### Prerequisites
@@ -379,7 +396,8 @@ exchange to a multi-node, multi-behavior application. Not published as a depende
 
 The `agenor-examples` module contains a structured **learning path** from first steps to a
 multi-node, multi-behavior application. See **[agenor-examples/README.md](agenor-examples/README.md)**
-for the full guide.
+for the full guide. Each example shows one concept; for whole applications, with failures and
+recovery, see Real Applications at the top of this page.
 
 The examples are not published to Maven Central, so they run from a clone: follow
 [Development Setup](#development-setup) first — `mvn exec:java` needs the modules installed.
