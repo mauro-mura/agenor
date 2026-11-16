@@ -71,6 +71,10 @@ class AgenorCLITest {
                 .setCaseInsensitiveEnumValuesAllowed(true)
                 .execute("--version");
         assertEquals(0, code);
+        // Run from target/classes there is no manifest: the CLI says so instead of printing
+        // a version written into the source, which once stood at 0.4.0 for 37 releases
+        assertEquals("agenor (version unknown: not loaded from a jar)",
+                outContent.toString().strip());
     }
 
     @Test

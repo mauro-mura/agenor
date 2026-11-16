@@ -111,6 +111,18 @@ class OptionalModuleDiagnosticsTest {
         assertThat(infos).anyMatch(line -> line.contains("agent discovery: absent"));
     }
 
+    @Test
+    @DisplayName("startup states the runtime version, or that it is unknown outside a jar")
+    void startup_statesVersion() {
+        runtime = AgenorRuntime.builder().build();
+
+        var infos = captureStartup(Level.INFO);
+
+        // This module's tests load AgenorRuntime from target/classes, which has no manifest
+        assertThat(infos).contains(
+                "Starting Agenor Runtime (version unknown: not loaded from a jar)...");
+    }
+
     /** Starts the runtime and returns the WARN lines {@code AgenorRuntime} emitted while doing so. */
     private List<String> captureStartupWarnings() {
         return captureStartup(Level.WARN);
