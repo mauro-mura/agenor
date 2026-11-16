@@ -17,6 +17,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import dev.agenor.core.*;
 import dev.agenor.core.directory.AgentDirectory;
@@ -214,7 +215,9 @@ public class AgenorRuntime {
             return CompletableFuture.completedFuture(null);
         }
 
-        log.info("Starting Agenor Runtime...");
+        log.info("Starting Agenor Runtime {}...", ModuleVersion.of(AgenorRuntime.class)
+                .map(ModuleVersion::version)
+                .orElse("(version unknown: not loaded from a jar)"));
 
         return CompletableFuture.runAsync(() -> {
             try {
@@ -598,6 +601,8 @@ public class AgenorRuntime {
                 describe(discoveryEngine), describe(hitlSupportProvider),
                 describe(llmMemoryManagerProvider), describe(behaviorAnnotationExtension));
 
+        logModuleVersionSkew();
+
         Set<Class<? extends Annotation>> claimed = registrationExtensions.stream()
                 .flatMap(extension -> extension.handledAnnotations().stream())
                 .collect(java.util.stream.Collectors.toSet());
@@ -625,6 +630,28 @@ public class AgenorRuntime {
                             + "classpath.",
                     declaringAgents.size(), annotation.getSimpleName(),
                     String.join(", ", declaringAgents));
+        }
+    }
+
+    /**
+     * Warns when a resolved optional module comes from a different Agenor release than
+     * {@code agenor-runtime} — the mix a dependency declared outside the BOM produces, and which
+     * otherwise shows up only as a behaviour neither version documents.
+     */
+    private void logModuleVersionSkew() {
+        List<ModuleVersion> found = Stream.concat(
+                        registrationExtensions.stream(),
+                        Stream.of(discoveryEngine, hitlSupportProvider,
+                                        llmMemoryManagerProvider, behaviorAnnotationExtension)
+                                .flatMap(Optional::stream))
+                .map(module -> ModuleVersion.ofOrUnversioned(module.getClass()))
+                .toList();
+        Optional<ModuleVersion> runtimeVersion = ModuleVersion.of(AgenorRuntime.class);
+        List<ModuleVersion> skewed = ModuleVersion.differingFrom(runtimeVersion, found);
+        if (!skewed.isEmpty()) {
+            log.warn("Agenor modules from different releases are on the classpath: {} next to {}. "
+                            + "Align them, for example by importing agenor-bom.",
+                    skewed.stream().map(ModuleVersion::toString).toList(), runtimeVersion.get());
         }
     }
 

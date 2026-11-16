@@ -12,7 +12,7 @@ import picocli.CommandLine.Command;
 @Command(
     name = "agenor",
     description = "Agenor Multi-Agent Framework CLI",
-    version = "0.4.0",
+    versionProvider = AgenorCLI.ManifestVersionProvider.class,
     mixinStandardHelpOptions = true,
     subcommands = {
         ListCommand.class,
@@ -37,5 +37,19 @@ public class AgenorCLI implements Runnable {
     @Override
     public void run() {
         CommandLine.usage(this, System.out);
+    }
+
+    /**
+     * Prints the version the {@code agenor-tools} jar declares in its manifest, so {@code -V}
+     * cannot fall behind the release the way a version written into the annotation did.
+     */
+    static class ManifestVersionProvider implements CommandLine.IVersionProvider {
+        @Override
+        public String[] getVersion() {
+            String version = AgenorCLI.class.getPackage().getImplementationVersion();
+            return new String[] {"agenor " + (version != null
+                    ? version
+                    : "(version unknown: not loaded from a jar)")};
+        }
     }
 }

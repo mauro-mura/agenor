@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The runtime logs its version at startup, and warns when Agenor modules come from different
+  releases.** Every Agenor jar now declares `Implementation-Title` and `Implementation-Version`,
+  and `AgenorRuntime` reads them: `Starting Agenor Runtime 0.42.0...`. A resolved optional module
+  whose jar declares another version, or none (any release before this one), gets one WARN naming
+  it; importing `agenor-bom` keeps them aligned. Run from compiled classes rather than a jar, the
+  version is reported as unknown.
+
 ### Changed
 
 - **The README opens with three applications built on Agenor**, each in its own repository: a job
@@ -22,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loops broke ADR-033: a handler holding the loop no longer held back its neighbours, and messages
   to one node were handled in parallel and out of order. The second call now leaves the first to
   finish.
+
+- **`agenor --version` prints the version of the installed CLI.** It had printed `0.4.0`, written
+  into the source, since that release; it now reads the jar's manifest.
 
 ## [0.41.0] - 2026-11-13
 
