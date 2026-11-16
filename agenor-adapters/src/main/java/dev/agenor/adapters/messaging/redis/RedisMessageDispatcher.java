@@ -70,6 +70,8 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
     // Node-stream subscription — started lazily on first subscribeRecipient call
     private volatile Subscription nodeStreamSubscription;
     private final Object nodeStreamLock = new Object();
+    // Guarded by nodeStreamLock: true while this node's subscribe is in progress
+    private boolean nodeStreamStarting;
 
     RedisMessageDispatcher(RedisTopicPublisher topicPublisher,
                            RedisMessageTransport messageTransport,
@@ -251,13 +253,33 @@ public final class RedisMessageDispatcher implements MessageDispatcher, LocalEnd
     // Internal
     // -------------------------------------------------------------------------
 
+    /**
+     * Starts this node's one consumer loop, once (ADR-033).
+     *
+     * <p>The lock alone does not make it once. {@code synchronized} is reentrant, and the
+     * subscribe blocks on the broker: on a {@code ForkJoinPool} worker, a blocked
+     * {@code CompletableFuture.get()} runs other queued tasks on the same thread, such as the
+     * {@code start()} of another agent, which comes back here holding the lock while the
+     * subscription is still {@code null}. That started a second loop on the node stream
+     * whenever two agents started together. {@code nodeStreamStarting} turns that call away.
+     *
+     * <p>Only that call is turned away. Another thread still waits on the lock and, if the
+     * subscribe failed, tries again. The call turned away returns before the loop exists,
+     * which loses nothing: the consumer group exists from offset {@code 0} since the
+     * transport was built, so what arrives meanwhile is read once the loop starts.
+     */
     private void ensureNodeStreamRunning() {
         if (nodeStreamSubscription == null) {
             synchronized (nodeStreamLock) {
-                if (nodeStreamSubscription == null) {
-                    var localEndpoint = new TransportEndpoint("redis", config.nodeId(), Map.of());
-                    nodeStreamSubscription = messageTransport.subscribe(
-                            localEndpoint, this::routeToLocalAgent);
+                if (nodeStreamSubscription == null && !nodeStreamStarting) {
+                    nodeStreamStarting = true;
+                    try {
+                        var localEndpoint = new TransportEndpoint("redis", config.nodeId(), Map.of());
+                        nodeStreamSubscription = messageTransport.subscribe(
+                                localEndpoint, this::routeToLocalAgent);
+                    } finally {
+                        nodeStreamStarting = false;
+                    }
                     log.debug("Node-stream consumer started for node '{}'", config.nodeId());
                 }
             }

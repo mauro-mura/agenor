@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   approves what an LLM agent drafts, and a 24-hour fault-injection run whose findings are public.
   The examples module still teaches one concept per example, and its section now points to them.
 
+### Fixed
+
+- **A Redis node runs one consumer loop again when its agents start together.** While the node's
+  subscribe waited on the broker, the `ForkJoinPool` worker running it could start another agent
+  on the same thread, which re-entered the lock and opened a second loop on the node stream. Two
+  loops broke ADR-033: a handler holding the loop no longer held back its neighbours, and messages
+  to one node were handled in parallel and out of order. The second call now leaves the first to
+  finish.
+
 ## [0.41.0] - 2026-11-13
 
 ### Changed

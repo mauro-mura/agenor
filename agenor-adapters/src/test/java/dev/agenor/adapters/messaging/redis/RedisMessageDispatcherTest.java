@@ -27,11 +27,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -321,6 +323,42 @@ class RedisMessageDispatcherTest {
             dispatcher.subscribeRecipient("agent-b", msg -> CompletableFuture.completedFuture(null));
 
             verify(messageTransport).subscribe(any(), any()); // exactly once
+        }
+
+        @Test
+        @DisplayName("starts one node-stream consumer when a second agent subscribes from inside the first subscribe")
+        void subscribeRecipient_reentrantCallDoesNotStartASecondLoop() {
+            // What a ForkJoinPool worker does while the subscribe waits on the broker: it runs
+            // another agent's start() on the same thread, already holding the lock.
+            var received = new ArrayList<String>();
+            when(messageTransport.subscribe(any(), any())).thenAnswer(invocation -> {
+                dispatcher.subscribeRecipient("agent-b", msg -> {
+                    received.add(msg.receiverId());
+                    return CompletableFuture.completedFuture(null);
+                });
+                return Subscription.of("node-sub", () -> {});
+            });
+
+            dispatcher.subscribeRecipient("agent-a", msg -> CompletableFuture.completedFuture(null));
+
+            verify(messageTransport).subscribe(any(), any()); // exactly once
+            dispatcher.sendTo(Message.builder().topic("t").receiverId("agent-b").content("x").build()).join();
+            assertThat(received).containsExactly("agent-b");
+        }
+
+        @Test
+        @DisplayName("a node-stream consumer that failed to start is tried again on the next subscription")
+        void subscribeRecipient_failedStartIsRetried() {
+            when(messageTransport.subscribe(any(), any()))
+                    .thenThrow(new IllegalStateException("broker down"))
+                    .thenReturn(Subscription.of("node-sub", () -> {}));
+
+            assertThatIllegalStateException().isThrownBy(() ->
+                    dispatcher.subscribeRecipient("agent-a", msg -> CompletableFuture.completedFuture(null)));
+            dispatcher.subscribeRecipient("agent-b", msg -> CompletableFuture.completedFuture(null));
+            dispatcher.subscribeRecipient("agent-c", msg -> CompletableFuture.completedFuture(null));
+
+            verify(messageTransport, times(2)).subscribe(any(), any());
         }
 
         @Test
