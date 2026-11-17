@@ -829,7 +829,14 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
      * @param receiverAgentId the target agent ID
      * @param content the request content
      * @return CompletableFuture with the response message
+     * @deprecated since 0.42.0, for removal in 1.0.0. It works only on a dispatcher that is a
+     *     {@link FilterableSubscriber}, so on Redis it fails at once with
+     *     {@link UnsupportedOperationException}, and nothing outside its own test calls it. Use
+     *     {@code DialogueCapability.request(target, content, timeout)}, which runs on every
+     *     transport; the target answers from a {@code @DialogueHandler} instead of with
+     *     {@link #replyTo}.
      */
+    @Deprecated(since = "0.42.0", forRemoval = true)
     protected CompletableFuture<Message> requestFrom(String receiverAgentId, Object content) {
         return requestFrom(receiverAgentId, content, 5000);
     }
@@ -841,7 +848,11 @@ public abstract class BaseAgent implements Agent, LifecycleHooks {
      * @param content the request content
      * @param timeoutMillis timeout in milliseconds
      * @return CompletableFuture with the response message
+     * @deprecated since 0.42.0, for removal in 1.0.0, for the same reason as
+     *     {@link #requestFrom(String, Object)}. Use
+     *     {@code DialogueCapability.request(target, content, Duration.ofMillis(timeoutMillis))}.
      */
+    @Deprecated(since = "0.42.0", forRemoval = true)
     protected CompletableFuture<Message> requestFrom(String receiverAgentId,
                                                      Object content,
                                                      long timeoutMillis) {
