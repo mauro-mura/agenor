@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-03-12  
+**Last Modified**: 2026-11-17 (see Amendment below)  
 **Authors**: Project Team
 
 ## Context
@@ -76,3 +77,33 @@ package as it is infrastructure, not a behavior.
 - ADR-004: Progressive Complexity Strategy
 - ADR-007: LLMProvider as Core Interface
 - ADR-011: KnowledgeStore as Core Interface
+
+---
+
+## Amendment — 2026-11-17: the behavior is gone, the strategy moved
+
+**Status**: Accepted. Corrects *Decision*, *Consequences* and *Module Layout*; the decision to put
+`ReflectionStrategy` in `agenor-core` is unchanged and is what survives.
+
+Two things happened to this ADR's runtime half without it being updated:
+
+- **`ReflectionBehavior` was removed in 0.29.0**, deprecated in 0.27.0. Its only caller was the
+  example written to demonstrate it. A critique loop is composed by calling a
+  `ReflectionStrategy` directly; the "no breaking changes to existing `LLMAgent` usage" bullet
+  above describes a wrapper that no longer exists, and its `reflection.iteration` span went with
+  it (ADR-019 records that).
+- **`DefaultReflectionStrategy` lives in `agenor-runtime-llm`**, package
+  `dev.agenor.runtime.reflection`, since ADR-027 split the LLM-coupled classes out of
+  `agenor-runtime`. `LLMAgent` builds one from its `LLMProvider` when no strategy is configured.
+
+The module layout therefore reads, today:
+
+```
+agenor-core
+  dev.agenor.core.reflection
+    ReflectionStrategy, CritiqueResult, ReflectionConfig
+
+agenor-runtime-llm
+  dev.agenor.runtime.reflection
+    DefaultReflectionStrategy          (LLMProvider-backed implementation)
+```

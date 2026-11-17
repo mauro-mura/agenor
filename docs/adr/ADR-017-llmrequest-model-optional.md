@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-04-12  
+**Last Modified**: 2026-11-17 (scoped note under *Rationale*)  
 **Authors**: Agenor Team  
 **Replaces**: Partial update to ADR-007 (LLMProvider as Core Interface)
 
@@ -83,6 +84,13 @@ A no-argument `LLMRequest.builder()` is added as the preferred factory.
       .addMessage(LLMMessage.user("Solve this complex problem..."))
       .build();
   ```
+
+  > **Scoped note, 2026-11-17.** This snippet does not compile against the current API, and
+  > would not be written this way today. `Builder.model` takes the model's string id
+  > (`.model("o3")`), and the per-provider `Models` enums are deprecated for removal at 1.0.0
+  > (since 0.36.0): a model is named by its id, and a context window the fallback does not
+  > cover is registered with `ModelTokenLimits.register`. `LLMRequest.builder(String)`, "retained
+  > for one release cycle" under *Decision*, was removed in 0.29.0, thirteen releases later.
 - Aligns with ADR-004 (Progressive Complexity): simple case requires no boilerplate,
   advanced case (per-request routing) remains possible
 

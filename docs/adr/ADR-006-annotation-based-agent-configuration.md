@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-09-16  
+**Last Modified**: 2026-11-17 (see Amendment below)  
 **Authors**: Project Team  
 
 ### Context
@@ -88,3 +89,41 @@ public class AnnotationAgentScanner {
 - **Negative**: Requires recompilation for configuration changes
 - **Negative**: May encourage hard-coding of environment-specific values
 - **Mitigation**: External configuration can override annotations
+
+---
+
+## Amendment — 2026-11-17: the external override was never built
+
+**Status**: Accepted. Corrects *Configuration Hierarchy*, *External Override Example*,
+*Discovery Mechanism* and the *Mitigation* line above; the annotation design stands.
+
+### What is so
+
+**No external configuration overrides an annotation.** `AgentAnnotationProcessor` reads
+`@Behavior`'s `interval` and `initialDelay` literally, with no placeholder resolution, and neither
+`agenor.yml` nor the Spring Boot starter has a per-agent section: the YAML under *External Override
+Example* (`agenor.agents.<id>.behaviors…`, `message-handlers…`) maps to nothing and is silently
+ignored. The *Mitigation* bullet therefore does not hold, and the two negatives above it are the
+whole cost: a value in an annotation changes only by recompiling.
+
+What external configuration does exist is narrower than the four-level hierarchy:
+
+- `agenor.yml`, read by `DefaultConfigurationLoader`, configures the runtime, discovery
+  (`agents.autoDiscovery`, `basePackage`, `scanPackages`), messaging, directory and scheduler —
+  see `docs/configuration.md`. It says nothing about an individual agent.
+- Inside that file, `${NAME:default}` takes an environment variable first and a system property
+  second. That is substitution into the YAML, not a layer above it.
+- Under Spring Boot, the `agenor.*` properties are the starter's own and follow Spring's
+  precedence; they do not reach annotation values either.
+
+The *Discovery Mechanism* sketch names types that do not exist (`AnnotationAgentScanner`, a
+`reflections` library, `AgenorAgent.class`). Discovery lives in `agenor-runtime-scanning`
+(ADR-027): `AgentScanner` walks the classpath itself, without a scanning library, behind the
+`AgentDiscoveryEngine` SPI. `AgentFactory.scanForAgents` is deprecated for removal at 1.0.0.
+
+### What is not decided here
+
+Whether annotation values should become overridable. Nothing built on Agenor has asked for it: an
+agent that needs an interval from the environment builds its behavior programmatically in
+`onStart()` instead of declaring it. This amendment only stops the ADR promising a mechanism the
+tree does not have.

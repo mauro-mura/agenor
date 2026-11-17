@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-03-16  
+**Last Modified**: 2026-11-17 (see Amendment below)  
 **Deciders**: Project team
 
 ---
@@ -115,3 +116,25 @@ The transitive Reactor dependency is therefore confined to the adapters module.
 - **Supported transports (F2 scope): SSE + STDIO** — SSE via `HttpClientSseClientTransport` (remote servers), STDIO via `StdioClientTransport` (local processes, required by the `npx @modelcontextprotocol/server-filesystem` example in T6)
 - `McpClientFactory` exposes two factory methods: `fromSse(String serverUrl)` and `fromStdio(String command, String... args)`
 - **Streamable-HTTP**: not implemented in F2 — tracked as backlog item for when remote hosted servers adopt the new transport
+
+---
+
+## Amendment — 2026-11-17: the condition for Streamable HTTP has been met
+
+**Status**: Accepted. Corrects the *Consequences*; the choice of the official SDK stands.
+
+The last bullet above deferred Streamable HTTP "for when remote hosted servers adopt the new
+transport". They have. HTTP+SSE was deprecated by the MCP protocol revision 2025-03-26, which made
+Streamable HTTP the remote transport, so `fromSse` now reaches only servers that still serve the
+legacy transport. *Context* listing three transports and *Option A* claiming "all three transports
+supported out of the box" describe the SDK, not what Agenor wires: Agenor offers SSE and STDIO.
+
+agenor-research met this on 2026-10-21 (its D4): `fromSse` against a Streamable HTTP endpoint fails
+after about 20 seconds without naming the transport, and the 38-line workaround had to copy the
+adapter because `AgenorMcpClientAdapter`'s constructors and `McpToolMapper` are package-private.
+The transport itself, `HttpClientStreamableHttpTransport`, is already in SDK 1.0.0.
+
+What changes here is the documentation: `docs/adapters/mcp.md` and `McpClientFactory`'s Javadoc
+now say that SSE is the legacy transport and what a Streamable HTTP endpoint does to it. Whether
+to wire Streamable HTTP, and to make the adapter reusable with another transport, is a separate
+decision this amendment does not take.

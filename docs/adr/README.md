@@ -188,6 +188,16 @@ graph TD
   Agenor's annotations either way — today included, together with two `requires` lines that the
   automatic modules cannot declare (corrected 2026-10-13). Builds on ADR-018, ADR-025 and ADR-027
 - **ADR-006** (Annotations) builds on **ADR-005** (Message Format)
+- **ADR-006** was amended on 2026-11-17: no external configuration overrides an annotation value.
+  The YAML override hierarchy and the per-agent section it showed were never built, and the
+  scanner it sketched names types that do not exist; discovery is in `agenor-runtime-scanning`
+  (**ADR-027**). Whether values should become overridable is left undecided, for lack of a case
+- **2026-11-17, a correction pass with no decision changed**: **ADR-012** records that
+  `ReflectionBehavior` was removed in 0.29.0 and that `DefaultReflectionStrategy` moved to
+  `agenor-runtime-llm`; **ADR-016** lists the sentences still describing Spring Boot 3.5.x and the
+  starter's real wiring; **ADR-013** records that the condition for Streamable HTTP has been met,
+  leaving the decision to wire it open; **ADR-007** and **ADR-017** carry scoped notes for
+  `MessageService` and a `Models` snippet that no longer compiles
 - **ADR-015** (HITL) builds on ADR-001, ADR-005, ADR-006, ADR-014
 - **ADR-016** (Spring Boot Starter) builds on ADR-003, ADR-004, ADR-007
 - **ADR-017** (LLMRequest optional model) refines ADR-007 (LLMProvider as Core Interface)
