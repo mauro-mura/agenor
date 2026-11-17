@@ -35,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`agenor --version` prints the version of the installed CLI.** It had printed `0.4.0`, written
   into the source, since that release; it now reads the jar's manifest.
 
+### Deprecated
+
+- **`BaseAgent.requestFrom`, both overloads, for removal in 1.0.0.** It needs a dispatcher that
+  is a `FilterableSubscriber`, so on Redis it fails at once with `UnsupportedOperationException`,
+  and nothing outside its own test called it. Use `DialogueCapability.request`, which runs on every
+  transport; the target answers from a `@DialogueHandler`. `forRemoval` goes from 8 to 10.
+
 ## [0.41.0] - 2026-11-13
 
 ### Changed

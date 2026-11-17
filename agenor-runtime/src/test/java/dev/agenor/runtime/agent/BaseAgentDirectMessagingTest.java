@@ -131,6 +131,7 @@ class BaseAgentDirectMessagingTest {
 
     @Test
     @Timeout(5)
+    @SuppressWarnings("removal") // the deprecated helper itself
     void testRequestFrom() throws Exception {
         // Given: Two agents with Bob configured to reply
         TestAgent alice = new TestAgent("alice");
@@ -165,6 +166,7 @@ class BaseAgentDirectMessagingTest {
 
     @Test
     @Timeout(5)
+    @SuppressWarnings("removal") // the deprecated helper itself
     void testRequestFromTimeout() throws Exception {
         // Given: Alice and Bob (Bob doesn't reply)
         TestAgent alice = new TestAgent("alice");
