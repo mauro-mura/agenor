@@ -198,9 +198,45 @@ MessageFilter.builder()
 
 ## Registering filters on subscriptions
 
-### Programmatic subscription
+> **`subscribeFiltered` works in memory only.** It belongs to `FilterableSubscriber`, which only
+> `InMemoryMessageDispatcher` implements: a Java predicate cannot run inside a broker. On Redis,
+> `getMessageDispatcher()` is not a `FilterableSubscriber`, so every cast to it on this page
+> throws `ClassCastException` when the agent starts. Code that may move to Redis subscribes by
+> exact topic and applies the filter in the handler, as in
+> [Filtering on every transport](#filtering-on-every-transport). The Redis side of this is in
+> [the Redis adapter page](adapters/redis.md), section *FilterableSubscriber — not supported*.
 
-Pass a `MessageFilter` (or any `Predicate<Message>`) to `FilterableSubscriber.subscribeFiltered()`. The in-memory dispatcher implements this capability:
+### Filtering on every transport
+
+A `MessageFilter` is a `Predicate<Message>`, so the same filter that `subscribeFiltered` takes can
+guard a handler subscribed by exact topic. This runs unchanged on the in-memory dispatcher and on
+Redis:
+
+```java
+@Agent("order-processor")
+public class OrderProcessorAgent extends BaseAgent {
+
+    private final MessageFilter urgent = HeaderFilter.equals("priority", "HIGH");
+
+    @Override
+    protected void onStart() {
+        registerTopicSubscription(getMessageDispatcher().subscribeTopic("orders.created",
+                MessageHandler.sync(msg -> {
+                    if (urgent.test(msg)) {
+                        processUrgentOrder(msg.getContent(OrderData.class));
+                    }
+                })));
+    }
+}
+```
+
+`registerTopicSubscription` releases the subscription when the agent stops. What this cannot
+express is a topic *pattern*: on Redis a subscription names one topic, so an agent that needs
+`orders.*` subscribes to each topic it handles.
+
+### Programmatic subscription, in memory
+
+Pass a `MessageFilter` (or any `Predicate<Message>`) to `FilterableSubscriber.subscribeFiltered()`. Only the in-memory dispatcher implements this capability:
 
 ```java
 // Using concrete filter classes
@@ -214,7 +250,7 @@ filterable.subscribeFiltered(filter, message -> {
 });
 ```
 
-### Inside an agent's onStart()
+### Inside an agent's onStart(), in memory
 
 ```java
 @Agent("order-processor")
@@ -240,7 +276,8 @@ public class OrderProcessorAgent extends BaseAgent {
 
 `@AgenorMessageHandler` routes by **exact** topic — it takes no pattern, and a value containing
 `*` or `#` is rejected when the agent is registered. For anything else, combine it with a guard
-inside the handler, or use programmatic subscription with a filter as above:
+inside the handler, which works on every transport, or use programmatic subscription with a
+filter as above, which works in memory only:
 
 ```java
 @AgenorMessageHandler("orders.created")
@@ -253,8 +290,8 @@ public void handleOrder(Message msg) {
 }
 ```
 
-To route on a topic *pattern*, subscribe programmatically with `TopicFilter.wildcard(...)` —
-the annotation has no equivalent:
+To route on a topic *pattern*, subscribe programmatically with `TopicFilter.wildcard(...)`.
+The annotation has no equivalent, and neither has Redis: this works in memory only.
 
 ```java
 ((FilterableSubscriber) getMessageDispatcher())
@@ -263,7 +300,7 @@ the annotation has no equivalent:
 
 ---
 
-## Complete example: a filtered agent
+## Complete example: a filtered agent, in memory
 
 ```java
 @Agent("order-enricher")

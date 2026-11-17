@@ -23,7 +23,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   approves what an LLM agent drafts, and a 24-hour fault-injection run whose findings are public.
   The examples module still teaches one concept per example, and its section now points to them.
 
+- **Six ADRs stop describing what the tree does not have.** ADR-006 promised YAML overrides of
+  annotation values that were never built; ADR-012 placed a removed `ReflectionBehavior` in the
+  wrong module; ADR-016 still described Spring Boot 3.5.x in places; ADR-007 and ADR-017 named
+  `MessageService` and a `Models` snippet that no longer compiles; ADR-013 deferred Streamable
+  HTTP until servers adopted it, which they have. Each carries a dated amendment or scoped note;
+  no decision changed.
+
 ### Fixed
+
+- **`docs/message-filtering.md` says that `subscribeFiltered` works in memory only.** Every
+  example cast `getMessageDispatcher()` to `FilterableSubscriber`, which on Redis throws
+  `ClassCastException` when the agent starts, and nothing on the page said so. It now opens with
+  the limit and shows a filter applied in a handler subscribed by exact topic, which runs on both
+  transports; topic patterns remain in memory only.
+
+- **The MCP page and `McpClientFactory` say that `fromSse` is the legacy transport.** A current
+  remote MCP server speaks Streamable HTTP, which Agenor does not offer; pointed at one, `fromSse`
+  fails after about 20 seconds without naming the transport. Both now say so.
 
 - **A Redis node runs one consumer loop again when its agents start together.** While the node's
   subscribe waited on the broker, the `ForkJoinPool` worker running it could start another agent

@@ -11,6 +11,12 @@ LLMProvider will be a core interface in agenor-core with implementations
 in agenor-adapters, following the same pattern as MessageService and
 AgentDirectory.
 
+> **Scoped note, 2026-11-17.** Both names in the sentence above have since changed. ADR-020 split
+> `MessageService` into the capabilities `MessageDispatcher` composes, and removed it in 0.22.0;
+> the `AgentDirectory` meant here is `dev.agenor.core.directory.AgentDirectory`, the old
+> `dev.agenor.core.AgentDirectory` facade having been removed in 0.28.0. The pattern the
+> sentence describes, a contract in `agenor-core` with implementations elsewhere, is unchanged.
+
 ## Consequences
 - Positive: Clean separation, user choice, no vendor lock-in
 - Positive: Follows established framework patterns

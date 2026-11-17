@@ -22,9 +22,16 @@ round-trip without writing provider-specific code.
  
 | Transport | Factory method | Notes |
 |-----------|----------------|-------|
-| **SSE** | `McpClientFactory.fromSse(url)` | Remote servers over HTTP/SSE |
+| **SSE** | `McpClientFactory.fromSse(url)` | Remote servers on the legacy HTTP+SSE transport |
 | **STDIO** | `McpClientFactory.fromStdio(command, args...)` | Local subprocess (e.g. Docker) |
-| Streamable-HTTP | — | Not supported; tracked as backlog |
+| Streamable HTTP | — | Not supported |
+
+**A current remote MCP server is not reachable from Agenor.** HTTP+SSE, the only remote transport
+`McpClientFactory` offers, was deprecated by the MCP protocol revision 2025-03-26, which replaced
+it with Streamable HTTP; servers written since serve Streamable HTTP, and some serve SSE only to
+older clients. Pointed at a Streamable HTTP endpoint, `fromSse` waits about 20 seconds and fails
+with `Client failed to initialize by explicit API call`, caused by a `TimeoutException`: the
+message does not name the transport. STDIO is unaffected.
  
 ---
  

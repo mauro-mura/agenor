@@ -23,6 +23,11 @@ import java.util.concurrent.ForkJoinPool;
  *   <li><b>STDIO</b> — {@link #fromStdio(String, String...)} / {@link #fromStdio(Executor, String, String...)}</li>
  * </ul>
  *
+ * <p>SSE here is the legacy HTTP+SSE transport, deprecated by the MCP protocol revision
+ * 2025-03-26 in favour of Streamable HTTP, which this factory does not offer. Pointed at a
+ * Streamable HTTP endpoint, {@code fromSse} fails after its initialization timeout without
+ * naming the transport.
+ *
  * <p>Every factory method performs the MCP {@code initialize()} handshake synchronously
  * before returning. Callers should invoke these methods outside of hot paths.
  *

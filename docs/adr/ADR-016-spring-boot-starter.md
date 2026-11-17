@@ -3,6 +3,7 @@
 **Status**: Accepted  
 **Date**: 2026-03-26  
 **Updated**: 2026-04-15 — migrated to Spring Boot 4.0.5 (see Decision update below)  
+**Last Modified**: 2026-11-17 (see Amendment below)  
 **Authors**: Agenor Team  
   
 
@@ -226,3 +227,35 @@ public class MyApp { public static void main(String[] args) { SpringApplication.
 - Spring Boot autoconfigure reference: https://docs.spring.io/spring-boot/reference/using/auto-configuration.html
 - Out of scope: Spring WebFlux / reactive support, `@ConditionalOnWebApplication` variants,
   Kafka / Consul adapter auto-wiring.
+
+---
+
+## Amendment — 2026-11-17: what the body still says about 3.5.x
+
+**Status**: Accepted. Corrects the body; the decision, as updated on 2026-04-15, is unchanged.
+
+The 2026-04-15 update moved the starter to Spring Boot 4.0.x, and the starter still builds
+against 4.0.5. The update was written into *Decision* and the *Neutral* consequences, but several
+sentences elsewhere kept describing the 3.5.x target and now contradict it:
+
+- *Cons*: "Spring Boot 4.x users must wait for a follow-up release" is the reverse of the case:
+  4.x is the only line the starter supports. The next bullet's "Spring Boot 3.x / Jakarta EE 10
+  baseline" should read 4.x / Jakarta EE 11.
+- *Consequences*, *Positive*: "Spring Boot 3.5.x developers can integrate Agenor with one
+  dependency" and "broad ecosystem coverage during the 3.x → 4.x transition" describe the
+  original target. With 4.0.x, a Spring Boot 3.x application cannot use the starter, which the
+  *Negative* bullet "Spring Boot 3.x users must upgrade to 4.x" already says correctly.
+- *Neutral*: the suggested example is a Spring Boot 3.5.x one; any example would be 4.0.x.
+- *Alternatives considered*, "Target Spring Boot 4.x from the start: rejected": that is what the
+  2026-04-15 update did, six weeks later, once 3.x's open-source support end was near.
+
+The *Core beans* snippet is also not how the starter is wired. The runtime bean calls
+`withConfiguration(props.toAgenorConfiguration())` and `service(LLMProvider.class, provider)`, and
+carries no `initMethod`/`destroyMethod`. Start and stop are driven by a separate
+`SmartLifecycle` bean: `start()` and `stop()` return futures, which it joins so the context waits
+for every agent, and its phase (`Integer.MAX_VALUE - 1`) starts the runtime after the
+infrastructure beans and stops it before them. The runtime bean also takes a telemetry, an
+`ApprovalGate` and the starter's internal builder contributors when they are present.
+
+Whether to offer anything to Spring Boot 3.x applications is not decided here. It would be a
+second artifact, and nothing built on Agenor has asked for one.
