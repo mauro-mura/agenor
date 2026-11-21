@@ -42,7 +42,7 @@ failure, not a degraded one.
 
 `LLMMessage` gains a fifth record component, `functionCallId`, populated by a new
 `LLMMessage.function(FunctionCall, String)` factory. The existing two-argument
-`function(String, String)` is deprecated for removal at `1.0.0`, since it has no way to carry an
+`function(String, String)` is deprecated for removal at `0.43.0`, since it has no way to carry an
 id. This is `BREAKING` on `agenor-core`: the canonical constructor's arity changes.
 
 OpenAI and Anthropic map a `FUNCTION`-role message to LangChain4j's

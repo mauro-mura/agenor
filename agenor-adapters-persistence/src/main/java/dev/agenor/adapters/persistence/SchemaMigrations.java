@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code db/migration/}, which Spring Boot's Flyway scans recursively by default, so an
  * application with Flyway of its own found Agenor's {@code V1}s next to its own and failed with
  * "more than one migration with version 1". A caller still passing an old location is moved to
- * the new one with a warning, until {@code 1.0.0}.
+ * the new one with a warning, until {@code 0.43.0}.
  *
  * @since 0.38.0
  */
@@ -99,7 +99,7 @@ public final class SchemaMigrations {
         }
         if (warned.add(location)) {
             log.warn("Flyway location {} moved to {} in 0.38.0; pass the new one. "
-                    + "The old location will stop working in 1.0.0", location, moved);
+                    + "The old location will stop working in 0.43.0", location, moved);
         }
         return moved;
     }

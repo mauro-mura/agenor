@@ -203,7 +203,7 @@ public class AgentFactory {
      *
      * @param packageNames packages to scan
      * @return set of classes annotated with @Agent
-     * @deprecated since 0.40.0, for removal in 1.0.0. Nothing calls it: discovery goes through
+     * @deprecated since 0.40.0, for removal in 0.43.0. Nothing calls it: discovery goes through
      *     {@link AgentScanner}, and this was a copy of it that had to be fixed twice. Use
      *     {@link AgentScanner#scanForAgents(String...)}.
      */

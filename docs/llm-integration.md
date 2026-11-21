@@ -611,13 +611,13 @@ boolean worthRetrying(Throwable t) {
 | `logRequests(boolean)` | `false` | Log request payload |
 | `logResponses(boolean)` | `false` | Log response payload |
 
-Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `1.0.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
+Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `0.43.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
 
 ### Anthropic builder options
 
 Same fields. Default model: `claude-sonnet-4-6`.
 
-Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `1.0.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
+Name a model by its string id. The per-provider `Models` enums are deprecated for removal in `0.43.0`; see [ModelTokenLimits](#modeltokenlimits) for why, and for what `getAvailableModels()` does and does not return.
 
 ### Ollama builder options
 

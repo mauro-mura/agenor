@@ -468,7 +468,7 @@ with Flyway of its own found Agenor's two `V1`s next to its own `V1`, and failed
 `Found more than one migration with version 1`. The migrations now live in
 `db/agenor/directory/` and `db/agenor/hitl/`. The files are unchanged, so their checksums and
 script names still match the history of existing databases. A caller that still passes a
-`db/migration/agenor-*` location is moved to the new one with a warning until `1.0.0`. Without
+`db/migration/agenor-*` location is moved to the new one with a warning until `0.43.0`. Without
 that, Flyway would resolve the old location to nothing and create no tables, with no error.
 
 The one-history-table amendment above made a second problem visible. The starter created both

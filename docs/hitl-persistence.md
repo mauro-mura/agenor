@@ -88,7 +88,7 @@ its own history table, `agenor_hitl_schema_history`. It can therefore share a da
 JDBC directory, which is what the URL fallback above does. Up to 0.37.0 that combination failed at
 startup with a Flyway checksum mismatch for version 1. A database migrated by 0.37.0 or earlier is
 picked up without any action. The location was `classpath:db/migration/agenor-hitl` up to
-0.37.0, and the old one still works with a warning until 1.0.0. See
+0.37.0, and the old one still works with a warning until 0.43.0. See
 [JDBC Agent Directory § Schema](adapters/jdbc-directory.md#schema).
 
 ```sql
