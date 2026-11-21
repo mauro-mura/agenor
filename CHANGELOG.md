@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`1.0.0` is no longer a goal, and the version stays `0.x`.** Agenor is now a learning lab
+  rather than a library looking for production users, and ADR-025 §D3 is amended a third time:
+  the promotion criteria are retired with nothing in their place. A minor release may still break
+  a public type, and `CHANGELOG.md` still marks every break `BREAKING` with a `Migration:` line.
+  `SECURITY.md` listed only `1.0.x` as supported; it now names the latest `0.x` minor.
+
 - **The README opens with three applications built on Agenor**, each in its own repository: a job
   dispatcher that finishes every job after a worker is killed mid-job, a helpdesk where a person
   approves what an LLM agent drafts, and a 24-hour fault-injection run whose findings are public.
@@ -54,10 +60,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
-- **`BaseAgent.requestFrom`, both overloads, for removal in 1.0.0.** It needs a dispatcher that
+- **`BaseAgent.requestFrom`, both overloads, for removal in 0.43.0.** It needs a dispatcher that
   is a `FilterableSubscriber`, so on Redis it fails at once with `UnsupportedOperationException`,
   and nothing outside its own test called it. Use `DialogueCapability.request`, which runs on every
   transport; the target answers from a `@DialogueHandler`. `forRemoval` goes from 8 to 10.
+
+- **Every removal dated `1.0.0` now names `0.43.0`.** A release that will not come would never
+  make them due, so `api-census.sh --check` could not flag them. The ten deprecations are the
+  `Models` enums of the three LLM providers, `LLMMessage.function(String, String)`,
+  `DialogueA2AConverter.mapPerformativeToTaskState`, `AgentFactory.scanForAgents`,
+  `LLMResponse.isComplete()`, `StreamingChunk.isComplete()` and both `BaseAgent.requestFrom`; the
+  fallback for the Flyway locations used up to 0.37.0 moves with them. Nothing is removed in this
+  release.
 
 ## [0.41.0] - 2026-11-13
 

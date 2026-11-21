@@ -31,7 +31,7 @@ public class OllamaProvider implements LLMProvider {
      * <p>Versioned tags ({@code ":8b"}, {@code ":70b"}) share the base context window and are
      * registered separately, in this class's static initializer.
      *
-     * @deprecated since 0.36.0, for removal in 1.0.0. A public enum of model constants goes
+     * @deprecated since 0.36.0, for removal in 0.43.0. A public enum of model constants goes
      *             stale the day a new model lands in Ollama's library, and removing a retired
      *             constant is itself a breaking change — so offering one at all works against
      *             ever reaching a release with no breaking entry. Name a model by its string id
@@ -255,7 +255,7 @@ public class OllamaProvider implements LLMProvider {
     }
 
     @Override
-    @SuppressWarnings("deprecation") // Models is this list's data source until 1.0.0 removes it
+    @SuppressWarnings("deprecation") // Models is this list's data source until 0.43.0 removes it
     public CompletableFuture<List<String>> getAvailableModels() {
         // Base family names only; a versioned tag can still be named freely via
         // modelName(String) — this list is knowledge of context windows, not availability.

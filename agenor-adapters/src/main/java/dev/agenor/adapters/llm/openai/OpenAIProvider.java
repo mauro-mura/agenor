@@ -28,7 +28,7 @@ public class OpenAIProvider implements LLMProvider {
     /**
      * Known OpenAI model identifiers and their context window sizes.
      *
-     * @deprecated since 0.36.0, for removal in 1.0.0. A public enum of model constants goes
+     * @deprecated since 0.36.0, for removal in 0.43.0. A public enum of model constants goes
      *             stale the day OpenAI ships a model it does not list, and removing a retired
      *             constant is itself a breaking change — so offering one at all works against
      *             ever reaching a release with no breaking entry. Name a model by its string id
@@ -240,7 +240,7 @@ public class OpenAIProvider implements LLMProvider {
     }
 
     @Override
-    @SuppressWarnings("deprecation") // Models is this list's data source until 1.0.0 removes it
+    @SuppressWarnings("deprecation") // Models is this list's data source until 0.43.0 removes it
     public CompletableFuture<List<String>> getAvailableModels() {
         return CompletableFuture.completedFuture(
             Arrays.stream(Models.values()).map(m -> m.id).toList()

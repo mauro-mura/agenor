@@ -205,11 +205,11 @@ public record LLMResponse(
      * Check if the response completed normally.
      *
      * @return true if finish reason is {@code stop}
-     * @deprecated since 0.41.0, for removal in 1.0.0. Nothing calls it, and its name says more than
-     *     it checks: a response that asks for function calls ends normally with {@code tool_calls},
-     *     and this returns {@code false} for it. Compare {@link #finishReason()} with
-     *     {@code "stop"}, or use {@link #hasFunctionCalls()} and {@link #wasTruncated()} for the
-     *     question you are asking.
+     * @deprecated since 0.41.0, for removal in 0.43.0. Nothing calls it, and its name says more
+     *     than it checks: a response that asks for function calls ends normally with
+     *     {@code tool_calls}, and this returns {@code false} for it. Compare
+     *     {@link #finishReason()} with {@code "stop"}, or use {@link #hasFunctionCalls()} and
+     *     {@link #wasTruncated()} for the question you are asking.
      */
     @Deprecated(since = "0.41.0", forRemoval = true)
     public boolean isComplete() {

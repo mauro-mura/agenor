@@ -164,7 +164,7 @@ public record LLMMessage(
      * @param functionName the name of the function that was called
      * @param result the function result (typically JSON)
      * @return a new function message
-     * @deprecated since 0.36.0, for removal in 1.0.0. A result with no call id cannot be paired
+     * @deprecated since 0.36.0, for removal in 0.43.0. A result with no call id cannot be paired
      *             to the call it answers — Anthropic rejects the request outright, OpenAI
      *             accepts it as an ordinary user message instead of a tool result, and two
      *             parallel calls to the same function are ambiguous by construction. Use

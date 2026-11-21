@@ -110,7 +110,7 @@ database with the HITL queue and with your own schema, created in any order.
 
 Up to 0.37.0 the location was `classpath:db/migration/agenor-directory`. That is inside Spring
 Boot's default Flyway location, which made an application's own Flyway pick Agenor's `V1` up as
-its own. The old location still works, with a warning, until 1.0.0.
+its own. The old location still works, with a warning, until 0.43.0.
 
 Flyway's default history table, `flyway_schema_history`, is left to your application. Up to
 0.37.0 the directory recorded itself there. A database migrated by 0.37.0 or earlier is picked up

@@ -87,7 +87,7 @@ A no-argument `LLMRequest.builder()` is added as the preferred factory.
 
   > **Scoped note, 2026-11-17.** This snippet does not compile against the current API, and
   > would not be written this way today. `Builder.model` takes the model's string id
-  > (`.model("o3")`), and the per-provider `Models` enums are deprecated for removal at 1.0.0
+  > (`.model("o3")`), and the per-provider `Models` enums are deprecated for removal at 0.43.0
   > (since 0.36.0): a model is named by its id, and a context window the fallback does not
   > cover is registered with `ModelTokenLimits.register`. `LLMRequest.builder(String)`, "retained
   > for one release cycle" under *Decision*, was removed in 0.29.0, thirteen releases later.

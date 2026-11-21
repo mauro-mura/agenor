@@ -111,9 +111,10 @@ public record StreamingChunk(
      * Check if the stream was stopped normally.
      *
      * @return true if finish reason is "stop"
-     * @deprecated since 0.41.0, for removal in 1.0.0. Nothing calls it, and beside {@link #isLast()}
-     *     its name reads as "the stream is over", which is what {@code isLast()} answers; this one
-     *     only checks the reason. Compare {@link #finishReason()} with {@code "stop"}.
+     * @deprecated since 0.41.0, for removal in 0.43.0. Nothing calls it, and beside
+     *     {@link #isLast()} its name reads as "the stream is over", which is what
+     *     {@code isLast()} answers; this one only checks the reason. Compare
+     *     {@link #finishReason()} with {@code "stop"}.
      */
     @Deprecated(since = "0.41.0", forRemoval = true)
     public boolean isComplete() {

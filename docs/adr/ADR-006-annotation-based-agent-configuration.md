@@ -119,7 +119,7 @@ What external configuration does exist is narrower than the four-level hierarchy
 The *Discovery Mechanism* sketch names types that do not exist (`AnnotationAgentScanner`, a
 `reflections` library, `AgenorAgent.class`). Discovery lives in `agenor-runtime-scanning`
 (ADR-027): `AgentScanner` walks the classpath itself, without a scanning library, behind the
-`AgentDiscoveryEngine` SPI. `AgentFactory.scanForAgents` is deprecated for removal at 1.0.0.
+`AgentDiscoveryEngine` SPI. `AgentFactory.scanForAgents` is deprecated for removal at 0.43.0.
 
 ### What is not decided here
 

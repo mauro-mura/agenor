@@ -194,6 +194,11 @@ the packages above afterwards would be breaking for those applications. That cos
 and it matches ADR-025's 2026-09-13 amendment, which declined to enumerate a stable subset
 before `1.0.0` — an `exports` list is such an enumeration.
 
+> **Scoped note, 2026-11-21.** ADR-025's third amendment took `1.0.0` off the roadmap, so the
+> freeze this paragraph prices will not happen. Hiding a package stays a breaking change for a
+> module-path application, but under `0.x` it is one a minor release may make, marked `BREAKING`
+> in the changelog like any other. The reopening conditions below are unchanged.
+
 ### When to reopen
 
 On new evidence, not on its own: a user or downstream project on the module path; LangChain4j,

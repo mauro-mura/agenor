@@ -2,10 +2,13 @@
 
 ## Supported Versions
 
-| Version  | Supported          |
-| -------- | ------------------ |
-| 1.0.x    | :white_check_mark: |
-| < 1.0.0  | :x:                |
+Agenor stays on `0.x` (see [ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md)). Security fixes
+go into the latest minor release only; there are no backports to earlier minors.
+
+| Version              | Supported          |
+| -------------------- | ------------------ |
+| Latest `0.x` minor   | :white_check_mark: |
+| Earlier `0.x` minors | :x:                |
 
 ## Reporting a Vulnerability
 
