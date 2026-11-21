@@ -192,19 +192,17 @@ agenor:
 
 ## 🧭 API stability
 
-**The whole API is `0.x`, and that is a statement rather than a formality.** A minor release may
-break a public type. The criteria that would move this project to `1.0.0` are written down in
-[ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md): three consecutive releases with no `BREAKING`
-entry in `CHANGELOG.md` across the whole public API, no pending ADR that would change it, and a
-per-backend statement of what is production-ready. **The count is currently zero** — reset by
-0.34.0's own Logback change — and nothing here is enumerated in advance: `1.0.0` freezes
-whatever is public the day the count reaches three, it doesn't wait on a document written first.
+**The whole API is `0.x`, and it will stay there.** Agenor is a learning lab, not a library
+looking for production users, so there is no `1.0.0` on the roadmap:
+[ADR-025 §D3](docs/adr/ADR-025-agenor-rebrand.md) records why the criteria that used to lead
+there were retired. A minor release may break a public type. When one does, `CHANGELOG.md` marks
+the entry `BREAKING` and says what to do instead on a line starting `Migration:`, and a
+deprecation names the release that removes it.
 
-When it arrives, `1.0.0` will mean **the public API does not break without a major release**. It
-will not mean the distributed story has been proven in the field; that is a separate claim, made
-per backend in the documentation, and
-[the Redis transport's own limits](docs/adapters/redis.md#trust-model-the-transport-authenticates-nothing)
-are stated there rather than implied by a version number.
+The version number has never claimed field maturity. What a backend does and does not do is
+stated on its own page —
+[the Redis transport's own limits](docs/adapters/redis.md#trust-model-the-transport-authenticates-nothing),
+for example — rather than implied by a version number.
 
 Within that, some parts are more settled than others. The list below is informal guidance, not a
 criterion — it is **not** a promise that everything unlisted is stable. It is the honest answer

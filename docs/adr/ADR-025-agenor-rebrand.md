@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2026-05-28  
-**Last Modified**: 2026-09-13 (see second Amendment to D3 below)  
+**Last Modified**: 2026-11-21 (see third Amendment to D3 below)  
 **Authors**: Project Team  
 **References**: ADR-002 (Interface-First Architecture), ADR-003 (Maven Multi-Module Structure),
 ADR-006 (Annotation-Based Agent Configuration), ADR-016 (Spring Boot Starter),
@@ -236,6 +236,71 @@ root POM, not from a peripheral module, so the "immature modules alone are block
 premise has no case to point to yet. If that evidence appears, the cheaper middle ground is
 scoping *which modules' `BREAKING` entries count toward criterion 1*, not giving each module its
 own version number — recorded here for a future amendment, not actioned now.
+
+#### Amendment — 2026-11-21: `1.0.0` is no longer a goal
+
+The three criteria above are **retired, and nothing replaces them**. They are kept in place, as
+the two sets before them were, because the reasoning is worth reading. Unlike those two, they are
+not superseded by a better gate: as of this amendment the project has no gate for `1.0.0`,
+because it no longer intends to reach it.
+
+**What changed is the project's purpose, not its evidence.** Agenor is now a learning lab: a
+public place to work out how agent systems, classic and LLM-based, are built and how they
+actually behave, on local models by default and on remote ones through the adapters when an
+experiment calls for it. It no longer looks for production users. The README says so; this
+amendment records only what that does to D3.
+
+**Why retire the criteria rather than keep them in reserve.**
+
+- **`1.0.0` is a promise to the people depending on the API.** The 2026-09-11 amendment read it
+  that way, as a compatibility discipline rather than a maturity certificate, and that reading
+  stands. A lab whose experiments may need to change the API is not making that promise to
+  anyone, and a criterion that rewards releases without a `BREAKING` entry would push against the
+  very breaks an experiment can require.
+- **A criterion held for a goal nobody holds is a ghost.** No tool counts the releases without a
+  `BREAKING` entry; the count lived in one sentence of the README, kept by hand. Left in place, it
+  would go on being quoted with nothing to keep it true.
+- **The count itself never came close.** In the eleven releases since the 2026-09-13 amendment it
+  reached two once, at 0.37.0 and 0.38.0, and was reset at 0.36.0, 0.39.0, 0.40.0 and 0.41.0.
+  This is not why the goal was dropped — the purpose is — but it means nothing near completion is
+  being abandoned.
+
+**What stays, because it never depended on `1.0.0`.**
+
+1. **The version stays `0.x`, and continues the existing sequence.** Under SemVer a minor
+   release may break a public type, and that is now the permanent reading rather than a phase.
+2. **Every break is still marked.** `CHANGELOG.md` leads a breaking entry with `BREAKING` and
+   names its migration on a line starting `Migration:`, which `tools/changelog-budget.sh --check`
+   enforces. That discipline serves whoever reads the changelog, so dropping `1.0.0` does not
+   touch it.
+3. **Backend maturity is still stated per backend**, as the old criterion 3 required: what a
+   backend does not do is written on its own page, such as the Redis transport authenticating
+   nothing in `docs/adapters/redis.md`. It is no longer a criterion; it is still true, and someone
+   running an experiment on Redis needs to read it.
+
+**Removal dates have to name a release that can arrive.** Ten deprecations named `1.0.0` as their
+removal release: the `Models` enums of the OpenAI, Anthropic and Ollama providers,
+`LLMMessage.function(String, String)`, `DialogueA2AConverter.mapPerformativeToTaskState`,
+`AgentFactory.scanForAgents`, `LLMResponse.isComplete()`, `StreamingChunk.isComplete()`, and both
+overloads of `BaseAgent.requestFrom`. `tools/api-census.sh --check` flags a deprecation once the
+version being built reaches the one it declares, so a date of `1.0.0` would now never come due:
+the undated case the check exists to catch, disguised as a date. **All ten now name `0.43.0`**,
+the release after the one that carries this amendment, so that one release announces the new
+date before the next one acts on it. The same goes for the fallback in `SchemaMigrations` that
+moves a Flyway location used up to 0.37.0 (`db/migration/agenor-directory`,
+`db/migration/agenor-hitl`) to the current one with a warning. It is not a `@Deprecated` member,
+so no check sees it: its date is kept by its Javadoc, its log message, and the two pages that
+mention it. Paying any of these in 0.43.0 is a `BREAKING` entry with a `Migration:` line, as for
+any other break.
+
+**How other records read now.** ADR-006, ADR-007, ADR-017 and ADR-023 stated the removal release
+of what they deprecated; their text now names `0.43.0`, with no other change. ADR-003's "Cost at
+1.0" paragraph described a freeze that will not happen; it carries a scoped note. ADR-016's GraalVM
+hints, "deferred to a post-1.0.0 milestone", are deferred with no milestone: they wait until
+something being built needs them. ADR-027's "acceptable pre-1.0" stays true, now permanently. The
+per-module versioning question recorded at the end of the 2026-09-13 amendment goes with the
+criterion it was about. `SECURITY.md` listed only `1.0.x` as supported, which meant no released
+version ever was; it now names the latest `0.x` minor.
 
 ---
 
