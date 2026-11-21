@@ -62,6 +62,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to one node were handled in parallel and out of order. The second call now leaves the first to
   finish.
 
+- **`PersistenceManager.stop()` no longer lets a periodic save overwrite the final one.** A
+  scheduled save handed its write to another thread and returned, so a write captured earlier
+  could finish after `stop()` or `unregisterAgent()` had saved the final state, replacing it with
+  an older one, and `stop()` returned while files were still being written. Each scheduled write
+  now completes under a per-agent lock that the final save takes too.
+
 - **`agenor --version` prints the version of the installed CLI.** It had printed `0.4.0`, written
   into the source, since that release; it now reads the jar's manifest.
 
