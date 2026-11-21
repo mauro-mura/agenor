@@ -24,10 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a public type, and `CHANGELOG.md` still marks every break `BREAKING` with a `Migration:` line.
   `SECURITY.md` listed only `1.0.x` as supported; it now names the latest `0.x` minor.
 
-- **The README opens with three applications built on Agenor**, each in its own repository: a job
-  dispatcher that finishes every job after a worker is killed mid-job, a helpdesk where a person
-  approves what an LLM agent drafts, and a 24-hour fault-injection run whose findings are public.
-  The examples module still teaches one concept per example, and its section now points to them.
+- **The README says what Agenor is now: a lab for learning how multi-agent systems work, and how
+  they break.** It opens with the learning path, then where the articles are and three
+  applications in their own repositories. A new section says what Agenor is not. The features
+  list, which still named behavior types removed in 0.30.0, is gone, and a table replaces nine
+  per-module snippets. The documentation home says the same.
+
+- **The examples README lists every runnable example**, nine of which were missing, among them
+  guardrails, MCP, observability and both HITL examples. A new Level 7 holds the ones that run
+  across processes, over Redis or a database, and each level names the guide to read. It is now
+  the only list of the path: the main README points to it instead of repeating it.
 
 - **Six ADRs stop describing what the tree does not have.** ADR-006 promised YAML overrides of
   annotation values that were never built; ADR-012 placed a removed `ReflectionBehavior` in the

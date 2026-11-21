@@ -2,9 +2,15 @@
 
 > **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
-Agenor lets you build autonomous, message-driven agents with minimal boilerplate — starting simple and evolving incrementally toward production-grade deployments. Built on Java 21+ virtual threads, with native support for MCP, A2A, Guardrails, and Human-in-the-Loop.
+Agenor is a Java 21 library and a public lab: a place to work out how agent systems, classic and
+LLM-based, are built and how they actually behave. Every concept has a runnable example, and
+every experiment ends up as an article with its code at a tagged release. It is for developers
+who want to understand these systems by running them, not for choosing a production framework:
+the API stays `0.x`, and there is no supervision of failed agents.
 
-New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**.
+New to Agenor? Start with the **[Getting Started Guide](getting-started.md)**, then follow the
+learning path in `agenor-examples/README.md`, one concept per level, each with the examples to
+run and the guide to read.
 
 ---
 
