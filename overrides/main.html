@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+  {{ super() }}
+  <!-- Visit counter for agenor.dev: cookie-free, stores no IP address.
+       The landing page (agenor-web) carries the same code; change both together. -->
+  <script data-goatcounter="https://agenor.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+{% endblock %}
