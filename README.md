@@ -9,26 +9,61 @@
 
 > **Multi-agent coordination for the JVM.** Autonomous agents that negotiate, delegate, and execute — with pluggable LLM reasoning when you need it.
 
-**For Java developers who have a job to split across several independent workers, and need them to talk.** You write a class, annotate it, and start it; the framework handles discovery, addressing, delivery and lifecycle. It is a plain Java 21 library — no broker to install and no server to run before you see something work, and Redis or JDBC only when you outgrow a single process. LLM-backed reasoning (`agenor-runtime-llm`) is an optional module, not a prerequisite.
+Agenor is a Java 21 library and a public lab. Its purpose is to work out how agent systems,
+classic and LLM-based, are built and how they actually behave: what an interaction protocol
+guarantees, what happens when an agent dies halfway through a conversation, what a small local
+model does with the prompt a large one handled. Every concept has a runnable example, and every
+experiment ends up as an article with its code at a tagged release and numbers you can
+reproduce.
+
+**It is for Java developers who want to understand these systems by running them**, not for
+teams choosing a framework for production — see [What Agenor is not](#-what-agenor-is-not).
+Experiments run on local models through Ollama by default, and on remote ones through the
+adapters when an experiment calls for it.
 
 Agenor draws on the concepts JADE pioneered — performatives, interaction protocols, a directory — carried forward on modern Java.
 
-## 🔍 Real Applications
+## 📚 Learning path
 
-Each of these is its own repository, built against a released version of Agenor from Maven Central:
+**[agenor-examples](agenor-examples/README.md) is the path**: one concept per level, each with the
+examples to run and the guide to read, from a first agent to LLM agents with tools, memory and
+guardrails, MCP and A2A, and agents in separate processes over Redis and a shared directory.
+
+The examples are not published to Maven Central, so they run from a clone: follow
+[Development Setup](#development-setup) first — `mvn exec:java` needs the modules installed.
+Then start where the path starts:
+
+```bash
+mvn exec:java -pl agenor-examples \
+  -Dexec.mainClass="dev.agenor.examples.QuickStartExample"
+```
+
+## 📝 Articles
+
+Every experiment ends up as an article: it starts from a question, answers it with code at a
+tagged release of Agenor, and says what did not work as well as what did. They are published on
+[Foojay](https://foojay.io/today/author/mauro-mura/) and announced on
+[{bit Autonomi}](https://bitautonomi.substack.com), the maintainer's blog.
+
+## 🔍 Applications built on it
+
+Each is its own repository, built against a released version of Agenor from Maven Central, and
+each has a role in the lab:
 
 - **[agenor-example-job-dispatcher](https://github.com/mauro-mura/agenor-example-job-dispatcher)** —
-  a manager hands jobs to workers by Contract Net and keeps every job in PostgreSQL; when a worker
-  dies, its job goes to another one. `demo/demo.sh` kills a worker with `kill -9` while it holds a
-  job, and exits 0 only if all twelve jobs still end done. No LLM.
-- **[agenor-example-helpdesk](https://github.com/mauro-mura/agenor-example-helpdesk)** — an LLM
-  agent sorts incoming tickets, a specialist drafts each reply from a knowledge base, and no draft
-  reaches the customer until a person approves it. Spring Boot, in one process or on two nodes over
-  Redis.
+  the reference example, updated with each release. A manager hands jobs to workers by Contract
+  Net and keeps every job in PostgreSQL; when a worker dies, its job goes to another one.
+  `demo/demo.sh` kills a worker with `kill -9` while it holds a job, and exits 0 only if all
+  twelve jobs still end done. No LLM.
+- **[agenor-example-helpdesk](https://github.com/mauro-mura/agenor-example-helpdesk)** — the test
+  bench for experiments with LLM agents. An LLM agent sorts incoming tickets, a specialist drafts
+  each reply from a knowledge base, and no draft reaches the customer until a person approves it.
+  Spring Boot, in one process or on two nodes over Redis.
 - **[agenor-sentinel](https://github.com/mauro-mura/agenor-sentinel)** — a distributed uptime
-  monitor whose nodes come and go, run for 24 hours under injected faults.
-  [`FINDINGS.md`](https://github.com/mauro-mura/agenor-sentinel/blob/main/FINDINGS.md) records
-  what that run found in Agenor.
+  monitor whose nodes come and go, run for 24 hours under injected faults, and kept at Agenor
+  0.39.0 as the record of that run.
+  [`FINDINGS.md`](https://github.com/mauro-mura/agenor-sentinel/blob/main/FINDINGS.md) lists what
+  it found in Agenor.
 
 ## ⚡ Quick Start
 
@@ -137,39 +172,6 @@ public class HelloWorld {
 > `.scanPackage(...)` on the builder, which requires adding `agenor-runtime-scanning` to
 > the classpath (ADR-027).
 
-## 🏗️ Architecture
-
-Agenor follows a modular, interface-first architecture:
-
-For details, read the Architecture Guide at docs/architecture.md.
-
-| agenor-core (interfaces) | agenor-runtime (basic impls) | agenor-runtime-llm (LLM-aware) | agenor-runtime-ext (extensions) | agenor-runtime-scanning (classpath scanning) | agenor-adapters (integrations) |
-|---|---|---|---|---|---|
-| Agent | BaseAgent | LLMAgent | InMemoryStore | AgentScanner | OpenAIProvider |
-| MessageDispatcher | InMemoryDispatcher | DefaultLLMMemoryManager | Filters | AgentFactory | AnthropicProvider |
-| AgentDirectory | InMemoryDirectory | Guardrails | HITL | | OllamaProvider |
-| BehaviorScheduler | SimpleScheduler | | | | A2A Adapter |
-| LLMProvider | | | | | extensible |
-| MemoryStore | | | | | |
-
-`agenor-runtime-llm`, `agenor-runtime-ext`, and `agenor-runtime-scanning` were split out of
-`agenor-runtime` per ADR-027 — a pure multi-agent-system consumer with no LLM, extended
-behavior, or classpath-scanning needs can depend on `agenor-core` + `agenor-runtime` alone.
-See docs/architecture.md for the full breakdown.
-
-### Core Components
-
-- **Agent**: Autonomous entity with behaviors and message handling
-- **MessageDispatcher**: Asynchronous communication between agents (topic pub/sub + direct messaging)
-- **AgentDirectory**: Service discovery, registration, and endpoint resolution
-- **BehaviorScheduler**: Execution management for agent behaviors
-
-### Evolution Path
-
-All components are interfaces — swap any implementation without changing agent code. See the
-[Architecture Guide](docs/architecture.md) for how a deployment grows from single-JVM to
-distributed.
-
 ## 🔧 Configuration
 
 Simple YAML configuration:
@@ -225,206 +227,32 @@ named. That is the current commitment. It is weaker than semver, and saying so i
 
 ## 📦 Modules
 
-Agenor is an 11-module Maven project.
+Agenor is an 11-module Maven project. Every published module takes the version of the BOM shown
+in [Installation](#installation); the [Architecture Guide](docs/architecture.md) explains how they
+fit together.
 
-### agenor-bom
-Bill of Materials — manages dependency versions across all Agenor modules. See
-[Installation](#installation) above for the import snippet.
+| Module | What it holds |
+|---|---|
+| `agenor-bom` | Bill of Materials: one version for every Agenor module |
+| `agenor-core` | Interfaces and records only — every contract, no implementation |
+| `agenor-runtime` | In-memory implementations: `AgenorRuntime`, `BaseAgent`, messaging, directory, scheduler, dialogue protocols |
+| `agenor-runtime-llm` | `LLMAgent`, LLM memory management, guardrails, reflection, and `ScriptedLLMProvider` for tests and offline runs |
+| `agenor-runtime-ext` | `InMemoryStore`, filters, file persistence, composite behaviors, human-in-the-loop, knowledge |
+| `agenor-runtime-scanning` | Classpath scanning for `scanPackage(...)`, kept apart so `agenor-runtime` stays GraalVM native-image friendly |
+| `agenor-adapters` | LLM providers (OpenAI, Anthropic, Ollama), the Redis transport, MCP and A2A |
+| `agenor-adapters-persistence` | JDBC-backed agent directory and human-in-the-loop approvals |
+| `agenor-spring-boot-starter` | Spring Boot 4.0.x auto-configuration, with an Actuator health indicator ([guide](docs/spring-boot-starter.md)) |
+| `agenor-tools` | Web console and CLI |
+| `agenor-examples` | The learning path; not published |
 
-### agenor-core
-Core interfaces and abstractions. No implementations, just contracts.
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-core</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-runtime
-Basic implementations for getting started quickly.
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-runtime</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-runtime-llm
-LLM-aware runtime pieces (ADR-027): `LLMAgent`, LLM memory management, guardrails, reflection
-strategy, and `ScriptedLLMProvider` for tests and offline runs. Depends on `agenor-runtime`.
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-runtime-llm</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-runtime-ext
-Extended runtime pieces (ADR-027): `InMemoryStore`, filters, file persistence, composite
-behaviors, HITL, knowledge. Depends on `agenor-runtime`.
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-runtime-ext</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-runtime-scanning
-Classpath scanning and DI-based agent discovery (ADR-027), isolated so `agenor-runtime` stays
-GraalVM native-image friendly. Required for `scanPackage(...)`. Depends on `agenor-runtime`.
-`agenor-spring-boot-starter` brings it in transitively — it is what makes
-`agenor.agents.base-package` work — and it can be excluded there for native-image builds
-that don't use classpath discovery (see the [Spring Boot Starter guide](docs/spring-boot-starter.md)).
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-runtime-scanning</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-adapters
-Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-adapters</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-adapters-persistence
-JDBC-backed agent directory and persistent Human-in-the-Loop checkpoints (ADR-022, ADR-023).
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-adapters-persistence</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-tools
-Web Console and CLI tools.
-
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-tools</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
-
-### agenor-spring-boot-starter
- 
-Spring Boot 4.0.x auto-configuration: wires `AgenorRuntime` and optionally an `LLMProvider`
-from `application.yml`. Includes an Actuator health indicator.
- 
-```xml
-<dependency>
-    <groupId>dev.agenor</groupId>
-    <artifactId>agenor-spring-boot-starter</artifactId>
-    <version>0.41.0</version>
-</dependency>
-```
- 
-`application.yml`:
-```yaml
-agenor:
-  agents:
-    base-package: com.example.agents
-  llm:
-    provider: openai          # none | openai | anthropic | ollama
-    api-key: ${OPENAI_API_KEY}
-```
- 
-That's it — `AgenorRuntime` is started and stopped automatically by the Spring lifecycle.
-
-### agenor-examples
-Runnable examples organized as a 6-level learning path (Level 0–5), from a first agent
-exchange to a multi-node, multi-behavior application. Not published as a dependency — see the
-[📚 Examples](#-examples) section below.
-
-## 🚀 Features
-
-### Core — multi-agent coordination (`agenor-core` + `agenor-runtime`)
-- [x] Agent lifecycle management
-- [x] In-memory message passing
-- [x] Local agent directory
-- [x] Annotation-based agent/behavior/handler declarations (`@Agent`, `@Behavior`, `@AgenorMessageHandler`)
-- [x] Behavior types: Cyclic, One-shot, Event-driven, Waker
-- [x] Dialogue protocol (Request, Query, Contract-Net) — negotiation with no LLM required
-- [x] YAML configuration support
-
-### Optional: LLM integration (`agenor-runtime-llm`)
-- [x] LLM-aware agent (`LLMAgent`) — OpenAI, Anthropic, Ollama providers via `agenor-adapters`
-- [x] Memory management with context window strategies (fixed, sliding, summarization)
-- [x] Reflection pattern (Generate → Critique → Revise)
-- [x] Guardrail layer (content policy, PII redaction, JSON schema, max tokens)
-
-### Optional: extended runtime behaviors & utilities (`agenor-runtime-ext`)
-- [x] Composite behaviors: Sequential, Parallel, FSM
-- [x] Message filtering (topic, header, content, predicate, composite)
-- [x] File-based persistence utilities
-- [x] Human-in-the-Loop checkpoint
-
-### Optional: classpath scanning & discovery (`agenor-runtime-scanning`)
-- [x] Automatic agent discovery via classpath scanning (`scanPackage(...)`)
-- [x] Isolated from `agenor-runtime` for GraalVM native-image friendliness
-
-### Integrations & tooling (`agenor-adapters`, `agenor-tools`, `agenor-spring-boot-starter`)
-- [x] A2A (Agent-to-Agent) protocol support
-- [x] MCP adapter
-- [x] Web management console
-- [x] CLI tools
-- [x] Spring Boot 4.0.x autoconfiguration
-
-
-## 📚 Examples
-
-The `agenor-examples` module contains a structured **learning path** from first steps to a
-multi-node, multi-behavior application. See **[agenor-examples/README.md](agenor-examples/README.md)**
-for the full guide. Each example shows one concept; for whole applications, with failures and
-recovery, see Real Applications at the top of this page.
-
-The examples are not published to Maven Central, so they run from a clone: follow
-[Development Setup](#development-setup) first — `mvn exec:java` needs the modules installed.
-
-```bash
-# Level 0 — first agent exchange
-mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.PingPongExample"
-
-# Level 1 — the three behavior types in one agent
-mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.behaviors.CoreBehaviorsExample"
-
-# Level 2 — Contract-Net negotiation (CFP → propose → accept)
-mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.dialogue.ContractNetExample"
-
-# Level 5 — e-commerce FSM + parallel validators
-mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.ecommerce.ECommerceApplication"
-
-# Level 4 — LLM multi-agent (free by default: local Ollama, no API key)
-mvn exec:java -pl agenor-examples \
-  -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
-```
+`agenor-core` and `agenor-runtime` are enough for agents that coordinate without an LLM; the
+other runtime modules were split out of `agenor-runtime` by ADR-027 so that each is added only
+when it is used.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome, and so are questions about why something behaves as it does. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Development Setup
 
@@ -450,19 +278,16 @@ mvn exec:java -pl agenor-examples \
 
 ## 📖 Documentation
 
-### Core Documentation
 - [Documentation Index](docs/index.md)
+- [Getting Started](docs/getting-started.md)
 - [Architecture Guide](docs/architecture.md)
-- [Agent Development Guide](docs/agent-development.md)
 - [Configuration Guide](docs/configuration.md)
-- [Dialogue Protocol](docs/dialog-protocol.md)
-- [LLM Integration Guide](docs/llm-integration.md)
-- [Memory Guide](docs/memory.md)
 - [Agent State Persistence Guide](docs/persistence.md)
 - [Message Filtering Guide](docs/message-filtering.md)
-- [Architecture Decision Records](docs/adr/README.md)
+- [Architecture Decision Records](docs/adr/README.md) — why the code is the way it is, including
+  what was tried and dropped
 
-### Behaviors
+## 🧩 Behaviors
 
 **When work runs**
 - [OneShotBehavior](docs/behaviors/OneShotBehavior.md) - Execute once, immediately or after a delay
@@ -475,31 +300,18 @@ mvn exec:java -pl agenor-examples \
 
 See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 
-## 💡 Why Agenor?
+## 🚧 What Agenor is not
 
-**Built for coordination, not just generation:**
-- Agents are independent, addressable, long-lived processes — each with its own
-  lifecycle and behavior scheduler, registered in an `AgentDirectory` for discovery
-- Asynchronous messaging (pub/sub topics + direct messaging) is a core primitive, not a
-  side effect of an LLM call
-- Dialogue protocols (Request, Query, Contract-Net) let agents negotiate and delegate
-  tasks to each other — no LLM required to run a negotiation
-- LLM-backed reasoning (`agenor-runtime-llm`) is one optional capability an agent can
-  have, not the mechanism coordination is built on
-
-**Reach for Agenor when:**
-- You have several independent, long-lived workers that need to discover each other,
-  exchange messages and negotiate — not one call orchestrating tools in sequence
-- You want agents that can delegate and bid on work (Contract-Net) with or without an
-  LLM in the loop
-- You want to start on a single JVM, no broker or server to stand up first, and grow
-  into a Redis- or JDBC-backed multi-node deployment only when you need to
-
-**Look elsewhere when:**
-- Your whole system is one LLM call chaining tools in sequence, with nothing that needs
-  its own address, lifecycle or negotiation
-- Durable, replayable long-running workflow execution is the core guarantee you need
-- Fine-grained supervision and actor-level control is the primitive you're building on
+- **Not a production framework.** There is no supervision: no restart policy, no backoff, no
+  escalation when an agent fails. The Redis transport
+  [authenticates nothing](docs/adapters/redis.md#trust-model-the-transport-authenticates-nothing),
+  so it belongs on a network you trust.
+- **Not a stable API.** It stays `0.x`, and a release may break a public type when an experiment
+  needs it — always marked in the changelog, with the way out. See [API stability](#-api-stability).
+- **Not a wrapper around an LLM.** Coordination is built on messages, protocols and a directory;
+  an LLM is one capability an agent can have, and a negotiation runs without one.
+- **Not a team.** One maintainer, in spare time. Issues and discussions are read; answers can take
+  a few days.
 
 ## 📄 License
 
@@ -509,8 +321,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 - 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/agenor/issues)
 - 💬 Questions and ideas: [GitHub Discussions](https://github.com/mauro-mura/agenor/discussions)
-- 📝 Articles: [{bit Autonomi}](https://bitautonomi.substack.com), the maintainer's blog, with
-  worked examples and the reasoning behind design decisions
+- 📝 Articles: [{bit Autonomi}](https://bitautonomi.substack.com), the maintainer's blog
 
 ## 🤖 Development
 

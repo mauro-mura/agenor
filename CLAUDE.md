@@ -123,7 +123,7 @@ bash tools/preflight.sh
 | `agenor-adapters-persistence` | JDBC-backed directory and HITL persistence (ADR-022). |
 | `agenor-spring-boot-starter` | Spring Boot 4.0.x auto-configuration for Agenor. |
 | `agenor-tools` | Web console (Jetty) and CLI (PicoCLI). |
-| `agenor-examples` | Runnable examples organized as a 6-level learning path (Level 0–5). |
+| `agenor-examples` | Runnable examples organized as a learning path; its README is the only list of the levels and their examples. |
 
 ## Core Architecture Patterns
 

@@ -50,7 +50,7 @@ mvn exec:java -pl agenor-examples \
   -Dexec.mainClass="dev.agenor.examples.llm.LLMDirectMessagingExample"
 ```
 
-The full learning path (Level 0 → Level 5) is in `agenor-examples/README.md`.
+The full learning path, one concept per level, is in `agenor-examples/README.md`.
 
 ## 5. Add Agenor to Your Project
 

@@ -26,7 +26,7 @@ agenor/
 ├── agenor-adapters/                     # LLM + A2A + MCP + OTel* + Redis*
 ├── agenor-adapters-persistence/         # JDBC directory + JDBC HITL (see ADR-022)
 ├── agenor-spring-boot-starter/          # Spring Boot 4.0.x auto-configuration
-├── agenor-examples/                     # Runnable examples (6-level learning path)
+├── agenor-examples/                     # Runnable examples (learning path)
 └── agenor-tools/                        # Web console + CLI
 
 * = optional dependency, opt-in at consumer POM level (see ADR-018)

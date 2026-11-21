@@ -1,7 +1,7 @@
 # Agenor Examples
 
-Runnable examples for the Agenor multi-agent framework, organized as a learning path
-from the absolute basics to production-grade systems.
+Runnable examples for Agenor, organized as a learning path: one concept per level, from a first
+agent to applications that combine several patterns.
 
 ## Prerequisites
 
@@ -33,6 +33,9 @@ Start here. Every example fits in a single file and introduces one concept.
 | `PingPongExample` | `dev.agenor.examples.PingPongExample` | Two agents exchanging messages |
 | `WeatherStationExample` | `dev.agenor.examples.WeatherStationExample` | Cyclic behavior + topic pub/sub |
 | `TaskManagerExample` | `dev.agenor.examples.TaskManagerExample` | Agent state + task lifecycle |
+| `SimpleExample` | `dev.agenor.examples.SimpleExample` | Agents created in code, without annotations |
+
+Read: [Getting started](../docs/getting-started.md), [Agent development](../docs/agent-development.md).
 
 ---
 
@@ -51,6 +54,8 @@ Those types were removed in 0.30.0 — retrying, rate limiting, batching, gating
 kinds of schedule, so they were never behavior types. See
 [Behaviors Overview](../docs/behaviors/README.md) for where each one belongs instead.
 
+Read: [Behaviors Overview](../docs/behaviors/README.md).
+
 ---
 
 ### Level 2 — Messaging patterns
@@ -62,6 +67,9 @@ kinds of schedule, so they were never behavior types. See
 | `QueryProtocolExample` | `dev.agenor.examples.dialogue.QueryProtocolExample` | Query/inform |
 | `ContractNetExample` | `dev.agenor.examples.dialogue.ContractNetExample` | CFP → propose → accept |
 
+Read: [Messaging](../docs/messaging.md), [Dialogue protocol](../docs/dialog-protocol.md),
+[Message filtering](../docs/message-filtering.md).
+
 ---
 
 ### Level 3 — Agent discovery
@@ -70,6 +78,8 @@ kinds of schedule, so they were never behavior types. See
 |---------|-----------|---------|
 | `DiscoveryExample` | `dev.agenor.examples.DiscoveryExample` | `scanPackages` auto-discovery |
 | `ChatAgentExample` | `dev.agenor.examples.agent.ChatAgentExample` | `AgentDirectory` queries + direct routing |
+
+Read: [Agent directory](../docs/directory.md).
 
 ---
 
@@ -122,13 +132,18 @@ rather than failing — so it runs with nothing installed.
 | `LLMDirectMessagingExample` | `dev.agenor.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
 | `LLMCapabilityDiscoveryExample` | `dev.agenor.examples.llm.capabilities.LLMCapabilityDiscoveryExample` | `scanPackages` + `AgentDirectory` capability queries |
 | `LLMFaultToleranceExample` | `dev.agenor.examples.llm.dynamic_discovery.LLMFaultToleranceExample` | Dynamic discovery + fault tolerance (agent stops mid-run) |
+| `GuardrailsExample` | `dev.agenor.examples.guardrail.GuardrailsExample` | Input and output guardrails: PII redaction, content policy |
 
 The three `LLM*` examples use the same research-team domain intentionally — comparing
 them side by side shows how the same problem is solved with different discovery patterns.
 
+Read: [LLM integration](../docs/llm-integration.md), [Memory](../docs/memory.md),
+[Guardrails](../docs/guardrails.md), and [ADR-012](../docs/adr/ADR-012-reflection-behavior.md) for
+reflection.
+
 ---
 
-### Level 5 — Production systems
+### Level 5 — Complete applications
 
 End-to-end examples that combine multiple patterns.
 
@@ -137,6 +152,9 @@ End-to-end examples that combine multiple patterns.
 | `ECommerceApplication` | `dev.agenor.examples.ecommerce.ECommerceApplication` | FSM order lifecycle + parallel validators + sequential fulfillment |
 | `SupportChatbotExample` | `dev.agenor.examples.support.SupportChatbotExample` | LLM + RAG + multi-agent synthesis + A2A protocol — [details](src/main/java/dev/agenor/examples/support/README.md) |
 | `EvaluationFrameworkExample` | `dev.agenor.examples.eval.EvaluationFrameworkExample` | Agent evaluation harness |
+| `HitlExample` | `dev.agenor.examples.hitl.HitlExample` | A person approves before an agent acts (human-in-the-loop checkpoint) |
+
+Read: [Knowledge](../docs/knowledge.md), [Human-in-the-loop](../docs/behaviors/hitl.md).
 
 ---
 
@@ -147,6 +165,29 @@ End-to-end examples that combine multiple patterns.
 | `CLIExample` | `dev.agenor.examples.cli.CLIExample` | Web console + CLI (`agenor list`, `agenor status`, `agenor logs -f`) |
 | `A2AIntegrationExample` | `dev.agenor.examples.a2a.A2AIntegrationExample` | Agent-to-Agent HTTP protocol |
 | `UserPreferenceMemoryExample` | `dev.agenor.examples.memory.UserPreferenceMemoryExample` | Agent memory / persistence |
+| `McpExample` | `dev.agenor.examples.mcp.McpExample` | MCP tools from a filesystem server; needs Docker |
+| `ObservabilityExample` | `dev.agenor.examples.observability.ObservabilityExample` | OpenTelemetry traces in Jaeger; needs Docker Compose |
+
+Read: [MCP adapter](../docs/adapters/mcp.md), [Observability](../docs/observability.md),
+[Dialogue protocol](../docs/dialog-protocol.md) for A2A.
+
+---
+
+### Level 7 — Across processes
+
+Everything above runs in one JVM, in memory. These examples move messages, the directory or
+pending approvals out of it.
+
+| Example | Main class | Demonstrates |
+|---------|-----------|-------------|
+| `JdbcDirectoryExample` | `dev.agenor.examples.jdbc.JdbcDirectoryExample` | Agent registrations that survive a restart, in H2; no infrastructure |
+| `PersistentHitlExample` | `dev.agenor.examples.hitl.PersistentHitlExample` | Approvals kept in a database, in H2; no infrastructure |
+| `RedisMessagingExample` | `dev.agenor.examples.redis.RedisMessagingExample` | Two agents over Redis Streams; needs Redis or Valkey |
+| `CrossRuntimeExample` | `dev.agenor.examples.distributed.CrossRuntimeExample` | Two runtimes, a request over Redis and a shared PostgreSQL directory; `docker compose up -d postgres valkey` |
+
+Read: [Distributed quick start](../docs/distributed-quick-start.md),
+[Redis adapter](../docs/adapters/redis.md), [JDBC directory](../docs/adapters/jdbc-directory.md),
+[Persistent HITL](../docs/hitl-persistence.md).
 
 ---
 
@@ -154,9 +195,11 @@ End-to-end examples that combine multiple patterns.
 
 ```
 dev.agenor.examples
-├── PingPongExample            ← start here
+├── QuickStartExample          ← start here
+├── PingPongExample
 ├── WeatherStationExample
 ├── TaskManagerExample
+├── SimpleExample
 ├── DiscoveryExample
 ├── behaviors/                 CoreBehaviorsExample
 ├── agent/                     ChatAgentExample
@@ -168,9 +211,16 @@ dev.agenor.examples
 ├── ecommerce/                 ECommerceApplication
 ├── support/                   SupportChatbotExample  (see support/README.md)
 ├── eval/                      EvaluationFrameworkExample
+├── guardrail/                 GuardrailsExample
+├── hitl/                      HitlExample, PersistentHitlExample
 ├── cli/                       CLIExample
 ├── a2a/                       A2AIntegrationExample
-└── memory/                    UserPreferenceMemoryExample
+├── memory/                    UserPreferenceMemoryExample
+├── mcp/                       McpExample
+├── observability/             ObservabilityExample
+├── jdbc/                      JdbcDirectoryExample
+├── redis/                     RedisMessagingExample
+└── distributed/               CrossRuntimeExample
 ```
 
 ## Adding a new example
