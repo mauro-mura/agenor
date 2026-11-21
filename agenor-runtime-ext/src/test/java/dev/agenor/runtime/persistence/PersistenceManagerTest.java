@@ -17,7 +17,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -91,6 +95,35 @@ class PersistenceManagerTest {
         TestAgent newAgent = new TestAgent("test-agent", PersistenceStrategy.MANUAL);
         persistenceManager.loadAgent(newAgent).get();
         assertThat(newAgent.counter.get()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("stop() waits for an in-flight periodic save, so it cannot land after the final one")
+    void stopWaitsForInFlightPeriodicSave() throws Exception {
+        // Given: the first periodic save is held mid-write by the gate
+        GatedPersistenceService service = new GatedPersistenceService();
+        PersistenceManager manager = new PersistenceManager(service);
+        manager.start().get();
+        PeriodicTestAgent agent = new PeriodicTestAgent("gated-agent");
+        agent.counter.set(1);
+        agent.setRunning(true);
+        manager.registerAgent(agent);
+        assertThat(service.firstSaveStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+        // When: the agent stops (no more periodic saves), its state moves on, and the manager
+        // stops while the first save is still held
+        agent.setRunning(false);
+        agent.counter.set(2);
+        CompletableFuture<Void> stopped = manager.stop();
+        // A broken stop() stores the final state without waiting; a correct one cannot until
+        // the held save finishes, so this wait times out and the gate opens anyway.
+        service.finalSaveStored.await(500, TimeUnit.MILLISECONDS);
+        service.gate.countDown();
+        stopped.get(15, TimeUnit.SECONDS);
+
+        // Then: nothing is still writing, and the last write is the final state, not the held one
+        assertThat(service.inFlight.get()).isZero();
+        assertThat(service.lastSaved.get().data()).containsEntry("counter", 2);
     }
 
     @Test
@@ -622,6 +655,41 @@ class PersistenceManagerTest {
         public void restoreState(AgentState state) {
             Integer v = (Integer) state.data().get("counter");
             if (v != null) counter.set(v);
+        }
+    }
+
+    /**
+     * Holds the first save until {@link #gate} opens, and records which save reached storage last.
+     * A save of {@code counter == 2} is the final one {@link PersistenceManager#stop()} issues.
+     */
+    static class GatedPersistenceService extends InMemoryPersistenceService {
+        final CountDownLatch gate = new CountDownLatch(1);
+        final CountDownLatch firstSaveStarted = new CountDownLatch(1);
+        final CountDownLatch finalSaveStored = new CountDownLatch(1);
+        final AtomicInteger inFlight = new AtomicInteger();
+        final AtomicReference<AgentState> lastSaved = new AtomicReference<>();
+        private final AtomicBoolean first = new AtomicBoolean(true);
+
+        @Override
+        public CompletableFuture<Void> saveState(String agentId, AgentState state) {
+            boolean held = first.compareAndSet(true, false);
+            inFlight.incrementAndGet();
+            return CompletableFuture.runAsync(() -> {
+                try {
+                    if (held) {
+                        firstSaveStarted.countDown();
+                        gate.await();
+                    }
+                    lastSaved.set(state);
+                    if (Integer.valueOf(2).equals(state.data().get("counter"))) {
+                        finalSaveStored.countDown();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    inFlight.decrementAndGet();
+                }
+            });
         }
     }
 

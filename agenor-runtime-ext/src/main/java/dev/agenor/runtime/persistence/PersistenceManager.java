@@ -8,6 +8,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,23 +82,9 @@ public class PersistenceManager {
         running = false;
 
         return CompletableFuture.runAsync(() -> {
-            // Cancel all scheduled tasks
-            for (AgentPersistenceContext context : agentContexts.values()) {
-                context.cancelScheduledTasks();
-            }
-
-            // Save all agent states before shutdown
             log.info("Saving all agent states before shutdown...");
             for (AgentPersistenceContext context : agentContexts.values()) {
-                try {
-                    AgentState state = context.statefulAgent.captureState();
-                    persistenceService.saveState(context.agent.getAgentId(), state)
-                        .get(5, TimeUnit.SECONDS);
-                    log.debug("Saved final state for agent: {}", context.agent.getAgentId());
-                } catch (Exception e) {
-                    log.error("Failed to save final state for agent: {}",
-                             context.agent.getAgentId(), e);
-                }
+                saveFinalState(context);
             }
 
             // Shutdown scheduler
@@ -157,17 +145,50 @@ public class PersistenceManager {
     public void unregisterAgent(String agentId) {
         AgentPersistenceContext context = agentContexts.remove(agentId);
         if (context != null) {
-            context.cancelScheduledTasks();
+            saveFinalState(context);
+        }
+    }
 
-            // Save final state if agent is stateful
-            try {
-                AgentState state = context.statefulAgent.captureState();
-                persistenceService.saveState(agentId, state)
-                    .get(5, TimeUnit.SECONDS);
-                log.info("Saved final state for unregistered agent: {}", agentId);
-            } catch (Exception e) {
-                log.error("Failed to save final state for agent: {}", agentId, e);
+    /**
+     * Stops the agent's scheduled writes and saves its state one last time.
+     *
+     * <p>Cancelling a scheduled task does not stop an execution already running, and that
+     * execution captured its state earlier. Taking the context's write lock waits for it to
+     * finish, so it cannot land after the final save and overwrite it with an older state, and
+     * nothing is still writing when this returns.
+     */
+    private void saveFinalState(AgentPersistenceContext context) {
+        String agentId = context.agent.getAgentId();
+        context.closed = true;
+        context.cancelScheduledTasks();
+        context.writeLock.lock();
+        try {
+            AgentState state = context.statefulAgent.captureState();
+            persistenceService.saveState(agentId, state).get(5, TimeUnit.SECONDS);
+            log.debug("Saved final state for agent: {}", agentId);
+        } catch (Exception e) {
+            log.error("Failed to save final state for agent: {}", agentId, e);
+        } finally {
+            context.writeLock.unlock();
+        }
+    }
+
+    /**
+     * Runs one scheduled write and waits for it to complete, under the context's write lock,
+     * so that {@link #saveFinalState} can wait for it in turn. Does nothing once the context
+     * is closed.
+     */
+    private void runScheduledWrite(AgentPersistenceContext context, String what,
+                                   Supplier<CompletableFuture<?>> write) {
+        context.writeLock.lock();
+        try {
+            if (!context.closed) {
+                write.get().join();
             }
+        } catch (Exception e) {
+            log.error("Failed to {} for agent {}", what, context.agent.getAgentId(), e);
+        } finally {
+            context.writeLock.unlock();
         }
     }
 
@@ -319,22 +340,11 @@ public class PersistenceManager {
         Duration interval = parseDuration(context.config.interval());
 
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-            () -> {
-                try {
-                    if (context.agent.isRunning()) {
-                        AgentState state = context.statefulAgent.captureState();
-                        persistenceService.saveState(context.agent.getAgentId(), state)
-                            .exceptionally(throwable -> {
-                                log.error("Failed to save periodic state for agent {}",
-                                         context.agent.getAgentId(), throwable);
-                                return null;
-                            });
-                    }
-                } catch (Exception e) {
-                    log.error("Error in periodic persistence for agent {}",
-                             context.agent.getAgentId(), e);
-                }
-            },
+            () -> runScheduledWrite(context, "save periodic state", () ->
+                context.agent.isRunning()
+                    ? persistenceService.saveState(context.agent.getAgentId(),
+                                                   context.statefulAgent.captureState())
+                    : CompletableFuture.completedFuture(null)),
             interval.toMillis(),
             interval.toMillis(),
             TimeUnit.MILLISECONDS
@@ -378,20 +388,9 @@ public class PersistenceManager {
 
             // Schedule new save
             currentTask[0] = scheduler.schedule(
-                () -> {
-                    try {
-                        AgentState state = context.statefulAgent.captureState();
-                        persistenceService.saveState(context.agent.getAgentId(), state)
-                            .exceptionally(throwable -> {
-                                log.error("Failed to save debounced state for agent {}",
-                                         context.agent.getAgentId(), throwable);
-                                return null;
-                            });
-                    } catch (Exception e) {
-                        log.error("Error in debounced persistence for agent {}",
-                                 context.agent.getAgentId(), e);
-                    }
-                },
+                () -> runScheduledWrite(context, "save debounced state", () ->
+                    persistenceService.saveState(context.agent.getAgentId(),
+                                                 context.statefulAgent.captureState())),
                 debounceInterval.toMillis(),
                 TimeUnit.MILLISECONDS
             );
@@ -405,21 +404,10 @@ public class PersistenceManager {
         Duration interval = parseDuration(context.config.snapshotInterval());
 
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-            () -> {
-                try {
-                    if (context.agent.isRunning()) {
-                        createSnapshot(context.agent.getAgentId())
-                            .exceptionally(throwable -> {
-                                log.error("Failed to create automatic snapshot for agent {}",
-                                         context.agent.getAgentId(), throwable);
-                                return null;
-                            });
-                    }
-                } catch (Exception e) {
-                    log.error("Error in snapshot creation for agent {}",
-                             context.agent.getAgentId(), e);
-                }
-            },
+            () -> runScheduledWrite(context, "create automatic snapshot", () ->
+                context.agent.isRunning()
+                    ? createSnapshot(context.agent.getAgentId())
+                    : CompletableFuture.completedFuture(null)),
             interval.toMillis(),
             interval.toMillis(),
             TimeUnit.MILLISECONDS
@@ -434,21 +422,10 @@ public class PersistenceManager {
         Duration interval = parseDuration(context.config.snapshotInterval());
 
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-            () -> {
-                try {
-                    if (context.agent.isRunning()) {
-                        createSnapshot(context.agent.getAgentId())
-                            .exceptionally(throwable -> {
-                                log.error("Failed to create auto-snapshot for agent {}",
-                                         context.agent.getAgentId(), throwable);
-                                return null;
-                            });
-                    }
-                } catch (Exception e) {
-                    log.error("Error in auto-snapshot for agent {}",
-                             context.agent.getAgentId(), e);
-                }
-            },
+            () -> runScheduledWrite(context, "create auto-snapshot", () ->
+                context.agent.isRunning()
+                    ? createSnapshot(context.agent.getAgentId())
+                    : CompletableFuture.completedFuture(null)),
             interval.toMillis(),
             interval.toMillis(),
             TimeUnit.MILLISECONDS
@@ -500,6 +477,10 @@ public class PersistenceManager {
         final Stateful statefulAgent;
         final PersistenceConfig config;
         final java.util.List<ScheduledFuture<?>> scheduledTasks;
+        /** Held for each scheduled write and for the final save, which must not interleave. */
+        final ReentrantLock writeLock = new ReentrantLock();
+        /** Set before the final save; a scheduled write that runs after it does nothing. */
+        volatile boolean closed;
         Runnable debouncedSave;
 
         AgentPersistenceContext(Agent agent, Stateful statefulAgent, PersistenceConfig config) {
