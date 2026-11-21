@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they break.** It opens with the learning path, then where the articles are and three
   applications in their own repositories. A new section says what Agenor is not. The features
   list, which still named behavior types removed in 0.30.0, is gone, and a table replaces nine
-  per-module snippets. The documentation home says the same.
+  per-module snippets. The documentation home says the same, and CONTRIBUTING says which
+  contributions fit a lab.
 
 - **The examples README lists every runnable example**, nine of which were missing, among them
   guardrails, MCP, observability and both HITL examples. A new Level 7 holds the ones that run

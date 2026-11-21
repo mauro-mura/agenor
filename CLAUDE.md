@@ -4,85 +4,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Attieniti sempre alle linee guida definite in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Current phase: adoption
+## Current phase: didactic
 
-The binding constraint is no longer correctness on the message path. It is that a developer who
-is not the maintainer can build something useful and understand what they built. Three rules,
-each checkable with a `grep`:
+Agenor is a learning lab: a public place to work out how agent systems, classic and LLM-based,
+are built and how they behave, on local models by default. The README says so, and ADR-025's
+2026-11-21 amendment records what it did to versioning: no `1.0.0`, the version stays `0.x`. The
+code is what the experiments run on, and what a reader studies, so it has to stay readable at a
+tag, one concept at a time. Four rules:
 
-1. **Zero-usage rule.** A public API with no uses outside its own test is to be deprecated, not
-   documented. An example that exists only to demonstrate one API is not a use of it. Never add
-   a third way to do something when two existing ways are unused.
+1. **Code serves an experiment or fixes a defect.** New surface is opened by something being built
+   that needs it — an experiment, an example, an article — never by an analysis noticing it is
+   absent. Supervision is the standing case: no restart policy, no backoff, no escalation, and it
+   stays that way until an experiment needs one.
 2. **Write for the other transport.** Behaviour verified only against
    `InMemoryMessageDispatcher` is not verified. This defect class has occurred four times; the
    fourth (`f2a3527`) lost on Redis what the in-memory dispatcher dead-lettered.
-3. **Concept budget, measured by what leaves.** The number is
-   `grep -r "forRemoval = true" --include="*.java" */src/main | wc -l`: the public surface
-   actually scheduled for removal, and it is **10** on `main`: the `Models` enums of the three LLM
-   providers and `LLMMessage.function(String, String)`, scheduled in 0.36.0 for removal in
-   0.43.0 (it said 1.0.0 until ADR-025's 2026-11-21 amendment took `1.0.0` off the roadmap),
-   `DialogueA2AConverter.mapPerformativeToTaskState`, scheduled in 0.39.0 for the same
-   release, `AgentFactory.scanForAgents`, scheduled in 0.40.0 for the same release,
-   `LLMResponse.isComplete()` and `StreamingChunk.isComplete()`, scheduled in 0.41.0 for the same
-   release, and the two overloads of `BaseAgent.requestFrom`, scheduled in 0.42.0 for the same
-   release. This is not a freeze, and a release may add types; but one that ships without moving
-   this number means the census produced a document instead of a decision.
+3. **One list per fact.** `agenor-examples/README.md` is the only list of the learning path and
+   its levels; nothing else names a level count. The README links to the articles' author page
+   instead of listing them. A list kept by hand in two places is wrong in one of them by the next
+   release.
+4. **A release when an article needs a tag**, not on a calendar. It may break a public type when
+   an experiment needs it; the CHANGELOG marks the entry `BREAKING` with a `Migration:` line, as
+   `tools/changelog-budget.sh --check` enforces.
 
-### Reading that number
+Until November 2026, while Agenor looked for production users, two more rules bound every
+release: a public API with no use outside its own test was deprecated rather than documented
+(the zero-usage rule), and a release had to move the count of surface scheduled for removal (the
+concept budget). Neither binds now. The census that measured them stays as a tool, because it
+costs nothing to run and what it shows is part of what the lab teaches.
 
-**Zero is not a terminal state.** When the count is zero, that means nothing is currently
-scheduled, not that nothing should ever be. The next entry earns its place from evidence, the
-way the paid ones did — not from a sweep looking for candidates.
+### The census, as a tool
 
-**Paying a deprecation lowers the count, and that is correct**: it measures surface still
-scheduled, not work done. Do not read a drop as a regression, and do not read a rise as progress
-on its own — the release that scheduled thirty-eight removals and the one that paid them are both
-doing the job. A release may also remove something without scheduling it first, leaving the
-number flat: read a flat zero the way you read a drop, by asking what left the tree rather than
-what the counter did.
+`bash tools/api-census.sh --check` still runs on its own, in `build.yml` and in
+`bash tools/preflight.sh`: it exits non-zero when a declared removal date has passed, was never
+declared, or when a `@Deprecated` carries no `forRemoval` at all. Each of those three has let dead
+surface survive releases it should not have. A removal date must name a release that can arrive.
+`grep -r "forRemoval = true" --include="*.java" */src/main` lists what is scheduled; every entry
+names `0.43.0`, so reopening at `0.43.0-SNAPSHOT` turns the check red until that release pays them.
 
-**Count constants and members, not only types.** A user writes `@Behavior(type = THROTTLED)` and
-never names `ThrottledBehavior`, so for an annotation-driven feature the constant is the unit of
-decision, and deprecating the class alone retires nothing.
+`bash tools/api-census.sh` (it writes to stdout — redirect it) gives per-type verdicts. Three
+lessons from reading it, still true:
 
-`bash tools/api-census.sh --check` is the companion number: it exits non-zero when a declared
-removal date has passed, was never declared, or when a `@Deprecated` carries no `forRemoval` at
-all. Each of those three has let dead surface survive releases it should not have. Unlike the
-census itself, it runs on its own — in `build.yml` and in `bash tools/preflight.sh`.
-
-### What the census cannot decide
-
-Run `bash tools/api-census.sh` (it writes to stdout — redirect it) for the per-type verdicts.
-**documented, unnamed** sits at 95 of 267 types across all nine modules that contain code — read
-it as a diagnostic, not an agenda. **dead surface** is at **0**.
-
-Applied to the types that differentiate Agenor from an LLM wrapper, both verdicts the census can
-hand out — stop presenting it as surface, or deprecate it — would have retired the
-differentiator. That is why the census stopped driving releases, and why the work that followed
-came from a different question: what a developer cannot currently do. A conversation and a
-commitment are now legible on both transports, and a failed message has somewhere to go on every
-transport.
-
-**A zero in the usage column is a question about why, not a verdict.** `EmbeddingProvider` scored
-as unused surface for the opposite of the obvious reason: the one example that needed embeddings
-had reimplemented it against LangChain4j directly rather than call it. Deprecating on that
-evidence would have deleted the answer while leaving the need.
-
-**One way to move the number is not progress, and the tool cannot tell you.** The verdict
-separates *plumbing* from *unused* by asking whether user-facing documentation presents the type
-as surface — so deleting the page that documents a type silences the question instead of
-answering it, and re-scores it as "plumbing — correctly invisible", which carries no action. That
-has happened, to three types at once. After a documentation change, re-run the census and read
-what moved — `tools/api-census-diff.sh <before.md> <after.md>` compares per type rather than by
-eye. A verdict that improved because a page went away has not improved, and what the type still
-lacks has to be written down somewhere the tool will not stop asking.
-
-### Where the gap is now
-
-**What is left is supervision, and it has no trigger.** No restart policy, no backoff, no
-escalation — and nothing a developer is building has asked for one, which is the bar for starting
-a gap rather than recording it: a gap is opened by something being built that needs it, never by
-an analysis noticing it is absent.
+- **A zero in the usage column is a question about why, not a verdict.** `EmbeddingProvider`
+  scored as unused because the one example that needed embeddings had reimplemented it against
+  LangChain4j directly. Deprecating on that evidence would have deleted the answer while leaving
+  the need.
+- **Deleting a page is not progress, and the tool cannot tell you.** The verdict separates
+  *plumbing* from *unused* by asking whether user-facing documentation presents the type, so
+  removing the page re-scores the type as "plumbing — correctly invisible". After a documentation
+  change, re-run it and compare per type with `tools/api-census-diff.sh <before.md> <after.md>`.
+- **Count constants and members, not only types.** A user writes `@Behavior(type = CYCLIC)` and
+  never names the class behind it, so for an annotation-driven feature the constant is the unit
+  of decision.
 
 ADRs in `docs/adr/` are authoritative over these rules where they conflict, and
 [CONTRIBUTING.md](./CONTRIBUTING.md) is authoritative over this file.
@@ -142,7 +115,7 @@ bash tools/preflight.sh
 
 **A2A Protocol**: `AgenorA2AAdapter` is a smart router for internal/external agent-to-agent messages; `AgenorA2AClient` handles HTTP/JSON-RPC calls to external agents; `AgenorAgentExecutor` turns an incoming A2A task into a request to an Agenor agent; `AgenorA2AServer` (0.39.0) wraps it with the rest of the SDK so an application serves the agent by mounting two endpoints in any HTTP server.
 
-**LLM Provider Factory**: Use `LLMProviderFactory` (builder pattern) in `agenor-adapters` to instantiate OpenAI, Anthropic, or Ollama providers. A model is named by its string id; the per-provider `Models` enums are deprecated for removal (see the concept budget above), and a context window the fallback does not cover is registered with `ModelTokenLimits.register`.
+**LLM Provider Factory**: Use `LLMProviderFactory` (builder pattern) in `agenor-adapters` to instantiate OpenAI, Anthropic, or Ollama providers. A model is named by its string id; the per-provider `Models` enums are deprecated for removal in 0.43.0 (see the census section above), and a context window the fallback does not cover is registered with `ModelTokenLimits.register`.
 
 ## Key Conventions
 

@@ -4,6 +4,14 @@
 
 Thank you for your interest in contributing to Agenor. This document provides guidelines for contributors and explains how to propose changes, report issues, and get your work merged.
 
+**Agenor is a learning lab**, not a library looking for production users: a public place to work
+out how agent systems, classic and LLM-based, are built and how they behave (see the
+[README](README.md)). That shapes what fits. A fix, an example that teaches one concept, a page
+that explains what an example does not, or the code an experiment needs are all welcome. A feature
+that nothing being built needs yet is not, however useful it may become; open an issue saying
+what you are building instead. The version stays `0.x` (ADR-025 §D3), so a change may break a
+public type, provided the CHANGELOG marks it.
+
 ## 🌟 Getting Started
 
 ### Prerequisites
@@ -294,7 +302,7 @@ class WeatherCollectorAgentTest {
 
 A behavior verified only against `InMemoryMessageDispatcher` is not verified. Agenor ships more
 than one `MessageDispatcher` implementation, and code that only ever ran against the in-memory
-one has shipped broken against the others — this defect class has recurred three times. If your
+one has shipped broken against the others — this defect class has recurred four times. If your
 change touches the message path, exercise it against a second transport (e.g. an `*IT.java` test
 against the Redis adapter) before calling it verified.
 
