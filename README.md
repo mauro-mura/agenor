@@ -83,7 +83,7 @@ Import the BOM (Bill of Materials) so that every Agenor module you add shares on
         <dependency>
             <groupId>dev.agenor</groupId>
             <artifactId>agenor-bom</artifactId>
-            <version>0.41.0</version>
+            <version>0.42.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -129,7 +129,7 @@ Every module takes the same version:
     <dependency>
         <groupId>dev.agenor</groupId>
         <artifactId>agenor-runtime</artifactId>
-        <version>0.41.0</version>
+        <version>0.42.0</version>
     </dependency>
 </dependencies>
 ```
