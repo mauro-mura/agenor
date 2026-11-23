@@ -45,6 +45,9 @@ trap 'rm -rf "$TMP"' EXIT
 
 cp mkdocs.yml "$TMP/"
 cp -r docs "$TMP/docs"
+# The theme override (custom_dir in mkdocs.yml) lives beside mkdocs.yml, outside docs/ so it is
+# not published as content; without it the strict build fails before it checks a single link.
+cp -r overrides "$TMP/overrides"
 mkdir -p "$TMP/docs/api"
 echo '<!doctype html><title>stub</title>' >"$TMP/docs/api/index.html"
 
