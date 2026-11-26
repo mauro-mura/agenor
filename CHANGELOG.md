@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`autoDiscovery: false` turns package scanning off, as documented.** The runtime scanned
+  whenever packages were listed and never read the flag, which only fed a startup warning:
+  `autoDiscovery is enabled but no scanPackages configured`. That warning went to every
+  application that registers its agents itself, the Spring Boot starter's included, since the
+  flag defaults to `true`. The scan now runs when the flag is on and packages are listed; the
+  warning is gone. A configuration that sets the flag to `false` and lists packages stops
+  discovering agents in them: remove the flag, or set it to `true`, to keep them.
+
 ## [0.42.0] - 2026-11-23
 
 ### Added

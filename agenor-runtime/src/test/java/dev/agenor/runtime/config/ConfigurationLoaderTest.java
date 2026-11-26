@@ -681,15 +681,15 @@ class ConfigurationLoaderTest {
     }
 
     @Test
-    @DisplayName("Should warn when autoDiscovery enabled but no packages")
-    void shouldWarnWhenAutoDiscoveryWithoutPackages() {
+    @DisplayName("Should accept autoDiscovery with no packages: agents registered by hand")
+    void shouldAcceptAutoDiscoveryWithoutPackages() {
         AgenorConfiguration config = new AgenorConfiguration(
                 new AgenorConfiguration.RuntimeConfig("test", "development", null),
                 new AgenorConfiguration.AgentsConfig(true, null, null, null, null),
                 null, null, null
         );
 
-        // Should not throw but log warning
+        // Nothing to scan is not a mistake
         assertThat(config).satisfies(c -> {
             try {
                 loader.validate(c);

@@ -20,7 +20,7 @@
     {
       "name": "agenor.agents.auto-discovery",
       "type": "java.lang.Boolean",
-      "description": "Whether to automatically discover and register @Agent classes at startup.",
+      "description": "Whether to scan base-package and scan-packages for @Agent classes at startup. False skips the scan even when packages are set.",
       "defaultValue": true
     },
     {

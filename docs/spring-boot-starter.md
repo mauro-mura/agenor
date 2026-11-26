@@ -66,7 +66,7 @@ All keys are under the `agenor` prefix. Every key is optional and falls back to 
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `auto-discovery` | `true` | Discover `@Agent` classes at startup |
+| `auto-discovery` | `true` | Scan `base-package` and `scan-packages` for `@Agent` classes at startup; `false` skips the scan even when they are set |
 | `base-package` | — | Root package to scan |
 | `scan-packages` | `[]` | Additional packages to scan |
 | `scan-paths` | `[]` | Legacy alias for `scan-packages` (kept for compatibility with `agenor.yml`) |

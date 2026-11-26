@@ -224,9 +224,14 @@ public class AgenorRuntime {
                 // Start core services
                 behaviorScheduler.start().join();
 
-                // Discover and create agents
-                if (!configuration.agents().getAllScanPackages().isEmpty()) {
-                    discoverAndCreateAgents();
+                // Discover and create agents: the packages say where, autoDiscovery whether
+                List<String> scanPackages = configuration.agents().getAllScanPackages();
+                if (!scanPackages.isEmpty()) {
+                    if (configuration.agents().autoDiscovery()) {
+                        discoverAndCreateAgents();
+                    } else {
+                        log.info("autoDiscovery is off: {} not scanned", scanPackages);
+                    }
                 }
 
                 // Report which optional modules resolved, and any optional annotation that

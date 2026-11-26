@@ -114,6 +114,20 @@ class AgenorStarterIntegrationTest {
             });
     }
 
+    /** The same package with {@code auto-discovery=false}: the switch the guide documents. */
+    @Test
+    void basePackage_withAutoDiscoveryOff_discoversNothing() {
+        runner
+            .withPropertyValues("agenor.agents.auto-discovery=false",
+                    "agenor.agents.base-package=dev.agenor.autoconfigure.testagents")
+            .run(ctx -> {
+                AgenorRuntime runtime = ctx.getBean(AgenorRuntime.class);
+                assertThat(runtime.getAgents())
+                        .noneSatisfy(agent -> assertThat(agent.getAgentId())
+                                .isEqualTo("discoverable-starter-agent"));
+            });
+    }
+
     // -----------------------------------------------------------------------
     // Scenario 4: custom thread-pool-size
     // -----------------------------------------------------------------------
