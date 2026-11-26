@@ -159,11 +159,9 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
             log.warn("Unknown environment '{}', expected: development, staging, production, or test", env);
         }
 
+        // autoDiscovery with no packages is not a mistake: there is nothing to scan, which is the
+        // case of every application that registers its agents itself
         AgenorConfiguration.AgentsConfig agents = config.agents();
-        if (agents.autoDiscovery() && agents.getAllScanPackages().isEmpty()) {
-            log.warn("autoDiscovery is enabled but no scanPackages configured");
-        }
-
         for (String packageName : agents.getAllScanPackages()) {
             if (packageName == null || packageName.trim().isEmpty()) {
                 throw new ConfigurationException("scanPackages cannot contain null or empty entries");

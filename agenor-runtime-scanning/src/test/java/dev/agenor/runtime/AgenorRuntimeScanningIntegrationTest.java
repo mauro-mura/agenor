@@ -111,6 +111,31 @@ class AgenorRuntimeScanningIntegrationTest {
                 .allSatisfy(agent -> assertThat(agent.isRunning()).isTrue());
     }
 
+    @Test
+    void shouldNotScanConfiguredPackagesWhenAutoDiscoveryIsOff() {
+        AgenorConfiguration config = new AgenorConfiguration(
+                new AgenorConfiguration.RuntimeConfig("test-runtime", "development", null),
+                new AgenorConfiguration.AgentsConfig(
+                        false,
+                        null,
+                        null,
+                        List.of("dev.agenor.runtime"),
+                        null
+                ),
+                null,
+                null,
+                null
+        );
+
+        runtimeUnderTest = AgenorRuntime.builder()
+                .withConfiguration(config)
+                .build();
+
+        runtimeUnderTest.start().join();
+
+        assertThat(runtimeUnderTest.getAgents()).isEmpty();
+    }
+
     // ========== HELPERS ==========
 
     static class TestAgent extends BaseAgent {

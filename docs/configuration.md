@@ -107,6 +107,8 @@ agenor:
 Notes:
 - Keys map to `dev.agenor.core.AgenorConfiguration` via `dev.agenor.runtime.config.AgenorConfigurationWrapper`.
 - `basePackage` and `scanPaths` are merged into `scanPackages` at load time.
+- `autoDiscovery: false` skips the scan even when packages are listed. With no packages there is
+  nothing to scan, whatever its value: the case of agents registered in code.
 - Unknown keys are ignored by the loader.
 
 ---
